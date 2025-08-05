@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Setups\BrandsController;
 use App\Http\Controllers\Api\Setups\FamiliesController;
 use App\Http\Controllers\Api\Setups\GroupsController;
 use App\Http\Controllers\Api\Setups\TypesController;
@@ -64,6 +65,20 @@ Route::middleware('auth:sanctum')->group(function () {
             'show' => 'groups.show',
             'update' => 'groups.update',
             'destroy' => 'groups.destroy',
+        ]);
+
+        Route::prefix('brands')->name('brands.')->group(function () {
+            Route::get('trashed', [BrandsController::class, 'trashed'])->name('trashed');
+            Route::patch('{id}/restore', [BrandsController::class, 'restore'])->name('restore');
+            Route::delete('{id}/force-delete', [BrandsController::class, 'forceDelete'])->name('force-delete');
+        });
+        
+        Route::apiResource('brands', BrandsController::class)->names([
+            'index' => 'brands.index',
+            'store' => 'brands.store',
+            'show' => 'brands.show',
+            'update' => 'brands.update',
+            'destroy' => 'brands.destroy',
         ]);
     });
     
