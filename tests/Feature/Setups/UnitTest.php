@@ -14,7 +14,7 @@ describe('Unit API', function () {
     it('can list units with pagination', function () {
         Unit::factory()->count(5)->create();
 
-        $response = $this->getJson('/api/units');
+        $response = $this->getJson('/api/setups/units');
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -44,7 +44,7 @@ describe('Unit API', function () {
             'is_active' => true,
         ];
 
-        $response = $this->postJson('/api/units', $unitData);
+        $response = $this->postJson('/api/setups/units', $unitData);
 
         $response->assertCreated()
             ->assertJsonFragment(['name' => 'Test Unit']);
@@ -58,7 +58,7 @@ describe('Unit API', function () {
     it('can show a specific unit', function () {
         $unit = Unit::factory()->create(['name' => 'Test Unit']);
 
-        $response = $this->getJson("/api/units/{$unit->id}");
+        $response = $this->getJson("/api/setups/units/{$unit->id}");
 
         $response->assertOk()
             ->assertJsonFragment(['name' => 'Test Unit']);
@@ -73,7 +73,7 @@ describe('Unit API', function () {
             'is_active' => false,
         ];
 
-        $response = $this->putJson("/api/units/{$unit->id}", $updateData);
+        $response = $this->putJson("/api/setups/units/{$unit->id}", $updateData);
 
         $response->assertOk()
             ->assertJsonFragment(['name' => 'Updated Name']);
@@ -88,7 +88,7 @@ describe('Unit API', function () {
     it('can soft delete a unit', function () {
         $unit = Unit::factory()->create();
 
-        $response = $this->deleteJson("/api/units/{$unit->id}");
+        $response = $this->deleteJson("/api/setups/units/{$unit->id}");
 
         $response->assertNoContent();
         $this->assertSoftDeleted('units', ['id' => $unit->id]);
@@ -98,7 +98,7 @@ describe('Unit API', function () {
         Unit::factory()->active()->count(3)->create();
         Unit::factory()->inactive()->count(2)->create();
 
-        $response = $this->getJson('/api/units?is_active=1');
+        $response = $this->getJson('/api/setups/units?is_active=1');
 
         $response->assertOk();
         $data = $response->json('data');
@@ -112,7 +112,7 @@ describe('Unit API', function () {
         Unit::factory()->create(['name' => 'Kilograms']);
         Unit::factory()->create(['name' => 'Boxes']);
 
-        $response = $this->getJson('/api/units?search=Piece');
+        $response = $this->getJson('/api/setups/units?search=Piece');
 
         $response->assertOk();
         $data = $response->json('data');
@@ -126,7 +126,7 @@ describe('Unit API', function () {
         Unit::factory()->create(['name' => 'Alpha']);
         Unit::factory()->create(['name' => 'Beta']);
 
-        $response = $this->getJson('/api/units?sort_by=name&sort_direction=asc');
+        $response = $this->getJson('/api/setups/units?sort_by=name&sort_direction=asc');
 
         $response->assertOk();
         $data = $response->json('data');
@@ -140,7 +140,7 @@ describe('Unit API', function () {
         Unit::factory()->active()->count(3)->create();
         Unit::factory()->inactive()->count(2)->create();
 
-        $response = $this->getJson('/api/units/active');
+        $response = $this->getJson('/api/setups/units/active');
 
         $response->assertOk();
         $data = $response->json('data');
@@ -155,7 +155,7 @@ describe('Unit API', function () {
 describe('Unit Validation', function () {
     
     it('requires name field', function () {
-        $response = $this->postJson('/api/units', [
+        $response = $this->postJson('/api/setups/units', [
             'short_name' => 'TU',
         ]);
 
@@ -166,7 +166,7 @@ describe('Unit Validation', function () {
     it('requires unique name', function () {
         Unit::factory()->create(['name' => 'Existing Unit']);
 
-        $response = $this->postJson('/api/units', [
+        $response = $this->postJson('/api/setups/units', [
             'name' => 'Existing Unit',
         ]);
 
@@ -175,7 +175,7 @@ describe('Unit Validation', function () {
     });
 
     it('validates short_name length', function () {
-        $response = $this->postJson('/api/units', [
+        $response = $this->postJson('/api/setups/units', [
             'name' => 'Test Unit',
             'short_name' => 'This is way too long',
         ]);
@@ -187,7 +187,7 @@ describe('Unit Validation', function () {
     it('allows update with same name', function () {
         $unit = Unit::factory()->create(['name' => 'Test Unit']);
 
-        $response = $this->putJson("/api/units/{$unit->id}", [
+        $response = $this->putJson("/api/setups/units/{$unit->id}", [
             'name' => 'Test Unit',
             'short_name' => 'TU',
         ]);
@@ -202,7 +202,7 @@ describe('Unit Authentication', function () {
         // Create new test instance without acting as user
         $this->app['auth']->forgetGuards();
         
-        $response = $this->getJson('/api/units');
+        $response = $this->getJson('/api/setups/units');
 
         $response->assertUnauthorized();
     });
