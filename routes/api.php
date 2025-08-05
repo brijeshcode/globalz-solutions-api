@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\AuthController;
-use App\Http\Controllers\Api\Setups\BrandsController;
-use App\Http\Controllers\Api\Setups\CategoriesController;
-use App\Http\Controllers\Api\Setups\FamiliesController;
-use App\Http\Controllers\Api\Setups\GroupsController;
-use App\Http\Controllers\Api\Setups\TypesController;
-use App\Http\Controllers\Api\Setups\UnitController;
+use App\Http\Controllers\Api\Setups\ItemBrandsController;
+use App\Http\Controllers\Api\Setups\ItemCategoriesController;
+use App\Http\Controllers\Api\Setups\ItemFamiliesController;
+use App\Http\Controllers\Api\Setups\ItemGroupsController;
+use App\Http\Controllers\Api\Setups\ItemTypesController;
+use App\Http\Controllers\Api\Setups\ItemUnitController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -18,83 +18,82 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/me', [AuthController::class, 'me']);
 
-    // Units
-    
     Route::prefix('setups')->name('setups.')->group(function () {
-        Route::get('units/active', [UnitController::class, 'active'])->name('units.active');
-        Route::apiResource('units', UnitController::class);
+        Route::prefix('items')->name('items.')->group(function () {
 
-        Route::prefix('types')->name('types.')->group(function () {
-            Route::get('trashed', [TypesController::class, 'trashed'])->name('trashed');
-            Route::patch('{id}/restore', [TypesController::class, 'restore'])->name('restore');
-            Route::delete('{id}/force-delete', [TypesController::class, 'forceDelete'])->name('force-delete');
-        });
-        
-        Route::apiResource('types', TypesController::class)->names([
-            'index' => 'types.index',
-            'store' => 'types.store',
-            'show' => 'types.show',
-            'update' => 'types.update',
-            'destroy' => 'types.destroy',
-        ]);
+            // Item Units Controller
+            Route::controller(ItemUnitController::class)->prefix('units')->name('units.')->group(function () {
+                Route::get('active', 'active')->name('active');
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{unit}', 'show')->name('show');
+                Route::put('{unit}', 'update')->name('update');
+                Route::delete('{unit}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
 
-        // families setup
-        Route::prefix('families')->name('families.')->group(function () {
-            Route::get('trashed', [FamiliesController::class, 'trashed'])->name('trashed');
-            Route::patch('{id}/restore', [FamiliesController::class, 'restore'])->name('restore');
-            Route::delete('{id}/force-delete', [FamiliesController::class, 'forceDelete'])->name('force-delete');
-        });
-        
-        Route::apiResource('families', FamiliesController::class)->names([
-            'index' => 'families.index',
-            'store' => 'families.store',
-            'show' => 'families.show',
-            'update' => 'families.update',
-            'destroy' => 'families.destroy',
-        ]);
+            // Item Types Controller
+            Route::controller(ItemTypesController::class)->prefix('types')->name('types.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{type}', 'show')->name('show');
+                Route::put('{type}', 'update')->name('update');
+                Route::delete('{type}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
 
-        // Groups
-        Route::prefix('groups')->name('groups.')->group(function () {
-            Route::get('trashed', [GroupsController::class, 'trashed'])->name('trashed');
-            Route::patch('{id}/restore', [GroupsController::class, 'restore'])->name('restore');
-            Route::delete('{id}/force-delete', [GroupsController::class, 'forceDelete'])->name('force-delete');
-        });
-        
-        Route::apiResource('groups', GroupsController::class)->names([
-            'index' => 'groups.index',
-            'store' => 'groups.store',
-            'show' => 'groups.show',
-            'update' => 'groups.update',
-            'destroy' => 'groups.destroy',
-        ]);
+            // Item Families Controller
+            Route::controller(ItemFamiliesController::class)->prefix('families')->name('families.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{family}', 'show')->name('show');
+                Route::put('{family}', 'update')->name('update');
+                Route::delete('{family}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
 
-        Route::prefix('brands')->name('brands.')->group(function () {
-            Route::get('trashed', [BrandsController::class, 'trashed'])->name('trashed');
-            Route::patch('{id}/restore', [BrandsController::class, 'restore'])->name('restore');
-            Route::delete('{id}/force-delete', [BrandsController::class, 'forceDelete'])->name('force-delete');
-        });
-        
-        Route::apiResource('brands', BrandsController::class)->names([
-            'index' => 'brands.index',
-            'store' => 'brands.store',
-            'show' => 'brands.show',
-            'update' => 'brands.update',
-            'destroy' => 'brands.destroy',
-        ]);
+            // Item Groups Controller
+            Route::controller(ItemGroupsController::class)->prefix('groups')->name('groups.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{group}', 'show')->name('show');
+                Route::put('{group}', 'update')->name('update');
+                Route::delete('{group}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
 
-        Route::prefix('categories')->name('categories.')->group(function () {
-            Route::get('trashed', [CategoriesController::class, 'trashed'])->name('trashed');
-            Route::patch('{id}/restore', [CategoriesController::class, 'restore'])->name('restore');
-            Route::delete('{id}/force-delete', [CategoriesController::class, 'forceDelete'])->name('force-delete');
+            // Item Brands Controller
+            Route::controller(ItemBrandsController::class)->prefix('brands')->name('brands.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{brand}', 'show')->name('show');
+                Route::put('{brand}', 'update')->name('update');
+                Route::delete('{brand}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            // Item Categories Controller
+            Route::controller(ItemCategoriesController::class)->prefix('categories')->name('categories.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{category}', 'show')->name('show');
+                Route::put('{category}', 'update')->name('update');
+                Route::delete('{category}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
         });
-        
-        Route::apiResource('categories', CategoriesController::class)->names([
-            'index' => 'categories.index',
-            'store' => 'categories.store',
-            'show' => 'categories.show',
-            'update' => 'categories.update',
-            'destroy' => 'categories.destroy',
-        ]);
     });
-    
 });
