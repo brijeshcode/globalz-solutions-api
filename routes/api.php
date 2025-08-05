@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Setups\FamiliesController;
 use App\Http\Controllers\Api\Setups\TypesController;
 use App\Http\Controllers\Api\Setups\UnitController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,21 @@ Route::middleware('auth:sanctum')->group(function () {
             'show' => 'types.show',
             'update' => 'types.update',
             'destroy' => 'types.destroy',
+        ]);
+
+        // families setup
+        Route::prefix('families')->name('families.')->group(function () {
+            Route::get('trashed', [FamiliesController::class, 'trashed'])->name('trashed');
+            Route::patch('{id}/restore', [FamiliesController::class, 'restore'])->name('restore');
+            Route::delete('{id}/force-delete', [FamiliesController::class, 'forceDelete'])->name('force-delete');
+        });
+        
+        Route::apiResource('families', FamiliesController::class)->names([
+            'index' => 'families.index',
+            'store' => 'families.store',
+            'show' => 'families.show',
+            'update' => 'families.update',
+            'destroy' => 'families.destroy',
         ]);
     });
     
