@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 trait Authorable
 {
-    protected static function bootHasAuditFields()
+    protected static function bootAuthorable()
     {
         // Set created_by when creating
         static::creating(function ($model) {

@@ -2,7 +2,6 @@
 
 namespace App\Traits;
 
-
 trait HasBooleanFilters
 {
     protected function applyBooleanFilter($query, string $column, $value): void
