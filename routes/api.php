@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Setups\FamiliesController;
+use App\Http\Controllers\Api\Setups\GroupsController;
 use App\Http\Controllers\Api\Setups\TypesController;
 use App\Http\Controllers\Api\Setups\UnitController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,21 @@ Route::middleware('auth:sanctum')->group(function () {
             'show' => 'families.show',
             'update' => 'families.update',
             'destroy' => 'families.destroy',
+        ]);
+
+        // Groups
+        Route::prefix('groups')->name('groups.')->group(function () {
+            Route::get('trashed', [GroupsController::class, 'trashed'])->name('trashed');
+            Route::patch('{id}/restore', [GroupsController::class, 'restore'])->name('restore');
+            Route::delete('{id}/force-delete', [GroupsController::class, 'forceDelete'])->name('force-delete');
+        });
+        
+        Route::apiResource('groups', GroupsController::class)->names([
+            'index' => 'groups.index',
+            'store' => 'groups.store',
+            'show' => 'groups.show',
+            'update' => 'groups.update',
+            'destroy' => 'groups.destroy',
         ]);
     });
     
