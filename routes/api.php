@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Setups\ItemBrandsController;
 use App\Http\Controllers\Api\Setups\ItemCategoriesController;
 use App\Http\Controllers\Api\Setups\ItemFamiliesController;
 use App\Http\Controllers\Api\Setups\ItemGroupsController;
+use App\Http\Controllers\Api\Setups\ItemProfitMarginsController;
 use App\Http\Controllers\Api\Setups\ItemTypesController;
 use App\Http\Controllers\Api\Setups\ItemUnitController;
 use Illuminate\Support\Facades\Route;
@@ -90,6 +91,18 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('{category}', 'show')->name('show');
                 Route::put('{category}', 'update')->name('update');
                 Route::delete('{category}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            // Item Profit Margins Controller
+            Route::controller(ItemProfitMarginsController::class)->prefix('profit-margins')->name('profit-margins.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{margin}', 'show')->name('show');
+                Route::put('{margin}', 'update')->name('update');
+                Route::delete('{margin}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });

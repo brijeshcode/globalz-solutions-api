@@ -6,12 +6,16 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('item_types', function (Blueprint $table) {
+        Schema::create('item_profit_margins', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->text('description')->nullable();
+            $table->decimal('margin_percentage', 5,2)->default(0);
+            $table->string('description')->nullable();
             $table->boolean('is_active')->default(true);
             
             // Authorable fields
@@ -24,11 +28,15 @@ return new class extends Migration
             // Indexes
             $table->index(['is_active', 'deleted_at']);
             $table->index('name');
+
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('types');
+        Schema::dropIfExists('item_profit_margins');
     }
 };

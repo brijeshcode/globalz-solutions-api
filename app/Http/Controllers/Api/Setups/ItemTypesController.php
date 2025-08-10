@@ -42,7 +42,7 @@ class ItemTypesController extends Controller
         $type->load(['createdBy:id,name', 'updatedBy:id,name']);
 
         return ApiResponse::store(
-            '11Type created successfully',
+            'Type created successfully',
             new ItemTypeResource($type)
         );
     }
@@ -52,7 +52,7 @@ class ItemTypesController extends Controller
         $type->load(['createdBy:id,name', 'updatedBy:id,name']);
 
         return ApiResponse::show(
-            '11Type retrieved successfully',
+            'Type retrieved successfully',
             new ItemTypeResource($type)
         );
     }
@@ -63,7 +63,7 @@ class ItemTypesController extends Controller
         $type->load(['createdBy:id,name', 'updatedBy:id,name']);
 
         return ApiResponse::update(
-            '11Type updated successfully',
+            'Type updated successfully',
             new ItemTypeResource($type)
         );
     }
@@ -72,7 +72,7 @@ class ItemTypesController extends Controller
     {
         $type->delete();
 
-        return ApiResponse::delete('11Type deleted successfully');
+        return ApiResponse::delete('Type deleted successfully');
     }
 
     public function trashed(Request $request): JsonResponse
@@ -102,7 +102,7 @@ class ItemTypesController extends Controller
         $type->load(['createdBy:id,name', 'updatedBy:id,name']);
 
         return ApiResponse::update(
-            '11Type restored successfully',
+            'Type restored successfully',
             new ItemTypeResource($type)
         );
     }
@@ -112,6 +112,6 @@ class ItemTypesController extends Controller
         $type = ItemType::onlyTrashed()->findOrFail($id);
         $type->forceDelete();
 
-        return ApiResponse::delete('11Type permanently deleted successfully');
+        return ApiResponse::delete('Type permanently deleted successfully');
     }
 }
