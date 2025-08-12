@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Setups\ItemGroupsController;
 use App\Http\Controllers\Api\Setups\ItemProfitMarginsController;
 use App\Http\Controllers\Api\Setups\ItemTypesController;
 use App\Http\Controllers\Api\Setups\ItemUnitController;
+use App\Http\Controllers\Api\Setups\WarehousesController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -20,6 +21,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
 
     Route::prefix('setups')->name('setups.')->group(function () {
+        
+        // Warehouses Controller
+        Route::controller(WarehousesController::class)->prefix('warehouses')->name('warehouses.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{warehouse}', 'show')->name('show');
+            Route::put('{warehouse}', 'update')->name('update');
+            Route::delete('{warehouse}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
         Route::prefix('items')->name('items.')->group(function () {
 
             // Item Units Controller
