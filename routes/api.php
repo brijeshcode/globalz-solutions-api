@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Setups\ItemTypesController;
 use App\Http\Controllers\Api\Setups\ItemUnitController;
 use App\Http\Controllers\Api\Setups\WarehousesController;
 use App\Http\Controllers\Api\Setups\CurrenciesController;
+use App\Http\Controllers\Api\Setups\CountriesController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -43,6 +44,18 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{currency}', 'show')->name('show');
             Route::put('{currency}', 'update')->name('update');
             Route::delete('{currency}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Countries Controller
+        Route::controller(CountriesController::class)->prefix('countries')->name('countries.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{country}', 'show')->name('show');
+            Route::put('{country}', 'update')->name('update');
+            Route::delete('{country}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
