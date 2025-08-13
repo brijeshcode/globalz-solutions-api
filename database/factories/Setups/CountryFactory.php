@@ -48,14 +48,12 @@ class CountryFactory extends Factory
             ['name' => 'Russia', 'code' => 'RUS', 'iso2' => 'RU', 'phone_code' => '+7', 'currency' => 'RUB'],
         ];
 
-        $country = fake()->randomElement($countries);
-
         return [
-            'name' => $country['name'],
-            'code' => $country['code'],
-            'iso2' => $country['iso2'],
-            'phone_code' => $country['phone_code'],
-            'currency' => $country['currency'],
+            'name' => fake()->unique()->country(),
+            'code' => strtoupper(fake()->unique()->lexify('???')),
+            'iso2' => strtoupper(fake()->unique()->lexify('??')),
+            'phone_code' => '+' . fake()->numberBetween(1, 999),
+            'currency' => fake()->currencyCode(),
             'is_active' => fake()->boolean(90), // 90% chance of being active
             'created_by' => User::factory(),
             'updated_by' => User::factory(),

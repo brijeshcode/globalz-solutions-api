@@ -41,9 +41,9 @@ class CurrencyFactory extends Factory
         $currency = fake()->randomElement($currencies);
 
         return [
-            'name' => $currency['name'],
-            'code' => $currency['code'],
-            'symbol' => $currency['symbol'],
+            'name' => fake()->unique()->currencyCode() . ' Currency',
+            'code' => fake()->unique()->currencyCode(),
+            'symbol' => fake()->randomElement(['$', '€', '£', '¥', '₹', '₹', 'C$', 'A$', 'CHF']),
             'symbol_position' => fake()->randomElement(['before', 'after']),
             'decimal_places' => fake()->numberBetween(0, 4),
             'decimal_separator' => fake()->randomElement(['.', ',']),
