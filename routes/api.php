@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Setups\ItemGroupsController;
 use App\Http\Controllers\Api\Setups\ItemProfitMarginsController;
 use App\Http\Controllers\Api\Setups\ItemTypesController;
 use App\Http\Controllers\Api\Setups\ItemUnitController;
+use App\Http\Controllers\Api\Setups\SupplierTypesController;
 use App\Http\Controllers\Api\Setups\WarehousesController;
 use App\Http\Controllers\Api\Setups\CurrenciesController;
 use App\Http\Controllers\Api\Setups\CountriesController;
@@ -56,6 +57,18 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{country}', 'show')->name('show');
             Route::put('{country}', 'update')->name('update');
             Route::delete('{country}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Supplier Types Controller
+        Route::controller(SupplierTypesController::class)->prefix('supplier-types')->name('supplier-types.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{supplierType}', 'show')->name('show');
+            Route::put('{supplierType}', 'update')->name('update');
+            Route::delete('{supplierType}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
