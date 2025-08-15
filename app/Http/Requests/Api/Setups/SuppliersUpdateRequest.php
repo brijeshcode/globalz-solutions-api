@@ -39,8 +39,8 @@ class SuppliersUpdateRequest extends FormRequest
             
             // Other Tab
             'notes' => 'nullable|string|max:2000',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'string|max:255',
+            'attachments' => 'nullable|array|max:10',
+            'attachments.*' => 'nullable', // Will be validated in controller based on type (file or string)
             
             // System
             'is_active' => 'boolean',

@@ -395,7 +395,7 @@ class SuppliersController extends Controller
     /**
      * Download attachment
      */
-    public function downloadAttachment(Request $request, Supplier $supplier): JsonResponse
+    public function downloadAttachment(Request $request, Supplier $supplier)
     {
         $request->validate([
             'attachment_path' => 'required|string'
