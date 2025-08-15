@@ -26,7 +26,6 @@ describe('Countries API', function () {
                         'code',
                         'iso2',
                         'phone_code',
-                        'currency',
                         'is_active',
                         'display_name',
                         'full_display',
@@ -46,7 +45,6 @@ describe('Countries API', function () {
             'code' => 'TST',
             'iso2' => 'TS',
             'phone_code' => '+999',
-            'currency' => 'TST',
             'is_active' => true,
         ];
 
@@ -61,7 +59,6 @@ describe('Countries API', function () {
                     'code',
                     'iso2',
                     'phone_code',
-                    'currency',
                     'is_active',
                     'display_name',
                     'full_display',
@@ -98,7 +95,6 @@ describe('Countries API', function () {
             'code' => 'UPD',
             'iso2' => 'UP',
             'phone_code' => '+888',
-            'currency' => 'UPD',
         ];
 
         $response = $this->putJson(route('setups.countries.update', $country), $data);
@@ -110,7 +106,6 @@ describe('Countries API', function () {
                     'code' => 'UPD',
                     'iso2' => 'UP',
                     'phone_code' => '+888',
-                    'currency' => 'UPD',
                 ]
             ]);
 
@@ -209,18 +204,6 @@ describe('Countries API', function () {
 
         $response->assertUnprocessable()
             ->assertJsonValidationErrors(['phone_code']);
-    });
-
-    it('validates currency length when creating', function () {
-        $response = $this->postJson(route('setups.countries.store'), [
-            'name' => 'Test Country',
-            'code' => 'TST',
-            'iso2' => 'TS',
-            'currency' => 'TOOLONG',
-        ]);
-
-        $response->assertUnprocessable()
-            ->assertJsonValidationErrors(['currency']);
     });
 
     it('validates unique name when updating', function () {
@@ -329,7 +312,6 @@ describe('Countries API', function () {
                         'code',
                         'iso2',
                         'phone_code',
-                        'currency',
                         'is_active',
                         'display_name',
                         'full_display',
