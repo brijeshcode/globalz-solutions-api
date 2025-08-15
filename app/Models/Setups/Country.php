@@ -20,7 +20,6 @@ class Country extends Model
         'code',
         'iso2',
         'phone_code',
-        'currency',
         'is_active',
     ];
 
@@ -29,6 +28,20 @@ class Country extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+    ];
+    protected $searchable = [
+        'name',
+        'code',
+        'iso2',
+        'phone_code',
+    ];
+
+    protected $sortable = [
+        'id',
+        'name',
+        'is_active',
+        'created_at',
+        'updated_at',
     ];
 
     // Helper methods

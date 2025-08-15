@@ -18,7 +18,6 @@ class CountriesStoreRequest extends FormRequest
             'code' => 'required|string|size:3|unique:countries,code',
             'iso2' => 'required|string|size:2|unique:countries,iso2',
             'phone_code' => 'nullable|string|max:10|regex:/^\+\d+$/',
-            'currency' => 'nullable|string|size:3',
             'is_active' => 'boolean',
         ];
     }
@@ -37,7 +36,6 @@ class CountriesStoreRequest extends FormRequest
             'iso2.unique' => 'This ISO2 code already exists.',
             'phone_code.max' => 'Phone code cannot exceed 10 characters.',
             'phone_code.regex' => 'Phone code must start with + followed by numbers.',
-            'currency.size' => 'Currency code must be exactly 3 characters.',
         ];
     }
 }

@@ -15,7 +15,6 @@ class CountryResource extends JsonResource
             'code' => $this->code,
             'iso2' => $this->iso2,
             'phone_code' => $this->phone_code,
-            'currency' => $this->currency,
             'is_active' => $this->is_active,
             'display_name' => $this->display_name,
             'full_display' => $this->full_display,

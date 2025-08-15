@@ -27,6 +27,10 @@ class Warehouse extends Model
         'country',
     ];
 
+    protected $searchable = [
+        'name','note', 'address_line_1', 'address_line_2', 'city', 'state', 'postal_code', 'country'
+    ];
+
     protected $casts = [
         'is_active' => 'boolean',
         'created_at' => 'datetime',

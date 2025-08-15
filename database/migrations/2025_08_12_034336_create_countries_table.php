@@ -14,7 +14,6 @@ return new class extends Migration
             $table->string('code', 3)->unique(); // ISO 3166-1 alpha-3 (USA, CAN, GBR)
             $table->string('iso2', 2)->unique(); // ISO 3166-1 alpha-2 (US, CA, GB)
             $table->string('phone_code', 10)->nullable(); // +1, +44, +91
-            $table->string('currency', 3)->nullable(); // USD, EUR, GBP
             $table->boolean('is_active')->default(true);
             
             // Authorable fields

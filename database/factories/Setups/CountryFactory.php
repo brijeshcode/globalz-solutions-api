@@ -25,35 +25,11 @@ class CountryFactory extends Factory
      */
     public function definition(): array
     {
-        $countries = [
-            ['name' => 'United States', 'code' => 'USA', 'iso2' => 'US', 'phone_code' => '+1', 'currency' => 'USD'],
-            ['name' => 'Canada', 'code' => 'CAN', 'iso2' => 'CA', 'phone_code' => '+1', 'currency' => 'CAD'],
-            ['name' => 'United Kingdom', 'code' => 'GBR', 'iso2' => 'GB', 'phone_code' => '+44', 'currency' => 'GBP'],
-            ['name' => 'Germany', 'code' => 'DEU', 'iso2' => 'DE', 'phone_code' => '+49', 'currency' => 'EUR'],
-            ['name' => 'France', 'code' => 'FRA', 'iso2' => 'FR', 'phone_code' => '+33', 'currency' => 'EUR'],
-            ['name' => 'Japan', 'code' => 'JPN', 'iso2' => 'JP', 'phone_code' => '+81', 'currency' => 'JPY'],
-            ['name' => 'Australia', 'code' => 'AUS', 'iso2' => 'AU', 'phone_code' => '+61', 'currency' => 'AUD'],
-            ['name' => 'India', 'code' => 'IND', 'iso2' => 'IN', 'phone_code' => '+91', 'currency' => 'INR'],
-            ['name' => 'China', 'code' => 'CHN', 'iso2' => 'CN', 'phone_code' => '+86', 'currency' => 'CNY'],
-            ['name' => 'Brazil', 'code' => 'BRA', 'iso2' => 'BR', 'phone_code' => '+55', 'currency' => 'BRL'],
-            ['name' => 'Mexico', 'code' => 'MEX', 'iso2' => 'MX', 'phone_code' => '+52', 'currency' => 'MXN'],
-            ['name' => 'South Africa', 'code' => 'ZAF', 'iso2' => 'ZA', 'phone_code' => '+27', 'currency' => 'ZAR'],
-            ['name' => 'Italy', 'code' => 'ITA', 'iso2' => 'IT', 'phone_code' => '+39', 'currency' => 'EUR'],
-            ['name' => 'Spain', 'code' => 'ESP', 'iso2' => 'ES', 'phone_code' => '+34', 'currency' => 'EUR'],
-            ['name' => 'Netherlands', 'code' => 'NLD', 'iso2' => 'NL', 'phone_code' => '+31', 'currency' => 'EUR'],
-            ['name' => 'Switzerland', 'code' => 'CHE', 'iso2' => 'CH', 'phone_code' => '+41', 'currency' => 'CHF'],
-            ['name' => 'Sweden', 'code' => 'SWE', 'iso2' => 'SE', 'phone_code' => '+46', 'currency' => 'SEK'],
-            ['name' => 'Norway', 'code' => 'NOR', 'iso2' => 'NO', 'phone_code' => '+47', 'currency' => 'NOK'],
-            ['name' => 'Denmark', 'code' => 'DNK', 'iso2' => 'DK', 'phone_code' => '+45', 'currency' => 'DKK'],
-            ['name' => 'Russia', 'code' => 'RUS', 'iso2' => 'RU', 'phone_code' => '+7', 'currency' => 'RUB'],
-        ];
-
         return [
             'name' => fake()->unique()->country(),
             'code' => strtoupper(fake()->unique()->lexify('???')),
             'iso2' => strtoupper(fake()->unique()->lexify('??')),
             'phone_code' => '+' . fake()->numberBetween(1, 999),
-            'currency' => fake()->currencyCode(),
             'is_active' => fake()->boolean(90), // 90% chance of being active
             'created_by' => User::factory(),
             'updated_by' => User::factory(),
@@ -90,7 +66,6 @@ class CountryFactory extends Factory
             'code' => 'USA',
             'iso2' => 'US',
             'phone_code' => '+1',
-            'currency' => 'USD',
         ]);
     }
 
@@ -104,7 +79,6 @@ class CountryFactory extends Factory
             'code' => 'CAN',
             'iso2' => 'CA',
             'phone_code' => '+1',
-            'currency' => 'CAD',
         ]);
     }
 
@@ -118,7 +92,6 @@ class CountryFactory extends Factory
             'code' => 'GBR',
             'iso2' => 'GB',
             'phone_code' => '+44',
-            'currency' => 'GBP',
         ]);
     }
 
@@ -132,7 +105,6 @@ class CountryFactory extends Factory
             'code' => 'DEU',
             'iso2' => 'DE',
             'phone_code' => '+49',
-            'currency' => 'EUR',
         ]);
     }
 
@@ -146,7 +118,6 @@ class CountryFactory extends Factory
             'code' => 'IND',
             'iso2' => 'IN',
             'phone_code' => '+91',
-            'currency' => 'INR',
         ]);
     }
 
@@ -160,7 +131,6 @@ class CountryFactory extends Factory
             'code' => 'JPN',
             'iso2' => 'JP',
             'phone_code' => '+81',
-            'currency' => 'JPY',
         ]);
     }
 
@@ -174,7 +144,6 @@ class CountryFactory extends Factory
             'code' => 'AUS',
             'iso2' => 'AU',
             'phone_code' => '+61',
-            'currency' => 'AUD',
         ]);
     }
 
@@ -189,32 +158,12 @@ class CountryFactory extends Factory
     }
 
     /**
-     * Create country without currency.
-     */
-    public function withoutCurrency(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'currency' => null,
-        ]);
-    }
-
-    /**
      * Set specific phone code.
      */
     public function phoneCode(string $code): static
     {
         return $this->state(fn (array $attributes) => [
             'phone_code' => $code,
-        ]);
-    }
-
-    /**
-     * Set specific currency.
-     */
-    public function currency(string $currency): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'currency' => $currency,
         ]);
     }
 
@@ -240,14 +189,13 @@ class CountryFactory extends Factory
     /**
      * Create a custom country.
      */
-    public function custom(string $name, string $code, string $iso2, ?string $phoneCode = null, ?string $currency = null): static
+    public function custom(string $name, string $code, string $iso2, ?string $phoneCode = null): static
     {
         return $this->state(fn (array $attributes) => [
             'name' => $name,
             'code' => strtoupper($code),
             'iso2' => strtoupper($iso2),
             'phone_code' => $phoneCode,
-            'currency' => $currency ? strtoupper($currency) : null,
         ]);
     }
 }

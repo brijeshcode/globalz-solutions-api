@@ -11,6 +11,9 @@ use App\Models\Setups\Supplier;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SuppliersController extends Controller
 {
@@ -78,7 +81,15 @@ class SuppliersController extends Controller
         $data = $request->validated();
         
         // Generate code if not provided
-         $data['code'] = $this->generateSupplierCode();
+        $data['code'] = $this->generateSupplierCode();
+
+        // Handle file attachments
+        if ($request->hasFile('attachments')) {
+            $data['attachments'] = $this->handleAttachments($request->file('attachments'));
+        } elseif ($request->has('attachments') && is_array($request->attachments)) {
+            // Handle attachments as array of file paths or base64 strings
+            $data['attachments'] = $this->processAttachmentPaths($request->attachments);
+        }
 
         $supplier = Supplier::create($data);
         $supplier->load([
@@ -115,7 +126,27 @@ class SuppliersController extends Controller
 
     public function update(SuppliersUpdateRequest $request, Supplier $supplier): JsonResponse
     {
-        $supplier->update($request->validated());
+        $data = $request->validated();
+
+        // Handle file attachments
+        if ($request->hasFile('attachments')) {
+            // Delete old attachments if new ones are uploaded
+            if ($supplier->attachments) {
+                $this->deleteAttachments($supplier->attachments);
+            }
+            $data['attachments'] = $this->handleAttachments($request->file('attachments'));
+        } elseif ($request->has('attachments') && is_array($request->attachments)) {
+            // Handle attachments as array of file paths or keep existing ones
+            $data['attachments'] = $this->processAttachmentPaths($request->attachments, $supplier->attachments);
+        } elseif ($request->has('attachments') && $request->attachments === null) {
+            // Explicitly remove all attachments
+            if ($supplier->attachments) {
+                $this->deleteAttachments($supplier->attachments);
+            }
+            $data['attachments'] = null;
+        }
+
+        $supplier->update($data);
         $supplier->load([
             'supplierType:id,name',
             'country:id,name,code',
@@ -196,6 +227,12 @@ class SuppliersController extends Controller
     public function forceDelete(int $id): JsonResponse
     {
         $supplier = Supplier::onlyTrashed()->findOrFail($id);
+        
+        // Delete associated attachments when permanently deleting supplier
+        if ($supplier->attachments) {
+            $this->deleteAttachments($supplier->attachments);
+        }
+        
         $supplier->forceDelete();
 
         return ApiResponse::delete('Supplier permanently deleted successfully');
@@ -299,5 +336,168 @@ class SuppliersController extends Controller
         });
 
         return ApiResponse::show('Suppliers exported successfully', $exportData);
+    }
+
+    /**
+     * Upload attachments for supplier
+     */
+    public function uploadAttachments(Request $request, Supplier $supplier): JsonResponse
+    {
+        $request->validate([
+            'attachments' => 'required|array|max:10',
+            'attachments.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png,xlsx,xls|max:10240' // 10MB max per file
+        ]);
+
+        $newAttachments = $this->handleAttachments($request->file('attachments'));
+        
+        // Merge with existing attachments
+        $existingAttachments = $supplier->attachments ?? [];
+        $allAttachments = array_merge($existingAttachments, $newAttachments);
+        
+        $supplier->update(['attachments' => $allAttachments]);
+        
+        return ApiResponse::update(
+            'Attachments uploaded successfully',
+            ['attachments' => $allAttachments]
+        );
+    }
+
+    /**
+     * Delete specific attachment
+     */
+    public function deleteAttachment(Request $request, Supplier $supplier): JsonResponse
+    {
+        $request->validate([
+            'attachment_path' => 'required|string'
+        ]);
+
+        $attachments = $supplier->attachments ?? [];
+        $attachmentToDelete = $request->attachment_path;
+        
+        // Remove from array
+        $updatedAttachments = array_filter($attachments, function($attachment) use ($attachmentToDelete) {
+            return $attachment !== $attachmentToDelete;
+        });
+        
+        // Delete physical file
+        if (Storage::disk('public')->exists($attachmentToDelete)) {
+            Storage::disk('public')->delete($attachmentToDelete);
+        }
+        
+        $supplier->update(['attachments' => array_values($updatedAttachments)]);
+        
+        return ApiResponse::update(
+            'Attachment deleted successfully',
+            ['attachments' => array_values($updatedAttachments)]
+        );
+    }
+
+    /**
+     * Download attachment
+     */
+    public function downloadAttachment(Request $request, Supplier $supplier): JsonResponse
+    {
+        $request->validate([
+            'attachment_path' => 'required|string'
+        ]);
+
+        $attachmentPath = $request->attachment_path;
+        
+        // Verify attachment belongs to this supplier
+        if (!in_array($attachmentPath, $supplier->attachments ?? [])) {
+            return response()->json(['message' => 'Attachment not found'], 404);
+        }
+        
+        if (!Storage::disk('public')->exists($attachmentPath)) {
+            return response()->json(['message' => 'File not found'], 404);
+        }
+        
+        return response()->download(Storage::disk('public')->path($attachmentPath));
+    }
+
+    /**
+     * Handle file uploads and return array of file paths
+     */
+    private function handleAttachments(array $files): array
+    {
+        $attachmentPaths = [];
+        
+        foreach ($files as $file) {
+            if ($file instanceof UploadedFile) {
+                $filename = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('suppliers/attachments', $filename, 'public');
+                $attachmentPaths[] = $path;
+            }
+        }
+        
+        return $attachmentPaths;
+    }
+
+    /**
+     * Process attachment paths from request (handles existing paths and new uploads)
+     */
+    private function processAttachmentPaths(array $attachments, ?array $existingAttachments = null): array
+    {
+        $processedPaths = [];
+        
+        foreach ($attachments as $attachment) {
+            if (is_string($attachment)) {
+                // If it's a string, it could be an existing path or base64 data
+                if (strpos($attachment, 'data:') === 0) {
+                    // Handle base64 encoded file
+                    $processedPaths[] = $this->handleBase64Upload($attachment);
+                } else {
+                    // Existing file path
+                    $processedPaths[] = $attachment;
+                }
+            }
+        }
+        
+        return $processedPaths;
+    }
+
+    /**
+     * Handle base64 file upload
+     */
+    private function handleBase64Upload(string $base64Data): string
+    {
+        // Extract file info from base64 string
+        if (preg_match('/^data:([^;]+);base64,(.+)$/', $base64Data, $matches)) {
+            $mimeType = $matches[1];
+            $data = base64_decode($matches[2]);
+            
+            // Determine file extension from mime type
+            $extensions = [
+                'application/pdf' => 'pdf',
+                'application/msword' => 'doc',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'application/vnd.ms-excel' => 'xls',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+            ];
+            
+            $extension = $extensions[$mimeType] ?? 'txt';
+            $filename = time() . '_' . Str::random(10) . '.' . $extension;
+            $path = 'suppliers/attachments/' . $filename;
+            
+            Storage::disk('public')->put($path, $data);
+            
+            return $path;
+        }
+        
+        throw new \InvalidArgumentException('Invalid base64 file data');
+    }
+
+    /**
+     * Delete attachment files from storage
+     */
+    private function deleteAttachments(array $attachments): void
+    {
+        foreach ($attachments as $attachment) {
+            if (Storage::disk('public')->exists($attachment)) {
+                Storage::disk('public')->delete($attachment);
+            }
+        }
     }
 }

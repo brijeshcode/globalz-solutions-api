@@ -89,6 +89,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //suppliers 
         Route::controller(SuppliersController::class)->prefix('suppliers')->name('suppliers.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('export', 'export')->name('export');
             Route::get('trashed', 'trashed')->name('trashed');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
@@ -97,6 +99,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{supplier}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            
+            // Attachment routes
+            Route::post('{supplier}/attachments', 'uploadAttachments')->name('attachments.upload');
+            Route::delete('{supplier}/attachments', 'deleteAttachment')->name('attachments.delete');
+            Route::get('{supplier}/attachments/download', 'downloadAttachment')->name('attachments.download');
         });
 
         Route::prefix('items')->name('items.')->group(function () {
