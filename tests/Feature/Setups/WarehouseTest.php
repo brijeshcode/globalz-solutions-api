@@ -182,6 +182,28 @@ describe('Warehouses API', function () {
             ->assertJsonValidationErrors(['name']);
     });
 
+    it('allows updating warehouse with its own name', function () {
+        $warehouse = Warehouse::factory()->create(['name' => 'Test Warehouse']);
+
+        $response = $this->putJson(route('setups.warehouses.update', $warehouse), [
+            'name' => 'Test Warehouse', // Same name should be allowed
+            'note' => 'Updated note',
+            'address_line_1' => '123 Test St',
+            'city' => 'Test City',
+            'state' => 'Test State',
+            'postal_code' => '12345',
+            'country' => 'Test Country',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Warehouse',
+                    'note' => 'Updated note',
+                ]
+            ]);
+    });
+
     it('can search warehouses', function () {
         Warehouse::factory()->create(['name' => 'Searchable Warehouse']);
         Warehouse::factory()->create(['name' => 'Another Warehouse']);

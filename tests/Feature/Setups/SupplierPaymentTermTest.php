@@ -173,6 +173,23 @@ describe('Supplier Payment Terms API', function () {
             ->assertJsonValidationErrors(['name']);
     });
 
+    it('allows updating payment term with its own name', function () {
+        $paymentTerm = SupplierPaymentTerm::factory()->create(['name' => 'Test Payment Term']);
+
+        $response = $this->putJson(route('setups.supplierPaymentTerm.update', $paymentTerm), [
+            'name' => 'Test Payment Term', // Same name should be allowed
+            'description' => 'Updated description',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Payment Term',
+                    'description' => 'Updated description',
+                ]
+            ]);
+    });
+
     it('validates payment term type', function () {
         $response = $this->postJson(route('setups.supplierPaymentTerm.store'), [
             'name' => 'Test Payment Term',

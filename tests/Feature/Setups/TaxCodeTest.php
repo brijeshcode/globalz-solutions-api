@@ -163,6 +163,27 @@ describe('Tax Codes API', function () {
             ->assertJsonValidationErrors(['code']);
     });
 
+    it('allows updating tax code with its own code', function () {
+        $taxCode = TaxCode::factory()->create(['code' => 'TEST', 'name' => 'Test Tax Code']);
+
+        $response = $this->putJson(route('setups.tax-codes.update', $taxCode), [
+            'code' => 'TEST', // Same code should be allowed
+            'name' => 'Test Tax Code',
+            'description' => 'Updated description',
+            'tax_percent' => 15.00,
+            'type' => 'exclusive',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'code' => 'TEST',
+                    'name' => 'Test Tax Code',
+                    'description' => 'Updated description',
+                ]
+            ]);
+    });
+
     it('can search tax codes', function () {
         TaxCode::factory()->create(['code' => 'VAT', 'name' => 'Value Added Tax']);
         TaxCode::factory()->create(['code' => 'GST', 'name' => 'Goods and Services Tax']);
