@@ -14,9 +14,14 @@ use App\Http\Controllers\Api\Setups\CurrenciesController;
 use App\Http\Controllers\Api\Setups\CountriesController;
 use App\Http\Controllers\Api\Setups\SupplierPaymentTermsController;
 use App\Http\Controllers\Api\Setups\SuppliersController;
+use App\Http\Controllers\Api\DocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+// Public routes (no authentication required)
+Route::get('/documents/{document}/preview-signed', [DocumentController::class, 'previewSigned'])
+    ->name('documents.preview-signed');
 
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
@@ -99,11 +104,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{supplier}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
-            
-            // Attachment routes
-            Route::post('{supplier}/attachments', 'uploadAttachments')->name('attachments.upload');
-            Route::delete('{supplier}/attachments', 'deleteAttachment')->name('attachments.delete');
-            Route::get('{supplier}/attachments/download', 'downloadAttachment')->name('attachments.download');
         });
 
         Route::prefix('items')->name('items.')->group(function () {
@@ -194,5 +194,22 @@ Route::middleware('auth:sanctum')->group(function () {
             });
 
         });
+    });
+
+    // Documents Controller - Global document management
+    Route::controller(DocumentController::class)->prefix('documents')->name('documents.')->group(function () {
+        Route::get('stats', 'stats')->name('stats');
+        Route::get('model-documents', 'getModelDocuments')->name('model-documents');
+        Route::post('bulk-destroy', 'bulkDestroy')->name('bulk-destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-destroy', 'forceDestroy')->name('force-destroy');
+        Route::get('{document}/download', 'download')->name('download');
+        Route::get('{document}/preview', 'preview')->name('preview');
+        Route::get('{document}/preview-url', 'getPreviewUrl')->name('preview-url');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{document}', 'show')->name('show');
+        Route::put('{document}', 'update')->name('update');
+        Route::delete('{document}', 'destroy')->name('destroy');
     });
 });

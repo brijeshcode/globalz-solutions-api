@@ -129,6 +129,11 @@ class ApiResponse
         return self::send($message, 200);
     }
 
+    public static function customError(string $message = '', int $code = 200, mixed $data = []): JsonResponse
+    {
+        return self::send($message, $code, $data);
+    }
+
     public static function custom(string $message = '', int $code = 200, mixed $data = []): JsonResponse
     {
         return self::send($message, $code, $data);

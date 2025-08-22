@@ -4,6 +4,7 @@ namespace App\Models\Setups;
   
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\HasDocuments;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Supplier extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDocuments, Searchable, Sortable;
 
     protected $fillable = [
         'code',
@@ -35,7 +36,6 @@ class Supplier extends Model
         'discount_percentage',
         'currency_id',
         'notes',
-        'attachments',
         'is_active',
     ];
 
@@ -43,7 +43,6 @@ class Supplier extends Model
         'is_active' => 'boolean',
         'opening_balance' => 'decimal:2',
         'discount_percentage' => 'decimal:2',
-        'attachments' => 'array',
     ];
 
     protected $searchable = [
@@ -118,4 +117,5 @@ class Supplier extends Model
     {
         return $query->where('supplier_type_id', $typeId);
     }
+
 }
