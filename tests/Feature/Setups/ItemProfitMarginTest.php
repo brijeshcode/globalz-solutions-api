@@ -209,28 +209,33 @@ describe('ItemProfitMargins API', function () {
             ]);
         });
 
-        it('validates unique name ignoring current record', function () {
+        it('validates unique name when updating', function () {
             $margin1 = ItemProfitMargin::factory()->create(['name' => 'Margin 1']);
             $margin2 = ItemProfitMargin::factory()->create(['name' => 'Margin 2']);
 
-            // Should fail - trying to use existing name
             $response = $this->putJson(route('setups.items.profit-margins.update', $margin2->id), [
                 'name' => 'Margin 1',
                 'margin_percentage' => 15.00,
             ]);
 
-            
-
             $response->assertStatus(422)
                 ->assertJsonValidationErrors(['name']);
+        });
 
-            // Should succeed - using same name as current record
-            $response = $this->putJson(route('setups.items.profit-margins.update', $margin2->id), [
-                'name' => 'Margin 2',
+        it('allows updating profit margin with its own name', function () {
+            $margin = ItemProfitMargin::factory()->create(['name' => 'Test Margin']);
+
+            $response = $this->putJson(route('setups.items.profit-margins.update', $margin->id), [
+                'name' => 'Test Margin', // Same name should be allowed
                 'margin_percentage' => 15.00,
+                'description' => 'Updated description',
             ]);
 
-            $response->assertStatus(200);
+            $response->assertStatus(200)
+                ->assertJsonFragment([
+                    'name' => 'Test Margin',
+                    'description' => 'Updated description',
+                ]);
         });
     });
 

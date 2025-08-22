@@ -137,6 +137,23 @@ describe('Types API', function () {
             ->assertJsonValidationErrors(['name']);
     });
 
+    it('allows updating type with its own name', function () {
+        $type = ItemType::factory()->create(['name' => 'Test Type']);
+
+        $response = $this->putJson(route('setups.items.types.update', $type), [
+            'name' => 'Test Type', // Same name should be allowed
+            'description' => 'Updated description',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Type',
+                    'description' => 'Updated description',
+                ]
+            ]);
+    });
+
     it('can search types', function () {
         ItemType::factory()->create(['name' => 'Searchable Type']);
         ItemType::factory()->create(['name' => 'Another Type']);

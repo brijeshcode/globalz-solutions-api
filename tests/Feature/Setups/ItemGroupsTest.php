@@ -137,6 +137,23 @@ describe('Groups API', function () {
             ->assertJsonValidationErrors(['name']);
     });
 
+    it('allows updating group with its own name', function () {
+        $group = ItemGroup::factory()->create(['name' => 'Test Group']);
+
+        $response = $this->putJson(route('setups.items.groups.update', $group), [
+            'name' => 'Test Group', // Same name should be allowed
+            'description' => 'Updated description',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Group',
+                    'description' => 'Updated description',
+                ]
+            ]);
+    });
+
     it('can search groups', function () {
         ItemGroup::factory()->create(['name' => 'Searchable Group']);
         ItemGroup::factory()->create(['name' => 'Another Group']);

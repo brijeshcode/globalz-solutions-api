@@ -137,6 +137,23 @@ describe('Brands API', function () {
             ->assertJsonValidationErrors(['name']);
     });
 
+    it('allows updating brand with its own name', function () {
+        $brand = ItemBrand::factory()->create(['name' => 'Test Brand']);
+
+        $response = $this->putJson(route('setups.items.brands.update', $brand), [
+            'name' => 'Test Brand', // Same name should be allowed
+            'description' => 'Updated description',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Brand',
+                    'description' => 'Updated description',
+                ]
+            ]);
+    });
+
     it('can search brands', function () {
         ItemBrand::factory()->create(['name' => 'Searchable Brand']);
         ItemBrand::factory()->create(['name' => 'Another Brand']);

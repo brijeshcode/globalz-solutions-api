@@ -248,6 +248,27 @@ describe('Countries API', function () {
             ->assertJsonValidationErrors(['iso2']);
     });
 
+    it('allows updating country with its own name, code and iso2', function () {
+        $country = Country::factory()->create(['name' => 'Test Country', 'code' => 'TST', 'iso2' => 'TS']);
+
+        $response = $this->putJson(route('setups.countries.update', $country), [
+            'name' => 'Test Country', // Same name should be allowed
+            'code' => 'TST', // Same code should be allowed
+            'iso2' => 'TS', // Same iso2 should be allowed
+            'phone_code' => '+999',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Country',
+                    'code' => 'TST',
+                    'iso2' => 'TS',
+                    'phone_code' => '+999',
+                ]
+            ]);
+    });
+
     it('can search countries', function () {
         Country::factory()->create(['name' => 'Searchable Country']);
         Country::factory()->create(['name' => 'Another Country']);

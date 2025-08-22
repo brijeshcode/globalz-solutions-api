@@ -19,7 +19,7 @@ class SupplierTypesUpdateRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('supplier_types', 'name')->ignore($this->supplier_type)
+                Rule::unique('supplier_types', 'name')->ignore($this->supplierType)
             ],
             'description' => 'nullable|string|max:500',
             'is_active' => 'boolean',

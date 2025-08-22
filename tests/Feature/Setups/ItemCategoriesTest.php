@@ -137,6 +137,23 @@ describe('Categories API', function () {
             ->assertJsonValidationErrors(['name']);
     });
 
+    it('allows updating category with its own name', function () {
+        $category = ItemCategory::factory()->create(['name' => 'Test Category']);
+
+        $response = $this->putJson(route('setups.items.categories.update', $category), [
+            'name' => 'Test Category', // Same name should be allowed
+            'description' => 'Updated description',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Category',
+                    'description' => 'Updated description',
+                ]
+            ]);
+    });
+
     it('can search categories', function () {
         ItemCategory::factory()->create(['name' => 'Searchable Category']);
         ItemCategory::factory()->create(['name' => 'Another Category']);

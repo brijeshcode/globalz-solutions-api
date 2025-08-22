@@ -184,15 +184,32 @@ describe('Unit Validation', function () {
             ->assertJsonValidationErrors(['short_name']);
     });
 
-    it('allows update with same name', function () {
+    it('validates unique name when updating', function () {
+        $unit1 = ItemUnit::factory()->create();
+        $unit2 = ItemUnit::factory()->create();
+
+        $response = $this->putJson("/api/setups/items/units/{$unit1->id}", [
+            'name' => $unit2->name,
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['name']);
+    });
+
+    it('allows updating unit with its own name', function () {
         $unit = ItemUnit::factory()->create(['name' => 'Test Unit']);
 
         $response = $this->putJson("/api/setups/items/units/{$unit->id}", [
-            'name' => 'Test Unit',
+            'name' => 'Test Unit', // Same name should be allowed
             'short_name' => 'TU',
+            'description' => 'Updated description',
         ]);
 
-        $response->assertOk();
+        $response->assertOk()
+            ->assertJsonFragment([
+                'name' => 'Test Unit',
+                'description' => 'Updated description',
+            ]);
     });
 });
 

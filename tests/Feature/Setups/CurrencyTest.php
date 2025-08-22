@@ -222,6 +222,26 @@ describe('Currencies API', function () {
             ->assertJsonValidationErrors(['code']);
     });
 
+    it('allows updating currency with its own name and code', function () {
+        $currency = Currency::factory()->create(['name' => 'Test Currency', 'code' => 'TST']);
+
+        $response = $this->putJson(route('setups.currencies.update', $currency), [
+            'name' => 'Test Currency', // Same name should be allowed
+            'code' => 'TST', // Same code should be allowed
+            'symbol' => '$',
+            'symbol_position' => 'before',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Currency',
+                    'code' => 'TST',
+                    'symbol' => '$',
+                ]
+            ]);
+    });
+
     it('can search currencies', function () {
         Currency::factory()->create(['name' => 'Searchable Currency']);
         Currency::factory()->create(['name' => 'Another Currency']);

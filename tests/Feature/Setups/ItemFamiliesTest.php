@@ -137,6 +137,23 @@ describe('Families API', function () {
             ->assertJsonValidationErrors(['name']);
     });
 
+    it('allows updating family with its own name', function () {
+        $family = ItemFamily::factory()->create(['name' => 'Test Family']);
+
+        $response = $this->putJson(route('setups.items.families.update', $family), [
+            'name' => 'Test Family', // Same name should be allowed
+            'description' => 'Updated description',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Test Family',
+                    'description' => 'Updated description',
+                ]
+            ]);
+    });
+
     it('can search families', function () {
         ItemFamily::factory()->create(['name' => 'Searchable Family']);
         ItemFamily::factory()->create(['name' => 'Another Family']);

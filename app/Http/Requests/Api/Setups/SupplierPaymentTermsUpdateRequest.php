@@ -19,7 +19,7 @@ class SupplierPaymentTermsUpdateRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('supplier_payment_terms', 'name')->ignore($this->supplier_payment_term)
+                Rule::unique('supplier_payment_terms', 'name')->ignore($this->supplierPaymentTerm)
             ],
             'description' => 'nullable|string|max:500',
             'days' => 'nullable|integer|min:-365|max:365',
