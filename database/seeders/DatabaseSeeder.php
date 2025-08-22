@@ -13,8 +13,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // Create admin users first
         User::factory()->create([
             'name' => 'Admin Master',
             'email' => 'admin@example.com',
@@ -28,5 +27,8 @@ class DatabaseSeeder extends Seeder
             'role' => 'developer',
             'password' => '123456'
         ]);
+
+        // Seed all setup module data
+        $this->call(SetupSeeder::class);
     }
 }

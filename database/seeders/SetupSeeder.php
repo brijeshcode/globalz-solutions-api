@@ -13,11 +13,26 @@ class SetupSeeder extends Seeder
     {
         $this->command->info('Starting setup seeders...');
 
-        // Seed currencies first (countries reference currencies)
+        // Core setup data (currencies and countries)
         $this->call(CurrencySeeder::class);
-        
-        // Then seed countries
         $this->call(CountrySeeder::class);
+        
+        // Item-related setup data
+        $this->call(ItemUnitSeeder::class);
+        $this->call(ItemTypeSeeder::class);
+        $this->call(ItemFamilySeeder::class);
+        $this->call(ItemGroupSeeder::class);
+        $this->call(ItemBrandSeeder::class);
+        $this->call(ItemCategorySeeder::class);
+        $this->call(ItemProfitMarginSeeder::class);
+        
+        // Tax setup data
+        $this->call(TaxCodeSeeder::class);
+        
+        // Warehouse and supplier setup data
+        $this->call(WarehouseSeeder::class);
+        $this->call(SupplierTypeSeeder::class);
+        $this->call(SupplierPaymentTermSeeder::class);
 
         $this->command->info('Setup seeders completed successfully!');
     }
