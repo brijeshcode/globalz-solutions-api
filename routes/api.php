@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Setups\CurrenciesController;
 use App\Http\Controllers\Api\Setups\CountriesController;
 use App\Http\Controllers\Api\Setups\SupplierPaymentTermsController;
 use App\Http\Controllers\Api\Setups\SuppliersController;
+use App\Http\Controllers\Api\Setups\TaxCodesController;
 use App\Http\Controllers\Api\DocumentController;
 use Illuminate\Support\Facades\Route;
 
@@ -104,6 +105,20 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{supplier}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Tax Codes Controller
+        Route::controller(TaxCodesController::class)->prefix('tax-codes')->name('tax-codes.')->group(function () {
+            Route::get('active', 'active')->name('active');
+            Route::get('default', 'getDefault')->name('default');
+            Route::post('bulk-destroy', 'bulkDestroy')->name('bulk-destroy');
+            Route::post('{taxCode}/calculate-tax', 'calculateTax')->name('calculate-tax');
+            Route::patch('{taxCode}/set-default', 'setDefault')->name('set-default');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{taxCode}', 'show')->name('show');
+            Route::put('{taxCode}', 'update')->name('update');
+            Route::delete('{taxCode}', 'destroy')->name('destroy');
         });
 
         Route::prefix('items')->name('items.')->group(function () {
