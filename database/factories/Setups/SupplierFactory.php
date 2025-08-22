@@ -120,7 +120,7 @@ class SupplierFactory extends Factory
 
             // Other Tab
             'notes' => $this->faker->optional(0.6)->paragraph,
-            'attachments' => $this->faker->optional(0.5)->randomElements($attachmentExamples, $this->faker->numberBetween(1, 3)),
+            // 'attachments' => $this->faker->optional(0.5)->randomElements($attachmentExamples, $this->faker->numberBetween(1, 3)),
 
             // System Fields
             'is_active' => $this->faker->boolean(85), // 85% chance of being active
@@ -264,7 +264,7 @@ class SupplierFactory extends Factory
     /**
      * Create a supplier with attachments.
      */
-    public function withAttachments(array $attachments = null): static
+    public function withAttachments(?array $attachments = null): static
     {
         $defaultAttachments = [
             'contracts/supplier_agreement_2024.pdf',

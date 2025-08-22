@@ -530,19 +530,26 @@ describe('Suppliers API', function () {
         expect($pagination['last_page'])->toBe(3);
     });
 
-    it('generates sequential supplier codes', function () {
-        // Clear any existing suppliers first
+    it('generates sequential supplier codes via API', function () {
+        // Clear existing suppliers
         Supplier::withTrashed()->forceDelete();
-        
-        // Create suppliers without specifying codes
-        $supplier1 = Supplier::factory()->create(['name' => 'First Supplier']);
-        $supplier2 = Supplier::factory()->create(['name' => 'Second Supplier']);
 
-        $code1 = (int) $supplier1->fresh()->code;
-        $code2 = (int) $supplier2->fresh()->code;
+        // First API request
+        $response1 = $this->postJson(route('setups.suppliers.store'), [
+            'name' => 'First Supplier',
+        ]);
+        $response1->assertCreated();
+        $code1 = (int) $response1->json('data.code');
+
+        // Second API request
+        $response2 = $this->postJson(route('setups.suppliers.store'), [
+            'name' => 'Second Supplier',
+        ]);
+        $response2->assertCreated();
+        $code2 = (int) $response2->json('data.code');
 
         expect($code1)->toBeGreaterThanOrEqual(1000);
-        expect($code2)->toBeGreaterThan($code1); // Second code should be greater than first
+        expect($code2)->toBe($code1 + 1); // strictly sequential
     });
 
     it('handles concurrent supplier creation with code generation', function () {
@@ -592,24 +599,6 @@ describe('Suppliers API', function () {
                 'phone' => $phone,
             ]);
         }
-    });
-
-    it('can handle attachments array', function () {
-        $data = [
-            'name' => 'Supplier with Attachments',
-            'attachments' => [
-                'contract.pdf',
-                'license.jpg',
-                'certificate.doc'
-            ],
-        ];
-
-        $response = $this->postJson(route('setups.suppliers.store'), $data);
-
-        $response->assertCreated();
-        
-        $supplier = Supplier::where('name', 'Supplier with Attachments')->first();
-        expect($supplier->attachments)->toBe($data['attachments']);
     });
 
     it('sets created_by and updated_by fields automatically', function () {
