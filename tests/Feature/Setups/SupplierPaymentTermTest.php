@@ -134,6 +134,36 @@ describe('Supplier Payment Terms API', function () {
         ]);
     });
 
+    it('can update a supplier payment term with zero days and discount days ', function () {
+        $paymentTerm = SupplierPaymentTerm::factory()->create();
+        $data = [
+            'name' => 'Updated Net 0',
+            'description' => 'Updated payment terms',
+            'days' => 0,
+            'discount_days' => 0,
+            'type' => 'net',
+        ];
+
+        $response = $this->putJson(route('setups.supplierPaymentTerm.update', $paymentTerm), $data);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'name' => 'Updated Net 0',
+                    'description' => 'Updated payment terms',
+                    'days' => 0,
+                    'discount_days' => 0,
+
+                ]
+            ]);
+
+        $this->assertDatabaseHas('supplier_payment_terms', [
+            'id' => $paymentTerm->id,
+            'name' => 'Updated Net 0',
+            'days' => 0,
+        ]);
+    });
+
     it('can delete a supplier payment term', function () {
         $paymentTerm = SupplierPaymentTerm::factory()->create();
 
