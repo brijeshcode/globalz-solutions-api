@@ -68,14 +68,14 @@ class SettingsSeeder extends Seeder
             [
                 'group_name' => 'system',
                 'key_name' => 'date_format',
-                'value' => 'Y-m-d',
+                'value' => 'd-m-Y',
                 'data_type' => Setting::TYPE_STRING,
                 'description' => 'Default date format for display',
             ],
             [
                 'group_name' => 'system',
-                'key_name' => 'currency_symbol',
-                'value' => '$',
+                'key_name' => 'default_currency',
+                'value' => '1',
                 'data_type' => Setting::TYPE_STRING,
                 'description' => 'Default currency symbol',
             ],

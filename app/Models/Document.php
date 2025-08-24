@@ -58,7 +58,8 @@ class Document extends Model
     protected $appends = [
         'file_size_human',
         'thumbnail_url',
-        'download_url'
+        'download_url',
+        'preview_url'
     ];
 
     /**
@@ -172,14 +173,26 @@ class Document extends Model
      */
     public function getThumbnailUrlAttribute(): string
     {
-        // For images, return the actual image
+        // For images, return a signed URL that doesn't require authentication
         if (str_starts_with($this->mime_type, 'image/')) {
-            return Storage::disk('public')->url($this->file_path);
+            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                'documents.preview-signed',
+                now()->addHours(24), // Valid for 24 hours
+                ['document' => $this->id]
+            );
         }
         
-        // Return default thumbnails based on file type
+        // For PDFs, also use signed URL for preview
+        if ($this->mime_type === 'application/pdf') {
+            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                'documents.preview-signed',
+                now()->addHours(24), // Valid for 24 hours
+                ['document' => $this->id]
+            );
+        }
+        
+        // Return default thumbnails based on file type for other files
         return match($this->file_extension) {
-            'pdf' => '/images/file-types/pdf.png',
             'doc', 'docx' => '/images/file-types/word.png',
             'xls', 'xlsx' => '/images/file-types/excel.png',
             'ppt', 'pptx' => '/images/file-types/powerpoint.png',
@@ -190,11 +203,29 @@ class Document extends Model
     }
 
     /**
+     * Get preview URL for the document (for modal/full view).
+     */
+    public function getPreviewUrlAttribute(): string
+    {
+        // For images and PDFs, return signed URL for preview
+        if ($this->isImage() || $this->isPdf()) {
+            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                'documents.preview-signed',
+                now()->addHours(24),
+                ['document' => $this->id]
+            );
+        }
+        
+        // For other file types, return download URL
+        return $this->download_url;
+    }
+
+    /**
      * Get download URL for the document.
      */
     public function getDownloadUrlAttribute(): string
     {
-        return route('documents.download', $this->id);
+        return url("/api/documents/{$this->id}/download");
     }
 
     /**

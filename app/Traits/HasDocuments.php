@@ -291,8 +291,11 @@ trait HasDocuments
             // Generate filename: modeltype-id-date-time-originalname.extension
             $filename = "{$modelName}-{$modelId}-{$currentDate}-{$currentTime}-{$cleanOriginalName}.{$extension}";
             
-            // Determine storage path: documents/YYYY/MM
-            $basePath = 'documents/' . date('Y/m');
+            // Get plural module name for folder organization
+            $moduleName = $this->getModuleFolderName();
+            
+            // Determine storage path: documents/YYYY/MM/module-name
+            $basePath = 'documents/' . date('Y/m') . '/' . $moduleName;
             
             // Store file
             $filePath = $file->storeAs($basePath, $filename, 'public');
@@ -334,5 +337,29 @@ trait HasDocuments
 
             return null;
         }
+    }
+
+    /**
+     * Get the module folder name for file organization
+     * Override this method in models that need custom folder names
+     */
+    protected function getModuleFolderName(): string
+    {
+        $className = class_basename($this);
+        
+        // Convert class name to plural form for folder
+        $folderName = strtolower($className);
+        
+        // Handle common plural forms
+        if (substr($folderName, -1) === 'y') {
+            $folderName = substr($folderName, 0, -1) . 'ies';
+        } elseif (in_array(substr($folderName, -1), ['s', 'x', 'z']) || 
+                  in_array(substr($folderName, -2), ['ch', 'sh'])) {
+            $folderName .= 'es';
+        } else {
+            $folderName .= 's';
+        }
+        
+        return $folderName;
     }
 }

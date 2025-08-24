@@ -80,14 +80,11 @@ class DocumentController extends Controller
             // Generate filename: modeltype-id-date-time-originalname.extension
             $fileName = "{$modelName}-{$modelId}-{$currentDate}-{$currentTime}-{$cleanOriginalName}.{$extension}";
             
-            // Determine storage path
-            $basePath = $modelName . '/documents';
+            // Get plural module name for folder organization
+            $moduleName = $this->getModuleFolderName($modelName);
             
-            if (!empty($validated['folder'])) {
-                $basePath .= '/' . $validated['folder'];
-            }
-            
-            $basePath .= '/' . date('Y/m');
+            // Determine storage path: documents/YYYY/MM/module-name
+            $basePath = 'documents/' . date('Y/m') . '/' . $moduleName;
             
             // Store the file
             $filePath = $file->storeAs($basePath, $fileName, 'public');
@@ -163,13 +160,11 @@ class DocumentController extends Controller
             // Generate filename: modeltype-id-date-time-originalname.extension
             $fileName = "{$modelName}-{$modelId}-{$currentDate}-{$currentTime}-{$cleanOriginalName}.{$extension}";
             
-            // Use existing folder structure or provided folder
-            $basePath = dirname($document->file_path);
-            if (!empty($validated['folder'])) {
-                $documentableType = $document->documentable_type;
-                $modelName = class_basename($documentableType);
-                $basePath = strtolower($modelName) . '/documents/' . $validated['folder'] . '/' . date('Y/m');
-            }
+            // Get plural module name for folder organization
+            $moduleName = $this->getModuleFolderName($modelName);
+            
+            // Use new file structure: documents/YYYY/MM/module-name
+            $basePath = 'documents/' . date('Y/m') . '/' . $moduleName;
             
             $filePath = $file->storeAs($basePath, $fileName, 'public');
             
@@ -530,5 +525,26 @@ class DocumentController extends Controller
         }
         
         return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+    /**
+     * Get the module folder name for file organization
+     */
+    protected function getModuleFolderName(string $modelName): string
+    {
+        // Convert class name to plural form for folder
+        $folderName = strtolower($modelName);
+        
+        // Handle common plural forms
+        if (substr($folderName, -1) === 'y') {
+            $folderName = substr($folderName, 0, -1) . 'ies';
+        } elseif (in_array(substr($folderName, -1), ['s', 'x', 'z']) || 
+                  in_array(substr($folderName, -2), ['ch', 'sh'])) {
+            $folderName .= 'es';
+        } else {
+            $folderName .= 's';
+        }
+        
+        return $folderName;
     }
 }

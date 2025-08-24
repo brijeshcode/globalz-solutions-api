@@ -14,11 +14,13 @@ class SettingsHelper
      * @param string $group
      * @param string $key
      * @param mixed $default
+     * @param bool $autoCreate
+     * @param string $dataType
      * @return mixed
      */
-    public static function get(string $group, string $key, $default = null)
+    public static function get(string $group, string $key, $default = null, $autoCreate = false, string $dataType = Setting::TYPE_STRING)
     {
-        return Setting::get($group, $key, $default);
+        return Setting::get($group, $key, $default, $autoCreate, $dataType);
     }
 
     /**
@@ -184,9 +186,9 @@ class SettingsHelper
     /**
      * Item code generation helpers
      */
-    public static function getNextItemCode(): string
+    public static function getCurrentItemCode(): string
     {
-        return (string) self::get('items', 'code_counter', 5000);
+        return (string) Setting::get('items', 'code_counter', 5000, true, Setting::TYPE_NUMBER);
     }
 
     public static function incrementItemCode(): int
@@ -196,7 +198,7 @@ class SettingsHelper
 
     public static function getNextSupplierCode(): string
     {
-        return (string) self::get('suppliers', 'code_counter', 1000);
+        return (string) Setting::get('suppliers', 'code_counter', 1000, true, Setting::TYPE_NUMBER);
     }
 
     public static function incrementSupplierCode(): int

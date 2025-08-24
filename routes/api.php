@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Setups\CountriesController;
 use App\Http\Controllers\Api\Setups\SupplierPaymentTermsController;
 use App\Http\Controllers\Api\Setups\SuppliersController;
 use App\Http\Controllers\Api\Setups\TaxCodesController;
+use App\Http\Controllers\Api\Items\ItemsController;
 use App\Http\Controllers\Api\DocumentController;
 use Illuminate\Support\Facades\Route;
 
@@ -209,6 +210,23 @@ Route::middleware('auth:sanctum')->group(function () {
             });
 
         });
+
+        // Items Controller
+        Route::controller(ItemsController::class)->prefix('items')->name('items.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('export', 'export')->name('export');
+            Route::get('next-code', 'getNextCode')->name('next-code');
+            Route::post('check-code', 'checkCodeAvailability')->name('check-code');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{item}', 'show')->name('show');
+            Route::put('{item}', 'update')->name('update');
+            Route::delete('{item}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
     });
 
     // Documents Controller - Global document management

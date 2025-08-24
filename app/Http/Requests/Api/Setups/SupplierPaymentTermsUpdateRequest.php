@@ -22,7 +22,7 @@ class SupplierPaymentTermsUpdateRequest extends FormRequest
                 Rule::unique('supplier_payment_terms', 'name')->ignore($this->supplierPaymentTerm)
             ],
             'description' => 'nullable|string|max:500',
-            'days' => 'nullable|integer|min:-365|max:365',
+            'days' => 'nullable|numeric|min:-365|max:365',
             'type' => [
                 'nullable',
                 Rule::in(['net', 'due_on_receipt', 'cash_on_delivery', 'advance', 'credit'])

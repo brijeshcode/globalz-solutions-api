@@ -5,7 +5,7 @@ namespace App\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static mixed get(string $group, string $key, $default = null)
+ * @method static mixed get(string $group, string $key, $default = null, bool $autoCreate = false, string $dataType = 'string')
  * @method static \App\Models\Setting set(string $group, string $key, $value, string $dataType = 'string', string $description = null)
  * @method static mixed userGet(int $userId = null, string $key, $default = null, string $globalGroup = 'system')
  * @method static \App\Models\UserSetting userSet(int $userId = null, string $key, $value, string $dataType = 'string', string $description = null)
@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static string userTimezone(int $userId = null)
  * @method static string userLayout(int $userId = null)
  * @method static bool userNotificationsEnabled(int $userId = null)
- * @method static string getNextItemCode()
+ * @method static string getCurrentItemCode()
  * @method static int incrementItemCode()
  * @method static string getNextSupplierCode()
  * @method static int incrementSupplierCode()

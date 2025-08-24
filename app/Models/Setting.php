@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 
 class Setting extends Model
 {
@@ -48,16 +49,29 @@ class Setting extends Model
     /**
      * Get setting value by group and key
      */
-    public static function get(string $group, string $key, $default = null)
+    public static function get(string $group, string $key, $default = null, $autoCreate = false, string $dataType = self::TYPE_STRING)
     {
         $cacheKey = self::CACHE_PREFIX . $group . ':' . $key;
         
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($group, $key, $default) {
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($group, $key, $default, $autoCreate, $dataType) {
             $setting = self::where('group_name', $group)
                           ->where('key_name', $key)
                           ->first();
             
             if (!$setting) {
+                if ($autoCreate && $default !== null) {
+                    // Auto-create the setting with the default value
+                    $setting = self::create([
+                        'group_name' => $group,
+                        'key_name' => $key,
+                        'value' => $default,
+                        'data_type' => $dataType,
+                        'description' => "Auto-created setting for {$group}.{$key}"
+                    ]);
+                    
+                    return $setting->getCastValue();
+                }
+                
                 return $default;
             }
             
@@ -91,7 +105,7 @@ class Setting extends Model
      */
     public static function incrementValue(string $group, string $key, int $amount = 1): int
     {
-        return \DB::transaction(function () use ($group, $key, $amount) {
+        return DB::transaction(function () use ($group, $key, $amount) {
             $setting = self::where('group_name', $group)
                           ->where('key_name', $key)
                           ->lockForUpdate()
