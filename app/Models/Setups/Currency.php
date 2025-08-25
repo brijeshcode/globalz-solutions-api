@@ -72,4 +72,9 @@ class Currency extends Model
     {
         return $this->name . ' (' . $this->code . ')';
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

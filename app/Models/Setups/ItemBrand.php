@@ -40,4 +40,9 @@ class ItemBrand extends Model
 
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

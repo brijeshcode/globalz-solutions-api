@@ -31,5 +31,9 @@ class DatabaseSeeder extends Seeder
         // Seed all setup module data
         $this->call(SetupSeeder::class);
         $this->call(SettingsSeeder::class);
+        
+        // Seed development data
+        $this->call(SupplierSeeder::class);
+        $this->call(ItemSeeder::class);
     }
 }
