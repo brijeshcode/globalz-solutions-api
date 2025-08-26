@@ -24,6 +24,7 @@ return new class extends Migration
             $table->unsignedBigInteger('item_family_id')->nullable();
             $table->unsignedBigInteger('item_group_id')->nullable();
             $table->unsignedBigInteger('item_category_id')->nullable();
+            $table->unsignedBigInteger('item_profit_margin_id')->nullable();
             $table->unsignedBigInteger('item_brand_id')->nullable();
             $table->unsignedBigInteger('item_unit_id'); // Required - references item_units table
             $table->unsignedBigInteger('supplier_id')->nullable();
@@ -63,6 +64,7 @@ return new class extends Migration
             $table->foreign('item_category_id')->references('id')->on('item_categories')->onDelete('set null');
             $table->foreign('item_brand_id')->references('id')->on('item_brands')->onDelete('set null');
             $table->foreign('item_unit_id')->references('id')->on('item_units')->onDelete('restrict');
+            $table->foreign('item_profit_margin_id')->references('id')->on('item_profit_margins')->onDelete('set null');
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('set null');
             $table->foreign('tax_code_id')->references('id')->on('tax_codes')->onDelete('restrict');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');

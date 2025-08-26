@@ -8,6 +8,7 @@ use App\Models\Setups\ItemBrand;
 use App\Models\Setups\ItemCategory;
 use App\Models\Setups\ItemFamily;
 use App\Models\Setups\ItemGroup;
+use App\Models\Setups\ItemProfitMargin;
 use App\Models\Setups\ItemType;
 use App\Models\Setups\ItemUnit;
 use App\Models\Setups\Supplier;
@@ -37,6 +38,7 @@ class Item extends Model
         'item_category_id',
         'item_brand_id',
         'item_unit_id',
+        'item_profit_margin_id',
         'supplier_id',
         'tax_code_id',
         'volume',
@@ -77,6 +79,7 @@ class Item extends Model
         'short_name',
         'description',
         'item_type_id',
+        'item_profit_margin_id',
         'item_family_id',
         'item_group_id',
         'item_category_id',
@@ -135,6 +138,11 @@ class Item extends Model
     public function itemUnit(): BelongsTo
     {
         return $this->belongsTo(ItemUnit::class);
+    }
+
+    public function itemProfitMargin(): BelongsTo
+    {
+        return $this->belongsTo(ItemProfitMargin::class);
     }
 
     public function supplier(): BelongsTo
@@ -196,6 +204,11 @@ class Item extends Model
     public function scopeByGroup($query, $groupId)
     {
         return $query->where('item_group_id', $groupId);
+    }
+
+    public function scopeByProfitMargin($query, $profitMarginId)
+    {
+        return $query->where('item_profit_margin_id', $profitMarginId);
     }
 
     public function scopeByCategory($query, $categoryId)

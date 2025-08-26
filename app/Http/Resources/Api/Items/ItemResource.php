@@ -53,6 +53,12 @@ class ItemResource extends JsonResource
                     'name' => $this->itemBrand->name,
                 ] : null;
             }),
+            'item_profit_margin' => $this->whenLoaded('itemProfitMargin', function () {
+                return $this->itemProfitMargin ? [
+                    'id' => $this->itemProfitMargin->id,
+                    'name' => $this->itemProfitMargin->name,
+                ] : null;
+            }),
             'item_unit' => $this->whenLoaded('itemUnit', function () {
                 return [
                     'id' => $this->itemUnit->id,
@@ -71,7 +77,7 @@ class ItemResource extends JsonResource
                 return [
                     'id' => $this->taxCode->id,
                     'name' => $this->taxCode->name,
-                    'rate' => $this->taxCode->rate ?? null,
+                    'rate' => $this->taxCode->tax_percent ?? null,
                 ];
             }),
 

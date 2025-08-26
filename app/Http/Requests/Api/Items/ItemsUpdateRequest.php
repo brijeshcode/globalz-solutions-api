@@ -45,6 +45,7 @@ class ItemsUpdateRequest extends FormRequest
             'item_unit_id' => 'sometimes|required|exists:item_units,id',
             'supplier_id' => 'sometimes|nullable|exists:suppliers,id',
             'tax_code_id' => 'sometimes|required|exists:tax_codes,id',
+            'item_profit_margin_id' => 'sometimes|nullable|exists:item_profit_margins,id',
 
             // Physical Properties
             'volume' => 'sometimes|nullable|numeric|min:0|max:999999.9999',
@@ -91,6 +92,7 @@ class ItemsUpdateRequest extends FormRequest
             'item_type_id.exists' => 'The selected item type does not exist.',
             'item_unit_id.required' => 'The item unit is required.',
             'item_unit_id.exists' => 'The selected item unit does not exist.',
+            'item_profit_margin_id.exists' => 'The selected item profit margin does not exist.',
             'tax_code_id.required' => 'The tax code is required.',
             'tax_code_id.exists' => 'The selected tax code does not exist.',
             'item_family_id.exists' => 'The selected item family does not exist.',
@@ -121,6 +123,7 @@ class ItemsUpdateRequest extends FormRequest
             'item_family_id' => 'item family',
             'item_group_id' => 'item group',
             'item_category_id' => 'item category',
+            'item_profit_margins' => 'item profit margin',
             'item_brand_id' => 'item brand',
             'item_unit_id' => 'item unit',
             'supplier_id' => 'supplier',
