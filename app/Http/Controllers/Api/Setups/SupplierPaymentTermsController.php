@@ -27,10 +27,6 @@ class SupplierPaymentTermsController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        if ($request->has('type')) {
-            $query->where('type', $request->input('type'));
-        }
-
         $supplierPaymentTerms = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(

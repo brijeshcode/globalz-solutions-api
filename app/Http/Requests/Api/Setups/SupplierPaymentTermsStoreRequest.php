@@ -20,7 +20,8 @@ class SupplierPaymentTermsStoreRequest extends FormRequest
             'days' => 'nullable|integer|min:-365|max:365',
             'type' => [
                 'nullable',
-                Rule::in(['net', 'due_on_receipt', 'cash_on_delivery', 'advance', 'credit'])
+                'max:255',
+                'string',
             ],
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_days' => 'nullable|integer|min:0|max:365',
@@ -38,7 +39,7 @@ class SupplierPaymentTermsStoreRequest extends FormRequest
             'days.integer' => 'Days must be a valid number.',
             'days.min' => 'Days cannot be less than -365.',
             'days.max' => 'Days cannot exceed 365.',
-            'type.in' => 'Invalid payment term type selected.',
+            'type.max' => 'payment term type cannot exceed 255 chatacters.',
             'discount_percentage.numeric' => 'Discount percentage must be a valid number.',
             'discount_percentage.min' => 'Discount percentage cannot be negative.',
             'discount_percentage.max' => 'Discount percentage cannot exceed 100%.',

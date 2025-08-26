@@ -220,15 +220,6 @@ describe('Supplier Payment Terms API', function () {
             ]);
     });
 
-    it('validates payment term type', function () {
-        $response = $this->postJson(route('setups.supplierPaymentTerm.store'), [
-            'name' => 'Test Payment Term',
-            'type' => 'invalid_type',
-        ]);
-
-        $response->assertUnprocessable()
-            ->assertJsonValidationErrors(['type']);
-    });
 
     it('validates days range', function () {
         $response = $this->postJson(route('setups.supplierPaymentTerm.store'), [
