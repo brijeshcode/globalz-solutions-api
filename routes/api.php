@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Setups\ItemProfitMarginsController;
 use App\Http\Controllers\Api\Setups\ItemTypesController;
 use App\Http\Controllers\Api\Setups\ItemUnitController;
 use App\Http\Controllers\Api\Setups\SupplierTypesController;
+use App\Http\Controllers\Api\Setups\Customers\CustomerTypesController;
 use App\Http\Controllers\Api\Setups\WarehousesController;
 use App\Http\Controllers\Api\Setups\CurrenciesController;
 use App\Http\Controllers\Api\Setups\CountriesController;
@@ -82,6 +83,21 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
 
+        // Customer Types Controller
+        Route::prefix('customers')->name('customer.')->group(function() {
+
+            Route::controller(CustomerTypesController::class)->prefix('types')->name('types.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{customerType}', 'show')->name('show');
+                Route::put('{customerType}', 'update')->name('update');
+                Route::delete('{customerType}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+        });
+            
         // Supplier Payment Term Controller
         Route::controller(SupplierPaymentTermsController::class)->prefix('supplier-payment-terms')->name('supplierPaymentTerm.')->group(function () {
             Route::get('trashed', 'trashed')->name('trashed');
