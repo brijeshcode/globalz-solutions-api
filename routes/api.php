@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Setups\SuppliersController;
 use App\Http\Controllers\Api\Setups\TaxCodesController;
 use App\Http\Controllers\Api\Items\ItemsController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\Setups\Customers\CustomerGroupsController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -84,7 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         // Customer Types Controller
-        Route::prefix('customers')->name('customer.')->group(function() {
+        Route::prefix('customers')->name('customers.')->group(function() {
 
             Route::controller(CustomerTypesController::class)->prefix('types')->name('types.')->group(function () {
                 Route::get('trashed', 'trashed')->name('trashed');
@@ -93,6 +94,17 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('{customerType}', 'show')->name('show');
                 Route::put('{customerType}', 'update')->name('update');
                 Route::delete('{customerType}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            Route::controller(CustomerGroupsController::class)->prefix('groups')->name('groups.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{customerGroup}', 'show')->name('show');
+                Route::put('{customerGroup}', 'update')->name('update');
+                Route::delete('{customerGroup}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
