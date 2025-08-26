@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\Items\ItemsController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerGroupsController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerPaymentTermsController;
+use App\Http\Controllers\Api\Setups\Customers\CustomerProvincesController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use Illuminate\Support\Facades\Route;
 
@@ -107,6 +108,17 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('{customerZone}', 'show')->name('show');
                 Route::put('{customerZone}', 'update')->name('update');
                 Route::delete('{customerZone}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            Route::controller(CustomerProvincesController::class)->prefix('provinces')->name('provinces.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{customerProvince}', 'show')->name('show');
+                Route::put('{customerProvince}', 'update')->name('update');
+                Route::delete('{customerProvince}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
