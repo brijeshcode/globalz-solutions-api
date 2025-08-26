@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Setups\TaxCodesController;
 use App\Http\Controllers\Api\Items\ItemsController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerGroupsController;
+use App\Http\Controllers\Api\Setups\Customers\CustomerPaymentTermsController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -105,6 +106,17 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('{customerGroup}', 'show')->name('show');
                 Route::put('{customerGroup}', 'update')->name('update');
                 Route::delete('{customerGroup}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            Route::controller(CustomerPaymentTermsController::class)->prefix('payment-terms')->name('paymentTerms.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{customerPaymentTerm}', 'show')->name('show');
+                Route::put('{customerPaymentTerm}', 'update')->name('update');
+                Route::delete('{customerPaymentTerm}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
