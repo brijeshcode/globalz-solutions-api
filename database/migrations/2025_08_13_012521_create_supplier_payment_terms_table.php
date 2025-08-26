@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('name')->unique();
             $table->text('description')->nullable();
             $table->integer('days')->nullable()->comment('Number of days for payment');
-            $table->enum('type', ['net', 'due_on_receipt', 'cash_on_delivery', 'advance', 'credit'])->nullable();
+            $table->string('type')->nullable()->comment("['net', 'due_on_receipt', 'cash_on_delivery', 'advance', 'credit'] and any other if user set");
             $table->decimal('discount_percentage', 5, 2)->nullable()->comment('Early payment discount percentage');
             $table->integer('discount_days')->nullable()->comment('Days within which discount applies');
             $table->boolean('is_active')->default(true);
