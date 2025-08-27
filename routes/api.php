@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerGroupsController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerPaymentTermsController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerProvincesController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
+use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -141,6 +142,20 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('{customerPaymentTerm}', 'show')->name('show');
                 Route::put('{customerPaymentTerm}', 'update')->name('update');
                 Route::delete('{customerPaymentTerm}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+        });
+
+        Route::prefix('employees')->name('employees.')->group(function() {
+
+            Route::controller(DepartmentsController::class)->prefix('departments')->name('departments.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{department}', 'show')->name('show');
+                Route::put('{department}', 'update')->name('update');
+                Route::delete('{department}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
