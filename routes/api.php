@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerPaymentTermsController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerProvincesController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
+use App\Http\Controllers\Api\Employees\EmployeesController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -37,6 +38,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    // Employees Controller
+    Route::controller(EmployeesController::class)->prefix('employees')->name('employees.')->group(function () {
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{employee}', 'show')->name('show');
+        Route::put('{employee}', 'update')->name('update');
+        Route::delete('{employee}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
 
     Route::prefix('setups')->name('setups.')->group(function () {
         
@@ -160,6 +173,8 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
         });
+
+        
             
         // Supplier Payment Term Controller
         Route::controller(SupplierPaymentTermsController::class)->prefix('supplier-payment-terms')->name('supplierPaymentTerm.')->group(function () {
