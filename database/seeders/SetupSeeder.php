@@ -17,6 +17,9 @@ class SetupSeeder extends Seeder
         $this->call(CurrencySeeder::class);
         $this->call(CountrySeeder::class);
         
+        // Employee setup data
+        $this->call(DepartmentSeeder::class);
+        
         // Item-related setup data
         $this->call(ItemUnitSeeder::class);
         $this->call(ItemTypeSeeder::class);

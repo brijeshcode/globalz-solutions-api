@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Customers\CustomersController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
 use App\Http\Controllers\Api\Setups\ItemCategoriesController;
 use App\Http\Controllers\Api\Setups\ItemFamiliesController;
@@ -47,6 +48,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{employee}', 'show')->name('show');
         Route::put('{employee}', 'update')->name('update');
         Route::delete('{employee}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
+
+    Route::controller(CustomersController::class)->prefix('customers')->name('customers.')->group(function () {
+        Route::get('stats', 'stats')->name('stats');
+        Route::get('export', 'export')->name('export');
+        Route::get('next-code', 'getNextCode')->name('next-code');
+        Route::get('salespersons', 'getSalespersons')->name('salespersons');
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{customer}', 'show')->name('show');
+        Route::put('{customer}', 'update')->name('update');
+        Route::delete('{customer}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });

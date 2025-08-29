@@ -2,6 +2,8 @@
 
 namespace App\Models\Employees;
 
+use App\Models\Setups\Customers\CustomerZone;
+use App\Models\Setups\Employees\Department;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
@@ -9,6 +11,8 @@ use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Employee extends Model
@@ -60,20 +64,20 @@ class Employee extends Model
         return $query->where('is_active', true);
     }
 
-    public function department()
+    public function department(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Setups\Employees\Department::class);
+        return $this->belongsTo(Department::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class);
     }
 
-    public function zones()
+    public function zones():BelongsToMany
     {
         return $this->belongsToMany(
-            \App\Models\Setups\Customers\CustomerZone::class,
+            CustomerZone::class,
             'employee_zone_assigns',
             'employee_id',
             'customer_zone_id'

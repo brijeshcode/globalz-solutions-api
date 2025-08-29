@@ -123,4 +123,35 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Customer Code Settings
+    |--------------------------------------------------------------------------
+    |
+    | These configuration options determine the starting code number for
+    | customer auto-generation. The customer code will start from this
+    | number and increment sequentially for each new customer.
+    |
+    */
+
+    'customer_code_start' => (int) env('CUSTOMER_CODE_START', 50000000),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Departments
+    |--------------------------------------------------------------------------
+    |
+    | These are the default departments that will be created during seeding.
+    | When selecting salespersons, only employees from Sales department will
+    | be shown to maintain proper role segregation.
+    |
+    */
+
+    'default_departments' => [
+        'Sales',
+        'Accounting', 
+        'Shipping',
+        'Administration'
+    ],
+
 ];

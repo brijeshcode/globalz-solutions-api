@@ -80,6 +80,22 @@ class SettingsSeeder extends Seeder
                 'description' => 'Default currency symbol',
             ],
 
+            // Customers Group
+            [
+                'group_name' => 'customers',
+                'key_name' => 'code_counter',
+                'value' => config('app.customer_code_start', 50000000),
+                'data_type' => Setting::TYPE_NUMBER,
+                'description' => 'Next customer code counter starting from ' . config('app.customer_code_start', 50000000),
+            ],
+            [
+                'group_name' => 'customers',
+                'key_name' => 'default_page_size',
+                'value' => '20',
+                'data_type' => Setting::TYPE_NUMBER,
+                'description' => 'Default pagination size for customers listing',
+            ],
+
             // Suppliers Group  
             [
                 'group_name' => 'suppliers',
