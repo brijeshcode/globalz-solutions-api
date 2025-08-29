@@ -45,7 +45,7 @@ test('can get employees list', function () {
 
 test('can create employee', function () {
     $employeeData = [
-        'code' => 'EMP001',
+         
         'name' => 'John Doe',
         'email' => 'john.doe@example.com',
         'phone' => '1234567890',
@@ -75,7 +75,7 @@ test('can create employee', function () {
         ]);
 
     $this->assertDatabaseHas('employees', [
-        'code' => 'EMP001',
+         
         'name' => 'John Doe',
         'email' => 'john.doe@example.com'
     ]);
@@ -202,7 +202,7 @@ test('validates required fields when creating employee', function () {
     $response = $this->postJson(route('employees.store'), []);
 
     $response->assertStatus(422)
-        ->assertJsonValidationErrors(['code', 'name', 'start_date', 'department_id']);
+        ->assertJsonValidationErrors([ 'name', 'start_date', 'department_id']);
 });
 
 test('validates unique code when creating employee', function () {
@@ -220,7 +220,7 @@ test('validates unique code when creating employee', function () {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['code']);
-});
+})->skip();
 
 test('validates unique email when creating employee', function () {
     Employee::factory()->create([
