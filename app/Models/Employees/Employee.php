@@ -2,6 +2,7 @@
 
 namespace App\Models\Employees;
 
+use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerZone;
 use App\Models\Setups\Employees\Department;
 use App\Traits\Authorable;
@@ -82,5 +83,19 @@ class Employee extends Model
             'employee_id',
             'customer_zone_id'
         );
+    }
+
+    public static function getCode(): int
+    {
+        $defaultValue = config('app.employee_code_start', 100);
+        return Setting::get('employees', 'code_counter', $defaultValue, true, Setting::TYPE_NUMBER);
+    }
+    /**
+     * Reserve the next code number (increment counter)
+     */
+    public static function reserveNextCode(): void
+    {
+        // increment the counter
+        Setting::incrementValue('employees', 'code_counter');
     }
 }

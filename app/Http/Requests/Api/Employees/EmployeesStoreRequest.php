@@ -21,8 +21,7 @@ class EmployeesStoreRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'code' => 'required|string|max:255|unique:employees,code',
+        return [ 
             'name' => 'required|string|max:255',
             'address' => 'nullable|string|max:500',
             'phone' => 'nullable|string|max:20',
@@ -38,10 +37,7 @@ class EmployeesStoreRequest extends FormRequest
 
     public function messages(): array
     {
-        return [
-            'code.required' => 'Employee code is required.',
-            'code.unique' => 'This employee code already exists.',
-            'code.max' => 'Employee code cannot exceed 255 characters.',
+        return [ 
             'name.required' => 'Employee name is required.',
             'name.max' => 'Employee name cannot exceed 255 characters.',
             'address.max' => 'Address cannot exceed 500 characters.',

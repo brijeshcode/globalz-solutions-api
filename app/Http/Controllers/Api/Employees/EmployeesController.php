@@ -42,8 +42,14 @@ class EmployeesController extends Controller
 
     public function store(EmployeesStoreRequest $request): JsonResponse
     {
-        $employee = Employee::create($request->validated());
+        $data = $request->validated();
+        $data['code'] = Employee::getCode();
+
+        $employee = Employee::create($data);
+        Employee::reserveNextCode();
+
         $employee->load(['department:id,name', 'user:id,name,email', 'createdBy:id,name', 'updatedBy:id,name']);
+        
 
         return ApiResponse::store(
             'Employee created successfully',

@@ -154,4 +154,17 @@ return [
         'Administration'
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Employee Code Settings
+    |--------------------------------------------------------------------------
+    |
+    | These configuration options determine the starting code number for
+    | employee auto-generation. The employee code will start from this
+    | number and increment sequentially for each new employee.
+    |
+    */
+
+    'employee_code_start' => (int) env('EMPLOYEE_CODE_START', 100),
+
 ];

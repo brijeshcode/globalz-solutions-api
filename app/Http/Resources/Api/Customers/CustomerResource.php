@@ -139,7 +139,7 @@ class CustomerResource extends JsonResource
             'deleted_at' => $this->deleted_at?->toISOString(),
 
             // Display helpers for frontend
-            'Employees\Employeedisplay_name' => $this->name,
+            'name' => $this->name,
             'full_display_name' => $this->code . ' - ' . $this->name,
             
             // Credit status indicators
