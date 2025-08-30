@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use App\Traits\Authorable;
+use App\Traits\HasBooleanFilters;
+use App\Traits\Searchable;
+use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -11,7 +14,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens, SoftDeletes, Authorable;
+    use HasFactory, Notifiable, HasApiTokens, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
 
     /**
      * The attributes that are mass assignable.
@@ -53,6 +56,24 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
         ];
     }
+
+    protected $searchable = [
+        'name',
+        'email',
+    ];
+
+    protected $sortable = [
+        'id',
+        'name',
+        'email',
+        'role',
+        'is_active',
+        'created_at',
+        'updated_at',
+    ];
+
+    protected $defaultSortField = 'name';
+    protected $defaultSortDirection = 'asc';
 
     /**
      * Role constants for better code maintainability
@@ -168,5 +189,13 @@ class User extends Authenticatable
     public function updateLastLogin(): void
     {
         $this->update(['last_login_at' => now()]);
+    }
+
+    /**
+     * Get the employee associated with this user
+     */
+    public function employee()
+    {
+        return $this->hasOne(\App\Models\Employees\Employee::class);
     }
 }
