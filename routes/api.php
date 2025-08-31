@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Accounts\AccountsController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Customers\CustomersController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
@@ -64,6 +65,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{customer}', 'show')->name('show');
         Route::put('{customer}', 'update')->name('update');
         Route::delete('{customer}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
+
+    // Accounts Controller
+    Route::controller(AccountsController::class)->prefix('accounts')->name('accounts.')->group(function () {
+        Route::get('stats', 'stats')->name('stats');
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{account}', 'show')->name('show');
+        Route::put('{account}', 'update')->name('update');
+        Route::delete('{account}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });
