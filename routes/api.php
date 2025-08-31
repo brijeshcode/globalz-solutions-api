@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerProvincesController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use App\Http\Controllers\Api\Setups\Users\UsersController;
+use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use Illuminate\Support\Facades\Route;
 
@@ -364,6 +365,21 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{item}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        Route::prefix('expenses')->name('expenses.')->group(function() {
+            
+            // Expense Categories Controller
+            Route::controller(ExpenseCategoriesController::class)->prefix('categories')->name('categories.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{expenseCategory}', 'show')->name('show');
+                Route::put('{expenseCategory}', 'update')->name('update');
+                Route::delete('{expenseCategory}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
         });
 
     });
