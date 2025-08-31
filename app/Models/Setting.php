@@ -101,21 +101,36 @@ class Setting extends Model
     }
 
     /**
-     * Increment numeric setting
+     * Increment numeric setting with auto-creation support
      */
-    public static function incrementValue(string $group, string $key, int $amount = 1): int
+    public static function incrementValue(string $group, string $key, int $amount = 1, $defaultValue = null): int
     {
-        return DB::transaction(function () use ($group, $key, $amount) {
+        return DB::transaction(function () use ($group, $key, $amount, $defaultValue) {
             $setting = self::where('group_name', $group)
                           ->where('key_name', $key)
                           ->lockForUpdate()
                           ->first();
 
-            if (!$setting || $setting->data_type !== self::TYPE_NUMBER) {
-                throw new \InvalidArgumentException("Setting {$group}.{$key} must exist and be of type 'number'");
+            if (!$setting) {
+                // Auto-create setting if it doesn't exist and default value is provided
+                if ($defaultValue !== null) {
+                    $setting = self::create([
+                        'group_name' => $group,
+                        'key_name' => $key,
+                        'value' => $defaultValue,
+                        'data_type' => self::TYPE_NUMBER,
+                        'description' => "Auto-created counter for {$group}.{$key}"
+                    ]);
+                    $currentValue = (int) $defaultValue;
+                } else {
+                    throw new \InvalidArgumentException("Setting {$group}.{$key} does not exist and no default value provided");
+                }
+            } else if ($setting->data_type !== self::TYPE_NUMBER) {
+                throw new \InvalidArgumentException("Setting {$group}.{$key} must be of type 'number'");
+            } else {
+                $currentValue = (int) $setting->value;
             }
 
-            $currentValue = (int) $setting->value;
             $newValue = $currentValue + $amount;
             
             $setting->update(['value' => $newValue]);
@@ -126,6 +141,32 @@ class Setting extends Model
 
             return $newValue;
         });
+    }
+
+    /**
+     * Get numeric setting with auto-creation support for counters
+     */
+    public static function getOrCreateCounter(string $group, string $key, $defaultValue = 0): int
+    {
+        $setting = self::where('group_name', $group)
+                      ->where('key_name', $key)
+                      ->first();
+
+        if (!$setting) {
+            $setting = self::create([
+                'group_name' => $group,
+                'key_name' => $key,
+                'value' => $defaultValue,
+                'data_type' => self::TYPE_NUMBER,
+                'description' => "Auto-created counter for {$group}.{$key}"
+            ]);
+            
+            // Clear cache
+            $cacheKey = self::CACHE_PREFIX . $group . ':' . $key;
+            Cache::forget($cacheKey);
+        }
+
+        return (int) $setting->getCastValue();
     }
 
     /**

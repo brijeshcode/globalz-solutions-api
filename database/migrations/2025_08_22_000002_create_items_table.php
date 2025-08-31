@@ -58,7 +58,7 @@ return new class extends Migration
             $table->softDeletes();
             
             // Foreign Key Constraints
-            $table->foreign('item_type_id')->references('id')->on('item_types')->onDelete('restrict');
+            $table->foreign('item_type_id')->references('id')->on('item_types')->onDelete('set null');
             $table->foreign('item_family_id')->references('id')->on('item_families')->onDelete('set null');
             $table->foreign('item_group_id')->references('id')->on('item_groups')->onDelete('set null');
             $table->foreign('item_category_id')->references('id')->on('item_categories')->onDelete('set null');

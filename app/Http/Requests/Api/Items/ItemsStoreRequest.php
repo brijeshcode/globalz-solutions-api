@@ -29,7 +29,7 @@ class ItemsStoreRequest extends FormRequest
             'code' => 'sometimes|string|max:255|unique:items,code',
             'short_name' => 'nullable|string|max:255',
             'description' => 'required|string',
-            'item_type_id' => 'required|exists:item_types,id',
+            'item_type_id' => 'nullable|exists:item_types,id',
 
             // Classification Fields
             'item_family_id' => 'nullable|exists:item_families,id',
@@ -76,7 +76,6 @@ class ItemsStoreRequest extends FormRequest
     {
         return [
             'description.required' => 'The item description is required.',
-            'item_type_id.required' => 'The item type is required.',
             'item_type_id.exists' => 'The selected item type does not exist.',
             'item_unit_id.required' => 'The item unit is required.',
             'item_unit_id.exists' => 'The selected item unit does not exist.',

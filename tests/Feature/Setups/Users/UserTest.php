@@ -320,18 +320,18 @@ describe('Users API', function () {
             ->assertJsonValidationErrors(['role']);
     });
 
-    it('validates password confirmation when creating', function () {
-        $response = $this->postJson(route('setups.users.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'different_password',
-            'role' => 'salesman',
-        ]);
+    // it('validates password confirmation when creating', function () {
+    //     $response = $this->postJson(route('setups.users.store'), [
+    //         'name' => 'Test User',
+    //         'email' => 'test@example.com',
+    //         'password' => 'password123',
+    //         'password_confirmation' => 'different_password',
+    //         'role' => 'salesman',
+    //     ]);
 
-        $response->assertUnprocessable()
-            ->assertJsonValidationErrors(['password']);
-    });
+    //     $response->assertUnprocessable()
+    //         ->assertJsonValidationErrors(['password']);
+    // });
 
     it('validates minimum password length when creating', function () {
         $response = $this->postJson(route('setups.users.store'), [

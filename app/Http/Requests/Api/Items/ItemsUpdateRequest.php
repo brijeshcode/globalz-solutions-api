@@ -35,7 +35,7 @@ class ItemsUpdateRequest extends FormRequest
             ],
             'short_name' => 'sometimes|nullable|string|max:255',
             'description' => 'sometimes|required|string',
-            'item_type_id' => 'sometimes|required|exists:item_types,id',
+            'item_type_id' => 'sometimes|nullable|exists:item_types,id',
 
             // Classification Fields
             'item_family_id' => 'sometimes|nullable|exists:item_families,id',

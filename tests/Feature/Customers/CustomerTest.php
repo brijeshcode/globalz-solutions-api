@@ -908,4 +908,69 @@ describe('Customer Code Generation Tests', function () {
         
         expect((int) $nextCode)->toBe(50000002);
     });
+
+    it('auto-generates customer code counter setting and continues sequence when missing', function () {
+        // Ensure no existing customers to get clean sequence
+        Customer::withTrashed()->forceDelete();
+        
+        // Remove any existing code counter setting
+        Setting::where('group_name', 'customers')
+            ->where('key_name', 'code_counter')
+            ->delete();
+        
+        // Clear cache to ensure setting is completely gone
+        Setting::clearCache();
+        
+        // Verify setting doesn't exist
+        $existingSetting = Setting::where('group_name', 'customers')
+            ->where('key_name', 'code_counter')
+            ->first();
+        expect($existingSetting)->toBeNull();
+        
+        // Create first customer without any counter setting - should auto-generate
+        $response1 = $this->postJson(route('customers.store'), [
+            'name' => 'Auto Generated Counter Customer 1',
+        ]);
+        
+        $response1->assertCreated();
+        $firstCode = (int) $response1->json('data.code');
+        expect($firstCode)->toBe(50000000); // Should start from default
+        
+        // Verify setting was auto-created
+        $setting = Setting::where('group_name', 'customers')
+            ->where('key_name', 'code_counter')
+            ->first();
+        expect($setting)->not()->toBeNull();
+        expect($setting->data_type)->toBe('number');
+        expect((int) $setting->value)->toBe(50000001); // Should be incremented after first customer
+        
+        // Create second customer - should continue sequence
+        $response2 = $this->postJson(route('customers.store'), [
+            'name' => 'Auto Generated Counter Customer 2',
+        ]);
+        
+        $response2->assertCreated();
+        $secondCode = (int) $response2->json('data.code');
+        expect($secondCode)->toBe(50000001); // Sequential
+        
+        // Create third customer - should continue sequence
+        $response3 = $this->postJson(route('customers.store'), [
+            'name' => 'Auto Generated Counter Customer 3',
+        ]);
+        
+        $response3->assertCreated();
+        $thirdCode = (int) $response3->json('data.code');
+        expect($thirdCode)->toBe(50000002); // Sequential
+        
+        // Verify final counter value
+        $finalSetting = Setting::where('group_name', 'customers')
+            ->where('key_name', 'code_counter')
+            ->first();
+        expect((int) $finalSetting->value)->toBe(50000003); // Ready for next customer
+        
+        // Test next-code endpoint also works correctly
+        $nextCodeResponse = $this->getJson(route('customers.next-code'));
+        $nextCodeResponse->assertOk();
+        expect((int) $nextCodeResponse->json('data.code'))->toBe(50000003);
+    });
 });

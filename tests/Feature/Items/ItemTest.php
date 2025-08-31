@@ -301,7 +301,7 @@ describe('Items API', function () {
         $response->assertUnprocessable()
             ->assertJsonValidationErrors([
                 'description',
-                'item_type_id',
+                // 'item_type_id',
                 'item_unit_id',
                 'tax_code_id',
             ]);

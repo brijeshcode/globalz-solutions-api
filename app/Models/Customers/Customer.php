@@ -242,7 +242,7 @@ class Customer extends Model
     public static function generateNextCustomerCode(): string
     {
         $defaultValue = config('app.customer_code_start', 50000000);
-        $nextNumber = Setting::get('customers', 'code_counter', $defaultValue, true, Setting::TYPE_NUMBER);
+        $nextNumber = Setting::getOrCreateCounter('customers', 'code_counter', $defaultValue);
         return (string) $nextNumber;
     }
 
@@ -251,8 +251,9 @@ class Customer extends Model
      */
     public static function reserveNextCode(): string
     {
-        // Atomically get and increment the counter
-        $newValue = Setting::incrementValue('customers', 'code_counter');
+        $defaultValue = config('app.customer_code_start', 50000000);
+        // Atomically get and increment the counter with auto-creation
+        $newValue = Setting::incrementValue('customers', 'code_counter', 1, $defaultValue);
         return (string) ($newValue - 1); // Return the value before increment
     }
 
@@ -293,7 +294,8 @@ class Customer extends Model
             // Only increment counter if user used the suggested code
             $suggestedCode = self::generateNextCustomerCode();
             if ($userCode === $suggestedCode) {
-                Setting::incrementValue('customers', 'code_counter');
+                $defaultValue = config('app.customer_code_start', 50000000);
+                Setting::incrementValue('customers', 'code_counter', 1, $defaultValue);
             }
         } else {
             // Auto-generate code
