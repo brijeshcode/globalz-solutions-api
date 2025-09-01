@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
+use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use Illuminate\Support\Facades\Route;
 
@@ -381,6 +382,18 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
         });
+    });
+
+    // Expense Transactions Controller
+    Route::controller(ExpenseTransactionsController::class)->prefix('expense-transactions')->name('expense-transactions.')->group(function () {
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{expenseTransaction}', 'show')->name('show');
+        Route::put('{expenseTransaction}', 'update')->name('update');
+        Route::delete('{expenseTransaction}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
 
     });
 
