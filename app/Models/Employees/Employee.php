@@ -45,7 +45,7 @@ class Employee extends Model
         'phone',
         'mobile',
         'email',
-        'note',
+        'notes',
     ];
 
     protected $sortable = [
