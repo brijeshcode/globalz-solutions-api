@@ -61,12 +61,40 @@ class ExpenseTransactionsController extends Controller
      */
     public function store(ExpenseTransactionsStoreRequest $request): JsonResponse
     {
-        $expenseTransaction = ExpenseTransaction::create($request->validated());
+        $data = $request->validated();
+        
+        // Auto-generate expense transaction code (system generated only)
+        $data['code'] = ExpenseTransaction::reserveNextCode();
+        
+        $expenseTransaction = ExpenseTransaction::create($data);
+
+        // Handle document uploads
+        if ($request->hasFile('documents')) {
+            $files = $request->file('documents');
+            if (!is_array($files)) {
+                $files = [$files];
+            }
+            
+            // Validate each document file
+            foreach ($files as $file) {
+                $validationErrors = $expenseTransaction->validateDocumentFile($file);
+                if (!empty($validationErrors)) {
+                    return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
+                }
+            }
+            
+            // Upload documents
+            $expenseTransaction->createDocuments($files, [
+                'type' => 'expense_transaction_document'
+            ]);
+        }
+
         $expenseTransaction->load([
             'createdBy:id,name', 
             'updatedBy:id,name', 
             'expenseCategory:id,name', 
-            'account:id,name'
+            'account:id,name',
+            'documents'
         ]);
 
         return ApiResponse::store(
@@ -84,7 +112,8 @@ class ExpenseTransactionsController extends Controller
             'createdBy:id,name', 
             'updatedBy:id,name', 
             'expenseCategory:id,name', 
-            'account:id,name'
+            'account:id,name',
+            'documents'
         ]);
 
         return ApiResponse::show(
@@ -98,12 +127,38 @@ class ExpenseTransactionsController extends Controller
      */
     public function update(ExpenseTransactionsUpdateRequest $request, ExpenseTransaction $expenseTransaction): JsonResponse
     {
-        $expenseTransaction->update($request->validated());
+        $data = $request->validated();
+        // Remove code from data if present (code is system generated only, not updatable)
+        unset($data['code']);
+
+        $expenseTransaction->update($data);
+
+        // Handle document uploads
+        if ($request->hasFile('documents')) {
+            $files = $request->file('documents');
+            if (!is_array($files)) {
+                $files = [$files];
+            }
+            
+            // Validate each document file
+            foreach ($files as $file) {
+                $validationErrors = $expenseTransaction->validateDocumentFile($file);
+                if (!empty($validationErrors)) {
+                    return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
+                }
+            }
+            
+            $expenseTransaction->updateDocuments($files, [
+                'type' => 'expense_transaction_document'
+            ]);
+        }
+
         $expenseTransaction->load([
             'createdBy:id,name', 
             'updatedBy:id,name', 
             'expenseCategory:id,name', 
-            'account:id,name'
+            'account:id,name',
+            'documents'
         ]);
 
         return ApiResponse::update(
@@ -166,5 +221,113 @@ class ExpenseTransactionsController extends Controller
         $expenseTransaction->forceDelete();
 
         return ApiResponse::delete('Expense transaction permanently deleted successfully');
+    }
+
+    /**
+     * Get the next suggested expense transaction code
+     */
+    public function getNextCode(): JsonResponse
+    {
+        $nextCode = ExpenseTransaction::getNextSuggestedCode();
+        
+        return ApiResponse::show('Next expense transaction code retrieved successfully', [
+            'code' => $nextCode,
+            'is_available' => true,
+            'message' => 'Next available code'
+        ]);
+    }
+
+    /**
+     * Upload documents for an expense transaction
+     */
+    public function uploadDocuments(Request $request, ExpenseTransaction $expenseTransaction): JsonResponse
+    {
+        $request->validate([
+            'documents' => 'required|array|max:15',
+            'documents.*' => 'required|file|mimes:jpg,jpeg,png,gif,bmp,webp,pdf,doc,docx,txt|max:10240', // 10MB max
+        ]);
+
+        $files = $request->file('documents');
+        
+        // Validate each document file using the model's validation
+        foreach ($files as $file) {
+            $validationErrors = $expenseTransaction->validateDocumentFile($file);
+            if (!empty($validationErrors)) {
+                return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
+            }
+        }
+        
+        // Upload documents
+        $uploadedDocuments = $expenseTransaction->createDocuments($files, [
+            'type' => 'expense_transaction_document'
+        ]);
+
+        return ApiResponse::store(
+            'Documents uploaded successfully',
+            [
+                'uploaded_count' => $uploadedDocuments->count(),
+                'documents' => $uploadedDocuments->map(function ($doc) {
+                    return [
+                        'id' => $doc->id,
+                        'original_name' => $doc->original_name,
+                        'file_name' => $doc->file_name,
+                        'thumbnail_url' => $doc->thumbnail_url,
+                        'download_url' => $doc->download_url,
+                    ];
+                })
+            ]
+        );
+    }
+
+    /**
+     * Delete specific documents for an expense transaction
+     */
+    public function deleteDocuments(Request $request, ExpenseTransaction $expenseTransaction): JsonResponse
+    {
+        $request->validate([
+            'document_ids' => 'required|array',
+            'document_ids.*' => 'required|integer|exists:documents,id',
+        ]);
+
+        // Verify that the documents belong to this expense transaction
+        $documentCount = $expenseTransaction->documents()
+            ->whereIn('id', $request->document_ids)
+            ->count();
+
+        if ($documentCount !== count($request->document_ids)) {
+            return ApiResponse::customError('Some documents do not belong to this expense transaction', 403);
+        }
+
+        // Delete the documents
+        $deleted = $expenseTransaction->deleteDocuments($request->document_ids);
+
+        return ApiResponse::delete(
+            'Documents deleted successfully',
+            ['deleted_count' => $deleted ? count($request->document_ids) : 0]
+        );
+    }
+
+    /**
+     * Get documents for a specific expense transaction
+     */
+    public function getDocuments(ExpenseTransaction $expenseTransaction): JsonResponse
+    {
+        $documents = $expenseTransaction->documents()->get();
+
+        return ApiResponse::show(
+            'Expense transaction documents retrieved successfully',
+            $documents->map(function ($doc) {
+                return [
+                    'id' => $doc->id,
+                    'original_name' => $doc->original_name,
+                    'file_name' => $doc->file_name,
+                    'file_size' => $doc->file_size,
+                    'file_size_human' => $doc->file_size_human,
+                    'thumbnail_url' => $doc->thumbnail_url,
+                    'download_url' => $doc->download_url,
+                    'uploaded_at' => $doc->created_at,
+                ];
+            })
+        );
     }
 }

@@ -23,7 +23,6 @@ class ExpenseTransactionsStoreRequest extends FormRequest
     {
         return [
             'date' => 'required|date',
-            'code' => 'nullable|string|max:200|unique:expense_transactions,code',
             'expense_category_id' => 'required|integer|exists:expense_categories,id',
             'account_id' => 'required|integer|exists:accounts,id',
             'subject' => 'nullable|string|max:200',

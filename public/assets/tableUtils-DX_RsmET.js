@@ -1,0 +1,1 @@
+import{c as e}from"./GlobalConfig-DCFE7Hv9.js";function t(){return{current_page:1,per_page:e.defaultPerPage,total:0,last_page:1,from:null,to:null,has_more_pages:!1,next_page_url:null,prev_page_url:null,first_page_url:``,last_page_url:``}}export{t as b};
