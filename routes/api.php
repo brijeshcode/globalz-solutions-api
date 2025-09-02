@@ -385,10 +385,16 @@ Route::middleware('auth:sanctum')->group(function () {
             
             // Expense Categories Controller
             Route::controller(ExpenseCategoriesController::class)->prefix('categories')->name('categories.')->group(function () {
+                Route::get('roots', 'roots')->name('roots');
                 Route::get('trashed', 'trashed')->name('trashed');
                 Route::get('/', 'index')->name('index');
                 Route::post('/', 'store')->name('store');
                 Route::get('{expenseCategory}', 'show')->name('show');
+                Route::get('{expenseCategory}/children', 'children')->name('children');
+                Route::get('{expenseCategory}/ancestors', 'ancestors')->name('ancestors');
+                Route::get('{expenseCategory}/descendants', 'descendants')->name('descendants');
+                Route::get('{expenseCategory}/tree', 'tree')->name('tree');
+                Route::patch('{expenseCategory}/move', 'move')->name('move');
                 Route::put('{expenseCategory}', 'update')->name('update');
                 Route::delete('{expenseCategory}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');

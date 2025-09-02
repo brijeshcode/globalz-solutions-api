@@ -39,7 +39,28 @@ class ExpenseCategoriesController extends Controller
         }
 
         if ($request->boolean('tree_structure')) {
-            $query->whereNull('parent_id')->with('childrenRecursive');
+            $query->whereNull('parent_id')->with([
+                'childrenRecursive.createdBy:id,name',
+                'childrenRecursive.updatedBy:id,name'
+            ]);
+        }
+
+        if ($request->boolean('roots_only')) {
+            $query->whereNull('parent_id');
+        }
+
+        if ($request->has('depth')) {
+            $depth = (int) $request->input('depth', 1);
+            if ($depth > 0) {
+                $with = [];
+                $relation = 'children';
+                for ($i = 0; $i < $depth; $i++) {
+                    $with[] = $relation . '.createdBy:id,name';
+                    $with[] = $relation . '.updatedBy:id,name';
+                    $relation .= '.children';
+                }
+                $query->with($with);
+            }
         }
 
         $expenseCategories = $this->applyPagination($query, $request);
@@ -104,6 +125,135 @@ class ExpenseCategoriesController extends Controller
         $expenseCategory->delete();
 
         return ApiResponse::delete('Expense category deleted successfully');
+    }
+
+    /**
+     * Display root categories only.
+     */
+    public function roots(Request $request): JsonResponse
+    {
+        $query = ExpenseCategory::rootCategories()
+            ->with(['createdBy:id,name', 'updatedBy:id,name', 'children'])
+            ->searchable($request)
+            ->sortable($request);
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        if ($request->boolean('with_children')) {
+            $query->with('childrenRecursive');
+        }
+
+        $expenseCategories = $this->applyPagination($query, $request);
+
+        return ApiResponse::paginated(
+            'Root expense categories retrieved successfully',
+            $expenseCategories,
+            ExpenseCategoryResource::class
+        );
+    }
+
+    /**
+     * Display children of a specific category.
+     */
+    public function children(ExpenseCategory $expenseCategory, Request $request): JsonResponse
+    {
+        $query = $expenseCategory->children()
+            ->with(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name'])
+            ->searchable($request)
+            ->sortable($request);
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        if ($request->boolean('recursive')) {
+            $query->with('childrenRecursive');
+        }
+
+        $children = $this->applyPagination($query, $request);
+
+        return ApiResponse::paginated(
+            'Category children retrieved successfully',
+            $children,
+            ExpenseCategoryResource::class
+        );
+    }
+
+    /**
+     * Display ancestors of a specific category.
+     */
+    public function ancestors(ExpenseCategory $expenseCategory): JsonResponse
+    {
+        $ancestors = $expenseCategory->getAllAncestors();
+        
+        return ApiResponse::send(
+            'Category ancestors retrieved successfully',
+            ExpenseCategoryResource::collection($ancestors),
+            200
+        );
+    }
+
+    /**
+     * Display descendants of a specific category.
+     */
+    public function descendants(ExpenseCategory $expenseCategory): JsonResponse
+    {
+        $descendants = $expenseCategory->getAllDescendants();
+        
+        return ApiResponse::send(
+            'Category descendants retrieved successfully',
+            ExpenseCategoryResource::collection($descendants),
+            200
+        );
+    }
+
+    /**
+     * Get category tree structure starting from a specific category.
+     */
+    public function tree(ExpenseCategory $expenseCategory): JsonResponse
+    {
+        $expenseCategory->load([
+            'createdBy:id,name', 
+            'updatedBy:id,name', 
+            'parent:id,name',
+            'childrenRecursive.createdBy:id,name',
+            'childrenRecursive.updatedBy:id,name'
+        ]);
+
+        return ApiResponse::show(
+            'Category tree retrieved successfully',
+            new ExpenseCategoryResource($expenseCategory)
+        );
+    }
+
+    /**
+     * Move category to a different parent.
+     */
+    public function move(Request $request, ExpenseCategory $expenseCategory): JsonResponse
+    {
+        $request->validate([
+            'parent_id' => 'nullable|exists:expense_categories,id|different:' . $expenseCategory->id,
+        ]);
+
+        $newParentId = $request->input('parent_id');
+
+        if ($newParentId) {
+            $newParent = ExpenseCategory::findOrFail($newParentId);
+            
+            if ($expenseCategory->getAllDescendants()->contains('id', $newParentId)) {
+                return ApiResponse::custom('Cannot move category to its own descendant', 422);
+            }
+        }
+
+        $expenseCategory->update(['parent_id' => $newParentId]);
+        $expenseCategory->load(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name']);
+
+        return ApiResponse::update(
+            'Category moved successfully',
+            new ExpenseCategoryResource($expenseCategory)
+        );
     }
 
     /**
