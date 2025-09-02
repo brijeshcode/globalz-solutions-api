@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
+use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -207,6 +208,18 @@ Route::middleware('auth:sanctum')->group(function () {
             });
         });
 
+        Route::prefix('accounts')->name('accounts.')->group(function() {
+            Route::controller(AccountTypesController::class)->prefix('types')->name('types.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{customerType}', 'show')->name('show');
+                Route::put('{customerType}', 'update')->name('update');
+                Route::delete('{customerType}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+        });
         // Users Controller
         Route::controller(UsersController::class)->prefix('users')->name('users.')->group(function () {
             Route::get('unassigned-employees', 'getUnassignedEmployees')->name('unassigned-employees');

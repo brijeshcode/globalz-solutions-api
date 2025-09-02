@@ -5,7 +5,7 @@ namespace App\Http\Resources\Api\Setups\Accounts;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class AccountType extends JsonResource
+class AccountTypeResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
