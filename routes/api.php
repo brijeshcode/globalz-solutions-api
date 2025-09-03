@@ -213,9 +213,9 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('trashed', 'trashed')->name('trashed');
                 Route::get('/', 'index')->name('index');
                 Route::post('/', 'store')->name('store');
-                Route::get('{customerType}', 'show')->name('show');
-                Route::put('{customerType}', 'update')->name('update');
-                Route::delete('{customerType}', 'destroy')->name('destroy');
+                Route::get('{accountType}', 'show')->name('show');
+                Route::put('{accountType}', 'update')->name('update');
+                Route::delete('{accountType}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
