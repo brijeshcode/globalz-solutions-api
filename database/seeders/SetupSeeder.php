@@ -32,6 +32,12 @@ class SetupSeeder extends Seeder
         // Tax setup data
         $this->call(TaxCodeSeeder::class);
         
+        // Account setup data
+        $this->call(AccountTypeSeeder::class);
+        
+        // Expense setup data
+        $this->call(ExpenseCategorySeeder::class);
+        
         // Warehouse and supplier setup data
         $this->call(WarehouseSeeder::class);
         $this->call(SupplierTypeSeeder::class);

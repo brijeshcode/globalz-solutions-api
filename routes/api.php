@@ -13,7 +13,6 @@ use App\Http\Controllers\Api\Setups\ItemUnitController;
 use App\Http\Controllers\Api\Setups\SupplierTypesController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerTypesController;
 use App\Http\Controllers\Api\Setups\WarehousesController;
-use App\Http\Controllers\Api\Setups\CurrenciesController;
 use App\Http\Controllers\Api\Setups\CountriesController;
 use App\Http\Controllers\Api\Setups\SupplierPaymentTermsController;
 use App\Http\Controllers\Api\Setups\SuppliersController;
@@ -30,6 +29,7 @@ use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
+use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');

@@ -26,6 +26,8 @@ class AccountsStoreRequest extends FormRequest
             'account_type_id' => 'required|integer|exists:account_types,id',
             'currency_id' => 'required|integer|exists:currencies,id',
             'description' => 'nullable|string|max:65535',
+            // Balance Information
+            'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
             'is_active' => 'boolean',
         ];
     }
@@ -59,6 +61,7 @@ class AccountsStoreRequest extends FormRequest
         return [
             'account_type_id' => 'account type',
             'currency_id' => 'currency',
+            'opening_balance' => 'opening balance',
         ];
     }
 }

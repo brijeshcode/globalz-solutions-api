@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\Setups;
+namespace App\Http\Controllers\Api\Setups\Generals\Currencies;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Setups\CurrenciesStoreRequest;

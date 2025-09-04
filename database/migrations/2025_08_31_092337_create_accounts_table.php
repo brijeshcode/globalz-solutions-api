@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('account_type_id')->constrained('account_types')->onDelete('restrict');
             $table->foreignId('currency_id')->constrained('currencies')->onDelete('restrict');
             $table->string('name')->unique();
+            $table->decimal('opening_balance', 15, 4)->default(0); // Starting balance
+            $table->decimal('current_balance', 15, 4)->default(0); // Running balance
             $table->text('description')->nullable();
             
             $table->boolean('is_active')->default(true);

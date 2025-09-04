@@ -55,7 +55,7 @@ class AccountsController extends Controller
     public function store(AccountsStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
-        
+        $data['current_balance'] = $data['opening_balance'] ?? 0;
         $account = Account::create($data);
 
         $account->load([

@@ -21,6 +21,8 @@ class Account extends Model
         'name',
         'account_type_id',
         'currency_id',
+        'opening_balance',
+        'current_balance',
         'description',
         'is_active',
     ];

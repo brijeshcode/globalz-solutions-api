@@ -90,6 +90,7 @@ describe('Accounts API', function () {
             'name' => 'Complete Account',
             'account_type_id' => $this->accountType->id,
             'currency_id' => $this->currency->id,
+            'opening_balance' => 1500,
             'description' => 'A complete test account with all fields',
             'is_active' => true,
         ];

@@ -19,6 +19,8 @@ class AccountResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'is_active' => $this->is_active,
+            'opening_balance' => $this->opening_balance,
+            'current_balance' => $this->current_balance,
             'currency' => $this->whenLoaded('currency', function () {
                 return [
                     'id' => $this->currency->id,

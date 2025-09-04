@@ -62,12 +62,8 @@ class ExpenseTransactionsController extends Controller
     public function store(ExpenseTransactionsStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
-        
-        // Auto-generate expense transaction code (system generated only)
-        $data['code'] = ExpenseTransaction::reserveNextCode();
-        
         $expenseTransaction = ExpenseTransaction::create($data);
-
+        
         // Handle document uploads
         if ($request->hasFile('documents')) {
             $files = $request->file('documents');
