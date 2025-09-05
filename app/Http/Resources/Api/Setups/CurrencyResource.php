@@ -20,6 +20,7 @@ class CurrencyResource extends JsonResource
             'thousand_separator' => $this->thousand_separator,
             'is_active' => $this->is_active,
             'display_name' => $this->display_name,
+            'current_rate' => $this->getCurrentRate(),
             'created_by' => [
                 'id' => $this->createdBy?->id,
                 'name' => $this->createdBy?->name,

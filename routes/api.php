@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
+use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -100,15 +101,23 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         // Currencies Controller
-        Route::controller(CurrenciesController::class)->prefix('currencies')->name('currencies.')->group(function () {
-            Route::get('trashed', 'trashed')->name('trashed');
-            Route::get('/', 'index')->name('index');
-            Route::post('/', 'store')->name('store');
-            Route::get('{currency}', 'show')->name('show');
-            Route::put('{currency}', 'update')->name('update');
-            Route::delete('{currency}', 'destroy')->name('destroy');
-            Route::patch('{id}/restore', 'restore')->name('restore');
-            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        Route::prefix('currencies')->name('currencies.')->group(function () {
+            Route::controller(CurrenciesController::class)->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{currency}', 'show')->name('show');
+                Route::put('{currency}', 'update')->name('update');
+                Route::delete('{currency}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            Route::controller(currencyRatesController::class)->prefix('rates')->name('rates.')->group(function () {
+                Route::post('change', 'changeRate')->name('change');
+                Route::get('{currency}/history', 'index')->name('history');
+            });
+
         });
 
         // Countries Controller

@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Factories\Setups;
+namespace Database\Factories\Setups\Generals\Currencies;
 
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;

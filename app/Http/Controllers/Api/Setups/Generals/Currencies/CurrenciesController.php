@@ -20,10 +20,9 @@ class CurrenciesController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Currency::query()
-            ->with(['createdBy:id,name', 'updatedBy:id,name'])
+            ->with(['createdBy:id,name', 'updatedBy:id,name', 'activeRate'])
             ->searchable($request)
             ->sortable($request);
-            ;
         
         $this->applyBooleanFilter($query, 'is_active', $request->input('is_active'));
 

@@ -34,6 +34,9 @@ class Currency extends Model
         'deleted_at' => 'datetime',
     ];
 
+    protected $defaultSortField = 'name';
+    protected $defaultSortDirection = 'asc';
+
     // Helper methods
     public function isActive()
     {
@@ -76,5 +79,22 @@ class Currency extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    // Relationships
+    public function rates()
+    {
+        return $this->hasMany(currencyRate::class);
+    }
+
+    public function activeRate()
+    {
+        return $this->hasOne(currencyRate::class)->where('is_active', true)->latest();
+    }
+
+    // Get current active rate value
+    public function getCurrentRate()
+    {
+        return $this->activeRate?->rate;
     }
 }
