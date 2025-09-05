@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Setups;
+namespace App\Models\Setups\Generals\Currencies;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

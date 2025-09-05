@@ -2,6 +2,7 @@
 
 namespace Database\Factories\Accounts;
 
+use App\Models\Setups\Generals\Currencies\Currency;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -42,7 +43,7 @@ class AccountFactory extends Factory
         return [
             'name' => $this->faker->unique()->randomElement($accountNames),
             'account_type_id' => \App\Models\Setups\Accounts\AccountType::factory(),
-            'currency_id' => \App\Models\Setups\Currency::factory(),
+            'currency_id' => Currency::factory(),
             'description' => $this->faker->optional(0.8)->sentence(),
             'is_active' => $this->faker->boolean(85),
         ];

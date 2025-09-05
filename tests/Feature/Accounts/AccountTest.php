@@ -2,7 +2,7 @@
 
 use App\Models\Accounts\Account;
 use App\Models\Setups\Accounts\AccountType;
-use App\Models\Setups\Currency;
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 
 uses()->group('api', 'setup', 'setup.accounts', 'accounts');

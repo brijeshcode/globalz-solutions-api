@@ -5,7 +5,6 @@ namespace App\Models\Expenses;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Expenses\ExpenseCategory;
-use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
@@ -59,7 +58,7 @@ class ExpenseTransaction extends Model
         'updated_at',
     ];
 
-    protected $defaultSortField = 'date';
+    protected $defaultSortField = 'id';
     protected $defaultSortDirection = 'desc';
 
     public function expenseCategory(): BelongsTo

@@ -4,7 +4,7 @@ use App\Models\Setups\Supplier;
 use App\Models\Setups\SupplierType;
 use App\Models\Setups\SupplierPaymentTerm;
 use App\Models\Setups\Country;
-use App\Models\Setups\Currency;
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 
 uses()->group('api', 'setup', 'setup.suppliers', 'suppliers');

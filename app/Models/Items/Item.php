@@ -3,7 +3,6 @@
 namespace App\Models\Items;
 
 use App\Models\Setting;
-use App\Models\Setups\Currency;
 use App\Models\Setups\ItemBrand;
 use App\Models\Setups\ItemCategory;
 use App\Models\Setups\ItemFamily;

@@ -61,7 +61,7 @@ class SettingsSeeder extends Seeder
             [
                 'group_name' => 'system',
                 'key_name' => 'timezone',
-                'value' => 'UTC',
+                'value' => 'Asia/Beirut',
                 'data_type' => Setting::TYPE_STRING,
                 'description' => 'Default application timezone',
             ],

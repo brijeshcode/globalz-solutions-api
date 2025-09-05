@@ -7,7 +7,7 @@ use App\Http\Requests\Api\Setups\CurrenciesStoreRequest;
 use App\Http\Requests\Api\Setups\CurrenciesUpdateRequest;
 use App\Http\Resources\Api\Setups\CurrencyResource;
 use App\Http\Responses\ApiResponse;
-use App\Models\Setups\Currency;
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;

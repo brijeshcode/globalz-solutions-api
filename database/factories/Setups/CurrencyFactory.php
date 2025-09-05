@@ -2,12 +2,12 @@
 
 namespace Database\Factories\Setups;
 
-use App\Models\Setups\Currency;
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Setups\Currency>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Setups\Generals\Currencies\Currency>
  */
 class CurrencyFactory extends Factory
 {

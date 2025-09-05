@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Setups\Currency;
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 
 uses()->group('api', 'setup', 'setup.currencies', 'currencies');

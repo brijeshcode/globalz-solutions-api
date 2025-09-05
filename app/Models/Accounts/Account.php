@@ -3,7 +3,7 @@
 namespace App\Models\Accounts;
 
 use App\Models\Setups\Accounts\AccountType;
-use App\Models\Setups\Currency;
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;

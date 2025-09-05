@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Models\Setups;
-  
+
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;

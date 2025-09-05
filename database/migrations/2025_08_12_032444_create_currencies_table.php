@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('decimal_separator', 5)->default('.');
             $table->string('thousand_separator', 5)->default(',');
             $table->boolean('is_active')->default(true);
+            $table->string('calculation_type',20)->default('multiply')->comment('Used to calculate USD value with give rate');
             
             // Authorable fields
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
