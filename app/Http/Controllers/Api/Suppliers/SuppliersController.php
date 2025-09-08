@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\Setups;
+namespace App\Http\Controllers\Api\Suppliers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Setups\SuppliersStoreRequest;
@@ -11,9 +11,6 @@ use App\Models\Setups\Supplier;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class SuppliersController extends Controller
 {
