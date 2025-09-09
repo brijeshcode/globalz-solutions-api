@@ -21,6 +21,7 @@ return new class extends Migration
             $table->money('price')->default(0);
             $table->quantity('quantity')->default(0);
             $table->percent('discount_percent')->default(0);
+            $table->money('unit_discount_amount')->default(0);
             $table->money('discount_amount')->default(0);
             $table->money('total_price')->default(0); // price - discount * quantity
 

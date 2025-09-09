@@ -159,15 +159,15 @@ class PurchasesController extends Controller
      */
     public function update(PurchasesUpdateRequest $request, Purchase $purchase): JsonResponse
     {
+        info($request->all());
+
         $data = $request->validated();
         $items = $data['items'] ?? [];
         unset($data['items']); // Remove items from purchase data
         unset($data['code']); // Remove code from data if present (code is system generated only, not updatable)
 
         // Update purchase with items using service
-        // If 'items' was present in the request, we should sync items even if the array is empty
-        $syncItems = array_key_exists('items', $request->validated());
-        $purchase = $this->purchaseService->updatePurchaseWithItems($purchase, $data, $items, $syncItems);
+        $purchase = $this->purchaseService->updatePurchaseWithItems($purchase, $data, $items);
 
         // Handle document uploads
         if ($request->hasFile('documents')) {

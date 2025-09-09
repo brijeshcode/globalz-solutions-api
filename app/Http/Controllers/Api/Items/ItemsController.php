@@ -6,6 +6,7 @@ use App\Facades\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Items\ItemsStoreRequest;
 use App\Http\Requests\Api\Items\ItemsUpdateRequest;
+use App\Http\Resources\Api\Items\ItemListResource;
 use App\Http\Resources\Api\Items\ItemResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Items\Item;
@@ -578,6 +579,16 @@ class ItemsController extends Controller
                     ];
                 })
             ]
+        );
+    }
+
+    public function getAllItems(): JsonResponse
+    {
+        $items = Item::active()->get();
+        return ApiResponse::paginated(
+            'Items retrieved successfully',
+            $items,
+            ItemListResource::class
         );
     }
 

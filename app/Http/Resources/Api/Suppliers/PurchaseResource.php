@@ -45,7 +45,7 @@ class PurchaseResource extends JsonResource
             'has_items' => $this->getHasItemsAttribute(),
             
             'note' => $this->note,
-            
+            'supplier_id' => $this->supplier_id,
             // Relationships
             'supplier' => $this->whenLoaded('supplier', function () {
                 return [
@@ -57,6 +57,7 @@ class PurchaseResource extends JsonResource
                     'address' => $this->when($this->supplier->address, $this->supplier->address),
                 ];
             }),
+            'warehouse_id' => $this->warehouse_id,
             
             'warehouse' => $this->whenLoaded('warehouse', function () {
                 return [
@@ -65,6 +66,7 @@ class PurchaseResource extends JsonResource
                     'address' => $this->when($this->warehouse->address, $this->warehouse->address),
                 ];
             }),
+            'currency_id' => $this->currency_id,
             
             'currency' => $this->whenLoaded('currency', function () {
                 return [
@@ -75,6 +77,7 @@ class PurchaseResource extends JsonResource
                 ];
             }),
             
+            'account_id' => $this->account_id,
             'account' => $this->whenLoaded('account', function () {
                 return [
                     'id' => $this->account->id,
@@ -83,10 +86,11 @@ class PurchaseResource extends JsonResource
                 ];
             }),
             
-            'purchase_items' => $this->whenLoaded('purchaseItems', function () {
+            'items' => $this->whenLoaded('purchaseItems', function () {
                 return $this->purchaseItems->map(function ($item) {
                     return [
                         'id' => $item->id,
+                        'item_id' => $item->item_id,
                         'item_code' => $item->item_code,
                         'price' => $item->price,
                         'quantity' => $item->quantity,
@@ -115,8 +119,8 @@ class PurchaseResource extends JsonResource
                             ];
                         }),
                         
-                        'created_at' => $item->created_at?->format('Y-m-d H:i:s'),
-                        'updated_at' => $item->updated_at?->format('Y-m-d H:i:s'),
+                        // 'created_at' => $item->created_at?->format('Y-m-d H:i:s'),
+                        // 'updated_at' => $item->updated_at?->format('Y-m-d H:i:s'),
                     ];
                 });
             }),

@@ -35,22 +35,22 @@ class PurchaseService
     }
 
     /**
-     * Update purchase with items sync
+     * Update purchase with items
      */
-    public function updatePurchaseWithItems(Purchase $purchase, array $purchaseData, array $items = [], bool $syncItems = null): Purchase
+    public function updatePurchaseWithItems(Purchase $purchase, array $purchaseData, array $items = []): Purchase
     {
-        return DB::transaction(function () use ($purchase, $purchaseData, $items, $syncItems) {
-            // Update purchase data
+        return DB::transaction(function () use ($purchase, $purchaseData, $items) {
+            // Update purchase data (exclude items from purchaseData)
+          
+            
             $purchase->update($purchaseData);
-            
-            // Process purchase items (sync)
-            // If syncItems is explicitly set, use that. Otherwise check if items key exists or items array is not empty
-            $shouldSyncItems = $syncItems !== null ? $syncItems : (array_key_exists('items', $purchaseData) || !empty($items));
-            
-            if ($shouldSyncItems) {
-                $this->syncPurchaseItems($purchase, $items);
+            info('purchase update completed ');
+            // Process items if provided
+            if (!empty($items)) {
+                $this->updatePurchaseItems($purchase, $items);
             }
-            
+
+            info('now going to recalculation');
             // Recalculate purchase totals
             $this->recalculatePurchaseTotals($purchase);
             
@@ -72,42 +72,91 @@ class PurchaseService
     }
 
     /**
-     * Sync purchase items for updates
+     * Update purchase items individually
      */
-    protected function syncPurchaseItems(Purchase $purchase, array $items): void
+    protected function updatePurchaseItems(Purchase $purchase, array $items): void
     {
-        $existingItemIds = [];
+        $processedItemIds = [];
         
         foreach ($items as $itemData) {
             if (isset($itemData['id'])) {
                 // Update existing item
-                $purchaseItem = PurchaseItem::findOrFail($itemData['id']);
-                $oldCostPerItemUsd = $purchaseItem->cost_per_item_usd;
-                $oldQuantity = $purchaseItem->quantity;
+                $purchaseItem = PurchaseItem::where('id', $itemData['id'])
+                    ->where('purchase_id', $purchase->id)
+                    ->first();
                 
-                $purchaseItem->update($this->preparePurchaseItemData($purchase, $itemData));
-                
-                // If cost or quantity changed, update related data
-                if ($oldCostPerItemUsd != $purchaseItem->cost_per_item_usd || $oldQuantity != $purchaseItem->quantity) {
-                    $this->processPurchaseItemRelatedData($purchase, $purchaseItem, true, $oldQuantity);
+                if ($purchaseItem) {
+                    
+                    $oldCostPerItemUsd = $purchaseItem->cost_per_item_usd;
+                    $oldQuantity = $purchaseItem->quantity;
+                    
+                    // Update only the fields that can change, preserve timestamps
+                    $price = $itemData['price'];
+                    $quantity = $itemData['quantity'];
+                    $discountAmount = $itemData['discount_amount'] ?? 0; // This is total line discount
+                    $discountPercent = $itemData['discount_percent'] ?? 0;
+                    
+                    // Calculate discount amount if discount percent is provided
+                    if ($discountPercent > 0) {
+                        $discountAmount = ($price * $quantity * $discountPercent) / 100;
+                    }
+                    
+                    $totalBeforeDiscount = $price * $quantity;
+                    $totalPrice = $totalBeforeDiscount - $discountAmount;
+                    
+                    $purchaseItem->update([
+                        'price' => $price,
+                        'quantity' => $quantity,
+                        'discount_percent' => $discountPercent,
+                        'discount_amount' => $discountAmount, // Store total line discount
+                        'total_price' => $totalPrice,
+                        'total_price_usd' => $totalPrice * $purchase->currency_rate,
+                        'note' => $itemData['note'] ?? $purchaseItem->note,
+                    ]);
+                    
+                    // Recalculate derived fields
+                    info('2. re calculating purchase items fileslike totla ship, customs, other');
+
+                    $updatedData = $this->preparePurchaseItemData($purchase, $itemData);
+                    $purchaseItem->update([
+                        'total_shipping_usd' => $updatedData['total_shipping_usd'],
+                        'total_customs_usd' => $updatedData['total_customs_usd'],
+                        'total_other_usd' => $updatedData['total_other_usd'],
+                        'final_total_cost_usd' => $updatedData['final_total_cost_usd'],
+                        'cost_per_item_usd' => $updatedData['cost_per_item_usd'],
+                    ]);
+                    
+                    // Update related data if cost or quantity changed
+                    if ($oldCostPerItemUsd != $purchaseItem->cost_per_item_usd || $oldQuantity != $purchaseItem->quantity) {
+                        info('3 update inventory');
+                        $this->processPurchaseItemRelatedData($purchase, $purchaseItem, true, $oldQuantity);
+                    }
+                    info('7  update inventory completed');
+                    
+                    $processedItemIds[] = $purchaseItem->id;
                 }
-                
-                $existingItemIds[] = $purchaseItem->id;
             } else {
-                // Create new item
+                info('updating:create new item');  
+                // Create new item (only if no ID provided)
                 $purchaseItem = $this->createPurchaseItem($purchase, $itemData);
                 $this->processPurchaseItemRelatedData($purchase, $purchaseItem);
-                $existingItemIds[] = $purchaseItem->id;
+                $processedItemIds[] = $purchaseItem->id;
             }
         }
         
-        // Delete removed items
-        $removedItems = $purchase->purchaseItems()->whereNotIn('id', $existingItemIds)->get();
+        // Handle removed items - items that exist in DB but not in the update list
+        $removedItems = $purchase->purchaseItems()
+            ->whereNotIn('id', $processedItemIds)
+            ->get();
+            
         foreach ($removedItems as $removedItem) {
             $this->handlePurchaseItemDeletion($purchase, $removedItem);
         }
         
-        $purchase->purchaseItems()->whereNotIn('id', $existingItemIds)->delete();
+        // Delete the removed items from database
+        $purchase->purchaseItems()
+            ->whereNotIn('id', $processedItemIds)
+            ->delete();
     }
 
     /**
@@ -130,16 +179,16 @@ class PurchaseService
         $price = $itemData['price'];
         $quantity = $itemData['quantity'];
         $discountPercent = $itemData['discount_percent'] ?? 0;
-        $discountAmount = $itemData['discount_amount'] ?? 0;
+        $discountAmount = $itemData['discount_amount'] ?? 0; // This is total line discount
         
         // Calculate discount amount if discount percent is provided
         if ($discountPercent > 0) {
-            $discountAmount = ($price * $discountPercent) / 100;
+            $discountAmount = ($price * $quantity * $discountPercent) / 100;
         }
         
-        $netPrice = $price - $discountAmount;
-        $totalPrice = $netPrice * $quantity;
-        $totalPriceUsd = $totalPrice / $purchase->currency_rate;
+        $totalBeforeDiscount = $price * $quantity;
+        $totalPrice = $totalBeforeDiscount - $discountAmount;
+        $totalPriceUsd = $totalPrice * $purchase->currency_rate;
         
         // Calculate proportional fees based on purchase totals
         $totalShippingUsd = $this->calculateProportionalFee($totalPriceUsd, $purchase, 'shipping_fee_usd', 'shipping_fee_usd_percent');
@@ -195,9 +244,11 @@ class PurchaseService
         // 1. Update inventory
         $this->updateInventory($purchase, $purchaseItem, $isUpdate, $oldQuantity);
         
+        info('4 update suppleir item price');
         // 2. Update supplier item prices
         $this->updateSupplierItemPrice($purchase, $purchaseItem);
         
+        info('5 update suppleir item price history');
         // 3. Update item price and price history
         $this->updateItemPriceAndHistory($purchase, $purchaseItem);
     }
@@ -240,27 +291,31 @@ class PurchaseService
             ->first();
         
         $newPrice = $purchaseItem->price;
-        $newPriceUsd = $purchaseItem->price / $purchase->currency_rate;
+        $newPriceUsd = $purchaseItem->price * $purchase->currency_rate;
         
         // Only create new price record if price has changed significantly or no current price exists
         $shouldCreateNewPrice = false;
         
         if (!$currentSupplierPrice) {
+            info('should create new supplier price');
             // No existing price, create new one
             $shouldCreateNewPrice = true;
         } else {
             // Compare original currency price, not USD price (because USD changes with exchange rates)
             $priceDifference = abs($newPrice - $currentSupplierPrice->price);
+            info('Update supplier price hsitroy');
+            info('Price deference: '. $priceDifference);
+
             if ($priceDifference > 0) {
                 $shouldCreateNewPrice = true;
             } else {
                 // Price hasn't changed significantly, just update the last purchase info and USD conversion
-                $currentSupplierPrice->update([
-                    'price_usd' => $newPriceUsd,
-                    'currency_rate' => $purchase->currency_rate,
-                    'last_purchase_id' => $purchase->id,
-                    'last_purchase_date' => $purchase->date,
-                ]);
+                // $currentSupplierPrice->update([
+                //     'price_usd' => $newPriceUsd,
+                //     'currency_rate' => $purchase->currency_rate,
+                //     'last_purchase_id' => $purchase->id,
+                //     'last_purchase_date' => $purchase->date,
+                // ]);
             }
         }
         
