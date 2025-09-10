@@ -14,6 +14,7 @@ class WarehouseResource extends JsonResource
             'name' => $this->name,
             'note' => $this->note,
             'is_active' => $this->is_active,
+            'is_default' => $this->is_default,
             'address_line_1' => $this->address_line_1,
             'address_line_2' => $this->address_line_2,
             'city' => $this->city,

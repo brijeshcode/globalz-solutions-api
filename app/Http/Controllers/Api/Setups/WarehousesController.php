@@ -81,6 +81,18 @@ class WarehousesController extends Controller
         );
     }
 
+    public function setDefault(int $warehouseId): JsonResponse
+    {
+        $warehouse = Warehouse::findorfail($warehouseId);
+        Warehouse::where('is_default', true)->update(['is_default' => false]);
+        $warehouse->update(['is_default' => true]);
+        
+        return ApiResponse::update(
+            'Warehouse default set',
+            new WarehouseResource($warehouse)
+        );
+    }
+
     public function destroy(Warehouse $warehouse): JsonResponse
     {
         $warehouse->delete();

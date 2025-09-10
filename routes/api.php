@@ -113,6 +113,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('{warehouse}', 'update')->name('update');
             Route::delete('{warehouse}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::patch('{id}/setdefault', 'setDefault')->name('setDefault');
+
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
 

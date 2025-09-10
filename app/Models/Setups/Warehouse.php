@@ -19,6 +19,7 @@ class Warehouse extends Model
         'name',
         'note',
         'is_active',
+        'is_default',
         'address_line_1',
         'address_line_2',
         'city',

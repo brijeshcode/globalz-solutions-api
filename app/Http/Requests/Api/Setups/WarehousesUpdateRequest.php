@@ -23,12 +23,13 @@ class WarehousesUpdateRequest extends FormRequest
             ],
             'note' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
-            'address_line_1' => 'required|string|max:255',
+            'is_default' => 'boolean',
+            'address_line_1' => 'nullable|string|max:255',
             'address_line_2' => 'nullable|string|max:255',
-            'city' => 'required|string|max:100',
-            'state' => 'required|string|max:100',
-            'postal_code' => 'required|string|max:20',
-            'country' => 'required|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:20',
+            'country' => 'nullable|string|max:100',
         ];
     }
 

@@ -141,11 +141,11 @@ describe('Warehouses API', function () {
         $response->assertUnprocessable()
             ->assertJsonValidationErrors([
                 'name',
-                'address_line_1',
-                'city',
-                'state',
-                'postal_code',
-                'country',
+                // 'address_line_1',
+                // 'city',
+                // 'state',
+                // 'postal_code',
+                // 'country',
             ]);
     });
 
@@ -352,6 +352,95 @@ describe('Warehouses API', function () {
 
     it('returns 404 when trying to force delete non-existent trashed warehouse', function () {
         $response = $this->deleteJson(route('setups.warehouses.force-delete', 999));
+
+        $response->assertNotFound();
+    });
+
+    it('can create new warehouse name and is_active filed only', function () {
+        $data = [
+            'name' => 'Minimal Warehouse',
+            'is_active' => true,
+        ];
+
+        $response = $this->postJson(route('setups.warehouses.store'), $data);
+
+        $response->assertCreated()
+            ->assertJsonStructure([
+                'message',
+                'data' => [
+                    'id',
+                    'name',
+                    'is_active',
+                ]
+            ])
+            ->assertJson([
+                'data' => [
+                    'name' => 'Minimal Warehouse',
+                    'is_active' => true,
+                ]
+            ]);
+
+        $this->assertDatabaseHas('warehouses', [
+            'name' => 'Minimal Warehouse',
+            'is_active' => true,
+        ]);
+    });
+    it('can update warehouse name and is_active filed only', function () {
+        $warehouse = Warehouse::factory()->create([
+            'name' => 'Original Warehouse',
+            'is_active' => false,
+        ]);
+
+        $data = [
+            'name' => 'Updated Minimal Warehouse',
+            'is_active' => true,
+        ];
+
+        $response = $this->putJson(route('setups.warehouses.update', $warehouse), $data);
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'id' => $warehouse->id,
+                    'name' => 'Updated Minimal Warehouse',
+                    'is_active' => true,
+                ]
+            ]);
+
+        $this->assertDatabaseHas('warehouses', [
+            'id' => $warehouse->id,
+            'name' => 'Updated Minimal Warehouse',
+            'is_active' => true,
+        ]);
+    });
+
+    it('can set a warehouse as default', function () {
+        $warehouse1 = Warehouse::factory()->create(['is_default' => true]);
+        $warehouse2 = Warehouse::factory()->create(['is_default' => false]);
+
+        $response = $this->patchJson(route('setups.warehouses.setDefault', $warehouse2->id));
+
+        $response->assertOk()
+            ->assertJson([
+                'data' => [
+                    'id' => $warehouse2->id,
+                    'is_default' => true,
+                ]
+            ]);
+
+        $this->assertDatabaseHas('warehouses', [
+            'id' => $warehouse1->id,
+            'is_default' => false,
+        ]);
+
+        $this->assertDatabaseHas('warehouses', [
+            'id' => $warehouse2->id,
+            'is_default' => true,
+        ]);
+    });
+
+    it('cannot set warehouse as default with invalid warehouse id', function () {
+        $response = $this->patchJson(route('setups.warehouses.setDefault', 999));
 
         $response->assertNotFound();
     });
