@@ -19,9 +19,8 @@ class ItemPriceFactory extends Factory
     {
         return [
             'item_id' => Item::factory()->create()->id,
-            'price_usd' => 100,
-            'last_purchase_id' => 1,
-            'effective_date' => now()
+            'price_usd' => $this->faker->randomFloat(4, 1, 1000),
+            'effective_date' => $this->faker->date()
         ];
     }
 }

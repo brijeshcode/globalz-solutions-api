@@ -18,11 +18,13 @@ class ItemPriceHistory extends Model
 
     protected $fillable = [
         'item_id',
-        'purchase_id',
         'price_usd',
         'average_waited_price',
         'latest_price',
         'effective_date',
+        'source_type',
+        'source_id',
+        'note',
     ];
 
     protected $casts = [
@@ -37,11 +39,13 @@ class ItemPriceHistory extends Model
     protected $sortable = [
         'id',
         'item_id',
-        'purchase_id',
         'price_usd',
         'average_waited_price',
         'latest_price',
         'effective_date',
+        'source_type',
+        'source_id',
+        'note',
         'created_at',
         'updated_at',
     ];
@@ -55,10 +59,6 @@ class ItemPriceHistory extends Model
         return $this->belongsTo(Item::class);
     }
 
-    public function purchase(): BelongsTo
-    {
-        return $this->belongsTo(Purchase::class);
-    }
 
     // Scopes
     public function scopeByItem($query, $itemId)
@@ -66,10 +66,6 @@ class ItemPriceHistory extends Model
         return $query->where('item_id', $itemId);
     }
 
-    public function scopeByPurchase($query, $purchaseId)
-    {
-        return $query->where('purchase_id', $purchaseId);
-    }
 
     public function scopeByDateRange($query, $startDate, $endDate)
     {

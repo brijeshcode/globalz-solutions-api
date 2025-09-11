@@ -13,6 +13,7 @@ use App\Models\Items\Item;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ItemsController extends Controller
 {
@@ -33,7 +34,9 @@ class ItemsController extends Controller
                 'taxCode:id,name,tax_percent',
                 'createdBy:id,name',
                 'updatedBy:id,name',
-                'documents'
+                'documents',
+                'inventories',
+                'itemPrice'
             ])
             ->searchable($request)
             ->sortable($request);
@@ -125,8 +128,22 @@ class ItemsController extends Controller
             $data['code'] = $this->generateItemCode();
         }
 
-        // Create item
-        $item = Item::create($data);
+        // Create item in a transaction to handle all related operations
+        $item = DB::transaction(function () use ($data, $request) {
+            // Create the item
+            $item = Item::create($data);
+            
+            // Initialize inventory if starting_quantity is provided
+            if (isset($data['starting_quantity']) && $data['starting_quantity'] > 0) {
+                $this->initializeInventory($item, $data['starting_quantity']);
+            }
+            // Initialize supplier item price if base_cost and supplier_id are provided
+            if (isset($data['base_cost']) && $data['base_cost'] > 0 && isset($data['supplier_id'])) {
+                $this->initializeSupplierItemPrice($item, $data['supplier_id']);
+            }
+            
+            return $item;
+        });
         
         // Increment counter only after successful creation
         if (!$request->has('code') || empty($request->input('code'))) {
@@ -392,7 +409,7 @@ class ItemsController extends Controller
 
     /**
      * Generate unique item code starting from settings
-     */
+    */
     private function generateItemCode(): string
     {
         return Settings::getCurrentItemCode();
@@ -444,6 +461,40 @@ class ItemsController extends Controller
         return null;
     }
 
+    /**
+     * Initialize inventory for a new item with starting quantity
+     */
+    private function initializeInventory(Item $item, float $startingQuantity): void
+    {
+        // Get default warehouse or create one if none exists
+        $defaultWarehouse = \App\Models\Setups\Warehouse::where('is_default', true)->first();
+        
+        if (!$defaultWarehouse) {
+            // If no default warehouse exists, get the first available warehouse
+            $defaultWarehouse = \App\Models\Setups\Warehouse::first();
+        }
+        
+        if ($defaultWarehouse) {
+            \App\Services\Inventory\InventoryService::set(
+                $item->id,
+                $defaultWarehouse->id,
+                (int) $startingQuantity,
+                'Initial inventory from item creation'
+            );
+        }
+    }
+
+    /**
+     * Initialize supplier item price for a new item
+     */
+    private function initializeSupplierItemPrice(Item $item, int $supplierId): void
+    {
+        \App\Services\Suppliers\SupplierItemPriceService::initializeFromItem(
+            $supplierId,
+            $item
+        );
+    }
+
 
     /**
      * Get item statistics for dashboard
@@ -458,7 +509,14 @@ class ItemsController extends Controller
             'low_stock_items' => Item::whereRaw('starting_quantity <= low_quantity_alert')
                 ->whereNotNull('low_quantity_alert')
                 ->count(),
+            'total_starting_quantity' => Item::sum('starting_quantity'),
+            'total_inventory_quantity' => DB::table('inventories')->sum('quantity'),
+            'total_net_quantity' => Item::sum('starting_quantity') + DB::table('inventories')->sum('quantity'),
             'total_inventory_value' => Item::selectRaw('SUM(starting_quantity * base_cost) as total')->value('total') ?? 0,
+            'total_warehouse_inventory_value' => DB::table('inventories')
+                ->join('items', 'inventories.item_id', '=', 'items.id')
+                ->selectRaw('SUM(inventories.quantity * items.base_cost) as total')
+                ->value('total') ?? 0,
             'items_by_type' => Item::with('itemType:id,name')
                 ->selectRaw('item_type_id, count(*) as count')
                 ->groupBy('item_type_id')
@@ -471,6 +529,11 @@ class ItemsController extends Controller
                 ->get(),
             'cost_calculation_breakdown' => Item::selectRaw('cost_calculation, count(*) as count')
                 ->groupBy('cost_calculation')
+                ->get(),
+            'inventory_by_warehouse' => DB::table('inventories')
+                ->join('warehouses', 'inventories.warehouse_id', '=', 'warehouses.id')
+                ->selectRaw('warehouses.name as warehouse_name, SUM(inventories.quantity) as total_quantity')
+                ->groupBy('warehouses.id', 'warehouses.name')
                 ->get(),
         ];
 

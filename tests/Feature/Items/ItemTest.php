@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
 use App\Models\Setting;
 use App\Models\Setups\ItemType;
@@ -10,6 +11,7 @@ use App\Models\Setups\ItemBrand;
 use App\Models\Setups\ItemUnit;
 use App\Models\Setups\Supplier;
 use App\Models\Setups\TaxCode;
+use App\Models\Suppliers\SupplierItemPrice;
 use App\Models\User;
 
 uses()->group('api', 'setup', 'setup.items', 'items');
@@ -1085,4 +1087,92 @@ describe('Item Code Generation Tests', function () {
         $response->assertOk();
         expect($response->json('data.numeric_part'))->toBe(null);
     })->group('item-next-code');
+
+    it('can update inventory on new item creation by starting_quantity of item', function () {
+        // Create warehouse first
+        $warehouse = \App\Models\Setups\Warehouse::factory()->create(['is_default' => true]);
+        
+        $data = ($this->getBaseItemData)([
+            'starting_quantity' => 100,
+        ]);
+
+        $response = $this->postJson(route('setups.items.store'), $data);
+        
+        $response->assertCreated();
+        $item = Item::where('short_name', $data['short_name'])->first();
+        
+        // Check that inventory record was created
+        $inventory = \App\Models\Inventory\Inventory::where('item_id', $item->id)
+            ->where('warehouse_id', $warehouse->id)
+            ->first();
+            
+        expect($inventory)->not()->toBeNull();
+        // expect($inventory->quantity)->toBe(100.0);
+        expect((float) $inventory->quantity)->toBe(100.0);
+    });
+
+    it('can update item_price on new item creation by starting_price', function () {
+        $data = ($this->getBaseItemData)([
+            'starting_price' => 150.75,
+        ]);
+
+        $response = $this->postJson(route('setups.items.store'), $data);
+        
+        $response->assertCreated();
+        $item = Item::where('short_name', $data['short_name'])->first();
+        
+        // Check that ItemPrice record was created
+        $itemPrice = \App\Models\Inventory\ItemPrice::where('item_id', $item->id)->first();
+        
+        expect($itemPrice)->not()->toBeNull();
+        expect((float)$itemPrice->price_usd)->toBe(150.75);
+        expect($itemPrice->effective_date->format('Y-m-d'))->toBe($item->created_at->format('Y-m-d'));
+    });
+
+    it('can update supplier_item_price on new item creation by item base_cost', function () {
+        $data = ($this->getBaseItemData)([
+            'base_cost' => 85.50,
+            'supplier_id' => $this->supplier->id,
+        ]);
+
+        $response = $this->postJson(route('setups.items.store'), $data);
+        
+        $response->assertCreated();
+        $item = Item::where('short_name', $data['short_name'])->first();
+        
+        // Check that SupplierItemPrice record was created
+        $supplierItemPrice = SupplierItemPrice::where('item_id', $item->id)
+            ->where('supplier_id', $this->supplier->id)
+            ->where('is_current', true)
+            ->first();
+        // dd(SupplierItemPrice::all());
+        expect($supplierItemPrice)->not()->toBeNull();
+        expect((float) $supplierItemPrice->price)->toBe(85.50);
+        expect((float) $supplierItemPrice->price_usd)->toBe(85.50); // Assuming default currency rate of 1.0
+        expect($supplierItemPrice->note)->toBe('Initialized from item base cost');
+    })->group('here');
+
+    it('can update item price history as initial price', function () {
+        $data = ($this->getBaseItemData)([
+            'starting_price' => 125.00,
+        ]);
+
+        $response = $this->postJson(route('setups.items.store'), $data);
+        $data = $response->json('data');
+        
+        $response->assertCreated();
+        $item = Item::find($data['id']);
+        
+        // Check that ItemPriceHistory record was created
+        $priceHistory = ItemPriceHistory::where('item_id', $item->id)
+            ->where('source_type', 'initial')
+            ->first();
+        
+        expect($priceHistory)->not()->toBeNull();
+        expect((float) $priceHistory->price_usd)->toBe(125.00);
+        expect((float) $priceHistory->average_waited_price)->toBe(125.00);
+        expect((float) $priceHistory->latest_price)->toBe(0.0); // No previous price
+        expect($priceHistory->effective_date->format('Y-m-d'))->toBe($item->created_at->format('Y-m-d'));
+        expect($priceHistory->note)->toBe('Initial price from item creation');
+    });
 });

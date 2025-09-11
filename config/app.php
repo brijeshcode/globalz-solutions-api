@@ -167,4 +167,9 @@ return [
 
     'employee_code_start' => (int) env('EMPLOYEE_CODE_START', 100),
 
+
+    'base_currency' => 'USD', // Default
+    // 'base_currency' => 'EUR', // European operations
+    // 'base_currency' => 'GBP', // UK operations
+
 ];

@@ -29,7 +29,7 @@ return new class extends Migration
 
 
             $table->boolean('is_current')->default(true)->comment('only one true per suppier_id , item_id'); // use to fetch last price for supplier item
-            $table->text('notes')->nullable();
+            $table->text('note')->nullable();
 
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');

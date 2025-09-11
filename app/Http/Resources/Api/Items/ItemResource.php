@@ -176,6 +176,34 @@ class ItemResource extends JsonResource
                     ];
                 });
             }),
+
+            // Inventory related data
+            'total_inventory_quantity' => $this->whenLoaded('inventories', function () {
+                return $this->total_inventory_quantity;
+            }),
+            'net_quantity' => $this->whenLoaded('inventories', function () {
+                return $this->net_quantity;
+            }),
+            'warehouse_inventories' => $this->whenLoaded('inventories', function () {
+                return $this->inventories->map(function ($inventory) {
+                    return [
+                        'warehouse_id' => $inventory->warehouse_id,
+                        'warehouse_name' => $inventory->warehouse->name ?? null,
+                        'quantity' => $inventory->quantity,
+                    ];
+                });
+            }),
+
+            // Item Price data
+            'current_price' => $this->whenLoaded('itemPrice', function () {
+                return $this->itemPrice ? [
+                    'price_usd' => $this->itemPrice->price_usd,
+                    'effective_date' => $this->itemPrice->effective_date,
+                    'formatted_price' => $this->itemPrice->formatted_price,
+                    'is_recent' => $this->itemPrice->is_recent,
+                    'age_in_days' => $this->itemPrice->age_in_days,
+                ] : null;
+            }),
         ];
     }
 

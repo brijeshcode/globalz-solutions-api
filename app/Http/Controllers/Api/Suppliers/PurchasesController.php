@@ -159,8 +159,6 @@ class PurchasesController extends Controller
      */
     public function update(PurchasesUpdateRequest $request, Purchase $purchase): JsonResponse
     {
-        info($request->all());
-
         $data = $request->validated();
         $items = $data['items'] ?? [];
         unset($data['items']); // Remove items from purchase data

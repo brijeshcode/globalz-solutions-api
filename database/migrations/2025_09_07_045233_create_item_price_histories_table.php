@@ -14,13 +14,17 @@ return new class extends Migration
         Schema::create('item_price_histories', function (Blueprint $table) {
             $table->id();
             // we will add histroy price if price has changed 
-            $table->unsignedBigInteger('item_id')->index();
-            $table->unsignedBigInteger('purchase_id')->index(); 
+            $table->unsignedBigInteger('item_id')->index(); 
             
             $table->money('price_usd', 15, 4);
             $table->money('average_waited_price')->nullable()->comment('for information');
             $table->money('latest_price')->nullable()->comment('for information');
-            $table->date('effective_date'); // purchase date
+            $table->date('effective_date');
+            
+            // Track transaction source
+            $table->string('source_type')->nullable()->comment('purchase, adjustment, manual, initial, etc.');
+            $table->unsignedBigInteger('source_id')->nullable()->comment('ID of the source transaction');
+            $table->text('note')->nullable()->comment('reason for price change');
             
             $table->timestamps();
             $table->softDeletes();

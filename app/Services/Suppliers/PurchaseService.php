@@ -9,6 +9,10 @@ use App\Models\Inventory\ItemPrice;
 use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Inventory\Inventory;
 use App\Models\Items\Item;
+use App\Services\Inventory\InventoryService;
+use App\Services\Inventory\PriceService;
+use App\Services\Suppliers\SupplierItemPriceService;
+use App\Services\Currency\CurrencyService;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseService
@@ -44,13 +48,11 @@ class PurchaseService
           
             
             $purchase->update($purchaseData);
-            info('purchase update completed ');
             // Process items if provided
             if (!empty($items)) {
                 $this->updatePurchaseItems($purchase, $items);
             }
 
-            info('now going to recalculation');
             // Recalculate purchase totals
             $this->recalculatePurchaseTotals($purchase);
             
@@ -110,12 +112,11 @@ class PurchaseService
                         'discount_percent' => $discountPercent,
                         'discount_amount' => $discountAmount, // Store total line discount
                         'total_price' => $totalPrice,
-                        'total_price_usd' => $totalPrice * $purchase->currency_rate,
+                        'total_price_usd' => CurrencyService::convertToBaseWithRate($totalPrice, $purchase->currency_id, $purchase->currency_rate),
                         'note' => $itemData['note'] ?? $purchaseItem->note,
                     ]);
                     
                     // Recalculate derived fields
-                    info('2. re calculating purchase items fileslike totla ship, customs, other');
 
                     $updatedData = $this->preparePurchaseItemData($purchase, $itemData);
                     $purchaseItem->update([
@@ -128,15 +129,12 @@ class PurchaseService
                     
                     // Update related data if cost or quantity changed
                     if ($oldCostPerItemUsd != $purchaseItem->cost_per_item_usd || $oldQuantity != $purchaseItem->quantity) {
-                        info('3 update inventory');
                         $this->processPurchaseItemRelatedData($purchase, $purchaseItem, true, $oldQuantity);
                     }
-                    info('7  update inventory completed');
                     
                     $processedItemIds[] = $purchaseItem->id;
                 }
             } else {
-                info('updating:create new item');  
                 // Create new item (only if no ID provided)
                 $purchaseItem = $this->createPurchaseItem($purchase, $itemData);
                 $this->processPurchaseItemRelatedData($purchase, $purchaseItem);
@@ -188,7 +186,7 @@ class PurchaseService
         
         $totalBeforeDiscount = $price * $quantity;
         $totalPrice = $totalBeforeDiscount - $discountAmount;
-        $totalPriceUsd = $totalPrice * $purchase->currency_rate;
+        $totalPriceUsd = CurrencyService::convertToBaseWithRate($totalPrice, $purchase->currency_id, $purchase->currency_rate);
         
         // Calculate proportional fees based on purchase totals
         $totalShippingUsd = $this->calculateProportionalFee($totalPriceUsd, $purchase, 'shipping_fee_usd', 'shipping_fee_usd_percent');
@@ -244,13 +242,11 @@ class PurchaseService
         // 1. Update inventory
         $this->updateInventory($purchase, $purchaseItem, $isUpdate, $oldQuantity);
         
-        info('4 update suppleir item price');
         // 2. Update supplier item prices
-        $this->updateSupplierItemPrice($purchase, $purchaseItem);
+        SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
         
-        info('5 update suppleir item price history');
         // 3. Update item price and price history
-        $this->updateItemPriceAndHistory($purchase, $purchaseItem);
+        PriceService::updateFromPurchase($purchase, $purchaseItem);
     }
 
     /**
@@ -258,168 +254,25 @@ class PurchaseService
      */
     protected function updateInventory(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0): void
     {
-        $inventory = Inventory::byWarehouseAndItem($purchase->warehouse_id, $purchaseItem->item_id)->first();
         
-        if ($inventory) {
-            if ($isUpdate) {
-                // For updates, adjust inventory by the difference between old and new quantities
-                $quantityDifference = $purchaseItem->quantity - $oldQuantity;
-                $inventory->quantity += $quantityDifference;
-            } else {
-                // Add quantity to existing inventory (for new items)
-                $inventory->quantity += $purchaseItem->quantity;
-            }
-            $inventory->save();
-        } else {
-            // Create new inventory record
-            Inventory::create([
-                'warehouse_id' => $purchase->warehouse_id,
-                'item_id' => $purchaseItem->item_id,
-                'quantity' => $purchaseItem->quantity,
-            ]);
-        }
-    }
-
-    /**
-     * Update supplier item price
-     */
-    protected function updateSupplierItemPrice(Purchase $purchase, PurchaseItem $purchaseItem): void
-    {
-        // Get current active supplier item price
-        $currentSupplierPrice = SupplierItemPrice::bySupplierAndItem($purchase->supplier_id, $purchaseItem->item_id)
-            ->where('is_current', true)
-            ->first();
-        
-        $newPrice = $purchaseItem->price;
-        $newPriceUsd = $purchaseItem->price * $purchase->currency_rate;
-        
-        // Only create new price record if price has changed significantly or no current price exists
-        $shouldCreateNewPrice = false;
-        
-        if (!$currentSupplierPrice) {
-            info('should create new supplier price');
-            // No existing price, create new one
-            $shouldCreateNewPrice = true;
-        } else {
-            // Compare original currency price, not USD price (because USD changes with exchange rates)
-            $priceDifference = abs($newPrice - $currentSupplierPrice->price);
-            info('Update supplier price hsitroy');
-            info('Price deference: '. $priceDifference);
-
-            if ($priceDifference > 0) {
-                $shouldCreateNewPrice = true;
-            } else {
-                // Price hasn't changed significantly, just update the last purchase info and USD conversion
-                // $currentSupplierPrice->update([
-                //     'price_usd' => $newPriceUsd,
-                //     'currency_rate' => $purchase->currency_rate,
-                //     'last_purchase_id' => $purchase->id,
-                //     'last_purchase_date' => $purchase->date,
-                // ]);
-            }
-        }
-        
-        if ($shouldCreateNewPrice) {
-            // Mark existing prices as not current
-            SupplierItemPrice::bySupplierAndItem($purchase->supplier_id, $purchaseItem->item_id)
-                ->update(['is_current' => false]);
-            
-            // Create new current price record
-            SupplierItemPrice::create([
-                'supplier_id' => $purchase->supplier_id,
-                'item_id' => $purchaseItem->item_id,
-                'currency_id' => $purchase->currency_id,
-                'price' => $purchaseItem->price,
-                'price_usd' => $newPriceUsd,
-                'currency_rate' => $purchase->currency_rate,
-                'last_purchase_id' => $purchase->id,
-                'last_purchase_date' => $purchase->date,
-                'is_current' => true,
-            ]);
-        }
-    }
-
-    /**
-     * Update item price and price history
-     */
-    protected function updateItemPriceAndHistory(Purchase $purchase, PurchaseItem $purchaseItem): void
-    {
-        $item = $purchaseItem->item;
-        $newPriceUsd = $purchaseItem->cost_per_item_usd;
-        
-        // Get current item price
-        $currentItemPrice = ItemPrice::byItem($purchaseItem->item_id)->first();
-        
-        if ($currentItemPrice) {
-            $oldPriceUsd = $currentItemPrice->price_usd;
-            
-            // Check if item uses weighted average calculation
-            if ($item->cost_calculation === Item::COST_WEIGHTED_AVERAGE) {
-                $newPriceUsd = $this->calculateWeightedAveragePrice($purchaseItem, $oldPriceUsd);
-            }
-            
-            // Only update if price changed significantly (more than 0.01 difference)
-            $priceDifference = abs($newPriceUsd - $oldPriceUsd);
-            
-            if ($priceDifference > 0) {
-                // Create price history for significant price change
-                ItemPriceHistory::create([
-                    'item_id' => $purchaseItem->item_id,
-                    'purchase_id' => $purchase->id,
-                    'price_usd' => $newPriceUsd,
-                    'average_waited_price' => $newPriceUsd, // For weighted average
-                    'latest_price' => $oldPriceUsd,
-                    'effective_date' => $purchase->date,
-                ]);
-                
-                // Update current item price
-                $currentItemPrice->update([
-                    'price_usd' => $newPriceUsd,
-                    'effective_date' => $purchase->date,
-                    'last_purchase_id' => $purchase->id,
-                ]);
-            } else {
-                // Price hasn't changed significantly, just update the last purchase info
-                $currentItemPrice->update([
-                    'last_purchase_id' => $purchase->id,
-                ]);
+        if ($isUpdate) {
+            // For updates, adjust inventory by the difference between old and new quantities
+            $quantityDifference = $purchaseItem->quantity - $oldQuantity;
+            if ($quantityDifference != 0) {
+                InventoryService::adjust(
+                    $purchaseItem->item_id,
+                    $purchase->warehouse_id,
+                    $quantityDifference
+                );
             }
         } else {
-            // Create new item price (first time for this item)
-            ItemPrice::create([
-                'item_id' => $purchaseItem->item_id,
-                'price_usd' => $newPriceUsd,
-                'effective_date' => $purchase->date,
-                'last_purchase_id' => $purchase->id,
-            ]);
+            // Add quantity to inventory (for new items)
+            InventoryService::add(
+                $purchaseItem->item_id,
+                $purchase->warehouse_id,
+                $purchaseItem->quantity
+            );
         }
-    }
-
-    /**
-     * Calculate weighted average price for an item
-     */
-    protected function calculateWeightedAveragePrice(PurchaseItem $purchaseItem, float $currentPriceUsd): float
-    {
-        // Get current inventory quantity
-        $currentInventory = Inventory::byWarehouseAndItem(
-            $purchaseItem->purchase->warehouse_id,
-            $purchaseItem->item_id
-        )->first();
-        
-        $currentQuantity = $currentInventory ? $currentInventory->quantity : 0;
-        $newQuantity = $purchaseItem->quantity;
-        $newPriceUsd = $purchaseItem->cost_per_item_usd;
-        
-        if ($currentQuantity <= 0) {
-            return $newPriceUsd;
-        }
-        
-        // Weighted average formula: 
-        // ((current_qty * current_price) + (new_qty * new_price)) / (current_qty + new_qty)
-        $totalValue = ($currentQuantity * $currentPriceUsd) + ($newQuantity * $newPriceUsd);
-        $totalQuantity = $currentQuantity + $newQuantity;
-        
-        return $totalQuantity > 0 ? ($totalValue / $totalQuantity) : $newPriceUsd;
     }
 
     /**
@@ -428,11 +281,11 @@ class PurchaseService
     protected function handlePurchaseItemDeletion(Purchase $purchase, PurchaseItem $purchaseItem): void
     {
         // Adjust inventory (remove quantity)
-        $inventory = Inventory::byWarehouseAndItem($purchase->warehouse_id, $purchaseItem->item_id)->first();
-        if ($inventory) {
-            $inventory->quantity -= $purchaseItem->quantity;
-            $inventory->save();
-        }
+        InventoryService::subtract(
+            $purchaseItem->item_id,
+            $purchase->warehouse_id,
+            $purchaseItem->quantity
+        );
         
         // Note: We don't remove supplier prices or item price history as they are historical records
     }

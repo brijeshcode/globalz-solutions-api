@@ -29,7 +29,7 @@ class SupplierItemPrice extends Model
         'last_purchase_id',
         'last_purchase_date',
         'is_current',
-        'notes',
+        'note',
     ];
 
     protected $casts = [
@@ -41,7 +41,7 @@ class SupplierItemPrice extends Model
     ];
 
     protected $searchable = [
-        'notes',
+        'note',
     ];
 
     protected $sortable = [

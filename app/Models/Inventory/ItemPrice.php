@@ -19,7 +19,6 @@ class ItemPrice extends Model
         'item_id',
         'price_usd',
         'effective_date',
-        'last_purchase_id',
     ];
 
     protected $casts = [
@@ -34,7 +33,6 @@ class ItemPrice extends Model
         'item_id',
         'price_usd',
         'effective_date',
-        'last_purchase_id',
         'created_at',
         'updated_at',
     ];
@@ -48,10 +46,6 @@ class ItemPrice extends Model
         return $this->belongsTo(Item::class);
     }
 
-    public function lastPurchase(): BelongsTo
-    {
-        return $this->belongsTo(Purchase::class, 'last_purchase_id');
-    }
 
     // Scopes
     public function scopeByItem($query, $itemId)

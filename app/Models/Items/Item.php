@@ -2,6 +2,7 @@
 
 namespace App\Models\Items;
 
+use App\Models\Inventory\Inventory;
 use App\Models\Setting;
 use App\Models\Setups\ItemBrand;
 use App\Models\Setups\ItemCategory;
@@ -21,6 +22,7 @@ use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Item extends Model
@@ -52,6 +54,8 @@ class Item extends Model
         'notes',
         'is_active',
     ];
+    // here we need to add net_quantity = starting_quantity + inventory quanitity including all warehouses 
+    // or we can have its relation with inventory which will tell me warhouse and there quantity.
 
     protected $casts = [
         'is_active' => 'boolean',
@@ -154,6 +158,11 @@ class Item extends Model
         return $this->belongsTo(TaxCode::class);
     }
 
+    public function itemPrice(): HasOne
+    {
+        return $this->hasOne(\App\Models\Inventory\ItemPrice::class);
+    }
+
     // Accessors & Mutators
     public function getCurrentCostAttribute(): float
     {
@@ -228,7 +237,7 @@ class Item extends Model
     public function scopeLowStock($query)
     {
         return $query->whereRaw('starting_quantity <= low_quantity_alert')
-                    ->whereNotNull('low_quantity_alert');
+            ->whereNotNull('low_quantity_alert');
     }
 
     public function scopeByBarcode($query, $barcode)
@@ -252,8 +261,24 @@ class Item extends Model
         return $this->cost_calculation === self::COST_LAST_COST;
     }
 
+    /**
+     * Check if starting price can be updated
+     */
+    public function canUpdateStartingPrice(): bool
+    {
+        return \App\Services\Inventory\PriceService::canUpdateStartingPrice($this->id);
+    }
+
+    /**
+     * Get impact of changing starting price
+     */
+    public function getStartingPriceChangeImpact(): array
+    {
+        return \App\Services\Inventory\PriceService::getStartingPriceChangeImpact($this->id);
+    }
+
     // Code Generation Methods
-    
+
     /**
      * Generate the next item code from settings
      */
@@ -261,6 +286,24 @@ class Item extends Model
     {
         $nextNumber = Setting::get('items', 'code_counter', 5000);
         return (string) $nextNumber;
+    }
+
+    // Relationship to get all warehouse inventories
+    public function inventories()
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
+    // Calculated attribute for total inventory across all warehouses
+    public function getTotalInventoryQuantityAttribute()
+    {
+        return $this->inventories()->sum('quantity');
+    }
+
+    // Net quantity = starting_quantity + total_inventory_quantity
+    public function getNetQuantityAttribute()
+    {
+        return $this->starting_quantity + $this->total_inventory_quantity;
     }
 
     /**
@@ -279,11 +322,11 @@ class Item extends Model
     public static function isCodeUnique(string $code, ?int $excludeId = null): bool
     {
         $query = self::withTrashed()->where('code', $code);
-        
+
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
         }
-        
+
         return !$query->exists();
     }
 
@@ -306,7 +349,7 @@ class Item extends Model
                 throw new \InvalidArgumentException("Code '{$userCode}' is already in use.");
             }
             $this->code = $userCode;
-            
+
             // Only increment counter if user used the suggested code
             $suggestedCode = self::generateNextItemCode();
             if ($userCode === $suggestedCode) {
@@ -316,7 +359,7 @@ class Item extends Model
             // Auto-generate code
             $this->code = self::reserveNextCode();
         }
-        
+
         return $this->code;
     }
 
@@ -350,11 +393,28 @@ class Item extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($item) {
             // Auto-set code if not provided
             if (!$item->code) {
                 $item->setItemCode();
+            }
+        });
+
+        static::created(function ($item) {
+            // Initialize price from starting_price after item is created
+            if ($item->starting_price > 0) {
+                \App\Services\Inventory\PriceService::initializeFromItem($item);
+            }
+        });
+
+        static::updating(function ($item) {
+            // Prevent starting_price changes if transactions exist
+            if ($item->isDirty('starting_price')) {
+                if (!$item->canUpdateStartingPrice()) {
+                    $impact = $item->getStartingPriceChangeImpact();
+                    throw new \InvalidArgumentException($impact['warning_message']);
+                }
             }
         });
     }

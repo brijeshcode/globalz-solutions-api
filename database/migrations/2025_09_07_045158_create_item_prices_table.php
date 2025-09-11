@@ -17,9 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('item_id')->unique()->index();
             
             $table->money('price_usd', 15, 4);
-            $table->date('effective_date'); // purchase date
-            
-            $table->unsignedBigInteger('last_purchase_id')->index();
+            $table->date('effective_date');
             
             $table->timestamps();
 

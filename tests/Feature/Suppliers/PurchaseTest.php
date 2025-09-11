@@ -309,6 +309,9 @@ describe('Purchases API', function () {
         expect($priceHistory)->not()->toBeNull();
         expect($priceHistory->latest_price)->toBe('50.0000');
         expect($priceHistory->price_usd)->toBeGreaterThan(50.00);
+        expect($priceHistory->source_type)->toBe('purchase');
+        expect($priceHistory->source_id)->not()->toBeNull();
+        expect($priceHistory->note)->toContain('Purchase #');
 
         // Verify item price was updated
         $initialItemPrice->refresh();
