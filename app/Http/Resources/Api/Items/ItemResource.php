@@ -106,10 +106,12 @@ class ItemResource extends JsonResource
             'is_active' => (bool) $this->is_active,
 
             // Computed Properties
-            'current_cost' => $this->getCurrentCostAttribute(),
-            'current_price' => $this->getCurrentPriceAttribute(),
-            'current_quantity' => $this->getCurrentQuantityAttribute(),
-            'is_low_stock' => $this->getIsLowStockAttribute(),
+            'current_cost' => $this->whenLoaded('itemPrice', function () {
+                return $this->itemPrice ? (float) $this->itemPrice->price_usd : (float) ($this->base_cost ?? 0);
+            }, (float) ($this->base_cost ?? 0)),
+            'current_price' => (float) ($this->base_sell ?? 0),
+            'current_quantity' => $this->getDisplayQuantity($request),
+            'is_low_stock' => $this->is_low_stock,
 
             // Helper methods display
             'is_cost_calculated_by_weighted_average' => $this->isCostCalculatedByWeightedAverage(),
@@ -181,9 +183,10 @@ class ItemResource extends JsonResource
             'total_inventory_quantity' => $this->whenLoaded('inventories', function () {
                 return $this->total_inventory_quantity;
             }),
-            'net_quantity' => $this->whenLoaded('inventories', function () {
-                return $this->net_quantity;
-            }),
+            'warehouse_inventory_quantity' => $this->when(
+                $request->has('warehouse_id') && isset($this->warehouse_inventory_quantity),
+                $this->warehouse_inventory_quantity ?? 0
+            ),
             'warehouse_inventories' => $this->whenLoaded('inventories', function () {
                 return $this->inventories->map(function ($inventory) {
                     return [
@@ -194,8 +197,8 @@ class ItemResource extends JsonResource
                 });
             }),
 
-            // Item Price data
-            'current_price' => $this->whenLoaded('itemPrice', function () {
+            // Item Price data  
+            'item_price_data' => $this->whenLoaded('itemPrice', function () {
                 return $this->itemPrice ? [
                     'price_usd' => $this->itemPrice->price_usd,
                     'effective_date' => $this->itemPrice->effective_date,
@@ -229,5 +232,19 @@ class ItemResource extends JsonResource
         }
 
         return round((($this->base_sell - $this->base_cost) / $this->base_cost) * 100, 2);
+    }
+
+    /**
+     * Get display quantity based on warehouse filter
+     */
+    private function getDisplayQuantity(\Illuminate\Http\Request $request): int|float
+    {
+        // If filtering by warehouse and warehouse_inventory_quantity is available, use it
+        if ($request->has('warehouse_id') && isset($this->warehouse_inventory_quantity)) {
+            return $this->warehouse_inventory_quantity;
+        }
+        
+        // Otherwise, use total inventory quantity
+        return $this->total_inventory_quantity ?? 0;
     }
 }

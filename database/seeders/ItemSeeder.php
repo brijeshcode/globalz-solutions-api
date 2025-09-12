@@ -361,6 +361,12 @@ class ItemSeeder extends Seeder
                 }
                 
                 $item->save();
+                \App\Services\Inventory\InventoryService::set(
+                    $item->id,
+                    1,
+                    (int) $itemData['starting_quantity'],
+                    'Initial inventory from item creation'
+                );
                 
                 $this->command->info("Created item: {$item->code} - {$item->description}");
             }

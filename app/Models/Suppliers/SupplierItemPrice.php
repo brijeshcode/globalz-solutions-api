@@ -167,7 +167,7 @@ class SupplierItemPrice extends Model
 
     public function makeCurrentForSupplierItem(): void
     {
-        app(\App\Services\Suppliers\SupplierItemPriceService::class)->makeCurrentForSupplierItem($this);
+        app(\App\Services\Suppliers\SupplierItemPriceService::class)::makeCurrent($this);
     }
 
     public function updateFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): void
@@ -178,22 +178,22 @@ class SupplierItemPrice extends Model
     // Static helper methods (moved to SupplierItemPriceService)
     public static function getCurrentPriceForSupplierItem(int $supplierId, int $itemId): ?self
     {
-        return app(\App\Services\Suppliers\SupplierItemPriceService::class)->getCurrentPriceForSupplierItem($supplierId, $itemId);
+        return app(\App\Services\Suppliers\SupplierItemPriceService::class)::getCurrentPrice($supplierId, $itemId);
     }
 
     public static function getBestCurrentPricesForItem(int $itemId, int $limit = 5): \Illuminate\Database\Eloquent\Collection
     {
-        return app(\App\Services\Suppliers\SupplierItemPriceService::class)->getBestCurrentPricesForItem($itemId, $limit);
+        return app(\App\Services\Suppliers\SupplierItemPriceService::class)::getBestPricesForItem($itemId, $limit);
     }
 
     public static function createFromPurchaseItem(Purchase $purchase, PurchaseItem $purchaseItem): self
     {
-        return app(\App\Services\Suppliers\SupplierItemPriceService::class)->createFromPurchaseItem($purchase, $purchaseItem);
+        return app(\App\Services\Suppliers\SupplierItemPriceService::class)::createFromPurchase($purchase, $purchaseItem);
     }
 
     public static function updateOrCreateFromPurchaseItem(Purchase $purchase, PurchaseItem $purchaseItem): self
     {
-        return app(\App\Services\Suppliers\SupplierItemPriceService::class)->updateOrCreateFromPurchaseItem($purchase, $purchaseItem);
+        return app(\App\Services\Suppliers\SupplierItemPriceService::class)::updateOrCreateFromPurchase($purchase, $purchaseItem);
     }
 
     // Model Events
@@ -223,7 +223,7 @@ class SupplierItemPrice extends Model
         static::saving(function ($model) {
             // Auto-calculate price_usd if currency_rate is available
             if ($model->currency_rate > 0 && $model->price > 0) {
-                app(\App\Services\Suppliers\SupplierItemPriceService::class)->updatePriceUsd($model);
+                app(\App\Services\Suppliers\SupplierItemPriceService::class)::updatePriceUsd($model);
             }
         });
     }

@@ -21,18 +21,15 @@ class PriceService
         $newPriceUsd = $purchaseItem->cost_per_item_usd;
         
         $currentItemPrice = self::getCurrentPrice($purchaseItem->item_id);
-        info("getCurrentPrice for item {$purchaseItem->item_id}: " . ($currentItemPrice ? 'found' : 'not found'));
         
         if ($currentItemPrice) {
             $oldPriceUsd = $currentItemPrice->price_usd;
-            
             // Calculate price based on item's cost calculation method
             if ($item->cost_calculation === Item::COST_WEIGHTED_AVERAGE) {
                 $newPriceUsd = self::calculateWeightedAveragePrice($purchaseItem, $oldPriceUsd);
             }
             // For COST_LAST_COST, use the new price as-is
-            
-            // Only update if price changed significantly (more than 0.01 difference)
+             
             $priceDifference = abs($newPriceUsd - $oldPriceUsd);
             
             if ($priceDifference > 0) {

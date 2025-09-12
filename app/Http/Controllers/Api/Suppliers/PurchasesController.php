@@ -163,7 +163,7 @@ class PurchasesController extends Controller
         $items = $data['items'] ?? [];
         unset($data['items']); // Remove items from purchase data
         unset($data['code']); // Remove code from data if present (code is system generated only, not updatable)
-
+        info('here');
         // Update purchase with items using service
         $purchase = $this->purchaseService->updatePurchaseWithItems($purchase, $data, $items);
 

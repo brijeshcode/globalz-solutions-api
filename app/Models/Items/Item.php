@@ -54,8 +54,6 @@ class Item extends Model
         'notes',
         'is_active',
     ];
-    // here we need to add net_quantity = starting_quantity + inventory quanitity including all warehouses 
-    // or we can have its relation with inventory which will tell me warhouse and there quantity.
 
     protected $casts = [
         'is_active' => 'boolean',
@@ -164,33 +162,12 @@ class Item extends Model
     }
 
     // Accessors & Mutators
-    public function getCurrentCostAttribute(): float
-    {
-        // This would calculate current cost based on cost calculation method
-        // For now, return base cost as placeholder
-        return (float) ($this->base_cost ?? 0);
-    }
-
-    public function getCurrentPriceAttribute(): float
-    {
-        // This would calculate current selling price
-        // For now, return base sell as placeholder
-        return (float) ($this->base_sell ?? 0);
-    }
-
-    public function getCurrentQuantityAttribute(): float
-    {
-        // This would calculate current stock quantity based on transactions
-        // For now, return starting quantity as placeholder
-        return (float) ($this->starting_quantity ?? 0);
-    }
-
     public function getIsLowStockAttribute(): bool
     {
         if (!$this->low_quantity_alert) {
             return false;
         }
-        return $this->getCurrentQuantityAttribute() <= $this->low_quantity_alert;
+        return $this->total_inventory_quantity <= $this->low_quantity_alert;
     }
 
     // Scopes
@@ -294,16 +271,21 @@ class Item extends Model
         return $this->hasMany(Inventory::class);
     }
 
-    // Calculated attribute for total inventory across all warehouses
+    // Get total inventory across all warehouses (using relationship if loaded, otherwise query)
     public function getTotalInventoryQuantityAttribute()
     {
+        if ($this->relationLoaded('inventories')) {
+            return $this->inventories->sum('quantity');
+        }
         return $this->inventories()->sum('quantity');
     }
 
-    // Net quantity = starting_quantity + total_inventory_quantity
-    public function getNetQuantityAttribute()
+    // Get inventory quantity for a specific warehouse
+    public function getWarehouseInventoryQuantity(int $warehouseId): int
     {
-        return $this->starting_quantity + $this->total_inventory_quantity;
+        return $this->inventories()
+            ->where('warehouse_id', $warehouseId)
+            ->value('quantity') ?? 0;
     }
 
     /**

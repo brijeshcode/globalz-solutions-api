@@ -203,17 +203,15 @@ class InventoryService
      */
     protected static function findOrCreateInventory(int $itemId, int $warehouseId): Inventory
     {
-        $inventory = self::getInventory($warehouseId, $itemId);
-        
-        if (!$inventory) {
-            $inventory = Inventory::create([
+        return Inventory::firstOrCreate(
+            [
                 'warehouse_id' => $warehouseId,
                 'item_id' => $itemId,
+            ],
+            [
                 'quantity' => 0,
-            ]);
-        }
-
-        return $inventory;
+            ]
+        );
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\PurchaseItem;
 use App\Models\Items\Item;
 use App\Services\Currency\CurrencyService;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -52,7 +53,6 @@ class SupplierItemPriceService
             if ($data['is_current'] ?? false) {
                 self::markOthersAsNotCurrent($data['supplier_id'], $data['item_id']);
             }
-            info($data);
             return SupplierItemPrice::create($data);
         });
     }
@@ -93,12 +93,17 @@ class SupplierItemPriceService
      */
     public static function updateFromPurchase(SupplierItemPrice $supplierPrice, Purchase $purchase, PurchaseItem $purchaseItem): void
     {
-        $supplierPrice->update([
-            'last_purchase_id' => $purchase->id,
-            'last_purchase_date' => $purchase->date,
-            'currency_rate' => $purchase->currency_rate,
-            'price_usd' => CurrencyService::convertToBaseWithRate($purchaseItem->price, $purchase->currency_id, $purchase->currency_rate),
-        ]);
+        $priceUsd = CurrencyService::convertToBaseWithRate($purchaseItem->price, $purchase->currency_id, $purchase->currency_rate);
+
+        DB::table('supplier_item_prices')
+            ->where('id', $supplierPrice->id)
+            ->update([
+                'last_purchase_id' => $purchase->id,
+                'last_purchase_date' => $purchase->date->format('Y-m-d'),
+                'currency_rate' => $purchase->currency_rate,
+                'price_usd' => $priceUsd,
+                'updated_at' => now()
+            ]);
     }
 
     /**
@@ -147,26 +152,31 @@ class SupplierItemPriceService
      */
     public static function updateOrCreateFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): SupplierItemPrice
     {
-        $existingPrice = self::getCurrentPrice($purchase->supplier_id, $purchaseItem->item_id);
+        // Check if this purchase already has a price record
+        $existingPriceForThisPurchase = SupplierItemPrice::where('supplier_id', $purchase->supplier_id)
+            ->where('item_id', $purchaseItem->item_id)
+            ->where('last_purchase_id', $purchase->id)
+            ->first();
 
-        if ($existingPrice) {
-            // Check if price has changed significantly
-            $newPrice = $purchaseItem->price;
-            $priceDifference = abs($newPrice - $existingPrice->price);
-            
-            if ($priceDifference > 0) {
-                // Price changed, mark old as not current and create new price record
-                self::markOthersAsNotCurrent($purchase->supplier_id, $purchaseItem->item_id);
-                return self::createFromPurchase($purchase, $purchaseItem);
-            } else {
-                // Price hasn't changed, just update the existing record
-                self::updateFromPurchase($existingPrice, $purchase, $purchaseItem);
-                return $existingPrice->fresh();
-            }
-        } else {
-            // No existing price, create new one
+        if ($existingPriceForThisPurchase) {
+            self::updateFromPurchase($existingPriceForThisPurchase, $purchase, $purchaseItem);
+            return $existingPriceForThisPurchase->fresh();
+        }
+
+        // For new purchases, check if price changed from current price
+        $currentPrice = self::getCurrentPrice($purchase->supplier_id, $purchaseItem->item_id);
+        
+        if (!$currentPrice) {
             return self::createFromPurchase($purchase, $purchaseItem);
         }
+
+        if ($purchaseItem->price != $currentPrice->price) {
+            self::markOthersAsNotCurrent($purchase->supplier_id, $purchaseItem->item_id);
+            return self::createFromPurchase($purchase, $purchaseItem);
+        }
+
+        self::updateFromPurchase($currentPrice, $purchase, $purchaseItem);
+        return $currentPrice->fresh();
     }
 
     /**

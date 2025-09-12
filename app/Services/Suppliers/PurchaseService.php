@@ -48,10 +48,8 @@ class PurchaseService
           
             
             $purchase->update($purchaseData);
-            // Process items if provided
-            if (!empty($items)) {
-                $this->updatePurchaseItems($purchase, $items);
-            }
+
+            $this->updatePurchaseItems($purchase, $items);
 
             // Recalculate purchase totals
             $this->recalculatePurchaseTotals($purchase);
@@ -79,7 +77,6 @@ class PurchaseService
     protected function updatePurchaseItems(Purchase $purchase, array $items): void
     {
         $processedItemIds = [];
-        
         foreach ($items as $itemData) {
             if (isset($itemData['id'])) {
                 // Update existing item
@@ -115,9 +112,7 @@ class PurchaseService
                         'total_price_usd' => CurrencyService::convertToBaseWithRate($totalPrice, $purchase->currency_id, $purchase->currency_rate),
                         'note' => $itemData['note'] ?? $purchaseItem->note,
                     ]);
-                    
                     // Recalculate derived fields
-
                     $updatedData = $this->preparePurchaseItemData($purchase, $itemData);
                     $purchaseItem->update([
                         'total_shipping_usd' => $updatedData['total_shipping_usd'],
@@ -128,10 +123,9 @@ class PurchaseService
                     ]);
                     
                     // Update related data if cost or quantity changed
-                    if ($oldCostPerItemUsd != $purchaseItem->cost_per_item_usd || $oldQuantity != $purchaseItem->quantity) {
-                        $this->processPurchaseItemRelatedData($purchase, $purchaseItem, true, $oldQuantity);
+                    if ($oldCostPerItemUsd != $purchaseItem->cost_per_item_usd || (float)$oldQuantity != (float)$purchaseItem->quantity) {
+                        $this->processPurchaseItemRelatedData($purchase, $purchaseItem, true, (float)$oldQuantity);
                     }
-                    
                     $processedItemIds[] = $purchaseItem->id;
                 }
             } else {
@@ -146,7 +140,6 @@ class PurchaseService
         $removedItems = $purchase->purchaseItems()
             ->whereNotIn('id', $processedItemIds)
             ->get();
-            
         foreach ($removedItems as $removedItem) {
             $this->handlePurchaseItemDeletion($purchase, $removedItem);
         }

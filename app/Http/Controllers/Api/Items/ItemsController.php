@@ -109,6 +109,22 @@ class ItemsController extends Controller
             $query->where('cost_calculation', $request->cost_calculation);
         }
 
+        // Filter by warehouse - show only items that have inventory in selected warehouse
+        if ($request->has('warehouse_id')) {
+            $warehouseId = $request->warehouse_id;
+            $query->whereHas('inventories', function ($inventoryQuery) use ($warehouseId) {
+                $inventoryQuery->where('warehouse_id', $warehouseId);
+            });
+            
+            // Add warehouse-specific inventory quantity
+            $query->addSelect([
+                'warehouse_inventory_quantity' => \App\Models\Inventory\Inventory::selectRaw('COALESCE(quantity, 0)')
+                    ->whereColumn('item_id', 'items.id')
+                    ->where('warehouse_id', $warehouseId)
+                    ->limit(1)
+            ]);
+        }
+
         $items = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(

@@ -34,7 +34,7 @@ class PurchasesUpdateRequest extends FormRequest
             'note' => 'nullable|string|max:1000',
             
             // Purchase items for updates
-            'items' => 'nullable|array',
+            'items' => 'required|array|min:1',
             'items.*.id' => 'nullable|integer|exists:purchase_items,id',
             'items.*.item_id' => 'required_with:items|integer|exists:items,id',
             'items.*.price' => 'required_with:items|numeric|min:0|max:999999.9999',
@@ -62,6 +62,8 @@ class PurchasesUpdateRequest extends FormRequest
             'items.*.price.required_with' => 'Price is required for each purchase item.',
             'items.*.quantity.required_with' => 'Quantity is required for each purchase item.',
             'items.*.quantity.min' => 'Quantity must be greater than 0.',
+            'items.required' => 'At least one item is required for the purchase.',
+            'items.min' => 'At least one item is required for the purchase.',
             'documents.*.max' => 'Each document must not exceed 10MB.',
             'documents.*.mimes' => 'Documents must be of type: jpg, jpeg, png, gif, bmp, webp, pdf, doc, docx, txt.',
         ];
