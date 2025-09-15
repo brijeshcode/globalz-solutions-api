@@ -11,28 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('purchases', function (Blueprint $table) {
+        Schema::create('sales', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique(); // auto generated invoice code
             $table->datetime('date');
+            $table->enum('prefix', ['INX', 'INV'])->default('INV');
 
-            $table->unsignedBigInteger('supplier_id')->nullable()->index();
-            $table->unsignedBigInteger('warehouse_id')->nullable()->index();
+            $table->unsignedBigInteger('salesperson_id')->nullable()->index();
+            $table->unsignedBigInteger('customer_id')->nullable()->index();
             $table->unsignedBigInteger('currency_id')->nullable()->index();
-            $table->unsignedBigInteger('account_id')->nullable()->index();
-            $table->string('supplier_invoice_number')->nullable();
+            $table->unsignedBigInteger('warehouse_id')->nullable()->index();
 
+            $table->unsignedBigInteger('customer_payment_term_id')->nullable()->index();
+            $table->unsignedBigInteger('customer_last_payment_receipt_id')->nullable()->index();
+            
+            $table->string('client_po_number')->nullable();
             $table->rate('currency_rate')->default(0);
 
-            $table->money('shipping_fee_usd')->default(0);
-            $table->money('customs_fee_usd')->default(0);
-            $table->money('other_fee_usd')->default(0);
-            $table->money('tax_usd')->default(0);
 
-            $table->percent('shipping_fee_usd_percent')->default(0);
-            $table->percent('customs_fee_usd_percent')->default(0);
-            $table->percent('other_fee_usd_percent')->default(0);
-            $table->percent('tax_usd_percent')->default(0);
+            $table->money('credit_limit')->default(0);
+            $table->money('outStanding_balance')->default(0);
 
             $table->money('sub_total')->default(0);
             $table->money('sub_total_usd')->default(0);
@@ -43,8 +41,6 @@ return new class extends Migration
             $table->money('total')->default(0);
             $table->money('total_usd')->default(0)->comment('sub_total_usd - discount_amount_usd');
 
-            $table->money('final_total')->default(0);
-            $table->money('final_total_usd')->default(0)->comment('total_usd + shipping_usd + custom_usd + other_usd');
 
             $table->text('note')->nullable();  // for remark
             
@@ -61,6 +57,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('purchases');
+        Schema::dropIfExists('sales');
     }
 };

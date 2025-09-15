@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Customers;
 
+use App\Models\Customers\Customer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -160,7 +161,7 @@ class CustomersUpdateRequest extends FormRequest
         $parentId = $this->input('parent_id');
         
         // Check if parent exists and is active
-        $parent = \App\Models\Customers\Customer::find($parentId);
+        $parent = Customer::find($parentId);
         if ($parent && !$parent->is_active) {
             $validator->errors()->add('parent_id', 'The selected parent customer is inactive.');
         }
@@ -171,7 +172,7 @@ class CustomersUpdateRequest extends FormRequest
         }
 
         // Prevent setting a child as parent (circular reference)
-        $customer = \App\Models\Customers\Customer::find($customerId);
+        $customer = Customer::find($customerId);
         if ($customer && $customer->children()->where('id', $parentId)->exists()) {
             $validator->errors()->add('parent_id', 'Cannot set a child customer as parent.');
         }
@@ -204,7 +205,7 @@ class CustomersUpdateRequest extends FormRequest
      */
     private function validateDeactivation($validator, $customerId): void
     {
-        $customer = \App\Models\Customers\Customer::find($customerId);
+        $customer = Customer::find($customerId);
         
         if ($customer) {
             // Check if customer has active children

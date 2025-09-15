@@ -215,14 +215,14 @@ class Purchase extends Model
     {
         $defaultValue = config('app.purchase_code_start', 1000);
         $nextNumber = Setting::getOrCreateCounter('purchases', 'code_counter', $defaultValue);
-        return 'PUR-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        return str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
     }
 
     public static function reserveNextCode(): string
     {
         $defaultValue = config('app.purchase_code_start', 1000);
         $newValue = Setting::incrementValue('purchases', 'code_counter', 1, $defaultValue);
-        return 'PUR-' . str_pad(($newValue - 1), 6, '0', STR_PAD_LEFT);
+        return str_pad(($newValue - 1), 6, '0', STR_PAD_LEFT);
     }
 
     public static function isCodeUnique(string $code, ?int $excludeId = null): bool

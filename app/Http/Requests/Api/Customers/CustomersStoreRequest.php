@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Customers;
 
+use App\Models\Customers\Customer;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CustomersStoreRequest extends FormRequest
@@ -155,7 +156,7 @@ class CustomersStoreRequest extends FormRequest
         $parentId = $this->input('parent_id');
         
         // Check if parent exists and is active
-        $parent = \App\Models\Customers\Customer::find($parentId);
+        $parent = Customer::find($parentId);
         if ($parent && !$parent->is_active) {
             $validator->errors()->add('parent_id', 'The selected parent customer is inactive.');
         }
