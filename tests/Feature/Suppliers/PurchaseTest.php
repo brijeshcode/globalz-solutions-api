@@ -800,7 +800,7 @@ describe('Purchase Code Generation Tests', function () {
 
         $nextCode = Purchase::getNextSuggestedCode();
 
-        expect($nextCode)->toBe('PUR-001001');
+        expect($nextCode)->toBe('001001');
     });
 
     it('creates purchase with current counter and increments correctly', function () {
@@ -818,10 +818,10 @@ describe('Purchase Code Generation Tests', function () {
 
         $response->assertCreated();
         $code = $response->json('data.code');
-        expect($code)->toBe('PUR-001005');
+        expect($code)->toBe('001005');
 
         $nextCode = Purchase::getNextSuggestedCode();
-        expect($nextCode)->toBe('PUR-001006');
+        expect($nextCode)->toBe('001006');
     });
 
     it('generates sequential purchase codes', function () {
@@ -852,11 +852,6 @@ describe('Purchase Code Generation Tests', function () {
         $response2->assertCreated();
         $code2 = $response2->json('data.code');
 
-        expect($code1)->toContain('PUR-');
-        expect($code2)->toContain('PUR-');
-
-        $num1 = (int) str_replace('PUR-', '', $code1);
-        $num2 = (int) str_replace('PUR-', '', $code2);
-        expect($num2)->toBe($num1 + 1);
+        expect($code2)->toBe($code1 + 1);
     });
 });

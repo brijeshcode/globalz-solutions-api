@@ -3,6 +3,7 @@
 use App\Models\Customers\Sale;
 use App\Models\Customers\SaleItems;
 use App\Models\Inventory\Inventory;
+use App\Models\Inventory\ItemPrice;
 use App\Models\Items\Item;
 use App\Models\Setups\Warehouse;
 use App\Models\Setups\Generals\Currencies\Currency;
@@ -44,6 +45,22 @@ beforeEach(function () {
         'base_sell' => 150.00,
     ]);
 
+    // Create item prices (cost prices) - use updateOrCreate to handle unique constraint
+    ItemPrice::updateOrCreate(
+        ['item_id' => $this->item1->id],
+        [
+            'price_usd' => 45.00, // Cost price
+            'effective_date' => now(),
+        ]
+    );
+    ItemPrice::updateOrCreate(
+        ['item_id' => $this->item2->id],
+        [
+            'price_usd' => 70.00, // Cost price
+            'effective_date' => now(),
+        ]
+    );
+
     // Create initial inventory
     InventoryService::set($this->item1->id, $this->warehouse->id, 100, 'Initial stock');
     InventoryService::set($this->item2->id, $this->warehouse->id, 50, 'Initial stock');
@@ -67,9 +84,9 @@ beforeEach(function () {
     $this->createSaleViaApi = function ($overrides = []) {
         $saleData = ($this->getBaseSaleData)($overrides);
 
-        // Ensure sale_items are provided if not in overrides
-        if (!isset($saleData['sale_items'])) {
-            $saleData['sale_items'] = [
+        // Ensure items are provided if not in overrides
+        if (!isset($saleData['items'])) {
+            $saleData['items'] = [
                 [
                     'item_id' => $this->item1->id,
                     'price' => 100.00,
@@ -118,6 +135,10 @@ describe('Sales API', function () {
     });
 
     it('can create sale with items and reduces inventory correctly', function () {
+        // Reset inventory to known values for this test
+        InventoryService::set($this->item1->id, $this->warehouse->id, 100, 'Reset for test');
+        InventoryService::set($this->item2->id, $this->warehouse->id, 50, 'Reset for test');
+
         $initialInventory1 = InventoryService::getQuantity($this->item1->id, $this->warehouse->id);
         $initialInventory2 = InventoryService::getQuantity($this->item2->id, $this->warehouse->id);
 
@@ -127,7 +148,7 @@ describe('Sales API', function () {
             'sub_total' => 520.00,
             'total' => 520.00,
             'total_usd' => 416.00,
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'price' => 100.00,
@@ -153,7 +174,7 @@ describe('Sales API', function () {
                 'data' => [
                     'id',
                     'code',
-                    'sale_items',
+                    'items',
                     'warehouse',
                     'currency'
                 ]
@@ -179,13 +200,17 @@ describe('Sales API', function () {
     });
 
     it('can update sale with item sync and adjusts inventory', function () {
+        // Reset inventory to known values for this test
+        InventoryService::set($this->item1->id, $this->warehouse->id, 100, 'Reset for test');
+        InventoryService::set($this->item2->id, $this->warehouse->id, 50, 'Reset for test');
+
         $initialInventory1 = InventoryService::getQuantity($this->item1->id, $this->warehouse->id);
         $initialInventory2 = InventoryService::getQuantity($this->item2->id, $this->warehouse->id);
 
         // Create initial sale via API
         $sale = ($this->createSaleViaApi)([
             'client_po_number' => 'PO-INITIAL',
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'quantity' => 2,
@@ -207,7 +232,7 @@ describe('Sales API', function () {
             'currency_rate' => 1.15,
             'total' => 650.00,
             'total_usd' => 565.22,
-            'sale_items' => [
+            'items' => [
                 // Update existing item quantity
                 [
                     'id' => $existingItem->id,
@@ -263,7 +288,7 @@ describe('Sales API', function () {
                     'sale_code',
                     'warehouse' => ['id', 'name'],
                     'currency' => ['id', 'name', 'code', 'symbol'],
-                    'sale_items' => [
+                    'items' => [
                         '*' => [
                             'id',
                             'item_code',
@@ -278,7 +303,7 @@ describe('Sales API', function () {
 
     it('auto-generates sale codes when not provided', function () {
         $saleData = ($this->getBaseSaleData)([
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'price' => 100.00,
@@ -352,7 +377,7 @@ describe('Sales API', function () {
             'warehouse_id' => null,
             'currency_id' => null,
             'total' => -100, // Negative total
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => 999, // Non-existent item
                     'price' => -10, // Negative price
@@ -367,9 +392,9 @@ describe('Sales API', function () {
             ->assertJsonValidationErrors([
                 'warehouse_id',
                 'currency_id',
-                'sale_items.0.item_id',
-                'sale_items.0.price',
-                'sale_items.0.quantity'
+                'items.0.item_id',
+                'items.0.price',
+                'items.0.quantity'
             ]);
     });
 
@@ -378,7 +403,7 @@ describe('Sales API', function () {
         InventoryService::set($this->item1->id, $this->warehouse->id, 1, 'Low stock for test');
 
         $saleData = ($this->getBaseSaleData)([
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'price' => 100.00,
@@ -412,7 +437,7 @@ describe('Sales API', function () {
 
         // Create sale data with mixed valid/invalid items
         $saleData = ($this->getBaseSaleData)([
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'price' => 100.00,
@@ -445,7 +470,7 @@ describe('Sales API', function () {
 
         // Create sale with item
         $sale = ($this->createSaleViaApi)([
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'quantity' => 5,
@@ -473,7 +498,7 @@ describe('Sales API', function () {
 
         // Create sale
         $sale = ($this->createSaleViaApi)([
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'quantity' => 3,
@@ -491,7 +516,7 @@ describe('Sales API', function () {
 
         // Update sale item quantity to 5 (increase by 2)
         $updateData = [
-            'sale_items' => [
+            'items' => [
                 [
                     'id' => $saleItem->id,
                     'item_id' => $this->item1->id,
@@ -510,8 +535,8 @@ describe('Sales API', function () {
         expect($finalInventory)->toBe($initialInventory - 5);
 
         // Update sale item quantity to 1 (decrease by 4)
-        $updateData['sale_items'][0]['quantity'] = 1;
-        $updateData['sale_items'][0]['total_price'] = 100.00;
+        $updateData['items'][0]['quantity'] = 1;
+        $updateData['items'][0]['total_price'] = 100.00;
 
         $response = $this->putJson(route('customers.sales.update', $sale), $updateData);
         $response->assertOk();
@@ -526,7 +551,7 @@ describe('Sales API', function () {
         InventoryService::set($this->item1->id, $this->warehouse->id, 5, 'Limited stock for concurrent test');
 
         $saleData = ($this->getBaseSaleData)([
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'price' => 100.00,
@@ -697,6 +722,240 @@ describe('Sales API', function () {
         $stats = $response->json('data');
         expect($stats['total_sales'])->toBe(5);
     });
+
+    it('automatically calculates cost price from item price', function () {
+        $saleData = ($this->getBaseSaleData)([
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 100.00, // Selling price
+                    'quantity' => 2,
+                    'total_price' => 200.00,
+                ]
+            ]
+        ]);
+
+        $response = $this->postJson(route('customers.sales.store'), $saleData);
+        $response->assertCreated();
+
+        $sale = Sale::latest()->first();
+        $saleItem = $sale->saleItems->first();
+
+        // Verify cost price was automatically set from item's price
+        expect((float)$saleItem->cost_price)->toBe(45.00); // From ItemPrice
+    });
+
+    it('calculates unit profit correctly', function () {
+        $saleData = ($this->getBaseSaleData)([
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 100.00, // Selling price
+                    'quantity' => 1,
+                    'total_price' => 100.00,
+                ]
+            ]
+        ]);
+
+        $response = $this->postJson(route('customers.sales.store'), $saleData);
+        $response->assertCreated();
+
+        $sale = Sale::latest()->first();
+        $saleItem = $sale->saleItems->first();
+
+        // Unit profit = selling price - cost price = 100.00 - 45.00 = 55.00
+        expect((float)$saleItem->unit_profit)->toBe(55.00);
+    });
+
+    it('calculates total profit per item correctly', function () {
+        $saleData = ($this->getBaseSaleData)([
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 100.00, // Selling price
+                    'quantity' => 3,
+                    'total_price' => 300.00,
+                ]
+            ]
+        ]);
+
+        $response = $this->postJson(route('customers.sales.store'), $saleData);
+        $response->assertCreated();
+
+        $sale = Sale::latest()->first();
+        $saleItem = $sale->saleItems->first();
+
+        // Total profit = unit profit × quantity = 55.00 × 3 = 165.00
+        expect((float)$saleItem->total_profit)->toBe(165.00);
+    });
+
+    it('calculates total sale profit correctly', function () {
+        $saleData = ($this->getBaseSaleData)([
+            'total' => 520.00,
+            'total_usd' => 416.00,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 100.00, // Selling price, cost: 45.00, unit profit: 55.00
+                    'quantity' => 2,
+                    'total_price' => 200.00, // Total profit: 110.00
+                ],
+                [
+                    'item_id' => $this->item2->id,
+                    'price' => 160.00, // Selling price, cost: 70.00, unit profit: 90.00
+                    'quantity' => 2,
+                    'total_price' => 320.00, // Total profit: 180.00
+                ]
+            ]
+        ]);
+
+        $response = $this->postJson(route('customers.sales.store'), $saleData);
+        $response->assertCreated();
+
+        $sale = Sale::latest()->first();
+
+        // Total sale profit = 110.00 + 180.00 = 290.00
+        expect((float)$sale->total_profit)->toBe(290.00);
+    });
+
+    it('includes profit fields in API response', function () {
+        $saleData = ($this->getBaseSaleData)([
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 100.00,
+                    'quantity' => 2,
+                    'total_price' => 200.00,
+                ]
+            ]
+        ]);
+
+        $response = $this->postJson(route('customers.sales.store'), $saleData);
+        $response->assertCreated();
+
+        $sale = Sale::latest()->first();
+        $response = $this->getJson(route('customers.sales.show', $sale));
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    'total_profit',
+                    'items' => [
+                        '*' => [
+                            'cost_price',
+                            'unit_profit',
+                            'total_profit'
+                        ]
+                    ]
+                ]
+            ]);
+
+        $data = $response->json('data');
+        expect((float)$data['total_profit'])->toBe(110.00);
+        expect((float)$data['items'][0]['cost_price'])->toBe(45.00);
+        expect((float)$data['items'][0]['unit_profit'])->toBe(55.00);
+        expect((float)$data['items'][0]['total_profit'])->toBe(110.00);
+    });
+
+    it('updates profits when sale items are updated', function () {
+        // Reset inventory to known values for this test
+        InventoryService::set($this->item1->id, $this->warehouse->id, 100, 'Reset for test');
+        InventoryService::set($this->item2->id, $this->warehouse->id, 50, 'Reset for test');
+
+        // Create initial sale
+        $sale = ($this->createSaleViaApi)([
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 100.00,
+                    'quantity' => 1,
+                    'total_price' => 100.00,
+                ]
+            ]
+        ]);
+
+        $saleItem = $sale->saleItems->first();
+
+        // Update sale with different quantities and items
+        $updateData = [
+            'total' => 520.00,
+            'total_usd' => 416.00,
+            'items' => [
+                [
+                    'id' => $saleItem->id,
+                    'item_id' => $this->item1->id,
+                    'price' => 105.00, // New selling price
+                    'quantity' => 2, // Increased quantity
+                    'total_price' => 210.00,
+                ],
+                [
+                    'item_id' => $this->item2->id,
+                    'price' => 155.00,
+                    'quantity' => 2,
+                    'total_price' => 310.00,
+                ]
+            ]
+        ];
+
+        $response = $this->putJson(route('customers.sales.update', $sale), $updateData);
+        $response->assertOk();
+
+        $sale->refresh();
+        $saleItems = $sale->saleItems;
+
+        // Verify we have 2 sale items
+        expect($saleItems)->toHaveCount(2);
+
+        // Check first item profits (selling: 105, cost: 45, unit profit: 60)
+        $firstItem = $saleItems->where('item_id', $this->item1->id)->first();
+        expect($firstItem)->not()->toBeNull();
+        expect((float)$firstItem->cost_price)->toBe(45.00);
+        expect((float)$firstItem->unit_profit)->toBe(60.00);
+        expect((float)$firstItem->total_profit)->toBe(120.00); // 60 × 2
+
+        // Check second item profits (selling: 155, cost: 70, unit profit: 85)
+        $secondItem = $saleItems->where('item_id', $this->item2->id)->first();
+        expect($secondItem)->not()->toBeNull();
+        expect((float)$secondItem->cost_price)->toBe(70.00);
+        expect((float)$secondItem->unit_profit)->toBe(85.00);
+        expect((float)$secondItem->total_profit)->toBe(170.00); // 85 × 2
+
+        // Check total sale profit: 120 + 170 = 290
+        expect((float)$sale->total_profit)->toBe(290.00);
+    });
+
+    it('handles zero cost price correctly', function () {
+        // Create an item without price (cost price will be 0)
+        $itemWithoutPrice = Item::factory()->create(['code' => 'ITEM003']);
+
+        // Ensure no ItemPrice record exists for this item
+        \App\Models\Inventory\ItemPrice::where('item_id', $itemWithoutPrice->id)->delete();
+
+        // Create inventory for this item
+        InventoryService::set($itemWithoutPrice->id, $this->warehouse->id, 10, 'Test inventory');
+
+        $saleData = ($this->getBaseSaleData)([
+            'items' => [
+                [
+                    'item_id' => $itemWithoutPrice->id,
+                    'price' => 100.00,
+                    'quantity' => 1,
+                    'total_price' => 100.00,
+                ]
+            ]
+        ]);
+
+        $response = $this->postJson(route('customers.sales.store'), $saleData);
+        $response->assertCreated();
+
+        $sale = Sale::latest()->first();
+        $saleItem = $sale->saleItems->first();
+
+        expect((float)$saleItem->cost_price)->toBe(0.00);
+        expect((float)$saleItem->unit_profit)->toBe(100.00); // 100 - 0
+        expect((float)$saleItem->total_profit)->toBe(100.00); // 100 × 1
+        expect((float)$sale->total_profit)->toBe(100.00);
+    });
 });
 
 describe('Sale Code Generation Tests', function () {
@@ -712,7 +971,7 @@ describe('Sale Code Generation Tests', function () {
         Setting::set('sales', 'code_counter', 1005, 'number');
 
         $response = $this->postJson(route('customers.sales.store'), ($this->getBaseSaleData)([
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'price' => 100.00,
@@ -731,7 +990,7 @@ describe('Sale Code Generation Tests', function () {
         Sale::withTrashed()->forceDelete();
 
         $response1 = $this->postJson(route('customers.sales.store'), ($this->getBaseSaleData)([
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item1->id,
                     'price' => 100.00,
@@ -745,7 +1004,7 @@ describe('Sale Code Generation Tests', function () {
 
         $response2 = $this->postJson(route('customers.sales.store'), ($this->getBaseSaleData)([
             'client_po_number' => 'PO-2025-002',
-            'sale_items' => [
+            'items' => [
                 [
                     'item_id' => $this->item2->id,
                     'price' => 150.00,

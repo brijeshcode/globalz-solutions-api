@@ -33,18 +33,19 @@ class SalesStoreRequest extends FormRequest
             'total_usd' => 'required|numeric|min:0',
             'note' => 'nullable|string',
 
-            'sale_items' => 'required|array|min:1',
-            'sale_items.*.item_id' => 'required|exists:items,id',
-            'sale_items.*.supplier_id' => 'nullable|exists:suppliers,id',
-            'sale_items.*.quantity' => 'required|numeric|min:0.01',
-            'sale_items.*.price' => 'required|numeric|min:0',
-            'sale_items.*.ttc_price' => 'nullable|numeric|min:0',
-            'sale_items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
-            'sale_items.*.unit_discount_amount' => 'nullable|numeric|min:0',
-            'sale_items.*.discount_amount' => 'nullable|numeric|min:0',
-            'sale_items.*.total_price' => 'required|numeric|min:0',
-            'sale_items.*.total_price_usd' => 'nullable|numeric|min:0',
-            'sale_items.*.note' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:items,id',
+            'items.*.supplier_id' => 'nullable|exists:suppliers,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.price' => 'required|numeric|min:0',
+            'items.*.ttc_price' => 'nullable|numeric|min:0',
+            'items.*.tax_percent' => 'nullable|numeric|min:0',
+            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.unit_discount_amount' => 'nullable|numeric|min:0',
+            'items.*.discount_amount' => 'nullable|numeric|min:0',
+            'items.*.total_price' => 'required|numeric|min:0',
+            'items.*.total_price_usd' => 'nullable|numeric|min:0',
+            'items.*.note' => 'nullable|string',
         ];
     }
 
@@ -59,11 +60,11 @@ class SalesStoreRequest extends FormRequest
             'currency_rate.required' => 'Currency rate is required',
             'total.required' => 'Total amount is required',
             'total_usd.required' => 'Total amount in USD is required',
-            'sale_items.required' => 'At least one sale item is required',
-            'sale_items.*.item_id.required' => 'Item is required for each sale item',
-            'sale_items.*.quantity.required' => 'Quantity is required for each sale item',
-            'sale_items.*.price.required' => 'Price is required for each sale item',
-            'sale_items.*.total_price.required' => 'Total price is required for each sale item',
+            'items.required' => 'At least one sale item is required',
+            'items.*.item_id.required' => 'Item is required for each sale item',
+            'items.*.quantity.required' => 'Quantity is required for each sale item',
+            'items.*.price.required' => 'Price is required for each sale item',
+            'items.*.total_price.required' => 'Total price is required for each sale item',
         ];
     }
 }

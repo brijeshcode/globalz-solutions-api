@@ -151,7 +151,8 @@ return [
         'Sales',
         'Accounting', 
         'Shipping',
-        'Administration'
+        'Administration',
+        'Warehouse'
     ],
 
     /*

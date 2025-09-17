@@ -41,6 +41,7 @@ return new class extends Migration
             $table->money('total')->default(0);
             $table->money('total_usd')->default(0)->comment('sub_total_usd - discount_amount_usd');
 
+            $table->money('total_profit')->default(0);
 
             $table->text('note')->nullable();  // for remark
             

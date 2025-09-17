@@ -2,6 +2,7 @@
 
 namespace App\Models\Customers;
 
+use App\Models\Employees\Employee;
 use App\Models\Setting;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
@@ -41,6 +42,7 @@ class Sale extends Model
         'discount_amount_usd',
         'total',
         'total_usd',
+        'total_profit',
         'note',
     ];
 
@@ -55,6 +57,7 @@ class Sale extends Model
         'discount_amount_usd' => 'decimal:2',
         'total' => 'decimal:2',
         'total_usd' => 'decimal:2',
+        'total_profit' => 'decimal:2',
     ];
 
     protected $searchable = [
@@ -75,6 +78,7 @@ class Sale extends Model
         'client_po_number',
         'sub_total',
         'total',
+        'total_profit',
         'created_at',
         'updated_at',
     ];
@@ -102,6 +106,16 @@ class Sale extends Model
         return $this->belongsTo(Currency::class);
     }
 
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function salesperson(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
 
     // local scopes 
 
@@ -113,6 +127,16 @@ class Sale extends Model
     public function scopeByCurrency($query, $currencyId)
     {
         return $query->where('currency_id', $currencyId);
+    }
+
+    public function scopeByCustomer($query, $customerId)
+    {
+        return $query->where('customer_id', $customerId);
+    }
+
+    public function scopeBySalesperson($query, $salepersonId)
+    {
+        return $query->where('salesperson_id', $salepersonId);
     }
 
     public function scopeByDateRange($query, $startDate, $endDate)

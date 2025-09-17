@@ -19,6 +19,9 @@ class SetupSeeder extends Seeder
         
         // Employee setup data
         $this->call(DepartmentSeeder::class);
+
+        // Customer setup data
+        $this->call(CustomerSetupSeeder::class);
         
         // Item-related setup data
         $this->call(ItemUnitSeeder::class);

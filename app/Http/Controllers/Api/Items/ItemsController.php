@@ -661,13 +661,61 @@ class ItemsController extends Controller
         );
     }
 
-    public function getAllItems(): JsonResponse
+    public function getAllItems(array $files = [] , array $relations = ['tax_code']): JsonResponse
     {
-        $items = Item::active()->get();
-        return ApiResponse::paginated(
+        $defaultFields = ['id', 'description', 'code', 'short_name', 'item_unit_id'];
+        $defaultRelations = ['itemUnit:id,name,short_name', 'itemPrice', 'inventories'];
+
+        $fields = empty($files) ? $defaultFields : array_merge($defaultFields, $files);
+
+        $with = $defaultRelations;
+
+        if (!empty($relations)) {
+            foreach ($relations as $relation) {
+                switch ($relation) {
+                    case 'type':
+                        $with[] = 'itemType:id,name';
+                        break;
+                    case 'family':
+                        $with[] = 'itemFamily:id,name';
+                        break;
+                    case 'group':
+                        $with[] = 'itemGroup:id,name';
+                        break;
+                    case 'category':
+                        $with[] = 'itemCategory:id,name';
+                        break;
+                    case 'brand':
+                        $with[] = 'itemBrand:id,name';
+                        break;
+                    case 'profit_margin':
+                        $with[] = 'itemProfitMargin:id,name';
+                        break;
+                    case 'supplier':
+                        $with[] = 'supplier:id,code,name';
+                        break;
+                    case 'tax_code':
+                        $fields[] = 'tax_code_id';
+                        $with[] = 'taxCode:id,name,tax_percent';
+                        break;
+                    case 'created_by':
+                        $with[] = 'createdBy:id,name';
+                        break;
+                    case 'updated_by':
+                        $with[] = 'updatedBy:id,name';
+                        break;
+                    case 'documents':
+                        $with[] = 'documents';
+                        break;
+                }
+            }
+        }
+        // info($fields);
+        $items = Item::select($fields)->with($with)->active()->get();
+
+        return ApiResponse::index(
             'Items retrieved successfully',
-            $items,
-            ItemListResource::class
+            ItemResource::collection($items)
         );
     }
 

@@ -22,7 +22,7 @@ class SalesController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Sale::query()
-            ->with(['saleItems.item', 'warehouse', 'currency'])
+            ->with(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson'])
             ->searchable($request)
             ->sortable($request);
 
@@ -32,6 +32,14 @@ class SalesController extends Controller
 
         if ($request->has('currency_id')) {
             $query->byCurrency($request->currency_id);
+        }
+
+        if ($request->has('salesperson_id')) {
+            $query->bySalesperson($request->salesperson_id);
+        }
+
+        if ($request->has('customer_id')) {
+            $query->byCustomer($request->customer_id);
         }
 
         if ($request->has('start_date') && $request->has('end_date')) {
@@ -52,18 +60,40 @@ class SalesController extends Controller
         $data = $request->validated();
 
         $sale = DB::transaction(function () use ($data) {
-            $saleItems = $data['sale_items'];
-            unset($data['sale_items']);
+            $saleItems = $data['items'];
+            unset($data['items']);
+
+            $totalProfit = 0;
+
+            // Calculate total profit from sale items
+            foreach ($saleItems as $index => $itemData) {
+                if (isset($itemData['item_id'])) {
+                    $item = Item::with('itemPrice')->find($itemData['item_id']);
+                    $saleItems[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
+
+                    // Get cost price from item's price
+                    $costPrice = $item?->itemPrice?->price_usd ?? 0;
+                    $sellingPrice = $itemData['price'] ?? 0;
+                    $quantity = $itemData['quantity'] ?? 0;
+
+                    $unitProfit = $sellingPrice - $costPrice;
+                    $itemTotalProfit = $unitProfit * $quantity;
+
+                    $saleItems[$index]['cost_price'] = $costPrice;
+                    $saleItems[$index]['unit_profit'] = $unitProfit;
+                    $saleItems[$index]['total_profit'] = $itemTotalProfit;
+
+                    $totalProfit += $itemTotalProfit;
+                }
+            }
+
+            // Add total profit to sale data
+            $data['total_profit'] = $totalProfit;
 
             $sale = Sale::create($data);
 
             foreach ($saleItems as $itemData) {
                 $itemData['sale_id'] = $sale->id;
-                if (isset($itemData['item_id'])) {
-                    $item = Item::find($itemData['item_id']);
-                    $itemData['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
-                }
-
                 SaleItems::create($itemData);
             }
 
@@ -80,7 +110,7 @@ class SalesController extends Controller
 
     public function show(Sale $sale): JsonResponse
     {
-        $sale->load(['saleItems.item', 'warehouse', 'currency']);
+        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'warehouse:id,name', 'currency', 'customer:id,name', 'salesperson:id,name']);
 
         return ApiResponse::show(
             'Sale retrieved successfully',
@@ -93,9 +123,36 @@ class SalesController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $sale) {
-            if (isset($data['sale_items'])) {
-                $saleItems = $data['sale_items'];
-                unset($data['sale_items']);
+            if (isset($data['items'])) {
+                $saleItems = $data['items'];
+                unset($data['items']);
+
+                $totalProfit = 0;
+
+                // Calculate total profit from sale items
+                foreach ($saleItems as $index => $itemData) {
+                    if (isset($itemData['item_id'])) {
+                        $item = \App\Models\Items\Item::with('itemPrice')->find($itemData['item_id']);
+                        $saleItems[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
+
+                        // Get cost price from item's price
+                        $costPrice = $item?->itemPrice?->price_usd ?? 0;
+                        $sellingPrice = $itemData['price'] ?? 0;
+                        $quantity = $itemData['quantity'] ?? 0;
+
+                        $unitProfit = $sellingPrice - $costPrice;
+                        $itemTotalProfit = $unitProfit * $quantity;
+
+                        $saleItems[$index]['cost_price'] = $costPrice;
+                        $saleItems[$index]['unit_profit'] = $unitProfit;
+                        $saleItems[$index]['total_profit'] = $itemTotalProfit;
+
+                        $totalProfit += $itemTotalProfit;
+                    }
+                }
+
+                // Add total profit to sale data
+                $data['total_profit'] = $totalProfit;
 
                 // Get existing sale item IDs from the request
                 $requestItemIds = collect($saleItems)
@@ -111,10 +168,6 @@ class SalesController extends Controller
 
                 foreach ($saleItems as $itemData) {
                     $itemData['sale_id'] = $sale->id;
-                    if (isset($itemData['item_id'])) {
-                        $item = \App\Models\Items\Item::find($itemData['item_id']);
-                        $itemData['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
-                    }
 
                     if (isset($itemData['id']) && $itemData['id']) {
                         // Update existing sale item

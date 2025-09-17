@@ -15,7 +15,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Department extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
-
+    public const FIXDEPARTMENTS = [ 'Warehouse', 'Sales', 'Accounting', 'Administration', 'Shipping'];
+    
     protected $fillable = [
         'name',
         'description',

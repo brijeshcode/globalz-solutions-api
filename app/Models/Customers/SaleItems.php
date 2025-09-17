@@ -19,16 +19,19 @@ class SaleItems extends Model
     protected $fillable = [
         'item_code',
         'sale_id',
-        'supplier_id',
         'item_id',
         'quantity',
+        'cost_price',
         'price',
         'ttc_price',
         'discount_percent',
         'unit_discount_amount',
         'discount_amount',
+        'tax_percent',
         'total_price',
         'total_price_usd',
+        'unit_profit',
+        'total_profit',
         'note',
     ];
 
@@ -36,11 +39,14 @@ class SaleItems extends Model
         'quantity' => 'decimal:4',
         'price' => 'decimal:2',
         'ttc_price' => 'decimal:2',
+        'tax_percent' => 'decimal:2',
         'discount_percent' => 'decimal:2',
         'unit_discount_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'total_price' => 'decimal:2',
         'total_price_usd' => 'decimal:2',
+        'unit_profit' => 'decimal:2',
+        'total_profit' => 'decimal:2',
     ];
 
     protected $searchable = [
@@ -51,11 +57,12 @@ class SaleItems extends Model
     protected $sortable = [
         'id',
         'item_code',
-        'supplier_id',
         'item_id',
         'quantity',
         'price',
         'total_price',
+        'unit_profit',
+        'total_profit',
         'created_at',
         'updated_at',
     ];

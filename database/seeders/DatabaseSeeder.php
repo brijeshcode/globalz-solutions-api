@@ -34,6 +34,8 @@ class DatabaseSeeder extends Seeder
         
         // Seed development data
         $this->call(SupplierSeeder::class);
+        $this->call(EmployeeSeeder::class);
+        $this->call(CustomerSeeder::class);
         $this->call(ItemSeeder::class);
     }
 }
