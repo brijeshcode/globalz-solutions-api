@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\Authorable;
+use App\Traits\HasDocuments;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class Setting extends Model
 {
-    use HasFactory, Authorable;
+    use HasFactory, Authorable, HasDocuments;
 
     protected $fillable = [
         'group_name',
@@ -266,6 +267,42 @@ class Setting extends Model
     public function scopeEncrypted($query)
     {
         return $query->where('is_encrypted', true);
+    }
+
+    /**
+     * Get the module folder name for file organization
+     */
+    protected function getModuleFolderName(): string
+    {
+        return $this->group_name ?? 'settings';
+    }
+
+    /**
+     * Get allowed document file extensions for settings
+     */
+    public function getAllowedDocumentExtensions(): array
+    {
+        // For company logo/stamp, only allow image files
+        if ($this->group_name === 'company' && in_array($this->key_name, ['logo', 'stamp'])) {
+            return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+        }
+
+        // Default allowed extensions for other settings
+        return ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif'];
+    }
+
+    /**
+     * Get maximum file size for document uploads
+     */
+    public function getMaxDocumentFileSize(): int
+    {
+        // For company logo/stamp, limit to 2MB
+        if ($this->group_name === 'company' && in_array($this->key_name, ['logo', 'stamp'])) {
+            return 2 * 1024 * 1024; // 2MB
+        }
+
+        // Default size for other settings
+        return 5 * 1024 * 1024; // 5MB
     }
 
     /**

@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
+use App\Http\Controllers\Api\Setups\Generals\CompanyController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
 use App\Http\Controllers\Api\Suppliers\PurchasesController;
@@ -123,6 +124,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('setups')->name('setups.')->group(function () {
         
+        Route::controller(CompanyController::class)->prefix('company')->name('company.')->group(function () {
+            Route::get('/', 'get')->name('get');
+            Route::post('/getSelected', 'getSelected')->name('getSelected');
+            Route::post('/', 'set')->name('set');
+        });
+
         // Warehouses Controller
         Route::controller(WarehousesController::class)->prefix('warehouses')->name('warehouses.')->group(function () {
             Route::get('trashed', 'trashed')->name('trashed');
