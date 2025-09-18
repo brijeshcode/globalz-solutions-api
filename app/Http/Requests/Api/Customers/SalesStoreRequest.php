@@ -16,7 +16,7 @@ class SalesStoreRequest extends FormRequest
         return [
             'date' => 'required|date',
             'prefix' => 'required|in:INV,INX',
-            'salesperson_id' => 'nullable|exists:users,id',
+            'salesperson_id' => 'nullable|exists:employees,id',
             'customer_id' => 'nullable|exists:customers,id',
             'currency_id' => 'required|exists:currencies,id',
             'warehouse_id' => 'required|exists:warehouses,id',
