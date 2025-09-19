@@ -30,7 +30,7 @@ return new class extends Migration
 
 
             $table->money('credit_limit')->default(0);
-            $table->money('outStanding_balance')->default(0);
+            $table->money('outStanding_balance')->default(0)->comment('this is the current balance of customer at the time of sales');
 
             $table->money('sub_total')->default(0);
             $table->money('sub_total_usd')->default(0);
