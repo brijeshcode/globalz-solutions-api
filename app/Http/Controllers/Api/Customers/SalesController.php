@@ -110,7 +110,7 @@ class SalesController extends Controller
 
     public function show(Sale $sale): JsonResponse
     {
-        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'warehouse:id,name', 'currency', 'customer:id,name', 'salesperson:id,name']);
+        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name']);
 
         return ApiResponse::show(
             'Sale retrieved successfully',
