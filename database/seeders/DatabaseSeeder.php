@@ -22,9 +22,44 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::factory()->create([
+            'name' => 'Admin 2',
+            'email' => 'admin2@example.com',
+            'role' => 'admin',
+            'password' => '123456'
+        ]);
+
+        User::factory()->create([
             'name' => 'Brijesh',
             'email' => 'brijesh@example.com',
             'role' => 'developer',
+            'password' => '123456'
+        ]);
+
+        User::factory()->create([
+            'name' => 'imsaleman',
+            'email' => 'imsaleman@example.com',
+            'role' => 'salesman',
+            'password' => '123456'
+        ]);
+
+        User::factory()->create([
+            'name' => 'imsaleman2',
+            'email' => 'imsaleman2@example.com',
+            'role' => 'salesman',
+            'password' => '123456'
+        ]);
+
+        User::factory()->create([
+            'name' => 'Warehouse manager',
+            'email' => 'imwarehousemanager@example.com',
+            'role' => 'warehouse_manager',
+            'password' => '123456'
+        ]);
+
+        User::factory()->create([
+            'name' => 'Warehouse manager2',
+            'email' => 'imwarehousemanager2@example.com',
+            'role' => 'warehouse_manager',
             'password' => '123456'
         ]);
 

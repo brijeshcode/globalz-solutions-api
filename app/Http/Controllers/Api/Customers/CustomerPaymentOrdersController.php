@@ -1,0 +1,261 @@
+<?php
+
+namespace App\Http\Controllers\Api\Customers;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Customers\CustomerPaymentOrdersStoreRequest;
+use App\Http\Requests\Api\Customers\CustomerPaymentOrdersUpdateRequest;
+use App\Http\Resources\Api\Customers\CustomerPaymentOrderResource;
+use App\Http\Responses\ApiResponse;
+use App\Models\Customers\CustomerPayment;
+use App\Traits\HasPagination;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class CustomerPaymentOrdersController extends Controller
+{
+    use HasPagination;
+
+    public function index(Request $request): JsonResponse
+    {
+        $query = CustomerPayment::query()
+            ->with([
+                'customer:id,name,code',
+                'currency:id,name,code',
+                'customerPaymentTerm:id,name,days',
+                'approvedBy:id,name',
+                'account:id,name',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ])
+            ->pending()
+            ->searchable($request)
+            ->sortable($request);
+
+        if ($request->has('customer_id')) {
+            $query->byCustomer($request->customer_id);
+        }
+
+        if ($request->has('currency_id')) {
+            $query->byCurrency($request->currency_id);
+        }
+
+        if ($request->has('prefix')) {
+            $query->byPrefix($request->prefix);
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->byDateRange($request->start_date, $request->end_date);
+        }
+
+
+        $payments = $this->applyPagination($query, $request);
+
+        return ApiResponse::paginated(
+            'Customer payments retrieved successfully',
+            $payments,
+            CustomerPaymentOrderResource::class
+        );
+    }
+
+    public function store(CustomerPaymentOrdersStoreRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+
+        $payment = CustomerPayment::create($data);
+
+        $payment->load([
+            'customer:id,name,code',
+            'currency:id,name,code',
+            'customerPaymentTerm:id,name,days',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
+
+        $message = 'Customer payment order created successfully (pending approval)';
+
+        return ApiResponse::store($message, new CustomerPaymentOrderResource($payment));
+    }
+
+    public function show(CustomerPayment $customerPayment): JsonResponse
+    {
+        $customerPayment->load([
+            'customer:id,name,code,address,city,mobile',
+            'currency:id,name,code,symbol',
+            'customerPaymentTerm:id,name,days',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
+
+        return ApiResponse::show(
+            'Customer payment retrieved successfully',
+            new CustomerPaymentOrderResource($customerPayment)
+        );
+    }
+
+    public function update(CustomerPaymentOrdersUpdateRequest $request, CustomerPayment $customerPayment): JsonResponse
+    {
+        if ($customerPayment->isApproved()) {
+            return ApiResponse::customError('Cannot update approved payments', 422);
+        }
+
+        $data = $request->validated();
+
+        $customerPayment->update($data);
+
+        $customerPayment->load([
+            'customer:id,name,code',
+            'currency:id,name,code',
+            'customerPaymentTerm:id,name,days',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
+
+        $message = 'Customer payment order updated successfully (pending approval)';
+
+        return ApiResponse::update($message, new CustomerPaymentOrderResource($customerPayment));
+    }
+
+    public function destroy(CustomerPayment $customerPayment): JsonResponse
+    {
+        if ($customerPayment->isApproved()) {
+            return ApiResponse::customError('Cannot delete approved payments', 422);
+        }
+
+        $customerPayment->delete();
+
+        return ApiResponse::delete('Customer payment order deleted successfully');
+    }
+
+    public function approve(Request $request, CustomerPayment $customerPayment): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
+            return ApiResponse::customError('You do not have permission to approve payments', 403);
+        }
+
+        if ($customerPayment->isApproved()) {
+            return ApiResponse::customError('Payment is already approved', 422);
+        }
+
+        $request->validate([
+            'account_id' => 'required|exists:accounts,id',
+            'approve_note' => 'nullable|string|max:1000'
+        ]);
+
+        $customerPayment->update([
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'account_id' => $request->account_id,
+            'approve_note' => $request->approve_note
+        ]);
+
+        $customerPayment->load([
+            'customer:id,name,code',
+            'currency:id,name,code',
+            'customerPaymentTerm:id,name,days',
+            'approvedBy:id,name',
+            'account:id,name',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
+
+        return ApiResponse::update(
+            'Customer payment approved successfully',
+            new CustomerPaymentOrderResource($customerPayment)
+        );
+    }
+
+    public function trashed(Request $request): JsonResponse
+    {
+        $query = CustomerPayment::onlyTrashed()
+            ->with([
+                'customer:id,name,code',
+                'currency:id,name,code',
+                'customerPaymentTerm:id,name,days',
+                'approvedBy:id,name',
+                'account:id,name',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ])
+            ->searchable($request)
+            ->sortable($request);
+
+        if ($request->has('customer_id')) {
+            $query->byCustomer($request->customer_id);
+        }
+
+        if ($request->has('currency_id')) {
+            $query->byCurrency($request->currency_id);
+        }
+
+        $payments = $this->applyPagination($query, $request);
+
+        return ApiResponse::paginated(
+            'Trashed customer payments retrieved successfully',
+            $payments,
+            CustomerPaymentOrderResource::class
+        );
+    }
+
+    public function restore(int $id): JsonResponse
+    {
+        $payment = CustomerPayment::onlyTrashed()->findOrFail($id);
+
+        $payment->restore();
+
+        $payment->load([
+            'customer:id,name,code',
+            'currency:id,name,code',
+            'customerPaymentTerm:id,name,days',
+            'approvedBy:id,name',
+            'account:id,name',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
+
+        return ApiResponse::update(
+            'Customer payment restored successfully',
+            new CustomerPaymentOrderResource($payment)
+        );
+    }
+
+    public function forceDelete(int $id): JsonResponse
+    {
+        $payment = CustomerPayment::onlyTrashed()->findOrFail($id);
+
+        $payment->forceDelete();
+
+        return ApiResponse::delete('Customer payment permanently deleted successfully');
+    }
+
+    public function stats(): JsonResponse
+    {
+        $stats = [
+            'total_payments' => CustomerPayment::count(),
+            'pending_payments' => CustomerPayment::pending()->count(),
+            'approved_payments' => CustomerPayment::approved()->count(),
+            'trashed_payments' => CustomerPayment::onlyTrashed()->count(),
+            'total_amount' => CustomerPayment::approved()->sum('amount'),
+            'total_amount_usd' => CustomerPayment::approved()->sum('amount_usd'),
+            'payments_by_prefix' => CustomerPayment::selectRaw('prefix, count(*) as count, sum(amount) as total_amount')
+                ->groupBy('prefix')
+                ->get(),
+            'payments_by_currency' => CustomerPayment::with('currency:id,name,code')
+                ->selectRaw('currency_id, count(*) as count, sum(amount) as total_amount')
+                ->groupBy('currency_id')
+                ->having('count', '>', 0)
+                ->get(),
+            'recent_approved' => CustomerPayment::approved()
+                ->with(['customer:id,name,code', 'approvedBy:id,name'])
+                ->orderBy('approved_at', 'desc')
+                ->limit(5)
+                ->get(),
+        ];
+
+        return ApiResponse::show('Customer payment statistics retrieved successfully', $stats);
+    }
+}

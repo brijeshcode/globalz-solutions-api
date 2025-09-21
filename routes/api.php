@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\Accounts\AccountsController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Customers\CustomersController;
+use App\Http\Controllers\Api\Customers\CustomerPaymentsController;
+use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
 use App\Http\Controllers\Api\Customers\SalesController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
 use App\Http\Controllers\Api\Setups\ItemCategoriesController;
@@ -72,6 +74,34 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{sale}', 'show')->name('show');
             Route::put('{sale}', 'update')->name('update');
             Route::delete('{sale}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Customer Payments Controller (for approved payments) - Must be defined BEFORE {customer} routes to avoid conflicts
+        Route::controller(CustomerPaymentsController::class)->prefix('payments')->name('payments.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{customerPayment}', 'show')->name('show');
+            Route::put('{customerPayment}', 'update')->name('update');
+            Route::delete('{customerPayment}', 'destroy')->name('destroy');
+            Route::patch('{customerPayment}/unapprove', 'unapprove')->name('unapprove');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Customer Payment Orders Controller (for pending payment orders) - Must be defined BEFORE {customer} routes to avoid conflicts
+        Route::controller(CustomerPaymentOrdersController::class)->prefix('payment-orders')->name('payment-orders.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{customerPayment}', 'show')->name('show');
+            Route::put('{customerPayment}', 'update')->name('update');
+            Route::delete('{customerPayment}', 'destroy')->name('destroy');
+            Route::patch('{customerPayment}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });

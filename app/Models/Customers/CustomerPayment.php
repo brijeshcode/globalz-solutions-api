@@ -1,0 +1,177 @@
+<?php
+
+namespace App\Models\Customers;
+
+use App\Models\Accounts\Account;
+use App\Models\Setting;
+use App\Models\Setups\Customers\CustomerPaymentTerm;
+use App\Models\Setups\Generals\Currencies\Currency;
+use App\Models\User;
+use App\Traits\Authorable;
+use App\Traits\Searchable;
+use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class CustomerPayment extends Model
+{
+    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
+
+    protected $fillable = [
+        'date',
+        'prefix',
+        'code',
+        'customer_id',
+        'customer_payment_term_id',
+        'currency_id',
+        'currency_rate',
+        'amount',
+        'amount_usd',
+        'credit_limit',
+        'last_payment_amount',
+        'rtc_book_number',
+        'note',
+        'approved_by',
+        'approved_at',
+        'account_id',
+        'approve_note',
+    ];
+
+    protected $casts = [
+        'date' => 'datetime',
+        'currency_rate' => 'decimal:4',
+        'amount' => 'decimal:2',
+        'amount_usd' => 'decimal:2',
+        'credit_limit' => 'decimal:2',
+        'last_payment_amount' => 'decimal:2',
+        'approved_at' => 'datetime',
+    ];
+
+    protected $searchable = [
+        'code',
+        'rtc_book_number',
+        'note',
+        'approve_note',
+    ];
+
+    protected $sortable = [
+        'id',
+        'date',
+        'code',
+        'customer_id',
+        'currency_id',
+        'amount',
+        'amount_usd',
+        'approved_at',
+        'created_at',
+        'updated_at',
+    ];
+
+    protected $defaultSortField = 'id';
+    protected $defaultSortDirection = 'desc';
+
+    // Relationships
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function customerPaymentTerm(): BelongsTo
+    {
+        return $this->belongsTo(CustomerPaymentTerm::class);
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
+    }
+
+    // Scopes
+    public function scopeApproved($query)
+    {
+        return $query->whereNotNull('approved_by');
+    }
+
+    public function scopePending($query)
+    {
+        return $query->whereNull('approved_by');
+    }
+
+    public function scopeByCustomer($query, $customerId)
+    {
+        return $query->where('customer_id', $customerId);
+    }
+
+    public function scopeByCurrency($query, $currencyId)
+    {
+        return $query->where('currency_id', $currencyId);
+    }
+
+    public function scopeByDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('date', [$startDate, $endDate]);
+    }
+
+    public function scopeByCode($query, $code)
+    {
+        return $query->where('code', $code);
+    }
+
+    public function scopeByPrefix($query, $prefix)
+    {
+        return $query->where('prefix', $prefix);
+    }
+
+    // Helper Methods
+    public function isApproved(): bool
+    {
+        return !is_null($this->approved_by);
+    }
+
+    public function isPending(): bool
+    {
+        return is_null($this->approved_by);
+    }
+
+    public function getPaymentCodeAttribute(): string
+    {
+        return $this->prefix . $this->code;
+    }
+
+    // Code Generation Methods
+    public static function reserveNextCode(): string
+    {
+        $defaultValue = config('app.customer_payment_code_start', 1000);
+        $newValue = Setting::incrementValue('customer_payments', 'code_counter', 1, $defaultValue);
+        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+    }
+
+    public function setPaymentCode(): string
+    {
+        return $this->code = self::reserveNextCode();
+    }
+
+    // Model Events
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($payment) {
+            if (!$payment->code) {
+                $payment->setPaymentCode();
+            }
+        });
+    }
+}
