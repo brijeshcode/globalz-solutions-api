@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Accounts\AccountsController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Customers\CustomersController;
+use App\Http\Controllers\Api\Customers\CustomerCreditDebitNotesController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentsController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerReturnsController;
@@ -131,6 +132,19 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('{customerReturn}', 'update')->name('update');
             Route::delete('{customerReturn}', 'destroy')->name('destroy');
             Route::patch('{customerReturn}/approve', 'approve')->name('approve');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Customer Credit/Debit Notes Controller - Must be defined BEFORE {customer} routes to avoid conflicts
+        Route::controller(CustomerCreditDebitNotesController::class)->prefix('credit-debit-notes')->name('credit-debit-notes.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{customerCreditDebitNote}', 'show')->name('show');
+            Route::put('{customerCreditDebitNote}', 'update')->name('update');
+            Route::delete('{customerCreditDebitNote}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
