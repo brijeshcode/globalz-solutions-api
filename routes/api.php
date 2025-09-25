@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Customers\CustomersController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentsController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
+use App\Http\Controllers\Api\Customers\CustomerReturnsController;
+use App\Http\Controllers\Api\Customers\CustomerReturnOrdersController;
 use App\Http\Controllers\Api\Customers\SalesController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
 use App\Http\Controllers\Api\Setups\ItemCategoriesController;
@@ -102,6 +104,33 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('{customerPayment}', 'update')->name('update');
             Route::delete('{customerPayment}', 'destroy')->name('destroy');
             Route::patch('{customerPayment}/approve', 'approve')->name('approve');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Customer Returns Controller (for approved returns) - Must be defined BEFORE {customer} routes to avoid conflicts
+        Route::controller(CustomerReturnsController::class)->prefix('returns')->name('returns.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{customerReturn}', 'show')->name('show');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::patch('{customerReturn}/mark-received', 'markReceived')->name('markReceived');
+            
+        });
+
+        // Customer Return Orders Controller (for pending return orders) - Must be defined BEFORE {customer} routes to avoid conflicts
+        Route::controller(CustomerReturnOrdersController::class)->prefix('return-orders')->name('return-orders.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{customerReturn}', 'show')->name('show');
+            Route::put('{customerReturn}', 'update')->name('update');
+            Route::delete('{customerReturn}', 'destroy')->name('destroy');
+            Route::patch('{customerReturn}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });

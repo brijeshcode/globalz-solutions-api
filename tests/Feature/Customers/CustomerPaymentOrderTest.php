@@ -94,7 +94,7 @@ describe('Customer Payment Orders API', function () {
         $this->actingAs($this->employeeUser, 'sanctum');
 
         for ($i = 0; $i < 3; $i++) {
-            ($this->createPaymentViaFactory)('approved');
+            ($this->createPaymentViaFactory)(null);
         }
 
         $response = $this->getJson(route('customers.payment-orders.index'));
@@ -389,10 +389,10 @@ describe('Customer Payment Orders API', function () {
         ]);
 
         for ($i = 0; $i < 2; $i++) {
-            ($this->createPaymentViaFactory)('approved', ['customer_id' => $this->customer->id]);
+            ($this->createPaymentViaFactory)(null, ['customer_id' => $this->customer->id]);
         }
         for ($i = 0; $i < 3; $i++) {
-            ($this->createPaymentViaFactory)('approved', ['customer_id' => $otherCustomer->id]);
+            ($this->createPaymentViaFactory)(null, ['customer_id' => $otherCustomer->id]);
         }
 
         $response = $this->getJson(route('customers.payment-orders.index', ['customer_id' => $this->customer->id]));
@@ -407,10 +407,10 @@ describe('Customer Payment Orders API', function () {
         $otherCurrency = Currency::factory()->create(['code' => 'EUR']);
 
         for ($i = 0; $i < 2; $i++) {
-            ($this->createPaymentViaFactory)('approved', ['currency_id' => $this->currency->id]);
+            ($this->createPaymentViaFactory)(null, ['currency_id' => $this->currency->id]);
         }
         for ($i = 0; $i < 3; $i++) {
-            ($this->createPaymentViaFactory)('approved', ['currency_id' => $otherCurrency->id]);
+            ($this->createPaymentViaFactory)(null, ['currency_id' => $otherCurrency->id]);
         }
 
         $response = $this->getJson(route('customers.payment-orders.index', ['currency_id' => $this->currency->id]));
@@ -422,9 +422,9 @@ describe('Customer Payment Orders API', function () {
     it('can filter payment orders by date range', function () {
         $this->actingAs($this->employeeUser, 'sanctum');
 
-        ($this->createPaymentViaFactory)('approved', ['date' => '2025-01-01']);
-        ($this->createPaymentViaFactory)('approved', ['date' => '2025-02-15']);
-        ($this->createPaymentViaFactory)('approved', ['date' => '2025-03-30']);
+        ($this->createPaymentViaFactory)(null, ['date' => '2025-01-01']);
+        ($this->createPaymentViaFactory)(null, ['date' => '2025-02-15']);
+        ($this->createPaymentViaFactory)(null, ['date' => '2025-03-30']);
 
         $response = $this->getJson(route('customers.payment-orders.index', [
             'start_date' => '2025-02-01',
@@ -438,8 +438,8 @@ describe('Customer Payment Orders API', function () {
     it('can search payment orders by code', function () {
         $this->actingAs($this->employeeUser, 'sanctum');
 
-        $payment1 = ($this->createPaymentViaFactory)('approved', ['code' => '001001']);
-        $payment2 = ($this->createPaymentViaFactory)('approved', ['code' => '001002']);
+        $payment1 = ($this->createPaymentViaFactory)(null, ['code' => '001001']);
+        $payment2 = ($this->createPaymentViaFactory)(null, ['code' => '001002']);
 
         $response = $this->getJson(route('customers.payment-orders.index', ['search' => '001001']));
 
@@ -453,8 +453,8 @@ describe('Customer Payment Orders API', function () {
     it('can search payment orders by rtc_book_number', function () {
         $this->actingAs($this->employeeUser, 'sanctum');
 
-        ($this->createPaymentViaFactory)('approved', ['rtc_book_number' => 'RTC-SEARCH-123']);
-        ($this->createPaymentViaFactory)('approved', ['rtc_book_number' => 'RTC-OTHER-456']);
+        ($this->createPaymentViaFactory)(null, ['rtc_book_number' => 'RTC-SEARCH-123']);
+        ($this->createPaymentViaFactory)(null, ['rtc_book_number' => 'RTC-OTHER-456']);
 
         $response = $this->getJson(route('customers.payment-orders.index', ['search' => 'SEARCH-123']));
 
@@ -488,7 +488,7 @@ describe('Customer Payment Orders API', function () {
         $this->actingAs($this->employeeUser, 'sanctum');
 
         for ($i = 0; $i < 7; $i++) {
-            ($this->createPaymentViaFactory)('approved');
+            ($this->createPaymentViaFactory)(null);
         }
 
         $response = $this->getJson(route('customers.payment-orders.index', ['per_page' => 3]));

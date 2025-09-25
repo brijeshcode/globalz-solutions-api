@@ -159,7 +159,9 @@ class CustomerPaymentsController extends Controller
  
     public function unapprove(CustomerPayment $customerPayment): JsonResponse
     { 
-        abort(403);die;
+        return ApiResponse::forbidden(
+            'un approve is disabled',
+        );
         /** @var \App\Models\User $user */
         $user = Auth::user();
 

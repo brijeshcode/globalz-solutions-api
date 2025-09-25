@@ -13,6 +13,7 @@ use App\Models\Items\Item;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class SalesController extends Controller
@@ -21,10 +22,18 @@ class SalesController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
         $query = Sale::query()
             ->with(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson'])
             ->searchable($request)
             ->sortable($request);
+
+        // Role-based filtering: salesman can only see their own returns
+        if ($user->isSalesman()) {
+            $query->where('salesperson_id', $user->id);
+        }
 
         if ($request->has('warehouse_id')) {
             $query->byWarehouse($request->warehouse_id);
