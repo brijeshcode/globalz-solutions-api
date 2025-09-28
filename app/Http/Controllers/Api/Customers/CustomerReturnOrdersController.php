@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Helpers\ApiHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerReturnOrdersStoreRequest;
 use App\Http\Requests\Api\Customers\CustomerReturnOrdersUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerReturnOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerReturn;
+use App\Models\Employees\Employee;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+
+use function PHPUnit\Framework\isNull;
 
 class CustomerReturnOrdersController extends Controller
 {
@@ -38,8 +42,11 @@ class CustomerReturnOrdersController extends Controller
             ->sortable($request);
 
         // Role-based filtering: salesman can only see their own returns
-        if ($user->isSalesman()) {
-            $query->where('salesperson_id', $user->id);
+        if (ApiHelper::isSalesman()) {
+            $employee = ApiHelper::salesmanEmployee();
+            if($employee){
+                $query->where('salesperson_id', $employee->id);
+            }
         }
 
         if ($request->has('customer_id')) {
@@ -110,8 +117,11 @@ class CustomerReturnOrdersController extends Controller
         $user = Auth::user();
 
         // Check if salesman can only view their own returns
-        if ($user->isSalesman() && $customerReturn->salesperson_id !== $user->id) {
-            return ApiResponse::customError('You can only view your own return orders', 403);
+        if (ApiHelper::isSalesman()) {
+            $employee = ApiHelper::salesmanEmployee();
+            if( is_null($employee) || $customerReturn->salesperson_id != $employee->id){
+                return ApiResponse::customError('You can only view your own return orders', 403);
+            }
         }
 
         $customerReturn->load([
@@ -138,7 +148,8 @@ class CustomerReturnOrdersController extends Controller
         $user = Auth::user();
 
         // Check if salesman can only update their own returns
-        if ($user->isSalesman() && $customerReturn->salesperson_id !== $user->id) {
+        $employee = ApiHelper::salesmanEmployee();
+        if ($user->isSalesman() && $customerReturn->salesperson_id !== $employee->id) {
             return ApiResponse::customError('You can only update your own return orders', 403);
         }
 

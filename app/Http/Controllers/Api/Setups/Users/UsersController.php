@@ -186,8 +186,9 @@ class UsersController extends Controller
     {
         $query = Employee::query()
             ->whereNull('user_id')
+            ->with('department:name,id')
             ->where('is_active', true)
-            ->select('id', 'name', 'code')
+            ->select('id', 'name', 'code', 'department_id')
             ->orderBy('name');
 
         if ($request->has('search')) {

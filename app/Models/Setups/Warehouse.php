@@ -67,4 +67,9 @@ class Warehouse extends Model
     {
         return $this->update(['is_active' => false]);
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

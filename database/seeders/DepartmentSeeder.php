@@ -12,13 +12,7 @@ class DepartmentSeeder extends Seeder
      */
     public function run(): void
     {
-        $departments = config('app.default_departments', [
-            'Sales',
-            'Accounting',
-            'Shipping',
-            'Administration',
-            'Warehouse',
-        ]);
+        $departments = Department::getDefaultDepartments();
 
         foreach ($departments as $departmentName) {
             Department::firstOrCreate(

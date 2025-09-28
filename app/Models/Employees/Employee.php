@@ -65,6 +65,27 @@ class Employee extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeIsSaleDepartment($query)
+    {
+        return $query->whereHas('department', function ($q) {
+            $q->where('name', 'Sales');
+        });
+    }
+
+    public function scopeIsWarehouseDepartment($query)
+    {
+        return $query->whereHas('department', function ($q) {
+            $q->where('name', 'Warehouse');
+        });
+    }
+
+    public function scopeIsDepartment($query, $departmentName)
+    {
+        return $query->whereHas('department', function ($q) use ($departmentName) {
+            $q->where('name', $departmentName);
+        });
+    }
+
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);

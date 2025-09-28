@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Helpers\ApiHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SalesStoreRequest;
 use App\Http\Requests\Api\Customers\SalesUpdateRequest;
@@ -22,17 +23,15 @@ class SalesController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        
         $query = Sale::query()
             ->with(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson'])
             ->searchable($request)
             ->sortable($request);
 
         // Role-based filtering: salesman can only see their own returns
-        if ($user->isSalesman()) {
-            $query->where('salesperson_id', $user->id);
+        if (ApiHelper::isSalesman()) {
+            $employee = ApiHelper::salesmanEmployee();
+            $query->where('salesperson_id', $employee?->id);
         }
 
         if ($request->has('warehouse_id')) {

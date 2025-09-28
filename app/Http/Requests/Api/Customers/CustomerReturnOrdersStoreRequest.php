@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Customers;
 
+use App\Helpers\ApiHelper;
 use App\Models\Customers\Customer;
 use App\Models\Setups\Warehouse;
 use Illuminate\Foundation\Http\FormRequest;
@@ -37,9 +38,12 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.price' => 'required|numeric|min:0',
             'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
-            
-            
+            'items.*.unit_discount_amount' => 'nullable|numeric|min:0',
+            'items.*.discount_amount' => 'nullable|numeric|min:0',
             'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.ttc_price' => 'required|numeric|min:0',
+            'items.*.total_price' => 'required|numeric|min:0',
+            'items.*.total_price_usd' => 'required|numeric|min:0',
             'items.*.total_volume_cbm' => 'nullable|numeric|min:0',
             'items.*.total_weight_kg' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string',
@@ -70,7 +74,15 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
             'items.*.price.required' => 'Price is required for all items',
             'items.*.price.min' => 'Price must be 0 or greater',
             'items.*.discount_percent.max' => 'Discount percentage cannot exceed 100%',
+            'items.*.unit_discount_amount.min' => 'Unit discount amount must be 0 or greater',
+            'items.*.discount_amount.min' => 'Discount amount must be 0 or greater',
             'items.*.tax_percent.max' => 'Tax percentage cannot exceed 100%',
+            'items.*.ttc_price.required' => 'TTC price is required for all items',
+            'items.*.ttc_price.min' => 'TTC price must be 0 or greater',
+            'items.*.total_price.required' => 'Total price is required for all items',
+            'items.*.total_price.min' => 'Total price must be 0 or greater',
+            'items.*.total_price_usd.required' => 'Total price in USD is required for all items',
+            'items.*.total_price_usd.min' => 'Total price in USD must be 0 or greater',
         ];
     }
 
@@ -99,7 +111,8 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
             }
 
             // Salesmen can only create returns for themselves
-            if ($user->isSalesman() && $this->input('salesperson_id') && $this->input('salesperson_id') != $user->id) {
+            $employee = ApiHelper::salesmanEmployee();
+            if ($user->isSalesman() && $this->input('salesperson_id') && $this->input('salesperson_id') != $employee->id) {
                 $validator->errors()->add('salesperson_id', 'You can only create returns for yourself');
             }
 

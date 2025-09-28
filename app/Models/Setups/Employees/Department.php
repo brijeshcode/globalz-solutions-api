@@ -16,6 +16,17 @@ class Department extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
     public const FIXDEPARTMENTS = [ 'Warehouse', 'Sales', 'Accounting', 'Administration', 'Shipping'];
+
+    public static function getDefaultDepartments(): array
+    {
+        return config('app.default_departments', [
+            'Sales',
+            'Accounting',
+            'Shipping',
+            'Administration',
+            'Warehouse'
+        ]);
+    }
     
     protected $fillable = [
         'name',
@@ -43,6 +54,21 @@ class Department extends Model
 
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
+
+    protected static function booted(): void
+    {
+        static::updating(function (Department $department) {
+            if ($department->isDirty('name') && in_array($department->getOriginal('name'), self::getDefaultDepartments())) {
+                throw new \Exception('Cannot update the name of a default department: ' . $department->getOriginal('name'));
+            }
+        });
+
+        static::deleting(function (Department $department) {
+            if (in_array($department->name, self::getDefaultDepartments())) {
+                throw new \Exception('Cannot delete default department: ' . $department->name);
+            }
+        });
+    }
 
     public function scopeActive($query)
     {

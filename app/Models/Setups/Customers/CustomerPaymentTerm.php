@@ -57,4 +57,9 @@ class CustomerPaymentTerm extends Model
     {
         return $query->where('is_active', true);
     }
+
+    public function scopeisActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

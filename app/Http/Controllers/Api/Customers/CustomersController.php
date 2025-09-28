@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Helpers\ApiHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomersStoreRequest;
 use App\Http\Requests\Api\Customers\CustomersUpdateRequest;
@@ -100,6 +101,14 @@ class CustomersController extends Controller
                 $query->where('current_balance', '<', 0);
             } elseif ($status === 'balanced') {
                 $query->where('current_balance', '=', 0);
+            }
+        }
+
+        if (ApiHelper::isSalesman()) {
+            $employee = ApiHelper::salesmanEmployee();
+
+            if($employee){
+                $query->where('salesperson_id', $employee->id);
             }
         }
 

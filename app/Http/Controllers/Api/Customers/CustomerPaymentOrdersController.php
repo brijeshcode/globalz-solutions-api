@@ -9,6 +9,7 @@ use App\Http\Resources\Api\Customers\CustomerPaymentOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerPayment;
 use App\Traits\HasPagination;
+use App\Helpers\ApiHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,6 +50,15 @@ class CustomerPaymentOrdersController extends Controller
             $query->byDateRange($request->start_date, $request->end_date);
         }
 
+        // Filter by salesman if user has salesman role
+        if (ApiHelper::isSalesman()) {
+            $salesmanEmployee = ApiHelper::salesmanEmployee();
+            if ($salesmanEmployee) {
+                $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
+                    $q->where('salesperson_id', $salesmanEmployee->id);
+                });
+            }
+        }
 
         $payments = $this->applyPagination($query, $request);
 
@@ -80,6 +90,17 @@ class CustomerPaymentOrdersController extends Controller
 
     public function show(CustomerPayment $customerPayment): JsonResponse
     {
+        // Check if user is salesman and has access to this customer
+        if (ApiHelper::isSalesman()) {
+            $salesmanEmployee = ApiHelper::salesmanEmployee();
+            if ($salesmanEmployee) {
+                $customerPayment->load('customer:id,salesperson_id');
+                if ($customerPayment->customer->salesperson_id !== $salesmanEmployee->id) {
+                    return ApiResponse::customError('You do not have permission to view this customer payment', 403);
+                }
+            }
+        }
+
         $customerPayment->load([
             'customer:id,name,code,address,city,mobile',
             'currency:id,name,code,symbol',
