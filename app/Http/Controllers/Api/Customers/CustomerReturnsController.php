@@ -206,9 +206,9 @@ class CustomerReturnsController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // if (!$user->isWarehouseManager()) {
-        //     return ApiResponse::customError('Only warehouse managers can mark returns as received', 403);
-        // }
+        if (!$user->isWarehouseManager()) {
+            return ApiResponse::customError('Only warehouse managers can mark returns as received', 403);
+        }
 
         if (!$customerReturn->isApproved()) {
             return ApiResponse::customError('Return must be approved before marking as received', 422);
