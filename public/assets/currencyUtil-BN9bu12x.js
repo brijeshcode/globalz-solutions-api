@@ -1,0 +1,1 @@
+const e=(e,t)=>e*t;export{e as b};
