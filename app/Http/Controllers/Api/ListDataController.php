@@ -123,7 +123,7 @@ class ListDataController extends Controller
         'customer_group_id',
         'customer_province_id',
         'customer_zone_id',
-        'opening_balance',
+        // 'opening_balance',
         'current_balance',
         'address',
         'city',

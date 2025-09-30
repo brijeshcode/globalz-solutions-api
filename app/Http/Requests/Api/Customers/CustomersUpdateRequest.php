@@ -39,7 +39,7 @@ class CustomersUpdateRequest extends FormRequest
             'customer_zone_id' => 'nullable|exists:customer_zones,id',
             
             // Balance Information
-            'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
+            // 'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
             'current_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
 
             // Additional Info Tab
@@ -96,8 +96,8 @@ class CustomersUpdateRequest extends FormRequest
             'discount_percentage.min' => 'The discount percentage must be at least 0.',
             'discount_percentage.max' => 'The discount percentage cannot exceed 100.',
             'credit_limit.min' => 'The credit limit must be at least 0.',
-            'opening_balance.min' => 'The opening balance cannot be less than -999,999,999.9999.',
-            'opening_balance.max' => 'The opening balance cannot exceed 999,999,999.9999.',
+            // 'opening_balance.min' => 'The opening balance cannot be less than -999,999,999.9999.',
+            // 'opening_balance.max' => 'The opening balance cannot exceed 999,999,999.9999.',
             'current_balance.min' => 'The current balance cannot be less than -999,999,999.9999.',
             'current_balance.max' => 'The current balance cannot exceed 999,999,999.9999.',
             'credit_limit.max' => 'The credit limit cannot exceed 999,999,999.9999.',
@@ -117,7 +117,7 @@ class CustomersUpdateRequest extends FormRequest
             'customer_zone_id' => 'customer zone',
             'salesperson_id' => 'salesperson',
             'customer_payment_term_id' => 'payment term',
-            'opening_balance' => 'opening balance',
+            // 'opening_balance' => 'opening balance',
             'current_balance' => 'current balance',
             'discount_percentage' => 'discount percentage',
             'credit_limit' => 'credit limit',

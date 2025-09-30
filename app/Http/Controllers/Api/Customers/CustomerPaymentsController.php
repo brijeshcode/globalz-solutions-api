@@ -9,6 +9,7 @@ use App\Http\Requests\Api\Customers\CustomerPaymentsUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerPaymentResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerPayment;
+use App\Services\Customers\CustomerBalanceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -87,6 +88,8 @@ class CustomerPaymentsController extends Controller
         $data['approved_at'] = now();
 
         $payment = CustomerPayment::create($data);
+
+        CustomerBalanceService::updateMonthlyTotal($payment->customer_id, 'payment', $payment->amount_usd, $payment->id);
 
         $payment->load([
             'customer:id,name,code',

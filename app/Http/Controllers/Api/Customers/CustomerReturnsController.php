@@ -10,6 +10,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\CustomerReturnItem;
 use App\Models\Employees\Employee;
+use App\Services\Customers\CustomerBalanceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -230,6 +231,7 @@ class CustomerReturnsController extends Controller
                 'return_received_note' => $request->return_received_note
             ]);
 
+            CustomerBalanceService::updateMonthlyTotal($customerReturn->customer_id, 'return', $customerReturn->total_usd, $customerReturn->id);
             // Update inventory for each returned item
             // foreach ($customerReturn->items as $returnItem) {
             //     if ($returnItem->item_id && $returnItem->quantity > 0) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Helpers\ApiHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerCreditDebitNotesStoreRequest;
 use App\Http\Requests\Api\Customers\CustomerCreditDebitNotesUpdateRequest;
@@ -12,6 +13,7 @@ use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CustomerCreditDebitNotesController extends Controller
 {
@@ -49,6 +51,16 @@ class CustomerCreditDebitNotesController extends Controller
             $query->byDateRange($request->start_date, $request->end_date);
         }
 
+        // Filter by salesman if user has salesman role
+        if (ApiHelper::isSalesman()) {
+            $salesmanEmployee = ApiHelper::salesmanEmployee();
+            if ($salesmanEmployee) {
+                $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
+                    $q->where('salesperson_id', $salesmanEmployee->id);
+                });
+            }
+        }
+
         $notes = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
@@ -62,18 +74,27 @@ class CustomerCreditDebitNotesController extends Controller
     {
         $data = $request->validated();
 
-        $note = CustomerCreditDebitNote::create($data);
+        try {
+            $note = DB::transaction(function () use ($data) {
+                $note = CustomerCreditDebitNote::create($data);
 
-        $note->load([
-            'customer:id,name,code',
-            'currency:id,name,code,symbol',
-            'createdBy:id,name',
-            'updatedBy:id,name'
-        ]);
+                $note->load([
+                    'customer:id,name,code',
+                    'currency:id,name,code,symbol',
+                    'createdBy:id,name',
+                    'updatedBy:id,name'
+                ]);
 
-        $message = 'Customer ' . $note->type . ' note created successfully';
+                return $note;
+            });
 
-        return ApiResponse::store($message, new CustomerCreditDebitNoteResource($note));
+            $message = 'Customer ' . $note->type . ' note created successfully';
+
+            return ApiResponse::store($message, new CustomerCreditDebitNoteResource($note));
+
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to create customer credit/debit note: ' . $e->getMessage());
+        }
     }
 
     public function show(CustomerCreditDebitNote $customerCreditDebitNote): JsonResponse
@@ -95,18 +116,25 @@ class CustomerCreditDebitNotesController extends Controller
     {
         $data = $request->validated();
 
-        $customerCreditDebitNote->update($data);
+        try {
+            DB::transaction(function () use ($data, $customerCreditDebitNote) {
+                $customerCreditDebitNote->update($data);
 
-        $customerCreditDebitNote->load([
-            'customer:id,name,code',
-            'currency:id,name,code,symbol',
-            'createdBy:id,name',
-            'updatedBy:id,name'
-        ]);
+                $customerCreditDebitNote->load([
+                    'customer:id,name,code',
+                    'currency:id,name,code,symbol',
+                    'createdBy:id,name',
+                    'updatedBy:id,name'
+                ]);
+            });
 
-        $message = 'Customer ' . $customerCreditDebitNote->type . ' note updated successfully';
+            $message = 'Customer ' . $customerCreditDebitNote->type . ' note updated successfully';
 
-        return ApiResponse::update($message, new CustomerCreditDebitNoteResource($customerCreditDebitNote));
+            return ApiResponse::update($message, new CustomerCreditDebitNoteResource($customerCreditDebitNote));
+
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to update customer credit/debit note: ' . $e->getMessage());
+        }
     }
 
     public function destroy(CustomerCreditDebitNote $customerCreditDebitNote): JsonResponse
@@ -118,9 +146,16 @@ class CustomerCreditDebitNotesController extends Controller
             return ApiResponse::customError('Only administrators can delete credit/debit notes', 403);
         }
 
-        $customerCreditDebitNote->delete();
+        try {
+            DB::transaction(function () use ($customerCreditDebitNote) {
+                $customerCreditDebitNote->delete();
+            });
 
-        return ApiResponse::delete('Customer credit/debit note deleted successfully');
+            return ApiResponse::delete('Customer credit/debit note deleted successfully');
+
+        } catch (\Exception $e) {
+            return ApiResponse::error('Failed to delete customer credit/debit note: ' . $e->getMessage());
+        }
     }
 
     public function trashed(Request $request): JsonResponse

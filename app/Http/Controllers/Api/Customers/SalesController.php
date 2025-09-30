@@ -11,6 +11,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Sale;
 use App\Models\Customers\SaleItems;
 use App\Models\Items\Item;
+use App\Services\Customers\CustomerBalanceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -109,6 +110,7 @@ class SalesController extends Controller
         });
 
         $sale->load(['saleItems.item', 'warehouse', 'currency']);
+        CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', $sale->total_usd, $sale->id);
 
         return ApiResponse::store(
             'Sale created successfully',
@@ -129,6 +131,7 @@ class SalesController extends Controller
     public function update(SalesUpdateRequest $request, Sale $sale): JsonResponse
     {
         $data = $request->validated();
+        $originalAmount = $sale->total_usd;
 
         DB::transaction(function () use ($data, $sale) {
             if (isset($data['items'])) {
@@ -195,6 +198,10 @@ class SalesController extends Controller
             $sale->update($data);
         });
 
+        // remove old amount 
+        CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', -$originalAmount, $sale->id);
+        CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', $sale->total_usd, $sale->id);
+
         $sale->load(['saleItems.item', 'warehouse', 'currency']);
 
         return ApiResponse::update(
@@ -205,6 +212,7 @@ class SalesController extends Controller
 
     public function destroy(Sale $sale): JsonResponse
     {
+        CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', -$sale->total_usd, $sale->id);
         $sale->delete();
 
         return ApiResponse::delete('Sale deleted successfully');

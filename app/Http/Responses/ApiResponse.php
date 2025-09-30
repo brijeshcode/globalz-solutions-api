@@ -119,6 +119,11 @@ class ApiResponse
         return self::send($message, 500);
     }
 
+    public static function error(string $message = 'Something went wrong'): JsonResponse
+    {
+        return self::send($message, 500);
+    }
+
     public static function failValidation(mixed $errors, string $message = 'Validation failed'): JsonResponse
     {
         return self::throw($errors, $message, 422);

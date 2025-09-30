@@ -68,9 +68,10 @@ class CustomerResource extends JsonResource
             }),
 
             // Financial Information
-            'opening_balance' => $this->opening_balance ? (float) $this->opening_balance : 0,
+            'opening_balance' =>  0,
             'current_balance' => $this->current_balance ? (float) $this->current_balance : 0,
             'balance_status' => $this->getBalanceStatusAttribute(),
+            // 'current_balance' => $this->getCurrentBalanceAttribute(),
 
             // Additional Information
             'address' => $this->address,

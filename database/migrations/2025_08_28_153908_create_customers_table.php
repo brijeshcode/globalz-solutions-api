@@ -25,7 +25,7 @@ return new class extends Migration
             $table->unsignedBigInteger('customer_zone_id')->nullable()->index();
 
 
-            $table->decimal('opening_balance', 15, 4)->default(0); // Starting balance
+            // $table->decimal('opening_balance', 15, 4)->default(0); // Starting balance
             $table->decimal('current_balance', 15, 4)->default(0); // Running balance
 
             // Additional Info Tab

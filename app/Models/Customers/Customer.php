@@ -33,7 +33,7 @@ class Customer extends Model
         'customer_group_id',
         'customer_province_id',
         'customer_zone_id',
-        'opening_balance',
+        // 'opening_balance',
         'current_balance',
         'address',
         'city',
@@ -54,7 +54,7 @@ class Customer extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
-        'opening_balance' => 'decimal:4',
+        // 'opening_balance' => 'decimal:4',
         'current_balance' => 'decimal:4',
         'discount_percentage' => 'decimal:2',
         'credit_limit' => 'decimal:4',
@@ -82,7 +82,7 @@ class Customer extends Model
         'customer_province_id',
         'customer_zone_id',
         'city',
-        'opening_balance',
+        // 'opening_balance',
         'current_balance',
         'salesperson_id',
         'discount_percentage',
@@ -134,6 +134,11 @@ class Customer extends Model
     public function customerPaymentTerm(): BelongsTo
     {
         return $this->belongsTo(CustomerPaymentTerm::class);
+    }
+
+    public function monthlyBalances(): HasMany
+    {
+        return $this->hasMany(CustomerBalanceMonthly::class);
     }
 
     // Scopes
@@ -222,17 +227,65 @@ class Customer extends Model
         if (!$this->gps_coordinates) {
             return null;
         }
-        
+
         $coordinates = explode(',', $this->gps_coordinates);
         if (count($coordinates) !== 2) {
             return null;
         }
-        
+
         return [
             'latitude' => trim($coordinates[0]),
             'longitude' => trim($coordinates[1])
         ];
     }
+
+    public function lastMonthRunningBalance(): float
+    {
+        $latestBalance = $this->monthlyBalances()
+            ->where('closing_balance', '>', 0)
+            ->orderBy('year', 'desc')
+            ->orderBy('month', 'desc')
+            ->first();
+
+        return $latestBalance ? (float) $latestBalance->closing_balance : 0.0;
+    }
+
+    public function currentMonthTransaction(): float
+    {
+        $latestBalance = $this->monthlyBalances()
+            ->where('closing_balance' , 0)
+            ->where('year', now()->year)
+            ->where('month', now()->month)
+            ->first(); 
+
+        return $latestBalance ? (float) $latestBalance->transaction_total : 0.0;
+    }
+
+    public function getCurrentBalanceAttribute(): float
+    {
+        $customerId = $this->id;
+        $closingBalanceData = CustomerBalanceMonthly::select('closing_balance')
+            ->where('transaction_total', '>', 0)
+            ->where('customer_id', $customerId)
+            ->where('closing_balance' , '>', 0)
+            ->orderBy('year', 'desc')
+            ->orderBy('month', 'desc')
+            ->first();
+
+        $closingBalance = $closingBalanceData ? (float) $closingBalanceData->closing_balance : 0.0;
+
+        $latestBalance = CustomerBalanceMonthly::select('transaction_total')
+            ->where('customer_id', $customerId)
+            ->where('closing_balance' , 0)
+            ->where('year', now()->year)
+            ->where('month', now()->month)
+            ->first();
+
+        $thisMonthBalance =  $latestBalance ? (float) $latestBalance->transaction_total : 0.0;
+         
+        return $closingBalance + $thisMonthBalance;    
+    }
+
 
     // Code Generation Methods
     

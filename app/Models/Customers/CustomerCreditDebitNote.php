@@ -5,6 +5,7 @@ namespace App\Models\Customers;
 use App\Models\Setting;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
+use App\Services\Customers\CustomerBalanceService;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -148,6 +149,27 @@ class CustomerCreditDebitNote extends Model
             if (!$note->code) {
                 $note->setNoteCode();
             }
+        });
+
+        static::created(function ($note) {
+            CustomerBalanceService::updateMonthlyTotal($note->customer_id, $note->type, $note->amount_usd, $note->id);
+        });
+
+        static::updated(function ($note) {
+            $originalAmount = $note->getOriginal('amount_usd');
+            $originalType = $note->getOriginal('type');
+
+            // Remove the old amount
+            if ($originalAmount) {
+                CustomerBalanceService::updateMonthlyTotal($note->customer_id, $originalType, -$originalAmount, $note->id);
+            }
+
+            // Add the new amount
+            CustomerBalanceService::updateMonthlyTotal($note->customer_id, $note->type, $note->amount_usd, $note->id);
+        });
+
+        static::deleted(function ($note) {
+            CustomerBalanceService::updateMonthlyTotal($note->customer_id, $note->type, -$note->amount_usd, $note->id);
         });
     }
 }
