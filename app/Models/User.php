@@ -116,6 +116,10 @@ class User extends Authenticatable
      */
     public function hasRole(string $role): bool
     {
+        if($role == self::ROLE_SUPER_ADMIN || $role === self::ROLE_DEVELOPER ){
+            return true;
+        }
+        
         return $this->role === $role;
     }
 
