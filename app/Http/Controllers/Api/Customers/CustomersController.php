@@ -6,14 +6,18 @@ use App\Helpers\ApiHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomersStoreRequest;
 use App\Http\Requests\Api\Customers\CustomersUpdateRequest;
+use App\Http\Requests\Api\Customers\CustomersImportRequest;
 use App\Http\Resources\Api\Customers\CustomerResource;
 use App\Http\Responses\ApiResponse;
+use App\Imports\CustomersImport;
 use App\Models\Customers\Customer;
 use App\Models\Setting;
 use App\Models\Setups\Employees\Department;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CustomersController extends Controller
 {
@@ -500,5 +504,186 @@ class CustomersController extends Controller
                 ];
             })
         );
+    }
+
+    /**
+     * Import customers from CSV/Excel file
+     */
+    public function import(CustomersImportRequest $request): JsonResponse
+    {
+        try {
+            $file = $request->file('file');
+            $skipDuplicates = $request->boolean('skip_duplicates', true);
+            $updateExisting = $request->boolean('update_existing', true);
+
+            // Create import instance
+            $import = new CustomersImport($skipDuplicates, $updateExisting);
+
+            // Process the import
+            Excel::import($import, $file);
+
+            // Get results
+            $results = $import->getResults();
+
+            // Determine response status
+            if ($results['imported'] === 0 && $results['updated'] === 0) {
+                Log::warning('No customers imported', [
+                    'total_rows' => $results['total'],
+                    'skipped' => $results['skipped'],
+                    'errors' => $results['errors']
+                ]);
+
+                return ApiResponse::customError(
+                    'No customers were imported. Please check the file format and data.',
+                    422,
+                    $results
+                );
+            }
+
+            return ApiResponse::store(
+                'Customers import completed successfully',
+                $results
+            );
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errors = [];
+
+            foreach ($failures as $failure) {
+                $errors[] = [
+                    'row' => $failure->row(),
+                    'attribute' => $failure->attribute(),
+                    'errors' => $failure->errors(),
+                    'values' => $failure->values()
+                ];
+            }
+
+            Log::error('Customer Import Validation Failed', ['errors' => $errors]);
+
+            return ApiResponse::customError('Import validation failed', 422, [
+                'errors' => $errors
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Customer Import Exception', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ApiResponse::customError(
+                'Import failed: ' . $e->getMessage(),
+                500,
+                [
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+        }
+    }
+
+    /**
+     * Download sample Excel/CSV template for customer import
+     */
+    public function downloadTemplate(Request $request)
+    {
+        $format = $request->query('format', 'xlsx'); // Default to xlsx
+
+        $headers = [
+            'code',
+            'name',
+            'customer_type',
+            'customer_group',
+            'customer_province',
+            'customer_zone',
+            'starting_balance',
+            'address',
+            'city',
+            'telephone',
+            'mobile',
+            'email',
+            'url',
+            'contact_name',
+            'gps_coordinates',
+            'mof_tax_number',
+            'salesperson',
+            'payment_term',
+            'discount_percentage',
+            'credit_limit',
+            'notes',
+            'is_active'
+        ];
+
+        $sampleData = [
+            [
+                '',  // code - leave empty for auto-generation
+                'Sample Customer Ltd',
+                'Retailer',
+                'Gold',
+                'Beirut',
+                'Central',
+                5000,  // starting_balance - positive means customer owes us (debit), negative means we owe customer (credit)
+                '123 Main Street',
+                'Beirut',
+                '+961 1 234567',
+                '+961 70 123456',
+                'info@samplecustomer.com',
+                'https://www.samplecustomer.com',
+                'John Doe',
+                '33.8886,35.4955',
+                'TAX123456',
+                'EMP001',
+                'Net 30',
+                5,
+                100000,
+                'VIP Customer',
+                true
+            ]
+        ];
+
+        if ($format === 'csv') {
+            // Generate CSV file
+            $callback = function() use ($headers, $sampleData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, $headers);
+
+                foreach ($sampleData as $row) {
+                    fputcsv($file, $row);
+                }
+
+                fclose($file);
+            };
+
+            return response()->streamDownload($callback, 'customer_import_template.csv', [
+                'Content-Type' => 'text/csv',
+            ]);
+        } else {
+            // Generate Excel file using Laravel Excel
+            return Excel::download(
+                new class($headers, $sampleData) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings {
+                    protected $headers;
+                    protected $data;
+
+                    public function __construct($headers, $data)
+                    {
+                        $this->headers = $headers;
+                        $this->data = $data;
+                    }
+
+                    public function array(): array
+                    {
+                        return $this->data;
+                    }
+
+                    public function headings(): array
+                    {
+                        return $this->headers;
+                    }
+                },
+                'customer_import_template.xlsx'
+            );
+        }
     }
 }

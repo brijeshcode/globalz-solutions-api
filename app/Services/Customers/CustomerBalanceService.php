@@ -90,7 +90,7 @@ class CustomerBalanceService
                 self::updateCustomerCurrentBalance($customerId);
             });
 
-            Log::info("Monthly balance updated for customer {$customerId}, type: {$transactionType}, amount: {$usdAmount}");
+            // Log::info("Monthly balance updated for customer {$customerId}, type: {$transactionType}, amount: {$usdAmount}");
 
         } catch (\Exception $e) {
             Log::error("Failed to update monthly balance: " . $e->getMessage());
