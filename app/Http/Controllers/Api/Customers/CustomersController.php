@@ -26,6 +26,7 @@ class CustomersController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Customer::query()
+            ->withCount('sales')
             ->with([
                 'parent:id,code,name',
                 'customerType:id,name',
