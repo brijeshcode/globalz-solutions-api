@@ -6,18 +6,44 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\Setups\Generals\Currencies\currencyRateResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setups\Generals\Currencies\currencyRate;
+use App\Traits\HasBooleanFilters;
+use App\Traits\HasPagination;
 use Illuminate\Http\Request;
 
 class currencyRatesController extends Controller
 {
+    use HasPagination, HasBooleanFilters;
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         // this will show rate table we will click on change, then i will become a changesable form
-        $rates = currencyRate::with('currency')->active()->get();
-        return ApiResponse::index('Currencies rates', $rates, currencyRateResource::class);
+        $query = currencyRate::query()
+            ->with('currency')
+            ->searchable($request)
+            ->sortable($request)
+            // ->active()
+            ;
+
+        if ($request->has('currency_id')) {
+            $query->byCurrency($request->currency_id);
+        }
+
+        if ($request->has('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $rates = $this->applyPagination($query, $request);
+
+        return ApiResponse::paginated(
+            'Currencies chage rates retrieved successfully',
+            $rates
+        );
     }
      
     public function changeRate(Request $request)

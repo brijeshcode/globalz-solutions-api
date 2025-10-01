@@ -58,4 +58,9 @@ class currencyRate extends Model
     {
         return $query->where('is_active', true);
     }
+
+    public function scopeByCurrency($query, $currencyId)
+    {
+        return $query->where('currency_id', $currencyId);
+    }
 }
