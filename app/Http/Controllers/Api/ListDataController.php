@@ -89,7 +89,7 @@ class ListDataController extends Controller
     // generals
     private function warehouses()
     {
-        return Warehouse::active()->orderby('name')->get(['id', 'name', 'address_line_1', 'address_line_2', 'city', 'state', 'postal_code', 'country']);
+        return Warehouse::active()->orderby('name')->get(['id', 'name', 'is_default', 'address_line_1', 'address_line_2', 'city', 'state', 'postal_code', 'country']);
     }
 
     private function currencies()
