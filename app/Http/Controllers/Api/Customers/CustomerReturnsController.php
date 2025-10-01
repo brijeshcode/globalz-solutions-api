@@ -172,7 +172,7 @@ class CustomerReturnsController extends Controller
         if (ApiHelper::isSalesman()) {
             $employee = ApiHelper::salesmanEmployee();
             if( is_null($employee) || $customerReturn->salesperson_id != $employee->id){
-                return ApiResponse::customError('You can only view your own return orders', 403);
+                return ApiResponse::customError('You can only view your own return', 403);
             }
         }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Customers\Customer;
 use App\Models\Customers\Sale;
 use App\Models\Customers\SaleItems;
 use App\Models\Inventory\Inventory;
@@ -10,12 +11,11 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use App\Models\Setting;
 use App\Services\Inventory\InventoryService;
-use Illuminate\Support\Facades\DB;
 
 uses()->group('api', 'customers', 'sales');
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
+    $this->user = User::factory()->create(['role' => 'admin']);
     $this->actingAs($this->user, 'sanctum');
 
     // Create sale code counter setting (starting from 1000)
@@ -30,6 +30,7 @@ beforeEach(function () {
     // Create related models for testing
     $this->warehouse = Warehouse::factory()->create(['name' => 'Main Warehouse']);
     $this->currency = Currency::factory()->eur()->create();
+    $this->customer = Customer::factory()->create(['is_active' => true]);
 
     // Create test items
     $this->item1 = Item::factory()->create([
@@ -72,6 +73,7 @@ beforeEach(function () {
             'prefix' => 'INV',
             'warehouse_id' => $this->warehouse->id,
             'currency_id' => $this->currency->id,
+            'customer_id' => $this->customer->id,
             'currency_rate' => 1.25,
             'sub_total' => 200.00,
             'sub_total_usd' => 160.00,

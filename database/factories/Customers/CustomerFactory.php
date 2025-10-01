@@ -35,7 +35,7 @@ class CustomerFactory extends Factory
             'customer_zone_id' => fake()->boolean(70) ? \App\Models\Setups\Customers\CustomerZone::factory() : null,
             
             // Financial Information
-            'opening_balance' => fake()->randomFloat(4, -50000, 50000),
+            // 'opening_balance' => fake()->randomFloat(4, -50000, 50000),
             'current_balance' => fake()->randomFloat(4, -25000, 75000),
             
             // Additional Information

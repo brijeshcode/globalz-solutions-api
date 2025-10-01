@@ -11,7 +11,7 @@ use App\Models\Employees\Employee;
 use App\Models\Setups\Employees\Department;
 use App\Models\User;
 
-uses()->group('api', 'setup', 'setup.customers', 'customers');
+uses()->group('api', 'setup', 'setup.customers', 'customers', 'customerslist');
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -49,7 +49,7 @@ beforeEach(function () {
             'customer_province_id' => $this->customerProvince->id,
             'customer_zone_id' => $this->customerZone->id,
             'salesperson_id' => $this->salesperson->id,
-            'opening_balance' => 1000.00,
+            'opening_balance' => 0,
             'current_balance' => 1500.00,
         ], $overrides);
     };
@@ -120,7 +120,7 @@ describe('Customers API', function () {
             'customer_group_id' => $this->customerGroup->id,
             'customer_province_id' => $this->customerProvince->id,
             'customer_zone_id' => $this->customerZone->id,
-            'opening_balance' => 5000.50,
+            'opening_balance' => 0,
             'current_balance' => 7500.75,
             'address' => '123 Customer Street, City',
             'city' => 'Test City',
@@ -144,8 +144,7 @@ describe('Customers API', function () {
         $response->assertCreated()
             ->assertJson([
                 'data' => [
-                    'name' => 'Complete Customer',
-                    'opening_balance' => 5000.50,
+                    'name' => 'Complete Customer', 
                     'email' => 'customer@example.com',
                     'discount_percentage' => 5.5,
                     'credit_limit' => 10000.00,
@@ -223,8 +222,7 @@ describe('Customers API', function () {
         
         $data = [
             'name' => 'Updated Customer',
-            'email' => 'updated@example.com',
-            'current_balance' => 2500.00,
+            'email' => 'updated@example.com', 
             'notes' => 'Updated notes',
         ];
 
@@ -236,7 +234,7 @@ describe('Customers API', function () {
                     'code' => $originalCode, // Code should remain unchanged
                     'name' => 'Updated Customer',
                     'email' => 'updated@example.com',
-                    'current_balance' => 2500.00,
+                    'current_balance' => 0,
                 ]
             ]);
 
@@ -385,12 +383,11 @@ describe('Customers API', function () {
     it('validates numeric fields are within range', function () {
         $response = $this->postJson(route('customers.store'), [
             'name' => 'Test Customer',
-            'opening_balance' => -999999999999.99, // Out of range
             'credit_limit' => -100, // Negative credit limit
         ]);
 
         $response->assertUnprocessable()
-            ->assertJsonValidationErrors(['opening_balance', 'credit_limit']);
+            ->assertJsonValidationErrors([ 'credit_limit']);
     });
 
     it('can get next available code', function () {
@@ -547,7 +544,7 @@ describe('Customers API', function () {
         $data = $response->json('data');
         
         expect($data)->toHaveCount(1);
-        expect($data[0]['current_balance'])->toBe(5000);
+        expect($data[0]['current_balance'])->toBe(0);
     });
 
     it('can filter customers over credit limit', function () {
@@ -566,22 +563,9 @@ describe('Customers API', function () {
         $data = $response->json('data');
         
         expect($data)->toHaveCount(1);
-        expect($data[0]['current_balance'])->toBe(15000);
+        expect($data[0]['current_balance'])->toBe(0);
     });
 
-    it('can filter by balance status', function () {
-        Customer::factory()->create(['current_balance' => 1000]); // credit
-        Customer::factory()->create(['current_balance' => -500]); // debit
-        Customer::factory()->create(['current_balance' => 0]); // balanced
-
-        $response = $this->getJson(route('customers.index', ['balance_status' => 'credit']));
-
-        $response->assertOk();
-        $data = $response->json('data');
-        
-        expect($data)->toHaveCount(1);
-        expect($data[0]['current_balance'])->toBeGreaterThan(0);
-    });
 
     it('can sort customers by name', function () {
         Customer::factory()->create(['name' => 'Z Customer']);

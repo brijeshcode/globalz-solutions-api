@@ -6,6 +6,7 @@ use App\Models\Employees\Employee;
 use App\Models\Setting;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
+use App\Services\Customers\CustomerBalanceService;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -183,6 +184,10 @@ class Sale extends Model
                 $sale->setSaleCode();
             }
         });
+        static::created(function ($sale) {
+            CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', $sale->total_usd, $sale->id);
+        });
+
 
         static::deleted(function ($sale) {
             // When sale is deleted, restore inventory by manually processing each sale item

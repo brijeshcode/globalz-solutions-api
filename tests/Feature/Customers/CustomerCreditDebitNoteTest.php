@@ -14,30 +14,21 @@ beforeEach(function () {
 
     // Clean up any existing notes and settings to avoid conflicts
     CustomerCreditDebitNote::withTrashed()->forceDelete();
-    Setting::where('group_name', 'customer_credit_notes')->delete();
-    Setting::where('group_name', 'customer_debit_notes')->delete();
+    Setting::where('group_name', 'customer_credit_debit_notes')->delete();
+    Setting::where('group_name', 'customer_credit_debit_notes')->delete();
 
     // Create credit note code counter setting (starting from 1000)
     Setting::create([
-        'group_name' => 'customer_credit_notes',
+        'group_name' => 'customer_credit_debit_notes',
         'key_name' => 'code_counter',
         'value' => '1000',
         'data_type' => 'number',
         'description' => 'Customer credit note code counter starting from 1000'
     ]);
 
-    // Create debit note code counter setting (starting from 2000)
-    Setting::create([
-        'group_name' => 'customer_debit_notes',
-        'key_name' => 'code_counter',
-        'value' => '2000',
-        'data_type' => 'number',
-        'description' => 'Customer debit note code counter starting from 2000'
-    ]);
-
     // Create related models for testing
     $this->customer = Customer::factory()->create(['name' => 'Test Customer','is_active'=> true]);
-    $this->currency = Currency::factory()->eur()->create();
+    $this->currency = Currency::factory()->eur()->create(['is_active' => true]);
 
     // Helper method for base credit/debit note data
     $this->getBaseCreditNoteData = function ($overrides = []) {
@@ -49,7 +40,7 @@ beforeEach(function () {
             'currency_id' => $this->currency->id,
             'currency_rate' => 1.25,
             'amount' => 200.00,
-            'amount_usd' => 160.00,
+            'amount_usd' => 250.00,
             'note' => 'Test credit note',
         ], $overrides);
     };
@@ -63,7 +54,7 @@ beforeEach(function () {
             'currency_id' => $this->currency->id,
             'currency_rate' => 1.25,
             'amount' => 200.00,
-            'amount_usd' => 160.00,
+            'amount_usd' => 250.00,
             'note' => 'Test debit note',
         ], $overrides);
     };
@@ -341,7 +332,7 @@ describe('Customer Credit/Debit Notes API', function () {
     });
 
     it('can filter notes by customer', function () {
-        $otherCustomer = Customer::factory()->create(['name' => 'Other Customer']);
+        $otherCustomer = Customer::factory()->create(['name' => 'Other Customer', 'is_active' => true]);
 
         ($this->createCreditNoteViaApi)(['customer_id' => $this->customer->id]);
         ($this->createCreditNoteViaApi)(['customer_id' => $otherCustomer->id]);
@@ -353,7 +344,7 @@ describe('Customer Credit/Debit Notes API', function () {
     });
 
     it('can filter notes by currency', function () {
-        $otherCurrency = Currency::factory()->usd()->create();
+        $otherCurrency = Currency::factory()->usd()->create(['is_active' => true]);
 
         ($this->createCreditNoteViaApi)(['currency_id' => $this->currency->id]);
         ($this->createCreditNoteViaApi)(['currency_id' => $otherCurrency->id]);
@@ -467,14 +458,14 @@ describe('Customer Credit/Debit Notes API', function () {
         for ($i = 0; $i < 3; $i++) {
             ($this->createCreditNoteViaApi)([
                 'amount' => 100.00,
-                'amount_usd' => 80.00,
+                'amount_usd' => 125.00,
             ]);
         }
 
         for ($i = 0; $i < 2; $i++) {
             ($this->createDebitNoteViaApi)([
                 'amount' => 150.00,
-                'amount_usd' => 120.00,
+                'amount_usd' => 187.5,
             ]);
         }
 
@@ -502,7 +493,7 @@ describe('Customer Credit/Debit Notes API', function () {
         expect($stats['total_notes'])->toBe(5);
         expect($stats['credit_notes'])->toBe(3);
         expect($stats['debit_notes'])->toBe(2);
-    })->group('now-');
+    });
 
     it('only allows admin users to create notes', function () {
         $nonAdminUser = User::factory()->create(['role' => 'salesman']);
@@ -535,18 +526,17 @@ describe('Customer Credit/Debit Notes API', function () {
 
 describe('Note Code Generation Tests', function () {
     it('creates credit note with current counter and increments correctly', function () {
-        Setting::set('customer_credit_notes', 'code_counter', 1005, 'number');
+        Setting::set('customer_credit_debit_notes', 'code_counter', 1005, 'number');
         $this->customer->update(['is_active' => true]);
 
         $response = $this->postJson(route('customers.credit-debit-notes.store'), ($this->getBaseCreditNoteData)());
-
         $response->assertCreated();
         $code = $response->json('data.code');
         expect($code)->toBe('001006');
     });
 
     it('creates debit note with current counter and increments correctly', function () {
-        Setting::set('customer_debit_notes', 'code_counter', 2005, 'number');
+        Setting::set('customer_credit_debit_notes', 'code_counter', 2005, 'number');
         $this->customer->update(['is_active' => true]);
 
         $response = $this->postJson(route('customers.credit-debit-notes.store'), ($this->getBaseDebitNoteData)());
@@ -559,9 +549,9 @@ describe('Note Code Generation Tests', function () {
     it('generates sequential credit note codes', function () {
         // Clean state for this specific test
         CustomerCreditDebitNote::withTrashed()->forceDelete();
-        Setting::where('group_name', 'customer_credit_notes')->delete();
+        Setting::where('group_name', 'customer_credit_debit_notes')->delete();
         Setting::create([
-            'group_name' => 'customer_credit_notes',
+            'group_name' => 'customer_credit_debit_notes',
             'key_name' => 'code_counter',
             'value' => '2000',
             'data_type' => 'number',
@@ -585,9 +575,9 @@ describe('Note Code Generation Tests', function () {
     it('generates sequential debit note codes', function () {
         // Clean state for this specific test
         CustomerCreditDebitNote::withTrashed()->forceDelete();
-        Setting::where('group_name', 'customer_debit_notes')->delete();
+        Setting::where('group_name', 'customer_credit_debit_notes')->delete();
         Setting::create([
-            'group_name' => 'customer_debit_notes',
+            'group_name' => 'customer_credit_debit_notes',
             'key_name' => 'code_counter',
             'value' => '3000',
             'data_type' => 'number',

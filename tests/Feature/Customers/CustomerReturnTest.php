@@ -67,6 +67,7 @@ beforeEach(function () {
             'warehouse_id' => $this->warehouse->id,
             'total' => 1000.00,
             'total_usd' => 800.00,
+            'currency_rate' => 1,
             'total_volume_cbm' => 1.5,
             'total_weight_kg' => 25.0,
             'note' => 'Test return note',
@@ -173,7 +174,7 @@ describe('Customer Returns API', function () {
         }
     });
 
-    it('admin can create approved return', function () {
+    test('admin can create approved return', function () {
         $this->actingAs($this->adminUser, 'sanctum');
 
         $returnData = ($this->getBaseReturnData)([
@@ -284,7 +285,7 @@ describe('Customer Returns API', function () {
 
         $response->assertForbidden()
             ->assertJson([
-                'message' => 'You can only view your own returns'
+                'message' => 'You can only view your own return'
             ]);
     });
 

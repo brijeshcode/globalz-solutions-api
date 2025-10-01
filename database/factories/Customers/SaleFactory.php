@@ -2,6 +2,7 @@
 
 namespace Database\Factories\Customers;
 
+use App\Models\Customers\Customer;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
@@ -29,7 +30,7 @@ class SaleFactory extends Factory
             'date' => $this->faker->dateTimeBetween('-1 year', 'now'),
             'prefix' => $this->faker->randomElement(['INV', 'INX']),
             'salesperson_id' => User::factory(),
-            'customer_id' => null,
+            'customer_id' => Customer::factory(),
             'currency_id' => Currency::factory(),
             'warehouse_id' => Warehouse::factory(),
             'customer_payment_term_id' => null,

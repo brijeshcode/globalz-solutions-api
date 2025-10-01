@@ -98,6 +98,8 @@ class SupplierItemPriceService
         DB::table('supplier_item_prices')
             ->where('id', $supplierPrice->id)
             ->update([
+                'currency_id' => $purchase->currency_id,
+                'price' => $purchaseItem->price,
                 'last_purchase_id' => $purchase->id,
                 'last_purchase_date' => $purchase->date->format('Y-m-d'),
                 'currency_rate' => $purchase->currency_rate,

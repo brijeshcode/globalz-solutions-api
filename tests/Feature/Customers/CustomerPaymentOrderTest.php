@@ -30,7 +30,7 @@ beforeEach(function () {
         'updated_by' => $this->adminUser->id,
         'is_active' => true,
     ]);
-    $this->currency = Currency::factory()->create(['code' => 'USD', 'name' => 'US Dollar']);
+    $this->currency = Currency::factory()->usd()->create( ['name' => 'US Dollar']);
     $this->paymentTerm = CustomerPaymentTerm::factory()->create();
     $this->account = Account::factory()->create(['name' => 'Cash Account']);
 
@@ -404,7 +404,7 @@ describe('Customer Payment Orders API', function () {
     it('can filter payment orders by currency', function () {
         $this->actingAs($this->employeeUser, 'sanctum');
 
-        $otherCurrency = Currency::factory()->create(['code' => 'EUR']);
+        $otherCurrency = Currency::factory()->eur()->create(['is_active' => true]);
 
         for ($i = 0; $i < 2; $i++) {
             ($this->createPaymentViaFactory)(null, ['currency_id' => $this->currency->id]);

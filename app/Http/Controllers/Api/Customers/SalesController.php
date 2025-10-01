@@ -110,7 +110,6 @@ class SalesController extends Controller
         });
 
         $sale->load(['saleItems.item', 'warehouse', 'currency']);
-        CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', $sale->total_usd, $sale->id);
 
         return ApiResponse::store(
             'Sale created successfully',
