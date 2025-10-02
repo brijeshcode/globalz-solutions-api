@@ -51,8 +51,16 @@ class SalesController extends Controller
             $query->byCustomer($request->customer_id);
         }
 
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->start_date, $request->end_date);
+        if ($request->has('date_from') && $request->has('date_to')) {
+            $query->byDateRange($request->date_from, $request->date_to);
+        }
+
+        if ($request->has('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->where('date', '<=', $request->date_to);
         }
 
         $sales = $this->applyPagination($query, $request);
@@ -270,26 +278,62 @@ class SalesController extends Controller
         return ApiResponse::delete('Sale permanently deleted successfully');
     }
 
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
+        $query = Sale::query();
+
+        // Role-based filtering: salesman can only see their own sales
+        if (ApiHelper::isSalesman()) {
+            $employee = ApiHelper::salesmanEmployee();
+            $query->where('salesperson_id', $employee?->id);
+        }
+
+        if ($request->has('warehouse_id')) {
+            $query->byWarehouse($request->warehouse_id);
+        }
+
+        if ($request->has('currency_id')) {
+            $query->byCurrency($request->currency_id);
+        }
+
+        if ($request->has('salesperson_id')) {
+            $query->bySalesperson($request->salesperson_id);
+        }
+
+        if ($request->has('customer_id')) {
+            $query->byCustomer($request->customer_id);
+        }
+
+        if ($request->has('date_from') && $request->has('date_to')) {
+            $query->byDateRange($request->date_from, $request->date_to);
+        }
+
+        if ($request->has('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->where('date', '<=', $request->date_to);
+        }
+
         $stats = [
-            'total_sales' => Sale::count(),
-            'trashed_sales' => Sale::onlyTrashed()->count(),
-            'total_amount' => Sale::sum('total'),
-            'total_amount_usd' => Sale::sum('total_usd'),
-            'sales_by_prefix' => Sale::selectRaw('prefix, count(*) as count, sum(total) as total_amount')
-                ->groupBy('prefix')
-                ->get(),
-            'sales_by_warehouse' => Sale::with('warehouse:id,name')
-                ->selectRaw('warehouse_id, count(*) as count, sum(total) as total_amount')
-                ->groupBy('warehouse_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'sales_by_currency' => Sale::with('currency:id,name,code')
-                ->selectRaw('currency_id, count(*) as count, sum(total) as total_amount')
-                ->groupBy('currency_id')
-                ->having('count', '>', 0)
-                ->get(),
+            'total_sales' => (clone $query)->count(),
+            'trashed_sales' => (clone $query)->onlyTrashed()->count(),
+            'total_amount' => (clone $query)->sum('total'),
+            'total_amount_usd' => (clone $query)->sum('total_usd'),
+            // 'sales_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(total) as total_amount')
+            //     ->groupBy('prefix')
+            //     ->get(),
+            // 'sales_by_warehouse' => (clone $query)->with('warehouse:id,name')
+            //     ->selectRaw('warehouse_id, count(*) as count, sum(total) as total_amount')
+            //     ->groupBy('warehouse_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'sales_by_currency' => (clone $query)->with('currency:id,name,code')
+            //     ->selectRaw('currency_id, count(*) as count, sum(total) as total_amount')
+            //     ->groupBy('currency_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
         ];
 
         return ApiResponse::show('Sale statistics retrieved successfully', $stats);

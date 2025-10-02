@@ -113,6 +113,8 @@ class ListDataController extends Controller
 
             if($employee){
                 $query->where('salesperson_id', $employee->id);
+            } else {
+                return collect();
             }
         }
 

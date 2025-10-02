@@ -64,6 +64,7 @@ class Sale extends Model
     protected $searchable = [
         'code',
         'client_po_number',
+        'total_usd',
         'note',
     ];
 
@@ -77,8 +78,9 @@ class Sale extends Model
         'currency_id',
         'warehouse_id',
         'client_po_number',
-        'sub_total',
-        'total',
+        // 'sub_total',
+        // 'total',
+        'total_usd',
         'total_profit',
         'created_at',
         'updated_at',
