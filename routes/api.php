@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerReturnsController;
 use App\Http\Controllers\Api\Customers\CustomerReturnOrdersController;
 use App\Http\Controllers\Api\Customers\SalesController;
+use App\Http\Controllers\Api\Customers\SaleOrdersController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
 use App\Http\Controllers\Api\Setups\ItemCategoriesController;
 use App\Http\Controllers\Api\Setups\ItemFamiliesController;
@@ -71,7 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('customers')->name('customers.')->group(function () {
 
-        // Sales Controller - Must be defined BEFORE {customer} routes to avoid conflicts
+        // Sales Controller (for approved sales) - Must be defined BEFORE {customer} routes to avoid conflicts
         Route::controller(SalesController::class)->prefix('sales')->name('sales.')->group(function () {
             Route::get('stats', 'stats')->name('stats');
             Route::get('trashed', 'trashed')->name('trashed');
@@ -80,6 +81,20 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{sale}', 'show')->name('show');
             Route::put('{sale}', 'update')->name('update');
             Route::delete('{sale}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Sale Orders Controller (for pending sale orders) - Must be defined BEFORE {customer} routes to avoid conflicts
+        Route::controller(SaleOrdersController::class)->prefix('sale-orders')->name('sale-orders.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{sale}', 'show')->name('show');
+            Route::put('{sale}', 'update')->name('update');
+            Route::delete('{sale}', 'destroy')->name('destroy');
+            Route::patch('{sale}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });

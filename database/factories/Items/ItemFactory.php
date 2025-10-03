@@ -31,8 +31,10 @@ class ItemFactory extends Factory
             'low_quantity_alert' => fake()->randomFloat(2, 1, 10),
             'cost_calculation' => fake()->randomElement(['weighted_average', 'last_cost']),
             'is_active' => fake()->boolean(80), // 80% chance of being active
-            'created_by' => 1,
-            'updated_by' => 1,
+            'created_by' => \App\Models\User::factory(),
+            'updated_by' => function (array $attributes) {
+                return $attributes['created_by'];
+            },
         ];
     }
 }

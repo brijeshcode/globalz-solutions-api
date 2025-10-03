@@ -8,7 +8,11 @@ class SalesStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var \App\Models\User $user */
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        // Only admins can create direct approved sales
+        return $user && $user->isAdmin();
     }
 
     public function rules(): array

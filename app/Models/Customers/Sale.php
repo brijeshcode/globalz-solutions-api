@@ -6,6 +6,7 @@ use App\Models\Employees\Employee;
 use App\Models\Setting;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
+use App\Models\User;
 use App\Services\Customers\CustomerBalanceService;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
@@ -27,6 +28,7 @@ class Sale extends Model
         'code',
         'date',
         'prefix',
+        'status',
         'salesperson_id',
         'customer_id',
         'currency_id',
@@ -44,11 +46,15 @@ class Sale extends Model
         'total',
         'total_usd',
         'total_profit',
+        'approved_by',
+        'approved_at',
+        'approve_note',
         'note',
     ];
 
     protected $casts = [
         'date' => 'datetime',
+        'approved_at' => 'datetime',
         'currency_rate' => 'decimal:4',
         'credit_limit' => 'decimal:2',
         'outStanding_balance' => 'decimal:2',
@@ -120,12 +126,27 @@ class Sale extends Model
         return $this->belongsTo(Employee::class);
     }
 
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
 
     // local scopes 
 
     public function scopeByWarehouse($query, $warehouseId)
     {
         return $query->where('warehouse_id', $warehouseId);
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->whereNotNull('approved_by');
+    }
+
+    public function scopePending($query)
+    {
+        return $query->whereNull('approved_by');
     }
 
     public function scopeByCurrency($query, $currencyId)
@@ -176,7 +197,17 @@ class Sale extends Model
         return $this->code = self::reserveNextCode();
     }
 
+    // Helper Methods
+    public function isApproved(): bool
+    {
+        return !is_null($this->approved_by);
+    }
 
+    public function isPending(): bool
+    {
+        return is_null($this->approved_by);
+    }
+    
     // Model Events
     protected static function boot()
     {
@@ -188,7 +219,10 @@ class Sale extends Model
             }
         });
         static::created(function ($sale) {
-            CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', $sale->total_usd, $sale->id);
+            // Only update customer balance if sale is approved
+            if ($sale->isApproved()) {
+                CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', $sale->total_usd, $sale->id);
+            }
         });
 
 

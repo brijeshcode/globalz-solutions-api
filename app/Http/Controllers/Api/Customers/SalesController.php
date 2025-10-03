@@ -15,7 +15,6 @@ use App\Services\Customers\CustomerBalanceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class SalesController extends Controller
@@ -26,6 +25,7 @@ class SalesController extends Controller
     {
         $query = Sale::query()
             ->with(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson'])
+            ->approved()
             ->searchable($request)
             ->sortable($request);
 
@@ -75,6 +75,17 @@ class SalesController extends Controller
     public function store(SalesStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
+        
+        /** @var \App\Models\User $user */
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        // Auto-approve sales created by admin
+        if (! $user->isAdmin()) {
+            return ApiResponse::customError('only admin user can create sale directly.', 403);
+        }
+        
+        $data['approved_by'] = $user->id;
+        $data['approved_at'] = now();
 
         $sale = DB::transaction(function () use ($data) {
             $saleItems = $data['items'];
@@ -92,8 +103,11 @@ class SalesController extends Controller
                     $costPrice = $item?->itemPrice?->price_usd ?? 0;
                     $sellingPrice = $itemData['price'] ?? 0;
                     $quantity = $itemData['quantity'] ?? 0;
+                    $discountAmount = $itemData['unit_discount_amount'] ?? 0;
 
-                    $unitProfit = $sellingPrice - $costPrice;
+                    // Profit = (Sale Price - Discount) - Cost Price
+                    $priceAfterDiscount = $sellingPrice - $discountAmount;
+                    $unitProfit = $priceAfterDiscount - $costPrice;
                     $itemTotalProfit = $unitProfit * $quantity;
 
                     $saleItems[$index]['cost_price'] = $costPrice;
@@ -127,6 +141,11 @@ class SalesController extends Controller
 
     public function show(Sale $sale): JsonResponse
     {
+        // Only show approved sales
+        if (!$sale->isApproved()) {
+            return ApiResponse::customError('Sale is not approved', 404);
+        }
+
         $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name']);
 
         return ApiResponse::show(
@@ -137,6 +156,11 @@ class SalesController extends Controller
 
     public function update(SalesUpdateRequest $request, Sale $sale): JsonResponse
     {
+        // Cannot update unapproved sales (they should be in sale orders)
+        if ($sale->isApproved()) {
+            return ApiResponse::customError('Cannot update an approved sales. Use sale orders endpoint instead.', 422);
+        }
+
         $data = $request->validated();
         $originalAmount = $sale->total_usd;
 
@@ -157,8 +181,11 @@ class SalesController extends Controller
                         $costPrice = $item?->itemPrice?->price_usd ?? 0;
                         $sellingPrice = $itemData['price'] ?? 0;
                         $quantity = $itemData['quantity'] ?? 0;
+                        $discountAmount = $itemData['unit_discount_amount'] ?? 0;
 
-                        $unitProfit = $sellingPrice - $costPrice;
+                        // Profit = (Sale Price - Discount) - Cost Price
+                        $priceAfterDiscount = $sellingPrice - $discountAmount;
+                        $unitProfit = $priceAfterDiscount - $costPrice;
                         $itemTotalProfit = $unitProfit * $quantity;
 
                         $saleItems[$index]['cost_price'] = $costPrice;
@@ -219,6 +246,11 @@ class SalesController extends Controller
 
     public function destroy(Sale $sale): JsonResponse
     {
+        // Cannot delete unapproved sales (they should be in sale orders)
+        if ($sale->isApproved()) {
+            return ApiResponse::customError('Cannot delete an approved sales. Use sale orders endpoint instead.', 422);
+        }
+
         CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', -$sale->total_usd, $sale->id);
         $sale->delete();
 
@@ -229,6 +261,7 @@ class SalesController extends Controller
     {
         $query = Sale::onlyTrashed()
             ->with(['saleItems.item', 'warehouse', 'currency'])
+            ->approved()
             ->searchable($request)
             ->sortable($request);
 
@@ -257,6 +290,11 @@ class SalesController extends Controller
     {
         $sale = Sale::onlyTrashed()->findOrFail($id);
 
+        // Only restore approved sales
+        if (!$sale->isApproved()) {
+            return ApiResponse::customError('Can only restore approved sales', 422);
+        }
+
         $sale->restore();
         $sale->saleItems()->withTrashed()->restore();
 
@@ -281,6 +319,7 @@ class SalesController extends Controller
     public function stats(Request $request): JsonResponse
     {
         $query = Sale::query()
+            ->approved()
             ->searchable($request)
             ->sortable($request);
 

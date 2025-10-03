@@ -261,8 +261,8 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             // Determine type and prefix based on balance
             // Positive balance = customer owes us = debit
             // Negative balance = we owe customer = credit
-            $type = $startingBalance > 0 ? 'debit' : 'credit';
-            $prefix = $startingBalance > 0 ? 'DBX' : 'CRX';
+            $type = $startingBalance < 0 ? 'debit' : 'credit';
+            $prefix = $startingBalance < 0 ? 'DBX' : 'CRX';
             $amount = abs($startingBalance);
 
             // Get currency rate (assuming default currency rate is 1)
