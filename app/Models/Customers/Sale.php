@@ -65,6 +65,7 @@ class Sale extends Model
         'code',
         'client_po_number',
         'total_usd',
+        'prefix',
         'note',
     ];
 

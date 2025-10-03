@@ -280,7 +280,9 @@ class SalesController extends Controller
 
     public function stats(Request $request): JsonResponse
     {
-        $query = Sale::query();
+        $query = Sale::query()
+            ->searchable($request)
+            ->sortable($request);
 
         // Role-based filtering: salesman can only see their own sales
         if (ApiHelper::isSalesman()) {
