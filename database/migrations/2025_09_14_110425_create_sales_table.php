@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('code')->unique(); // auto generated invoice code
             $table->datetime('date');
             $table->enum('prefix', ['INX', 'INV'])->default('INV');
+            $table->enum('status', ['Waiting', 'Shipped', 'Delivered'])->nullable(); // null untill its been approved
+
 
             $table->unsignedBigInteger('salesperson_id')->nullable()->index();
             $table->unsignedBigInteger('customer_id')->nullable()->index();
@@ -48,6 +50,10 @@ return new class extends Migration
 
             $table->text('note')->nullable();  // for remark
             
+            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->dateTime('approved_at')->nullable();
+            $table->text('approve_note')->nullable();
+                
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');
 

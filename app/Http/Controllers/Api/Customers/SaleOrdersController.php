@@ -8,6 +8,7 @@ use App\Http\Requests\Api\Customers\SaleOrdersStoreRequest;
 use App\Http\Requests\Api\Customers\SaleOrdersUpdateRequest;
 use App\Http\Resources\Api\Customers\SaleOrderResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Customers\Customer;
 use App\Models\Customers\Sale;
 use App\Models\Items\Item;
 use App\Traits\HasPagination;
@@ -306,6 +307,10 @@ class SaleOrdersController extends Controller
             'approve_note' => 'nullable|string|max:1000'
         ]);
 
+        if(! $this->customerHasBalance($sale->customer_id, $sale->total_usd)){
+            return ApiResponse::customError('Insufficient customer balance to fulfill this order.', 422);
+        }
+
         $sale->update([
             'approved_by' => $user->id,
             'approved_at' => now(),
@@ -334,6 +339,14 @@ class SaleOrdersController extends Controller
             'Sale order approved successfully',
             new SaleOrderResource($sale)
         );
+    }
+
+    private function customerHasBalance(int $customerId, float $saleUsdTotal): bool
+    {
+        $customer = Customer::findOrFail($customerId);
+        $balance = $customer->credit_limit + $customer->current_balance - $saleUsdTotal;
+
+        return $balance > 0 ? true : false;
     }
 
     public function trashed(Request $request): JsonResponse
