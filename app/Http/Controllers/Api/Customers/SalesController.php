@@ -158,8 +158,9 @@ class SalesController extends Controller
     public function update(SalesUpdateRequest $request, Sale $sale): JsonResponse
     {
         // Cannot update unapproved sales (they should be in sale orders)
-        if ($sale->isApproved()) {
-            return ApiResponse::customError('Cannot update an approved sales. Use sale orders endpoint instead.', 422);
+        if(!RoleHelper::isAdmin()){
+            return ApiResponse::customError('Cannot update an approved sales', 422);
+
         }
 
         $data = $request->validated();
@@ -247,9 +248,8 @@ class SalesController extends Controller
 
     public function destroy(Sale $sale): JsonResponse
     {
-        // Cannot delete unapproved sales (they should be in sale orders)
-        if ($sale->isApproved()) {
-            return ApiResponse::customError('Cannot delete an approved sales. Use sale orders endpoint instead.', 422);
+        if(!RoleHelper::isAdmin()){
+            return ApiResponse::customError('Cannot delete an approved sales', 422);
         }
 
         CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', -$sale->total_usd, $sale->id);
