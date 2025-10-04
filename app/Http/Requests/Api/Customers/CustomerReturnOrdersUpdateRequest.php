@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Setups\Warehouse;
@@ -99,7 +100,7 @@ class CustomerReturnOrdersUpdateRequest extends FormRequest
             $user = Auth::user();
             $customerRetur = $this->route('customerReturn');
             // Salesmen can only update their own returns
-            $employee = ApiHelper::salesmanEmployee();
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($user->isSalesman() && $this->input('salesperson_id') && $this->input('salesperson_id') != $employee->id) {
                 $validator->errors()->add('salesperson_id', 'You can only update your own returns');
             }

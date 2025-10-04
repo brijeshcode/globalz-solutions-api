@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Models\Customers\Customer;
 use App\Models\Setups\Warehouse;
 use Illuminate\Foundation\Http\FormRequest;
@@ -111,7 +112,7 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
             }
 
             // Salesmen can only create returns for themselves
-            $employee = ApiHelper::salesmanEmployee();
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($user->isSalesman() && $this->input('salesperson_id') && $this->input('salesperson_id') != $employee->id) {
                 $validator->errors()->add('salesperson_id', 'You can only create returns for yourself');
             }

@@ -16,9 +16,9 @@ class SalesUpdateRequest extends FormRequest
         return [
             'date' => 'sometimes|required|date',
             'prefix' => 'sometimes|required|in:INV,INX',
-            'salesperson_id' => 'nullable|exists:users,id',
-            'customer_id' => 'nullable|exists:customers,id',
-            'currency_id' => 'sometimes|required|exists:currencies,id',
+            // 'salesperson_id' => 'nullable|exists:users,id',
+            // 'customer_id' => 'nullable|exists:customers,id',
+            // 'currency_id' => 'sometimes|required|exists:currencies,id',
             // 'warehouse_id' => 'sometimes|required|exists:warehouses,id',
             'customer_payment_term_id' => 'nullable|exists:customer_payment_terms,id',
             'client_po_number' => 'nullable|string|max:255',

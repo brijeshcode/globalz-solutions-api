@@ -10,6 +10,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerPayment;
 use App\Traits\HasPagination;
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Services\Customers\CustomerBalanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,8 +53,8 @@ class CustomerPaymentOrdersController extends Controller
         }
 
         // Filter by salesman if user has salesman role
-        if (ApiHelper::isSalesman()) {
-            $salesmanEmployee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $salesmanEmployee = RoleHelper::getSalesmanEmployee();
             if ($salesmanEmployee) {
                 $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
                     $q->where('salesperson_id', $salesmanEmployee->id);
@@ -92,8 +93,8 @@ class CustomerPaymentOrdersController extends Controller
     public function show(CustomerPayment $customerPayment): JsonResponse
     {
         // Check if user is salesman and has access to this customer
-        if (ApiHelper::isSalesman()) {
-            $salesmanEmployee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $salesmanEmployee = RoleHelper::getSalesmanEmployee();
             if ($salesmanEmployee) {
                 $customerPayment->load('customer:id,salesperson_id');
                 if ($customerPayment->customer->salesperson_id !== $salesmanEmployee->id) {

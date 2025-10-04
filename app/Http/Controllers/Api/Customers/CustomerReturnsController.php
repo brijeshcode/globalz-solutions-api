@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerReturnsStoreRequest;
 use App\Http\Resources\Api\Customers\CustomerReturnResource;
@@ -42,8 +43,8 @@ class CustomerReturnsController extends Controller
             ->sortable($request);
 
         // Role-based filtering: salesman can only see their own returns
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
 
             if($employee){
                 $query->where('salesperson_id', $employee->id);
@@ -169,8 +170,8 @@ class CustomerReturnsController extends Controller
         $user = Auth::user();
 
         // Check if salesman can only view their own returns
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if( is_null($employee) || $customerReturn->salesperson_id != $employee->id){
                 return ApiResponse::customError('You can only view your own return', 403);
             }

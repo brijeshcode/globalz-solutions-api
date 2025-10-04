@@ -38,6 +38,9 @@ class SaleResource extends JsonResource
             'created_by' => $this->created_by,
             'updated_by' => $this->updated_by,
 
+            // Shipping status
+            'status' => $this->status,
+            
             'sale_items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
             'items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
             'warehouse' => $this->whenLoaded('warehouse'),

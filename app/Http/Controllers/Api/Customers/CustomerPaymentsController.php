@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerPaymentsStoreRequest;
 use App\Http\Requests\Api\Customers\CustomerPaymentsUpdateRequest;
@@ -60,8 +61,8 @@ class CustomerPaymentsController extends Controller
         }
 
         // Filter by salesman if user has salesman role
-        if (ApiHelper::isSalesman()) {
-            $salesmanEmployee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $salesmanEmployee = RoleHelper::getSalesmanEmployee();
             if ($salesmanEmployee) {
                 $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
                     $q->where('salesperson_id', $salesmanEmployee->id);

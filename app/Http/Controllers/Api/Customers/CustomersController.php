@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomersStoreRequest;
 use App\Http\Requests\Api\Customers\CustomersUpdateRequest;
@@ -109,8 +110,8 @@ class CustomersController extends Controller
             }
         }
 
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
 
             if($employee){
                 $query->where('salesperson_id', $employee->id);

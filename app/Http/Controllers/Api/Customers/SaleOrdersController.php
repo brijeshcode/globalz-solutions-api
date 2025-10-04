@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SaleOrdersStoreRequest;
 use App\Http\Requests\Api\Customers\SaleOrdersUpdateRequest;
@@ -38,8 +39,8 @@ class SaleOrdersController extends Controller
             ->sortable($request);
 
         // Role-based filtering: salesman can only see their own sale orders
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($employee) {
                 $query->where('salesperson_id', $employee->id);
             }
@@ -146,8 +147,8 @@ class SaleOrdersController extends Controller
         $user = Auth::user();
 
         // Check if salesman can only view their own sale orders
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if (is_null($employee) || $sale->salesperson_id != $employee->id) {
                 return ApiResponse::customError('You can only view your own sale orders', 403);
             }
@@ -177,8 +178,8 @@ class SaleOrdersController extends Controller
         $user = Auth::user();
 
         // Check if salesman can only update their own sale orders
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($sale->salesperson_id !== $employee->id) {
                 return ApiResponse::customError('You can only update your own sale orders', 403);
             }
@@ -268,8 +269,8 @@ class SaleOrdersController extends Controller
         $user = Auth::user();
 
         // Check if salesman can only delete their own sale orders
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($sale->salesperson_id !== $employee->id) {
                 return ApiResponse::customError('You can only delete your own sale orders', 403);
             }
@@ -368,8 +369,8 @@ class SaleOrdersController extends Controller
             ->sortable($request);
 
         // Role-based filtering: salesman can only see their own trashed sale orders
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($employee) {
                 $query->where('salesperson_id', $employee->id);
             }
@@ -404,8 +405,8 @@ class SaleOrdersController extends Controller
         $sale = Sale::onlyTrashed()->findOrFail($id);
 
         // Check if salesman can only restore their own sale orders
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($sale->salesperson_id !== $employee->id) {
                 return ApiResponse::customError('You can only restore your own sale orders', 403);
             }
@@ -460,8 +461,8 @@ class SaleOrdersController extends Controller
         $query = Sale::query();
 
         // Role-based filtering for stats: salesman sees only their own stats
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($employee) {
                 $query->where('salesperson_id', $employee->id);
             }

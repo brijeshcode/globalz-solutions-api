@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SalesStoreRequest;
 use App\Http\Requests\Api\Customers\SalesUpdateRequest;
@@ -30,8 +31,8 @@ class SalesController extends Controller
             ->sortable($request);
 
         // Role-based filtering: salesman can only see their own returns
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             $query->where('salesperson_id', $employee?->id);
         }
 
@@ -83,7 +84,7 @@ class SalesController extends Controller
         if (! $user->isAdmin()) {
             return ApiResponse::customError('only admin user can create sale directly.', 403);
         }
-        
+
         $data['approved_by'] = $user->id;
         $data['approved_at'] = now();
 
@@ -324,8 +325,8 @@ class SalesController extends Controller
             ->sortable($request);
 
         // Role-based filtering: salesman can only see their own sales
-        if (ApiHelper::isSalesman()) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
             $query->where('salesperson_id', $employee?->id);
         }
 
@@ -378,5 +379,23 @@ class SalesController extends Controller
         ];
 
         return ApiResponse::show('Sale statistics retrieved successfully', $stats);
+    }
+
+    public function changeStatus(Request $request, Sale $sale): JsonResponse
+    {
+        if (! $sale->isApproved()) {
+            return ApiResponse::customError('Cannot change status off an un-approved sales order.', 422);
+        }
+
+        if (! RoleHelper::isWarehouseManager()) {
+            return ApiResponse::customError('Only warehouse manager can change the status.', 422);
+        }
+
+        $sale->update(['status' => $request->status]);
+        return ApiResponse::update(
+            'Sale status updated successfully',
+            new SaleResource($sale)
+        );
+        $sale->load(['saleItems.item', 'warehouse', 'currency']);
     }
 }

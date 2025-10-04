@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Models\Customers\Customer;
 use App\Models\Customers\Sale;
 use App\Models\Setups\Warehouse;
@@ -104,8 +105,8 @@ class SaleOrdersUpdateRequest extends FormRequest
             $sale = $this->route('sale');
 
             // Salesmen can only update their own sales
-            if (ApiHelper::isSalesman()) {
-                $employee = ApiHelper::salesmanEmployee();
+            if (RoleHelper::isSalesman()) {
+                $employee = RoleHelper::getSalesmanEmployee();
                 if ($this->input('salesperson_id') && $employee && $this->input('salesperson_id') != $employee->id) {
                     $validator->errors()->add('salesperson_id', 'You can only update your own sale orders');
                 }

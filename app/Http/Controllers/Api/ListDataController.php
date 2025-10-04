@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
@@ -108,7 +109,7 @@ class ListDataController extends Controller
     {
         $query = Customer::active()->orderby('name');
 
-        if (ApiHelper::isSalesman()) {
+        if (RoleHelper::isSalesman()) {
             $employee = Employee::where('user_id', ApiHelper::authUser()->id )->first();
 
             if($employee){

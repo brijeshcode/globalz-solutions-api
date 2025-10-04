@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use App\Models\Customers\Customer;
 use App\Models\Setups\Warehouse;
 use Illuminate\Foundation\Http\FormRequest;
@@ -102,16 +103,16 @@ class SaleOrdersStoreRequest extends FormRequest
             $user = Auth::user();
 
             // If salesperson_id is not provided, set it to current user if they are a salesman
-            if (!$this->input('salesperson_id') && ApiHelper::isSalesman()) {
-                $employee = ApiHelper::salesmanEmployee();
+            if (!$this->input('salesperson_id') && RoleHelper::isSalesman()) {
+                $employee = RoleHelper::getSalesmanEmployee();
                 if ($employee) {
                     $this->merge(['salesperson_id' => $employee->id]);
                 }
             }
 
             // Salesmen can only create sale orders for themselves
-            if (ApiHelper::isSalesman()) {
-                $employee = ApiHelper::salesmanEmployee();
+            if (RoleHelper::isSalesman()) {
+                $employee = RoleHelper::getSalesmanEmployee();
                 if ($this->input('salesperson_id') && $employee && $this->input('salesperson_id') != $employee->id) {
                     $validator->errors()->add('salesperson_id', 'You can only create sale orders for yourself');
                 }
@@ -157,8 +158,8 @@ class SaleOrdersStoreRequest extends FormRequest
     protected function prepareForValidation()
     {
         // Auto-set salesperson for salesmen
-        if (ApiHelper::isSalesman() && !$this->salesperson_id) {
-            $employee = ApiHelper::salesmanEmployee();
+        if (RoleHelper::isSalesman() && !$this->salesperson_id) {
+            $employee = RoleHelper::getSalesmanEmployee();
             if ($employee) {
                 $this->merge(['salesperson_id' => $employee->id]);
             }

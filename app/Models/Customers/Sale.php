@@ -70,6 +70,7 @@ class Sale extends Model
     protected $searchable = [
         'code',
         'client_po_number',
+        'status',
         'total_usd',
         'prefix',
         'note',
@@ -78,6 +79,7 @@ class Sale extends Model
     protected $sortable = [
         'id',
         'code',
+        'status',
         'date',
         'prefix',
         'salesperson_id',
@@ -214,6 +216,7 @@ class Sale extends Model
         parent::boot();
 
         static::creating(function ($sale) {
+            $sale->status = 'Waiting';
             if (!$sale->code) {
                 $sale->setSaleCode();
             }
