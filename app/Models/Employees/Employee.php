@@ -5,6 +5,7 @@ namespace App\Models\Employees;
 use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerZone;
 use App\Models\Setups\Employees\Department;
+use App\Models\Setups\Warehouse;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
@@ -94,6 +95,13 @@ class Employee extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class);
+    }
+    
+    public function warehouses()
+    {
+        return $this->belongsToMany(Warehouse::class, 'employee_warehouses')
+                    ->withTimestamps()
+                    ->withPivot('is_primary');
     }
 
     public function zones():BelongsToMany

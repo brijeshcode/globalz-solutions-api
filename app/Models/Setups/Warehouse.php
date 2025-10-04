@@ -2,6 +2,7 @@
 
 namespace App\Models\Setups;
 
+use App\Models\Employees\Employee;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -71,5 +72,12 @@ class Warehouse extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function employees()
+    {
+        return $this->belongsToMany(Employee::class, 'employee_warehouses')
+                    ->withTimestamps()
+                    ->withPivot('is_primary');
     }
 }

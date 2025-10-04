@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
-use App\Helpers\ApiHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SalesStoreRequest;
@@ -24,45 +23,7 @@ class SalesController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Sale::query()
-            ->with(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson'])
-            ->approved()
-            ->searchable($request)
-            ->sortable($request);
-
-        // Role-based filtering: salesman can only see their own returns
-        if (RoleHelper::isSalesman()) {
-            $employee = RoleHelper::getSalesmanEmployee();
-            $query->where('salesperson_id', $employee?->id);
-        }
-
-        if ($request->has('warehouse_id')) {
-            $query->byWarehouse($request->warehouse_id);
-        }
-
-        if ($request->has('currency_id')) {
-            $query->byCurrency($request->currency_id);
-        }
-
-        if ($request->has('salesperson_id')) {
-            $query->bySalesperson($request->salesperson_id);
-        }
-
-        if ($request->has('customer_id')) {
-            $query->byCustomer($request->customer_id);
-        }
-
-        if ($request->has('date_from') && $request->has('date_to')) {
-            $query->byDateRange($request->date_from, $request->date_to);
-        }
-
-        if ($request->has('date_from')) {
-            $query->where('date', '>=', $request->date_from);
-        }
-
-        if ($request->has('date_to')) {
-            $query->where('date', '<=', $request->date_to);
-        }
+        $query = $this->saleQuery($request);
 
         $sales = $this->applyPagination($query, $request);
 
@@ -319,50 +280,19 @@ class SalesController extends Controller
 
     public function stats(Request $request): JsonResponse
     {
-        $query = Sale::query()
-            ->approved()
-            ->searchable($request)
-            ->sortable($request);
-
-        // Role-based filtering: salesman can only see their own sales
-        if (RoleHelper::isSalesman()) {
-            $employee = RoleHelper::getSalesmanEmployee();
-            $query->where('salesperson_id', $employee?->id);
-        }
-
-        if ($request->has('warehouse_id')) {
-            $query->byWarehouse($request->warehouse_id);
-        }
-
-        if ($request->has('currency_id')) {
-            $query->byCurrency($request->currency_id);
-        }
-
-        if ($request->has('salesperson_id')) {
-            $query->bySalesperson($request->salesperson_id);
-        }
-
-        if ($request->has('customer_id')) {
-            $query->byCustomer($request->customer_id);
-        }
-
-        if ($request->has('date_from') && $request->has('date_to')) {
-            $query->byDateRange($request->date_from, $request->date_to);
-        }
-
-        if ($request->has('date_from')) {
-            $query->where('date', '>=', $request->date_from);
-        }
-
-        if ($request->has('date_to')) {
-            $query->where('date', '<=', $request->date_to);
-        }
+        $query = $this->saleQuery($request);
 
         $stats = [
             'total_sales' => (clone $query)->count(),
             'trashed_sales' => (clone $query)->onlyTrashed()->count(),
             'total_amount' => (clone $query)->sum('total'),
             'total_amount_usd' => (clone $query)->sum('total_usd'),
+            'sales_by_status' => (clone $query)->selectRaw('status, count(*) as count')
+                ->groupBy('status')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    return [$item->status => $item->count];
+                }),
             // 'sales_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(total) as total_amount')
             //     ->groupBy('prefix')
             //     ->get(),
@@ -397,5 +327,74 @@ class SalesController extends Controller
             new SaleResource($sale)
         );
         $sale->load(['saleItems.item', 'warehouse', 'currency']);
+    }
+
+    private function saleQuery(Request $request)
+    {
+        $query = Sale::query()
+            ->with(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson'])
+            ->approved()
+            ->searchable($request)
+            ->sortable($request);
+
+        // Role-based filtering: salesman can only see their own returns
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
+            $query->where('salesperson_id', $employee?->id);
+        }
+
+        // Role-based filtering: warehouse manager can only see their assigned warehouses' sales
+        if (RoleHelper::isWarehouseManager()) {
+            $employee = RoleHelper::getWarehouseEmployee();
+            if ($employee) {
+                $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
+
+                if ($request->has('warehouse_id')) {
+                    // Only allow filtering by warehouse_id if it's in their assigned warehouses
+                    if ($warehouseIds->contains($request->warehouse_id)) {
+                        $query->byWarehouse($request->warehouse_id);
+                    } else {
+                        $query->whereIn('warehouse_id', $warehouseIds);
+                    }
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                }
+            }
+        } elseif ($request->has('warehouse_id')) {
+            $query->byWarehouse($request->warehouse_id);
+        }
+
+        if ($request->has('warehouse_id')) {
+            $query->byWarehouse($request->warehouse_id);
+        }
+
+        if ($request->has('currency_id')) {
+            $query->byCurrency($request->currency_id);
+        }
+
+        if ($request->has('salesperson_id')) {
+            $query->bySalesperson($request->salesperson_id);
+        }
+
+        if ($request->has('customer_id')) {
+            $query->byCustomer($request->customer_id);
+        }
+
+        if ($request->has('status')) {
+            $query->where('status' , $request->status);
+        }
+
+        if ($request->has('date_from') && $request->has('date_to')) {
+            $query->byDateRange($request->date_from, $request->date_to);
+        }
+
+        if ($request->has('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->where('date', '<=', $request->date_to);
+        }
+        return $query;
     }
 }

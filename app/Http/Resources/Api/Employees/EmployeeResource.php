@@ -44,6 +44,15 @@ class EmployeeResource extends JsonResource
                     ];
                 });
             }),
+            'warehouses' => $this->whenLoaded('warehouses', function () {
+                return $this->warehouses->map(function ($warehouse) {
+                    return [
+                        'id' => $warehouse->id,
+                        'name' => $warehouse->name,
+                        'is_primary' => $warehouse->pivot->is_primary,
+                    ];
+                });
+            }),
             'created_by' => [
                 'id' => $this->createdBy?->id,
                 'name' => $this->createdBy?->name,

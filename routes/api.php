@@ -66,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{employee}', 'show')->name('show');
         Route::put('{employee}', 'update')->name('update');
         Route::delete('{employee}', 'destroy')->name('destroy');
+        Route::patch('{employee}/assign-warehouse', 'assignWarehouse')->name('assignWarehouse');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });

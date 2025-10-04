@@ -83,14 +83,24 @@ class ListDataController extends Controller
             
             default      => response()->json(['error' => 'Invalid list type'], 400),
         };
-        // dd('stop');
         return ApiResponse::index($type . ' data', $dataList);
     }
 
     // generals
     private function warehouses()
     {
-        return Warehouse::active()->orderby('name')->get(['id', 'name', 'is_default', 'address_line_1', 'address_line_2', 'city', 'state', 'postal_code', 'country']);
+        $query = Warehouse::active()->orderby('name');
+
+        if (\App\Helpers\RoleHelper::isWarehouseManager()) {
+            $employee = Employee::where('user_id', \App\Helpers\RoleHelper::authUser()->id)->first();
+            if ($employee) {
+                $query->whereHas('employees', function ($q) use ($employee) {
+                    $q->where('employee_id', $employee->id);
+                });
+            }
+        }
+
+        return $query->get(['id', 'name', 'is_default', 'address_line_1', 'address_line_2', 'city', 'state', 'postal_code', 'country']);
     }
 
     private function currencies()

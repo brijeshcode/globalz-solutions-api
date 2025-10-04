@@ -19,7 +19,7 @@ class EmployeesController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Employee::query()
-            ->with(['department:id,name', 'user:id,name,email', 'createdBy:id,name', 'updatedBy:id,name'])
+            ->with(['department:id,name', 'user:id,name,email', 'createdBy:id,name', 'warehouses', 'updatedBy:id,name'])
             ->searchable($request)
             ->sortable($request);
 
@@ -127,5 +127,26 @@ class EmployeesController extends Controller
         $employee->forceDelete();
 
         return ApiResponse::delete('Employee permanently deleted successfully');
+    }
+
+    public function assignWarehouse(Request $request, Employee $employee): JsonResponse
+    {
+        if(! $employee->isWarehouseDepartment()){
+            return ApiResponse::customError('Employee '. $employee->name.' not belongs to Warehouse department', 422);
+        }
+
+        $validated = $request->validate([
+          'warehouses' => 'required|array',
+          'warehouses.*.warehouse_id' => 'required|exists:warehouses,id',
+          'warehouses.*.is_primary' => 'boolean',
+        ]);
+
+        $employee->warehouses()->sync($validated['warehouses']);
+
+
+        return ApiResponse::update(
+            'Employee warehouses assigned successfully',
+            new EmployeeResource($employee->load('warehouses'))
+        );
     }
 }

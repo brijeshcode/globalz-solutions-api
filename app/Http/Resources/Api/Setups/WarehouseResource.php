@@ -22,6 +22,16 @@ class WarehouseResource extends JsonResource
             'postal_code' => $this->postal_code,
             'country' => $this->country,
             'full_address' => $this->full_address,
+            'employees' => $this->whenLoaded('employees', function () {
+                return $this->employees->map(function ($employee) {
+                    return [
+                        'id' => $employee->id,
+                        'code' => $employee->code,
+                        'name' => $employee->name,
+                        'is_primary' => $employee->pivot->is_primary,
+                    ];
+                });
+            }),
             'created_by' => [
                 'id' => $this->createdBy?->id,
                 'name' => $this->createdBy?->name,
