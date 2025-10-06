@@ -120,6 +120,7 @@ class CustomerResource extends JsonResource
             'has_children' => $this->hasChildren(),
             'is_over_credit_limit' => $this->isOverCreditLimit(),
             'sales_count' => $this->sales_count ?? 0,
+            'sales_total_usd' => $this->sales_sum_total_usd ? (float) $this->sales_sum_total_usd : 0,
 
             // Audit Information
             'created_by' => $this->whenLoaded('createdBy', function () {

@@ -26,97 +26,10 @@ class CustomersController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Customer::query()
-            ->withCount('sales')
-            ->with([
-                'parent:id,code,name',
-                'customerType:id,name',
-                'customerGroup:id,name',
-                'customerProvince:id,name',
-                'customerZone:id,name',
-                'salesperson:id,code,name,department_id',
-                'salesperson.department:id,name',
-                'customerPaymentTerm:id,name,days',
-                'createdBy:id,name',
-                'updatedBy:id,name',
-                'documents'
-            ])
-            ->searchable($request)
-            ->sortable($request);
-
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        // Filter by customer type
-        if ($request->has('customer_type_id')) {
-            $query->where('customer_type_id', $request->customer_type_id);
-        }
-
-        // Filter by customer group
-        if ($request->has('customer_group_id')) {
-            $query->where('customer_group_id', $request->customer_group_id);
-        }
-
-        // Filter by customer province
-        if ($request->has('customer_province_id')) {
-            $query->where('customer_province_id', $request->customer_province_id);
-        }
-
-        // Filter by customer zone
-        if ($request->has('customer_zone_id')) {
-            $query->where('customer_zone_id', $request->customer_zone_id);
-        }
-
-        // Filter by salesperson
-        if ($request->has('salesperson_id')) {
-            $query->where('salesperson_id', $request->salesperson_id);
-        }
-
-        // Filter by parent customer
-        if ($request->has('parent_id')) {
-            $query->where('parent_id', $request->parent_id);
-        }
-
-        // Filter by city
-        if ($request->has('city')) {
-            $query->where('city', 'LIKE', '%' . $request->city . '%');
-        }
-
-        // Balance range filters
-        if ($request->has('min_balance')) {
-            $query->where('current_balance', '>=', $request->min_balance);
-        }
-
-        if ($request->has('max_balance')) {
-            $query->where('current_balance', '<=', $request->max_balance);
-        }
-
-        // Credit limit filter
-        if ($request->boolean('over_credit_limit')) {
-            $query->overCreditLimit();
-        }
-
-        // Balance status filter
-        if ($request->has('balance_status')) {
-            $status = $request->balance_status;
-            if ($status === 'credit') {
-                $query->where('current_balance', '>', 0);
-            } elseif ($status === 'debit') {
-                $query->where('current_balance', '<', 0);
-            } elseif ($status === 'balanced') {
-                $query->where('current_balance', '=', 0);
-            }
-        }
-
-        if (RoleHelper::isSalesman()) {
-            $employee = RoleHelper::getSalesmanEmployee();
-
-            if($employee){
-                $query->where('salesperson_id', $employee->id);
-            }
-        }
+        $query = $this->customerQuery($request);
+        $query->withSum(['sales' => function ($query) {
+            $query->approved();
+        }], 'total_usd');
 
         $customers = $this->applyPagination($query, $request);
 
@@ -383,32 +296,34 @@ class CustomersController extends Controller
     /**
      * Get customer statistics for dashboard
      */
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
+        $query = $this->customerQuery($request);
+
         $stats = [
-            'total_customers' => Customer::count(),
-            'active_customers' => Customer::where('is_active', true)->count(),
-            'inactive_customers' => Customer::where('is_active', false)->count(),
-            'trashed_customers' => Customer::onlyTrashed()->count(),
-            'customers_with_balance' => Customer::where('current_balance', '!=', 0)->count(),
-            'customers_over_credit_limit' => Customer::whereColumn('current_balance', '>', 'credit_limit')
-                ->whereNotNull('credit_limit')->count(),
-            'total_customer_balance' => Customer::sum('current_balance'),
-            'customers_by_type' => Customer::with('customerType:id,name')
-                ->selectRaw('customer_type_id, count(*) as count')
-                ->groupBy('customer_type_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'customers_by_province' => Customer::with('customerProvince:id,name')
-                ->selectRaw('customer_province_id, count(*) as count')
-                ->groupBy('customer_province_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'customers_by_zone' => Customer::with('customerZone:id,name')
-                ->selectRaw('customer_zone_id, count(*) as count')
-                ->groupBy('customer_zone_id')
-                ->having('count', '>', 0)
-                ->get(),
+            'total_customers' =>  (clone $query)->count(),
+            // 'active_customers' =>  (clone $query)->where('is_active', true)->count(),
+            // 'inactive_customers' =>  (clone $query)->where('is_active', false)->count(),
+            // 'trashed_customers' =>  (clone $query)->onlyTrashed()->count(),
+            // 'customers_with_balance' =>  (clone $query)->where('current_balance', '!=', 0)->count(),
+            // 'customers_over_credit_limit' =>  (clone $query)->whereColumn('current_balance', '>', 'credit_limit')
+            //     ->whereNotNull('credit_limit')->count(),
+            // 'total_customer_balance' =>  (clone $query)->sum('current_balance'),
+            // 'customers_by_type' =>  (clone $query)->with('customerType:id,name')
+            //     ->selectRaw('customer_type_id, count(*) as count')
+            //     ->groupBy('customer_type_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'customers_by_province' =>  (clone $query)->with('customerProvince:id,name')
+            //     ->selectRaw('customer_province_id, count(*) as count')
+            //     ->groupBy('customer_province_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'customers_by_zone' =>  (clone $query)->with('customerZone:id,name')
+            //     ->selectRaw('customer_zone_id, count(*) as count')
+            //     ->groupBy('customer_zone_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
         ];
 
         return ApiResponse::show('Customer statistics retrieved successfully', $stats);
@@ -687,5 +602,103 @@ class CustomersController extends Controller
                 'customer_import_template.xlsx'
             );
         }
+    }
+
+    public function customerQuery(Request $request)
+    {
+        $query = Customer::query()
+           
+            ->with([
+                'parent:id,code,name',
+                'customerType:id,name',
+                'customerGroup:id,name',
+                'customerProvince:id,name',
+                'customerZone:id,name',
+                'salesperson:id,code,name,department_id',
+                'salesperson.department:id,name',
+                'customerPaymentTerm:id,name,days',
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'documents'
+            ])
+            ->searchable($request)
+            ->sortable($request);
+
+        // Filter by active status
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        // Filter by customer type
+        if ($request->has('customer_type_id')) {
+            $query->where('customer_type_id', $request->customer_type_id);
+        }
+
+        // Filter by customer group
+        if ($request->has('customer_group_id')) {
+            $query->where('customer_group_id', $request->customer_group_id);
+        }
+
+        // Filter by customer province
+        if ($request->has('customer_province_id')) {
+            $query->where('customer_province_id', $request->customer_province_id);
+        }
+
+        // Filter by customer zone
+        if ($request->has('customer_zone_id')) {
+            $query->where('customer_zone_id', $request->customer_zone_id);
+        }
+
+        // Filter by salesperson
+        if ($request->has('salesperson_id')) {
+            $query->where('salesperson_id', $request->salesperson_id);
+        }
+
+        // Filter by parent customer
+        if ($request->has('parent_id')) {
+            $query->where('parent_id', $request->parent_id);
+        }
+
+        // Filter by city
+        if ($request->has('city')) {
+            $query->where('city', 'LIKE', '%' . $request->city . '%');
+        }
+
+        // Balance range filters
+        if ($request->has('min_balance')) {
+            $query->where('current_balance', '>=', $request->min_balance);
+        }
+
+        if ($request->has('max_balance')) {
+            $query->where('current_balance', '<=', $request->max_balance);
+        }
+
+        // Credit limit filter
+        if ($request->boolean('over_credit_limit')) {
+            $query->overCreditLimit();
+        }
+
+        // Balance status filter
+        if ($request->has('balance_status')) {
+            $status = $request->balance_status;
+            if ($status === 'credit') {
+                $query->where('current_balance', '>', 0);
+            } elseif ($status === 'debit') {
+                $query->where('current_balance', '<', 0);
+            } elseif ($status === 'balanced') {
+                $query->where('current_balance', '=', 0);
+            }
+        }
+
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
+
+            if($employee){
+                $query->where('salesperson_id', $employee->id);
+            }
+        }
+
+        return $query;
+
     }
 }
