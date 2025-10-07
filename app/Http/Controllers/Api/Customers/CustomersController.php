@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
-use App\Helpers\ApiHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomersStoreRequest;
@@ -12,7 +11,6 @@ use App\Http\Resources\Api\Customers\CustomerResource;
 use App\Http\Responses\ApiResponse;
 use App\Imports\CustomersImport;
 use App\Models\Customers\Customer;
-use App\Models\Setting;
 use App\Models\Setups\Employees\Department;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;

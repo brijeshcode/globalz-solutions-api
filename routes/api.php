@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Customers\CustomerPaymentsController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerReturnsController;
 use App\Http\Controllers\Api\Customers\CustomerReturnOrdersController;
+use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use App\Http\Controllers\Api\Customers\SalesController;
 use App\Http\Controllers\Api\Customers\SaleOrdersController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
@@ -72,6 +73,12 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('customers')->name('customers.')->group(function () {
+
+        // Customer Statements Controller - Must be defined BEFORE {customer} routes to avoid conflicts
+        Route::controller(CustomerStatmentController::class)->prefix('statements')->name('statements.')->group(function () {
+            Route::get('/', 'statements')->name('index');
+            Route::get('{customer}', 'customerStatements')->name('customer');
+        });
 
         // Sales Controller (for approved sales) - Must be defined BEFORE {customer} routes to avoid conflicts
         Route::controller(SalesController::class)->prefix('sales')->name('sales.')->group(function () {

@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('expense_transactions', function (Blueprint $table) {
-            $table->id();
-            $table->date('date');
+            $table->id(); 
+            $table->datetime('date');
             $table->string('code', 200)->unique()->index(); // Auto-generated starting from 100
 
             $table->foreignId('expense_category_id')->constrained('expense_categories')->onDelete('restrict');

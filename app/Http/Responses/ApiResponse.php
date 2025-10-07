@@ -46,17 +46,17 @@ class ApiResponse
     /**
      * Paginated response with resource transformation
      */
-    public static function paginated(string $message, LengthAwarePaginator $paginator, ?string $resourceClass = null): JsonResponse
+    public static function paginated(string $message, LengthAwarePaginator $paginator, ?string $resourceClass = null, ?array $stats = null): JsonResponse
     {
         // Transform data using resource class if provided
-        $data = $resourceClass 
+        $data = $resourceClass
             ? $resourceClass::collection($paginator->items())
             : $paginator->items();
 
         $response = [
             'message' => $message,
             'data' => $data,
-            'pagination' => [   
+            'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
@@ -71,11 +71,24 @@ class ApiResponse
             ]
         ];
 
+        if ($stats !== null) {
+            $response['stats'] = $stats;
+        }
+
         return response()->json($response, 200);
     }
     
-    public static function index(string $message = '', mixed $result = []): JsonResponse
+    public static function index(string $message = '', mixed $result = [], ?array $stats = null): JsonResponse
     {
+        if ($stats !== null) {
+            $response = [
+                'message' => $message,
+                'data' => $result,
+                'stats' => $stats,
+            ];
+            return response()->json($response, 200);
+        }
+
         return self::send($message, 200, $result);
     }
 

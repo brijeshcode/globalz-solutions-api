@@ -207,7 +207,7 @@ class CustomerReturnsController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (!$user->isWarehouseManager()) {
+        if (!$user->isWarehouseManager() || !$user->isAdmin()) {
             return ApiResponse::customError('Only warehouse managers can mark returns as received', 403);
         }
 

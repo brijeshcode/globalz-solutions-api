@@ -8,6 +8,7 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
 use App\Traits\Authorable;
+use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CustomerReturn extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable,HasDateWithTime, Searchable, Sortable;
 
     protected $fillable = [
         'code',

@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Models\Setups\Expenses\ExpenseCategory;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\HasDateWithTime;
 use App\Traits\HasDocuments;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ExpenseTransaction extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters,HasDocuments, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasBooleanFilters,HasDocuments, Searchable, Sortable;
 
     protected $fillable = [
         'date',

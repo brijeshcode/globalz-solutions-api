@@ -7,6 +7,7 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use App\Services\Customers\CustomerBalanceService;
 use App\Traits\Authorable;
+use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CustomerCreditDebitNote extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
 
     protected $fillable = [
         'code',
