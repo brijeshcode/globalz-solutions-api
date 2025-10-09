@@ -105,7 +105,8 @@ class ListDataController extends Controller
 
     private function currencies()
     {
-        return Currency::active()->orderby('name')->get(['id', 'name', 'code', 'symbol']);
+        return Currency::with('activeRate:id,currency_id,rate')->active()->orderby('name')->get(['id', 'name', 'code', 'symbol'])
+        ;
     }
 
     // suppliers
