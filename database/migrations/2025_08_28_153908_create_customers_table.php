@@ -35,6 +35,7 @@ return new class extends Migration
             $table->string('telephone', 20)->nullable();
             $table->string('mobile', 20)->nullable();
             $table->string('url')->nullable();
+            $table->string('google_map')->nullable();
             $table->string('email')->nullable();
             $table->string('contact_name')->nullable();
             $table->string('gps_coordinates')->nullable(); // Format: 33.9024493,35.5750987
@@ -44,7 +45,7 @@ return new class extends Migration
             $table->unsignedBigInteger('salesperson_id')->nullable()->index();
             $table->unsignedBigInteger('customer_payment_term_id')->nullable();
             $table->decimal('discount_percentage', 5, 2)->default(0); // Default discount %
-            $table->decimal('credit_limit', 15, 4)->nullable(); // Credit limit
+            $table->decimal('credit_limit', 15, 4)->default(5000); // Credit limit
 
             // Other Tab
             $table->text('notes')->nullable();

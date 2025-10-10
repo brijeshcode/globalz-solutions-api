@@ -121,7 +121,7 @@ class SaleOrderResource extends JsonResource
                     return [
                         'id' => $item->id,
                         'item_id' => $item->item_id,
-                        'supplier_id' => $item->supplier_id,
+                        // 'supplier_id' => $item->supplier_id,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
                         'ttc_price' => $item->ttc_price,
@@ -137,7 +137,7 @@ class SaleOrderResource extends JsonResource
                         'note' => $item->note,
                         'created_at' => $item->created_at,
                         'updated_at' => $item->updated_at,
-
+                        'item_code' => $item->item_code,
                         // Item details
                         'item' => $item->relationLoaded('item') ? [
                             'id' => $item->item->id,

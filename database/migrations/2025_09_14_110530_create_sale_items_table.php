@@ -19,15 +19,23 @@ return new class extends Migration
             $table->unsignedBigInteger('item_id')->nullable()->index();
 
             $table->quantity('quantity')->default(0);
-            $table->money('cost_price')->default(0);
-            $table->money('unit_profit')->default(0)->comment('ttc_price - cost_price');
-            $table->money('price')->default(0)->comment('sale price always in usd');
+            $table->money('cost_price')->default(0)->comment('in usd');
+            $table->money('unit_profit')->default(0)->comment('ttc_price_usd - cost_price');
+
+            $table->money('price')->default(0)->comment('sale price is in selected currency');
+            $table->money('price_usd')->default(0)->comment('sale price_usd use for profit calculation');
+
             $table->money('tax_percent')->default(0)->comment('tax percent from the items table');
-            $table->money('ttc_price')->default(0)->comment('sale price always in usd');
+            $table->money('ttc_price')->default(0)->comment('ttc price will be in selected currency');
+            $table->money('ttc_price_usd')->default(0)->comment('ttc price usd');
             
             $table->percent('discount_percent')->default(0);
-            $table->money('unit_discount_amount')->default(0);
-            $table->money('discount_amount')->default(0);
+            
+            $table->money('unit_discount_amount')->default(0)->comment('in selected_currency');
+            $table->money('unit_discount_amount_usd')->default(0)->comment('in usd');
+            
+            $table->money('discount_amount')->default(0)->comment('in usd');
+            $table->money('discount_amount_usd')->default(0)->comment('in selected_currency');
             
             $table->money('total_price')->default(0); // price - discount * quantity
             $table->money('total_price_usd')->default(0);

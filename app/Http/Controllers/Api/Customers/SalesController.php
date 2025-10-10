@@ -56,23 +56,38 @@ class SalesController extends Controller
             $totalProfit = 0;
 
             // Calculate total profit from sale items
+            $currencyRate = $data['currency_rate'] ?? 1;
+
             foreach ($saleItems as $index => $itemData) {
                 if (isset($itemData['item_id'])) {
                     $item = Item::with('itemPrice')->find($itemData['item_id']);
                     $saleItems[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
 
-                    // Get cost price from item's price
+                    // Get cost price from item's price (already in USD)
                     $costPrice = $item?->itemPrice?->price_usd ?? 0;
-                    $sellingPrice = $itemData['price'] ?? 0;
-                    $quantity = $itemData['quantity'] ?? 0;
-                    $discountAmount = $itemData['unit_discount_amount'] ?? 0;
 
-                    // Profit = (Sale Price - Discount) - Cost Price
-                    $priceAfterDiscount = $sellingPrice - $discountAmount;
-                    $unitProfit = $priceAfterDiscount - $costPrice;
+                    // Prices from request (in selected currency)
+                    $sellingPrice = $itemData['price'] ?? 0;
+                    $ttcPrice = $itemData['ttc_price'] ?? 0;
+                    $quantity = $itemData['quantity'] ?? 0;
+                    $unitDiscountAmount = $itemData['unit_discount_amount'] ?? 0;
+                    $discountAmount = $itemData['discount_amount'] ?? 0;
+
+                    // Convert prices to USD (currency * rate = USD)
+                    $sellingPriceUsd = $sellingPrice * $currencyRate;
+                    $ttcPriceUsd = $ttcPrice * $currencyRate;
+                    $unitDiscountAmountUsd = $unitDiscountAmount * $currencyRate;
+                    $discountAmountUsd = $discountAmount * $currencyRate;
+
+                    // Calculate profit using USD values: ttc_price_usd - cost_price
+                    $unitProfit = $ttcPriceUsd - $costPrice;
                     $itemTotalProfit = $unitProfit * $quantity;
 
                     $saleItems[$index]['cost_price'] = $costPrice;
+                    $saleItems[$index]['price_usd'] = $sellingPriceUsd;
+                    $saleItems[$index]['ttc_price_usd'] = $ttcPriceUsd;
+                    $saleItems[$index]['unit_discount_amount_usd'] = $unitDiscountAmountUsd;
+                    $saleItems[$index]['discount_amount_usd'] = $discountAmountUsd;
                     $saleItems[$index]['unit_profit'] = $unitProfit;
                     $saleItems[$index]['total_profit'] = $itemTotalProfit;
 
@@ -135,23 +150,38 @@ class SalesController extends Controller
                 $totalProfit = 0;
 
                 // Calculate total profit from sale items
+                $currencyRate = $data['currency_rate'] ?? $sale->currency_rate ?? 1;
+
                 foreach ($saleItems as $index => $itemData) {
                     if (isset($itemData['item_id'])) {
                         $item = \App\Models\Items\Item::with('itemPrice')->find($itemData['item_id']);
                         $saleItems[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
 
-                        // Get cost price from item's price
+                        // Get cost price from item's price (already in USD)
                         $costPrice = $item?->itemPrice?->price_usd ?? 0;
-                        $sellingPrice = $itemData['price'] ?? 0;
-                        $quantity = $itemData['quantity'] ?? 0;
-                        $discountAmount = $itemData['unit_discount_amount'] ?? 0;
 
-                        // Profit = (Sale Price - Discount) - Cost Price
-                        $priceAfterDiscount = $sellingPrice - $discountAmount;
-                        $unitProfit = $priceAfterDiscount - $costPrice;
+                        // Prices from request (in selected currency)
+                        $sellingPrice = $itemData['price'] ?? 0;
+                        $ttcPrice = $itemData['ttc_price'] ?? 0;
+                        $quantity = $itemData['quantity'] ?? 0;
+                        $unitDiscountAmount = $itemData['unit_discount_amount'] ?? 0;
+                        $discountAmount = $itemData['discount_amount'] ?? 0;
+
+                        // Convert prices to USD (currency * rate = USD)
+                        $sellingPriceUsd = $sellingPrice * $currencyRate;
+                        $ttcPriceUsd = $ttcPrice * $currencyRate;
+                        $unitDiscountAmountUsd = $unitDiscountAmount * $currencyRate;
+                        $discountAmountUsd = $discountAmount * $currencyRate;
+
+                        // Calculate profit using USD values: ttc_price_usd - cost_price
+                        $unitProfit = $ttcPriceUsd - $costPrice;
                         $itemTotalProfit = $unitProfit * $quantity;
 
                         $saleItems[$index]['cost_price'] = $costPrice;
+                        $saleItems[$index]['price_usd'] = $sellingPriceUsd;
+                        $saleItems[$index]['ttc_price_usd'] = $ttcPriceUsd;
+                        $saleItems[$index]['unit_discount_amount_usd'] = $unitDiscountAmountUsd;
+                        $saleItems[$index]['discount_amount_usd'] = $discountAmountUsd;
                         $saleItems[$index]['unit_profit'] = $unitProfit;
                         $saleItems[$index]['total_profit'] = $itemTotalProfit;
 
