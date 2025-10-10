@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Accounts\AccountsController;
+use App\Http\Controllers\Api\Accounts\AccountStatementController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Customers\CustomersController;
 use App\Http\Controllers\Api\Customers\CustomerCreditDebitNotesController;
@@ -196,17 +197,26 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
 
-    // Accounts Controller
-    Route::controller(AccountsController::class)->prefix('accounts')->name('accounts.')->group(function () {
-        Route::get('stats', 'stats')->name('stats');
-        Route::get('trashed', 'trashed')->name('trashed');
-        Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
-        Route::get('{account}', 'show')->name('show');
-        Route::put('{account}', 'update')->name('update');
-        Route::delete('{account}', 'destroy')->name('destroy');
-        Route::patch('{id}/restore', 'restore')->name('restore');
-        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    Route::prefix('accounts')->name('accounts.')->group(function () {
+
+        // Account Statements Controller - Must be defined BEFORE {account} routes to avoid conflicts
+        Route::controller(AccountStatementController::class)->prefix('statements')->name('statements.')->group(function () {
+            Route::get('/', 'statements')->name('index');
+            Route::get('{account}', 'accountStatements')->name('account');
+        });
+
+        // Accounts Controller
+        Route::controller(AccountsController::class)->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{account}', 'show')->name('show');
+            Route::put('{account}', 'update')->name('update');
+            Route::delete('{account}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
     });
 
     Route::prefix('suppliers')->name('suppliers.')->group(function () {
