@@ -32,8 +32,8 @@ class CustomerStatmentController extends Controller
         $search = $request->get('search');
 
         $allTransactions = $this->getTransactions($request, $customer, $search);
-
         $stats = $this->calculateStats($allTransactions);
+        $this->canUpdateBalance($customer, $stats['balance']);
 
         // Check if pagination is requested
         if ($request->boolean('withPage')) {
@@ -124,6 +124,14 @@ class CustomerStatmentController extends Controller
             $allTransactions,
             $stats
         );
+    }
+
+    private function canUpdateBalance(Customer $customer, float $balance): void
+    {
+        if($customer->current_balance == $balance){
+            return;
+        }
+        $customer->update(['current_balance' => $balance]);
     }
 
     private function getTransactions(Request $request, Customer $customer, ?string $noteSearch = null)
