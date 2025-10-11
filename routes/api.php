@@ -534,6 +534,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::controller(ItemsController::class)->prefix('items')->name('items.')->group(function () {
             Route::get('stats', 'stats')->name('stats');
             Route::get('export', 'export')->name('export');
+            Route::get('import-template', 'downloadTemplate')->name('import-template');
+            Route::post('import', 'import')->name('import');
             Route::get('all', 'getAllItems')->name('all');
             Route::get('next-code', 'getNextCode')->name('next-code');
             Route::post('check-code', 'checkCodeAvailability')->name('check-code');

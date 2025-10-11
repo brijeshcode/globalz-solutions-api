@@ -6,14 +6,18 @@ use App\Facades\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Items\ItemsStoreRequest;
 use App\Http\Requests\Api\Items\ItemsUpdateRequest;
+use App\Http\Requests\Api\Items\ItemsImportRequest;
 use App\Http\Resources\Api\Items\ItemListResource;
 use App\Http\Resources\Api\Items\ItemResource;
 use App\Http\Responses\ApiResponse;
+use App\Imports\ItemsImport;
 use App\Models\Items\Item;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ItemsController extends Controller
 {
@@ -769,5 +773,213 @@ class ItemsController extends Controller
                 ];
             })
         );
+    }
+
+    /**
+     * Import items from CSV/Excel file
+     */
+    public function import(ItemsImportRequest $request): JsonResponse
+    {
+        try {
+            $file = $request->file('file');
+            $skipDuplicates = $request->boolean('skip_duplicates', true);
+            $updateExisting = $request->boolean('update_existing', true);
+
+            // Create import instance
+            $import = new ItemsImport($skipDuplicates, $updateExisting);
+
+            // Process the import
+            Excel::import($import, $file);
+
+            // Get results
+            $results = $import->getResults();
+
+            // Determine response status
+            if ($results['imported'] === 0 && $results['updated'] === 0) {
+                Log::warning('No items imported', [
+                    'total_rows' => $results['total'],
+                    'skipped' => $results['skipped'],
+                    'errors' => $results['errors']
+                ]);
+
+                return ApiResponse::customError(
+                    'No items were imported. Please check the file format and data.',
+                    422,
+                    $results
+                );
+            }
+
+            return ApiResponse::store(
+                'Items import completed successfully',
+                $results
+            );
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errors = [];
+
+            foreach ($failures as $failure) {
+                $errors[] = [
+                    'row' => $failure->row(),
+                    'attribute' => $failure->attribute(),
+                    'errors' => $failure->errors(),
+                    'values' => $failure->values()
+                ];
+            }
+
+            Log::error('Item Import Validation Failed', ['errors' => $errors]);
+
+            return ApiResponse::customError('Import validation failed', 422, [
+                'errors' => $errors
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Item Import Exception', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ApiResponse::customError(
+                'Import failed: ' . $e->getMessage(),
+                500,
+                [
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            );
+        }
+    }
+
+    /**
+     * Download sample Excel/CSV template for item import
+     */
+    public function downloadTemplate(Request $request)
+    {
+        $format = $request->query('format', 'xlsx'); // Default to xlsx
+
+        $headers = [
+            'code',
+            'short_name',
+            'description',
+            'item_type',
+            'item_family',
+            'item_group',
+            'item_category',
+            'item_brand',
+            'item_unit',
+            'item_profit_margin',
+            'supplier',
+            'tax_code',
+            'volume',
+            'weight',
+            'barcode',
+            'base_cost',
+            'base_sell',
+            'starting_price',
+            'starting_quantity',
+            'low_quantity_alert',
+            'cost_calculation',
+            'notes',
+            'is_active'
+        ];
+
+        $sampleData = [
+            [
+                '',  // code - leave empty for auto-generation
+                'Sample Product',
+                'Sample Product Description',
+                'Finished Goods',  // item_type
+                'Electronics',     // item_family
+                'Computers',       // item_group
+                'Laptops',         // item_category
+                'Dell',            // item_brand
+                'PCS',             // item_unit
+                'Standard',        // item_profit_margin
+                'SUP001',          // supplier code
+                'VAT 11%',         // tax_code
+                0.5,               // volume
+                2.5,               // weight
+                '1234567890123',   // barcode
+                500.00,            // base_cost
+                750.00,            // base_sell
+                750.00,            // starting_price
+                100,               // starting_quantity
+                10,                // low_quantity_alert
+                'weighted_average', // cost_calculation (weighted_average or last_cost)
+                'Sample notes',
+                true               // is_active
+            ],
+            [
+                '',  // code - leave empty for auto-generation
+                'second sample product',
+                'Sample Product Description',
+                'Finished Goods',  // item_type
+                'Electronics',     // item_family
+                'Computers',       // item_group
+                'Laptops',         // item_category
+                'Dell',            // item_brand
+                'PCS',             // item_unit
+                'Standard',        // item_profit_margin
+                'SUP001',          // supplier code
+                'VAT 11%',         // tax_code
+                0.5,               // volume
+                2.5,               // weight
+                '1234567890123',   // barcode
+                500.00,            // base_cost
+                750.00,            // base_sell
+                750.00,            // starting_price
+                100,               // starting_quantity
+                10,                // low_quantity_alert
+                'last_cost',       // cost_calculation (weighted_average or last_cost)
+                'Sample notes',
+                true               // is_active
+            ]
+        ];
+
+        if ($format === 'csv') {
+            // Generate CSV file
+            $callback = function() use ($headers, $sampleData) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, $headers);
+
+                foreach ($sampleData as $row) {
+                    fputcsv($file, $row);
+                }
+
+                fclose($file);
+            };
+
+            return response()->streamDownload($callback, 'item_import_template.csv', [
+                'Content-Type' => 'text/csv',
+            ]);
+        } else {
+            // Generate Excel file using Laravel Excel
+            return Excel::download(
+                new class($headers, $sampleData) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings {
+                    protected $headers;
+                    protected $data;
+
+                    public function __construct($headers, $data)
+                    {
+                        $this->headers = $headers;
+                        $this->data = $data;
+                    }
+
+                    public function array(): array
+                    {
+                        return $this->data;
+                    }
+
+                    public function headings(): array
+                    {
+                        return $this->headers;
+                    }
+                },
+                'item_import_template.xlsx'
+            );
+        }
     }
 }
