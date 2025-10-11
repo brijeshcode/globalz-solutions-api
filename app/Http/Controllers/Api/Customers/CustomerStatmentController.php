@@ -33,7 +33,7 @@ class CustomerStatmentController extends Controller
 
         $allTransactions = $this->getTransactions($request, $customer, $search);
         $stats = $this->calculateStats($allTransactions);
-        $this->canUpdateBalance($customer, $stats['balance']);
+        $this->canUpdateBalance($request, $customer, $stats['balance']);
 
         // Check if pagination is requested
         if ($request->boolean('withPage')) {
@@ -126,8 +126,18 @@ class CustomerStatmentController extends Controller
         );
     }
 
-    private function canUpdateBalance(Customer $customer, float $balance): void
+    private function canUpdateBalance(Request $request, Customer $customer, float $balance): void
     {
+        // Only update balance if no filters are applied
+        $hasFilters = $request->has('from_date')
+            || $request->has('to_date')
+            || $request->has('search')
+            || $request->has('transaction_type');
+
+        if ($hasFilters) {
+            return;
+        }
+
         if($customer->current_balance == $balance){
             return;
         }

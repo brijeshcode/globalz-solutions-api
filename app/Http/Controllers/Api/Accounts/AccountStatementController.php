@@ -25,7 +25,7 @@ class AccountStatementController extends Controller
 
         $stats = $this->calculateStats($allTransactions, $account);
 
-        $this->canUpdateBalance($account, $stats['balance']);
+        $this->canUpdateBalance($request, $account, $stats['balance']);
         // Check if pagination is requested
         if ($request->boolean('withPage')) {
             // Paginate using DataHelper
@@ -51,8 +51,18 @@ class AccountStatementController extends Controller
         );
     }
 
-    private function canUpdateBalance(Account $account, float $balance): void
+    private function canUpdateBalance(Request $request, Account $account, float $balance): void
     {
+        // Only update balance if no filters are applied
+        $hasFilters = $request->has('from_date')
+            || $request->has('to_date')
+            || $request->has('search')
+            || $request->has('transaction_type');
+
+        if ($hasFilters) {
+            return;
+        }
+
         if($account->current_balance == $balance){
             return;
         }
