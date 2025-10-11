@@ -127,21 +127,9 @@ class CustomerPaymentsController extends Controller
 
     public function update(CustomerPaymentsUpdateRequest $request, CustomerPayment $customerPayment): JsonResponse
     {
-        if ($customerPayment->isApproved()) {
-            return ApiResponse::customError('Cannot update approved payments', 422);
-        }
-
         $data = $request->validated();
-
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        $isAdmin = $user->isAdmin();
-
-        if ($isAdmin && $request->has('account_id') ) {
-            $data['approved_by'] = $user->id;
-            $data['approved_at'] = now();
-        }
-
+        $originalAmount = $customerPayment->amount_usd;
+ 
         $customerPayment->update($data);
 
         $customerPayment->load([
@@ -154,6 +142,10 @@ class CustomerPaymentsController extends Controller
             'updatedBy:id,name'
         ]);
 
+        // remove old amount 
+        CustomerBalanceService::updateMonthlyTotal($customerPayment->customer_id, 'payment', -$originalAmount, $customerPayment->id);
+        CustomerBalanceService::updateMonthlyTotal($customerPayment->customer_id, 'payment', $customerPayment->amount_usd, $customerPayment->id);
+
         $message = $customerPayment->isApproved()
             ? 'Customer payment updated and approved successfully'
             : 'Customer payment order updated successfully (pending approval)';
@@ -163,11 +155,12 @@ class CustomerPaymentsController extends Controller
 
     public function destroy(CustomerPayment $customerPayment): JsonResponse
     {
-        if ($customerPayment->isApproved()) {
+        if (! RoleHelper::isSuperAdmin() && $customerPayment->isApproved()) {
             return ApiResponse::customError('Cannot delete approved payments', 422);
         }
 
         $customerPayment->delete();
+        CustomerBalanceService::updateMonthlyTotal($customerPayment->customer_id, 'payment', -$customerPayment->amount_usd, $customerPayment->id);
 
         return ApiResponse::delete('Customer payment deleted successfully');
     }

@@ -177,26 +177,42 @@ class CustomerPayment extends Model
         });
 
         static::created(function ($payment) {
-            AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
+            // Only add balance if payment is approved
+            if ($payment->isApproved()) {
+                AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
+            }
         });
 
         static::updated(function ($payment) {
             $original = $payment->getOriginal();
+            $wasApproved = !is_null($original['approved_by']);
+            $isNowApproved = $payment->isApproved();
 
-            // If account changed, restore balance to old account and deduct from new account
-            if ($original['account_id'] != $payment->account_id) {
+            // Case 1: Payment just got approved (was pending, now approved)
+            if (!$wasApproved && $isNowApproved) {
+                AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
+            }
+            // Case 2: Payment was unapproved (was approved, now pending)
+            elseif ($wasApproved && !$isNowApproved) {
+                AccountsHelper::removeBalance(Account::find($original['account_id']), $original['amount_usd']);
+            }
+            // Case 3: Payment is approved and account changed
+            elseif ($isNowApproved && $original['account_id'] != $payment->account_id) {
                 AccountsHelper::removeBalance(Account::find($original['account_id']), $original['amount_usd']);
                 AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
             }
-            // If amount changed on same account, adjust the difference
-            elseif ($original['amount_usd'] != $payment->amount_usd) {
+            // Case 4: Payment is approved and amount changed on same account
+            elseif ($isNowApproved && $original['amount_usd'] != $payment->amount_usd) {
                 $difference = $payment->amount_usd - $original['amount_usd'];
                 AccountsHelper::addBalance(Account::find($payment->account_id), $difference);
             }
         });
 
         static::deleted(function ($payment) {
-            AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount_usd);
+            // Only remove balance if payment was approved
+            if ($payment->isApproved()) {
+                AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount_usd);
+            }
         });
     }
 }

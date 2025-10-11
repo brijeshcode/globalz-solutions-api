@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -86,22 +87,18 @@ class CustomerPaymentsUpdateRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            $user = Auth::user();
-            $isAdmin = $user && $user->isAdmin();
+            
             $payment = $this->route('customerPayment');
-
-            if ($payment && $payment->isApproved()) {
+            $isSuperAdmin = RoleHelper::isSuperAdmin();
+            if ($payment && !$isSuperAdmin && $payment->isApproved()) {
                 $validator->errors()->add('payment', 'Cannot update approved payments');
                 return;
             }
 
-            if (!$isAdmin && $this->has('account_id')) {
-                $validator->errors()->add('account_id', 'Only administrators can approve payments during update');
+            if (!$isSuperAdmin && $this->has('account_id')) {
+                $validator->errors()->add('account_id', 'Only super administrators can approve payments during update');
             }
 
-            if ($this->has('account_id') && !$this->has('approve_note')) {
-                $validator->errors()->add('approve_note', 'Approval note is required when approving payment');
-            }
 
             $amount = $this->input('amount');
             $amountUsd = $this->input('amount_usd');
