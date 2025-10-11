@@ -63,6 +63,14 @@ class ExpenseTransaction extends Model
     protected $defaultSortField = 'id';
     protected $defaultSortDirection = 'desc';
 
+    /**
+     * Get the code attribute with "EXP" prefix
+     */
+    public function getCodeAttribute($value): ?string
+    {
+        return $value ? 'EXP' . $value : null;
+    }
+
     public function expenseCategory(): BelongsTo
     {
         return $this->belongsTo(ExpenseCategory::class);
