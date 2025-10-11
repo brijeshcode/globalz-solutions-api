@@ -163,8 +163,8 @@ class AccountStatementController extends Controller
         }
 
         // Sort by date
-        $sortedTransactions = $allTransactions->sortByDesc('date')->values();
-
+        $sortedTransactions = $allTransactions->sortBy('timestamp')->values();
+        // info($sortedTransactions);
         // Calculate running balance
         $balance = 0;
         $transactionsWithBalance = $sortedTransactions->map(function ($transaction) use (&$balance) {
