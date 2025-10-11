@@ -21,6 +21,8 @@ class PurchasesUpdateRequest extends FormRequest
             'account_id' => 'nullable|integer|exists:accounts,id',
             'supplier_invoice_number' => 'nullable|string|max:255',
             'currency_rate' => 'sometimes|required|numeric|min:0.000001|max:999999.999999',
+            'final_total_usd' => 'required|numeric|min:0.000000|max:999999.999999',
+            'total_usd' => 'required|numeric|min:0.000000|max:999999.999999',
             'shipping_fee_usd' => 'nullable|numeric|min:0|max:999999.9999',
             'customs_fee_usd' => 'nullable|numeric|min:0|max:999999.9999',
             'other_fee_usd' => 'nullable|numeric|min:0|max:999999.9999',

@@ -2,6 +2,7 @@
 
 namespace App\Models\Expenses;
 
+use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Expenses\ExpenseCategory;
@@ -168,6 +169,29 @@ class ExpenseTransaction extends Model
             if (!$expenseTransaction->code) {
                 $expenseTransaction->setExpenseTransactionCode();
             }
+        });
+
+        static::created(function ($expenseTransaction) {
+            AccountsHelper::removeBalance(Account::find($expenseTransaction->account_id), $expenseTransaction->amount);
+        });
+
+        static::updated(function ($expenseTransaction) {
+            $original = $expenseTransaction->getOriginal();
+
+            // If account changed, restore balance to old account and deduct from new account
+            if ($original['account_id'] != $expenseTransaction->account_id) {
+                AccountsHelper::addBalance(Account::find($original['account_id']), $original['amount']);
+                AccountsHelper::removeBalance(Account::find($expenseTransaction->account_id), $expenseTransaction->amount);
+            }
+            // If amount changed on same account, adjust the difference
+            elseif ($original['amount'] != $expenseTransaction->amount) {
+                $difference = $expenseTransaction->amount - $original['amount'];
+                AccountsHelper::removeBalance(Account::find($expenseTransaction->account_id), $difference);
+            }
+        });
+
+        static::deleted(function ($expenseTransaction) {
+            AccountsHelper::addBalance(Account::find($expenseTransaction->account_id), $expenseTransaction->amount);
         });
     }
 }

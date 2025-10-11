@@ -2,6 +2,7 @@
 
 namespace App\Models\Customers;
 
+use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
@@ -173,6 +174,29 @@ class CustomerPayment extends Model
             if (!$payment->code) {
                 $payment->setPaymentCode();
             }
+        });
+
+        static::created(function ($payment) {
+            AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
+        });
+
+        static::updated(function ($payment) {
+            $original = $payment->getOriginal();
+
+            // If account changed, restore balance to old account and deduct from new account
+            if ($original['account_id'] != $payment->account_id) {
+                AccountsHelper::removeBalance(Account::find($original['account_id']), $original['amount_usd']);
+                AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
+            }
+            // If amount changed on same account, adjust the difference
+            elseif ($original['amount_usd'] != $payment->amount_usd) {
+                $difference = $payment->amount_usd - $original['amount_usd'];
+                AccountsHelper::addBalance(Account::find($payment->account_id), $difference);
+            }
+        });
+
+        static::deleted(function ($payment) {
+            AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount_usd);
         });
     }
 }

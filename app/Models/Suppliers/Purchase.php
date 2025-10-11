@@ -2,6 +2,7 @@
 
 namespace App\Models\Suppliers;
 
+use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Items\Item;
@@ -288,5 +289,29 @@ class Purchase extends Model
                 $purchase->setPurchaseCode();
             }
         });
+
+        static::created(function ($purchase) {
+            AccountsHelper::removeBalance(Account::find($purchase->account_id), $purchase->final_total_usd);
+        });
+
+        static::updated(function ($purchase) {
+            $original = $purchase->getOriginal();
+
+            // If account changed, restore balance to old account and deduct from new account
+            if ($original['account_id'] != $purchase->account_id) {
+                AccountsHelper::addBalance(Account::find($original['account_id']), $original['final_total_usd']);
+                AccountsHelper::removeBalance(Account::find($purchase->account_id), $purchase->final_total_usd);
+            }
+            // If amount changed on same account, adjust the difference
+            elseif ($original['final_total_usd'] != $purchase->final_total_usd) {
+                $difference = $purchase->final_total_usd - $original['final_total_usd'];
+                AccountsHelper::removeBalance(Account::find($purchase->account_id), $difference);
+            }
+        });
+
+        static::deleted(function ($purchase) {
+            AccountsHelper::addBalance(Account::find($purchase->account_id), $purchase->final_total_usd);
+        });
+
     }
 }

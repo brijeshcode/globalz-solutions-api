@@ -25,6 +25,7 @@ class AccountStatementController extends Controller
 
         $stats = $this->calculateStats($allTransactions, $account);
 
+        $this->canUpdateBalance($account, $stats['balance']);
         // Check if pagination is requested
         if ($request->boolean('withPage')) {
             // Paginate using DataHelper
@@ -48,6 +49,14 @@ class AccountStatementController extends Controller
             $allTransactions,
             $stats
         );
+    }
+
+    private function canUpdateBalance(Account $account, float $balance): void
+    {
+        if($account->current_balance == $balance){
+            return;
+        }
+        $account->update(['current_balance' => $balance]);
     }
 
     public function statements(Request $request): JsonResponse
@@ -215,8 +224,8 @@ class AccountStatementController extends Controller
                 'type' => 'Purchase',
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => -$item->final_total_usd,
-                'debit' => 0,
-                'credit' => $item->final_total_usd,
+                'debit' => $item->final_total_usd,
+                'credit' => 0,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
