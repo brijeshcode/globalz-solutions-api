@@ -22,7 +22,7 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
             'date' => 'required|date',
             'prefix' => 'required|in:RTX,RTV',
             'customer_id' => 'required|exists:customers,id',
-            'salesperson_id' => 'nullable|exists:users,id',
+            'salesperson_id' => 'nullable|exists:employees,id',
             'currency_id' => 'required|exists:currencies,id',
             'warehouse_id' => 'required|exists:warehouses,id',
             'total' => 'required|numeric|min:0',

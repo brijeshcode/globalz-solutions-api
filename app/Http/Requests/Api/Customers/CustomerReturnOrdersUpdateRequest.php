@@ -23,7 +23,7 @@ class CustomerReturnOrdersUpdateRequest extends FormRequest
             'date' => 'sometimes|required|date',
             'prefix' => 'sometimes|required|in:RTX,RTV',
             'customer_id' => 'sometimes|required|exists:customers,id',
-            'salesperson_id' => 'sometimes|nullable|exists:users,id',
+            'salesperson_id' => 'sometimes|nullable|exists:employees,id',
             'currency_id' => 'sometimes|required|exists:currencies,id',
             'warehouse_id' => 'sometimes|required|exists:warehouses,id',
             'currency_rate' => 'required|numeric',
