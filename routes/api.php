@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
 use App\Http\Controllers\Api\Suppliers\PurchasesController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
+use App\Http\Controllers\Api\ClearDataController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -599,5 +600,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{document}', 'show')->name('show');
         Route::put('{document}', 'update')->name('update');
         Route::delete('{document}', 'destroy')->name('destroy');
+    });
+
+    // Clear Data Controller - System data management
+    Route::controller(ClearDataController::class)->prefix('clear-data')->name('clear-data.')->group(function () {
+        Route::delete('items', 'clearItems')->name('items');
+        Route::delete('customers', 'clearCustomers')->name('customers');
+        Route::delete('sales', 'clearSales')->name('sales');
+        Route::delete('all', 'clearAll')->name('all');
     });
 });

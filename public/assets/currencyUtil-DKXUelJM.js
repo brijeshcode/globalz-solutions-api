@@ -1,0 +1,1 @@
+const e=(e,t,n)=>n===`divide`?e/t:e*t,t=(e,t,n)=>n===`divide`?e*t:e/t,n=e=>e==`USD`||e==`usd`;export{t as b,n as c,e as d};

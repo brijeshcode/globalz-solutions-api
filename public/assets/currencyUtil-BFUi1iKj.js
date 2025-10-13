@@ -1,1 +1,0 @@
-const e=(e,t)=>e*t,t=(e,t)=>e/t,n=e=>e==`USD`||e==`usd`;export{t as b,n as c,e as d};
