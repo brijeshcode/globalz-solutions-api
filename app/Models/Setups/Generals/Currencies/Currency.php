@@ -14,6 +14,7 @@ class Currency extends Model
 {
     /** @use HasFactory<\Database\Factories\Setups\CurrencyFactory> */
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
+    public const CALCULATION_TYPE = [ 'multiply', 'divide'];
 
     protected $fillable = [
         'name',
@@ -23,6 +24,7 @@ class Currency extends Model
         'decimal_places',
         'decimal_separator',
         'thousand_separator',
+        'calculation_type',
         'is_active',
     ];
 

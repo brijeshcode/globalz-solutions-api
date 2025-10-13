@@ -18,6 +18,7 @@ class CurrencyResource extends JsonResource
             'decimal_places' => $this->decimal_places,
             'decimal_separator' => $this->decimal_separator,
             'thousand_separator' => $this->thousand_separator,
+            'calculation_type' => $this->calculation_type,
             'is_active' => $this->is_active,
             'display_name' => $this->display_name,
             'current_rate' => $this->getCurrentRate(),

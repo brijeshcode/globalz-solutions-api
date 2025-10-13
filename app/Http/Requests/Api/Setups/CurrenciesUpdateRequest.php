@@ -28,6 +28,7 @@ class CurrenciesUpdateRequest extends FormRequest
                 Rule::unique('currencies', 'code')->ignore($this->currency)
             ],
             'symbol' => 'nullable|string|max:10',
+            'calculation_type' => 'required|in:multiply,divide',
             'symbol_position' => 'nullable|string|in:before,after',
             'decimal_places' => 'nullable|integer|min:0|max:10',
             'decimal_separator' => 'nullable|string|max:5',

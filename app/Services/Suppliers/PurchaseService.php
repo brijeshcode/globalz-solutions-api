@@ -2,6 +2,7 @@
 
 namespace App\Services\Suppliers;
 
+use App\Helpers\CurrencyHelper;
 use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\PurchaseItem;
 use App\Models\Suppliers\SupplierItemPrice;
@@ -12,7 +13,6 @@ use App\Models\Items\Item;
 use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\PriceService;
 use App\Services\Suppliers\SupplierItemPriceService;
-use App\Services\Currency\CurrencyService;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseService
@@ -109,7 +109,7 @@ class PurchaseService
                         'discount_percent' => $discountPercent,
                         'discount_amount' => $discountAmount, // Store total line discount
                         'total_price' => $totalPrice,
-                        'total_price_usd' => CurrencyService::convertToBaseWithRate($totalPrice, $purchase->currency_id, $purchase->currency_rate),
+                        'total_price_usd' => CurrencyHelper::toUsd($purchase->currency_id, $totalPrice, $purchase->currency_rate),
                         'note' => $itemData['note'] ?? $purchaseItem->note,
                     ]);
                     // Recalculate derived fields
@@ -179,7 +179,7 @@ class PurchaseService
         
         $totalBeforeDiscount = $price * $quantity;
         $totalPrice = $totalBeforeDiscount - $discountAmount;
-        $totalPriceUsd = CurrencyService::convertToBaseWithRate($totalPrice, $purchase->currency_id, $purchase->currency_rate);
+        $totalPriceUsd = CurrencyHelper::toUsd($purchase->currency_id, $totalPrice, $purchase->currency_rate) ;
         
         // Calculate proportional fees based on purchase totals
         $totalShippingUsd = $this->calculateProportionalFee($totalPriceUsd, $purchase, 'shipping_fee_usd', 'shipping_fee_usd_percent');

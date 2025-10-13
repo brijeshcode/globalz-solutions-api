@@ -2,6 +2,7 @@
 
 namespace App\Services\Suppliers;
 
+use App\Helpers\CurrencyHelper;
 use App\Models\Suppliers\SupplierItemPrice;
 use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\PurchaseItem;
@@ -38,8 +39,6 @@ class SupplierItemPriceService
                 'note' => 'Initialized from item base cost'
             ]);
         }
-        dd('stop');
-
         return null;
     }
 
@@ -93,8 +92,8 @@ class SupplierItemPriceService
      */
     public static function updateFromPurchase(SupplierItemPrice $supplierPrice, Purchase $purchase, PurchaseItem $purchaseItem): void
     {
-        $priceUsd = CurrencyService::convertToBaseWithRate($purchaseItem->price, $purchase->currency_id, $purchase->currency_rate);
-
+        $priceUsd = CurrencyHelper::toUsd($purchase->currency_id, $purchaseItem->price, $purchase->currency_rate); 
+                    
         DB::table('supplier_item_prices')
             ->where('id', $supplierPrice->id)
             ->update([
@@ -141,7 +140,7 @@ class SupplierItemPriceService
             'item_id' => $purchaseItem->item_id,
             'currency_id' => $purchase->currency_id,
             'price' => $purchaseItem->price,
-            'price_usd' => CurrencyService::convertToBaseWithRate($purchaseItem->price, $purchase->currency_id, $purchase->currency_rate),
+            'price_usd' => CurrencyHelper::toUsd($purchase->currency_id, $purchaseItem->price, $purchase->currency_rate),
             'currency_rate' => $purchase->currency_rate,
             'last_purchase_id' => $purchase->id,
             'last_purchase_date' => $purchase->date,
@@ -187,7 +186,8 @@ class SupplierItemPriceService
     public static function updatePriceUsd(SupplierItemPrice $supplierPrice, ?float $currencyRate = null): void
     {
         $rate = $currencyRate ?? $supplierPrice->currency_rate ?? 1.0;
-        $priceUsd = CurrencyService::convertToBaseWithRate($supplierPrice->price, $supplierPrice->currency_id, $rate);
+        $priceUsd = CurrencyHelper::toUsd($supplierPrice->currency_id, $supplierPrice->price, $rate);
+        
         $supplierPrice->update(['price_usd' => $priceUsd]);
     }
 

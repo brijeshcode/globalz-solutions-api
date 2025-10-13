@@ -60,14 +60,18 @@ class currencyRatesController extends Controller
         foreach ($request->rates as $rateData) {
             $currencyId = $rateData['currency_id'];
             $newRate = $rateData['rate'];
-            
+
             // Get the current active rate for this currency
             $currentActiveRate = currencyRate::where('currency_id', $currencyId)
                 ->where('is_active', true)
                 ->first();
-            
+
+            // Format rates to avoid scientific notation
+            $currentRateFormatted = $currentActiveRate ? number_format($currentActiveRate->rate, 11, '.', '') : null;
+            $newRateFormatted = number_format((float)$newRate, 11, '.', '');
+
             // If there's no current rate, or the rate is different, create a new one
-            if (!$currentActiveRate || bccomp((string)$currentActiveRate->rate, (string)$newRate, 6) !== 0) {
+            if (!$currentActiveRate || bccomp($currentRateFormatted, $newRateFormatted, 11) !== 0) {
                 // Deactivate all existing rates for this currency
                 currencyRate::where('currency_id', $currencyId)
                     ->where('is_active', true)

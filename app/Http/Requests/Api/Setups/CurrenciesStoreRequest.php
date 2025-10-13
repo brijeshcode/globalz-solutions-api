@@ -18,6 +18,7 @@ class CurrenciesStoreRequest extends FormRequest
             'code' => 'required|string|size:3|unique:currencies,code',
             'symbol' => 'nullable|string|max:10',
             'symbol_position' => 'nullable|string|in:before,after',
+            'calculation_type' => 'required|in:multiply,divide',
             'decimal_places' => 'nullable|integer|min:0|max:10',
             'decimal_separator' => 'nullable|string|max:5',
             'thousand_separator' => 'nullable|string|max:5',
