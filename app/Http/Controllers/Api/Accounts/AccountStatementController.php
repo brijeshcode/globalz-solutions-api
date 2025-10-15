@@ -23,9 +23,11 @@ class AccountStatementController extends Controller
     {
         $search = $request->get('search');
 
-        $allTransactions = $this->getTransactions($request, $account, $search);
+        $result = $this->getTransactions($request, $account, $search);
+        $allTransactions = $result['transactions'];
+        $finalBalance = $result['final_balance'];
 
-        $stats = $this->calculateStats($allTransactions, $account);
+        $stats = $this->calculateStats($allTransactions, $account, $finalBalance);
 
         $this->canUpdateBalance($request, $account, $stats['balance']);
         // Check if pagination is requested
@@ -99,9 +101,11 @@ class AccountStatementController extends Controller
             );
         }
 
-        $allTransactions = $this->getTransactions($request, $account, $noteSearch);
+        $result = $this->getTransactions($request, $account, $noteSearch);
+        $allTransactions = $result['transactions'];
+        $finalBalance = $result['final_balance'];
 
-        $stats = $this->calculateStats($allTransactions, $account);
+        $stats = $this->calculateStats($allTransactions, $account, $finalBalance);
 
         // Check if pagination is requested
         if ($request->boolean('withPage')) {
@@ -185,8 +189,14 @@ class AccountStatementController extends Controller
             return $transaction;
         });
 
+        // Store final balance before reversing
+        $finalBalance = $balance;
+
         // Reverse to show latest transactions on top
-        return $transactionsWithBalance->reverse()->values();
+        return [
+            'transactions' => $transactionsWithBalance->reverse()->values(),
+            'final_balance' => $finalBalance,
+        ];
     }
 
     private function getCustomerPayments(Request $request, Account $account, ?string $noteSearch = null)
@@ -288,18 +298,17 @@ class AccountStatementController extends Controller
         });
     }
 
-    private function calculateStats($transactions, Account $account)
+    private function calculateStats($transactions, Account $account, float $finalBalance)
     {
         $openingBalance = $account->opening_balance ?? 0;
 
-        $balance = $transactions->last()['balance'] ?? $openingBalance;
         return [
             'opening_balance' => $openingBalance,
             'total_debit' => $transactions->sum('debit'),
             'total_credit' => $transactions->sum('credit'),
-            'balance' => $balance,
+            'balance' => $finalBalance,
             'current_balance' => $account->current_balance ?? 0,
-            'balance_in_usd' => CurrencyHelper::toUsd($account->currency_id, $balance)
+            'balance_in_usd' => CurrencyHelper::toUsd($account->currency_id, $finalBalance)
         ];
     }
 
