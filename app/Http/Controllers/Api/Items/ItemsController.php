@@ -529,32 +529,35 @@ class ItemsController extends Controller
             'low_stock_items' => Item::whereRaw('starting_quantity <= low_quantity_alert')
                 ->whereNotNull('low_quantity_alert')
                 ->count(),
-            'total_starting_quantity' => Item::sum('starting_quantity'),
-            'total_inventory_quantity' => DB::table('inventories')->sum('quantity'),
-            'total_net_quantity' => Item::sum('starting_quantity') + DB::table('inventories')->sum('quantity'),
-            'total_inventory_value' => Item::selectRaw('SUM(starting_quantity * base_cost) as total')->value('total') ?? 0,
-            'total_warehouse_inventory_value' => DB::table('inventories')
-                ->join('items', 'inventories.item_id', '=', 'items.id')
-                ->selectRaw('SUM(inventories.quantity * items.base_cost) as total')
-                ->value('total') ?? 0,
-            'items_by_type' => Item::with('itemType:id,name')
-                ->selectRaw('item_type_id, count(*) as count')
-                ->groupBy('item_type_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'items_by_family' => Item::with('itemFamily:id,name')
-                ->selectRaw('item_family_id, count(*) as count')
-                ->groupBy('item_family_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'cost_calculation_breakdown' => Item::selectRaw('cost_calculation, count(*) as count')
-                ->groupBy('cost_calculation')
-                ->get(),
-            'inventory_by_warehouse' => DB::table('inventories')
-                ->join('warehouses', 'inventories.warehouse_id', '=', 'warehouses.id')
-                ->selectRaw('warehouses.name as warehouse_name, SUM(inventories.quantity) as total_quantity')
-                ->groupBy('warehouses.id', 'warehouses.name')
-                ->get(),
+            'items_with_stock' => Item::whereHas('inventories', function ($query) {
+                $query->where('quantity', '>', 0);
+            })->count(),
+            // 'total_starting_quantity' => Item::sum('starting_quantity'),
+            // 'total_inventory_quantity' => DB::table('inventories')->sum('quantity'),
+            // 'total_net_quantity' => Item::sum('starting_quantity') + DB::table('inventories')->sum('quantity'),
+            // 'total_inventory_value' => Item::selectRaw('SUM(starting_quantity * base_cost) as total')->value('total') ?? 0,
+            // 'total_warehouse_inventory_value' => DB::table('inventories')
+            //     ->join('items', 'inventories.item_id', '=', 'items.id')
+            //     ->selectRaw('SUM(inventories.quantity * items.base_cost) as total')
+            //     ->value('total') ?? 0,
+            // 'items_by_type' => Item::with('itemType:id,name')
+            //     ->selectRaw('item_type_id, count(*) as count')
+            //     ->groupBy('item_type_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'items_by_family' => Item::with('itemFamily:id,name')
+            //     ->selectRaw('item_family_id, count(*) as count')
+            //     ->groupBy('item_family_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'cost_calculation_breakdown' => Item::selectRaw('cost_calculation, count(*) as count')
+            //     ->groupBy('cost_calculation')
+            //     ->get(),
+            // 'inventory_by_warehouse' => DB::table('inventories')
+            //     ->join('warehouses', 'inventories.warehouse_id', '=', 'warehouses.id')
+            //     ->selectRaw('warehouses.name as warehouse_name, SUM(inventories.quantity) as total_quantity')
+            //     ->groupBy('warehouses.id', 'warehouses.name')
+            //     ->get(),
         ];
 
         return ApiResponse::show('Item statistics retrieved successfully', $stats);
