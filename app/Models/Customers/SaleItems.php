@@ -32,10 +32,17 @@ class SaleItems extends Model
         'discount_amount',
         'discount_amount_usd',
         'tax_percent',
+        'tax_label',
+        'tax_amount',
+        'tax_amount_usd',
         'total_price',
         'total_price_usd',
         'unit_profit',
         'total_profit',
+        'unit_volume_cbm',
+        'unit_weight_kg',
+        'total_volume_cbm',
+        'total_weight_kg',
         'note',
     ];
 
@@ -47,6 +54,8 @@ class SaleItems extends Model
         'ttc_price' => 'decimal:2',
         'ttc_price_usd' => 'decimal:2',
         'tax_percent' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'tax_amount_usd'=> 'decimal:2',
         'discount_percent' => 'decimal:2',
         'unit_discount_amount' => 'decimal:2',
         'unit_discount_amount_usd' => 'decimal:2',
@@ -56,6 +65,10 @@ class SaleItems extends Model
         'total_price_usd' => 'decimal:2',
         'unit_profit' => 'decimal:2',
         'total_profit' => 'decimal:2',
+        'unit_volume_cbm' => 'decimal:4',
+        'unit_weight_kg' => 'decimal:4',
+        'total_volume_cbm' => 'decimal:4',
+        'total_weight_kg' => 'decimal:4',
     ];
 
     protected $searchable = [
@@ -93,6 +106,32 @@ class SaleItems extends Model
     {
         parent::boot();
 
+        static::creating(function ($saleItem) {
+            // Get tax label from item's tax code
+            if ($saleItem->item_id) {
+                $item = Item::with('taxCode')->find($saleItem->item_id);
+                if ($item) {
+                    // Set tax label from tax code name or 'No' if no tax
+                    $saleItem->tax_label = ($saleItem->tax_percent == 0 || !$item->taxCode)
+                        ? 'No'
+                        : $item->taxCode->name;
+
+                    // Set volume and weight from item
+                    $saleItem->unit_volume_cbm = $item->volume ?? 0;
+                    $saleItem->unit_weight_kg = $item->weight ?? 0;
+                    $saleItem->total_volume_cbm = ($item->volume ?? 0) * $saleItem->quantity;
+                    $saleItem->total_weight_kg = ($item->weight ?? 0) * $saleItem->quantity;
+                }
+            } else {
+                $saleItem->tax_label = $saleItem->tax_percent == 0 ? 'No' : 'TVA';
+            }
+
+            $price = $saleItem->price - $saleItem->unit_discount_amount;
+            $priceUsd = $saleItem->price_usd - $saleItem->unit_discount_amount_usd;
+            $saleItem->tax_amount = $saleItem->tax_percent > 0 ? $price * ($saleItem->tax_percent / 100) : 0 ;
+            $saleItem->tax_amount_usd = $saleItem->tax_percent > 0 ? $priceUsd * ($saleItem->tax_percent / 100) : 0 ;
+        });
+
         static::created(function ($saleItem) {
             // Reduce inventory when sale item is created
             InventoryService::subtract(
@@ -101,6 +140,41 @@ class SaleItems extends Model
                 $saleItem->quantity,
                 "Sale #{$saleItem->sale->code} - Item sold"
             );
+
+            // Recalculate total tax amount on the sale
+            $saleItem->sale->recalculateTotalTax();
+        });
+
+        static::updating(function ($saleItem) {
+            // Recalculate tax label, volume and weight if item, quantity, or tax_percent changed
+            if ($saleItem->isDirty(['item_id', 'quantity', 'tax_percent'])) {
+                if ($saleItem->item_id) {
+                    $item = Item::with('taxCode')->find($saleItem->item_id);
+                    if ($item) {
+                        // Update tax label from tax code name or 'No' if no tax
+                        if ($saleItem->isDirty(['item_id', 'tax_percent'])) {
+                            $saleItem->tax_label = ($saleItem->tax_percent == 0 || !$item->taxCode)
+                                ? 'No'
+                                : $item->taxCode->name;
+                        }
+
+                        // Update volume and weight if item or quantity changed
+                        if ($saleItem->isDirty(['item_id', 'quantity'])) {
+                            $saleItem->unit_volume_cbm = $item->volume ?? 0;
+                            $saleItem->unit_weight_kg = $item->weight ?? 0;
+                            $saleItem->total_volume_cbm = ($item->volume ?? 0) * $saleItem->quantity;
+                            $saleItem->total_weight_kg = ($item->weight ?? 0) * $saleItem->quantity;
+                        }
+                    }
+                } else {
+                    $saleItem->tax_label = $saleItem->tax_percent == 0 ? 'No' : 'TVA';
+                }
+            }
+
+            $price = $saleItem->price - $saleItem->unit_discount_amount;
+            $priceUsd = $saleItem->price_usd - $saleItem->unit_discount_amount_usd;
+            $saleItem->tax_amount = $saleItem->tax_percent > 0 ? $price * ($saleItem->tax_percent / 100) : 0;
+            $saleItem->tax_amount_usd = $saleItem->tax_percent > 0 ? $priceUsd * ($saleItem->tax_percent / 100) : 0;
         });
 
         static::updated(function ($saleItem) {
@@ -128,6 +202,11 @@ class SaleItems extends Model
                     );
                 }
             }
+
+            // Recalculate total tax amount on the sale if tax-related fields changed
+            if ($saleItem->isDirty(['tax_amount', 'tax_amount_usd', 'quantity'])) {
+                $saleItem->sale->recalculateTotalTax();
+            }
         });
 
         static::deleted(function ($saleItem) {
@@ -145,6 +224,9 @@ class SaleItems extends Model
                     $saleItem->quantity,
                     "Sale #{$saleItem->sale->code} - Item deleted/cancelled"
                 );
+
+                // Recalculate total tax amount on the sale
+                $saleItem->sale->recalculateTotalTax();
             }
         });
 

@@ -170,6 +170,8 @@ return [
 
 
     'base_currency' => 'USD', // Default
+    'local_currency' => 'LBP', // local currency of country
+    
     // 'base_currency' => 'EUR', // European operations
     // 'base_currency' => 'GBP', // UK operations
 

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('code')->unique(); // auto generated invoice code
             $table->datetime('date');
+            $table->datetime('value_date')->nullable()->comment('date by payment term');
             $table->enum('prefix', ['INX', 'INV'])->default('INV');
             $table->enum('status', ['Waiting', 'Shipped', 'Delivered'])->nullable(); // null untill its been approved
 
@@ -47,6 +48,14 @@ return new class extends Migration
 
             $table->decimal('total_volume_cbm', 10,4)->default(0);
             $table->decimal('total_weight_kg', 10,4)->default(0);
+
+            $table->money('total_tax_amount')->default(0); // sum of all tax amount
+            $table->money('total_tax_amount_usd')->default(0);
+
+            $table->rate('local_curreny_rate')->default(0); // country local currency rate here it is LL
+            $table->string('invoice_tax_label', 200)->default('TVA 11%');
+            $table->string('invoice_nb1', 200)->default('Payment in USD or Market Price.');
+            $table->string('invoice_nb2', 200)->default('ملحظة : ألضريبة على ألقيمة المضافة ل تسترد بعد ثلثة أشهر من تاريخ إصدار ألفاتورة');
 
             $table->text('note')->nullable();  // for remark
             

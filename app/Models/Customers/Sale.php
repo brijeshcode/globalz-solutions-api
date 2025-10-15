@@ -4,6 +4,7 @@ namespace App\Models\Customers;
 
 use App\Models\Employees\Employee;
 use App\Models\Setting;
+use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
@@ -51,11 +52,19 @@ class Sale extends Model
         'approved_at',
         'approve_note',
         'note',
+        'value_date',
+        'total_tax_amount',
+        'total_tax_amount_usd',
+        'local_curreny_rate',
+        'invoice_tax_label',
+        'invoice_nb1',
+        'invoice_nb2',
     ];
 
     protected $casts = [
         'date' => 'datetime',
         'approved_at' => 'datetime',
+        'value_date' => 'datetime',
         'currency_rate' => 'decimal:4',
         'credit_limit' => 'decimal:2',
         'outStanding_balance' => 'decimal:2',
@@ -66,6 +75,9 @@ class Sale extends Model
         'total' => 'decimal:2',
         'total_usd' => 'decimal:2',
         'total_profit' => 'decimal:2',
+        'total_tax_amount' => 'decimal:2',
+        'total_tax_amount_usd' => 'decimal:2',
+        'local_curreny_rate' => 'decimal:4',
     ];
 
     protected $searchable = [
@@ -210,7 +222,23 @@ class Sale extends Model
     {
         return is_null($this->approved_by);
     }
-    
+
+    public function recalculateTotalTax(): void
+    {
+        $totalTaxAmount = $this->saleItems->sum(function ($item) {
+            return $item->tax_amount * $item->quantity;
+        });
+
+        $totalTaxAmountUsd = $this->saleItems->sum(function ($item) {
+            return $item->tax_amount_usd * $item->quantity;
+        });
+
+        $this->updateQuietly([
+            'total_tax_amount' => $totalTaxAmount,
+            'total_tax_amount_usd' => $totalTaxAmountUsd,
+        ]);
+    }
+
     // Model Events
     protected static function boot()
     {
@@ -221,7 +249,22 @@ class Sale extends Model
             if (!$sale->code) {
                 $sale->setSaleCode();
             }
+
+            // Calculate value_date based on payment term
+            if ($sale->customer_payment_term_id) {
+                $paymentTerm = CustomerPaymentTerm::find($sale->customer_payment_term_id);
+                if ($paymentTerm && $paymentTerm->days) {
+                    $sale->value_date = $sale->date->addDays($paymentTerm->days);
+                }
+            }
+
+            $localCurrency = Currency::with('activeRate')->where('code', config('app.local_currency'))->first();
+            $sale->local_curreny_rate = $localCurrency && $localCurrency->activeRate ? $localCurrency->activeRate->rate : 1;
+            $sale->invoice_tax_label = 'TVA 11%';
+            $sale->invoice_nb1 = 'Payment in USD or Market Price.';
+            $sale->invoice_nb2 = 'ملحظة : ألضريبة على ألقيمة المضافة ل تسترد بعد ثلثة أشهر من تاريخ إصدار ألفاتورة';
         });
+
         static::created(function ($sale) {
             // Only update customer balance if sale is approved
             if ($sale->isApproved()) {
@@ -229,6 +272,17 @@ class Sale extends Model
             }
         });
 
+        static::updating(function ($sale) {
+            // Recalculate value_date only if payment term or date changes
+            if ($sale->isDirty('customer_payment_term_id') || $sale->isDirty('date')) {
+                if ($sale->customer_payment_term_id) {
+                    $paymentTerm = CustomerPaymentTerm::find($sale->customer_payment_term_id);
+                    if ($paymentTerm && $paymentTerm->days) {
+                        $sale->value_date = $sale->date->addDays($paymentTerm->days);
+                    }
+                }
+            }
+        });
 
         static::deleted(function ($sale) {
             // When sale is deleted, restore inventory by manually processing each sale item

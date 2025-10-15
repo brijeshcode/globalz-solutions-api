@@ -145,7 +145,7 @@ class CustomerReturnResource extends JsonResource
                         'item' => [
                             'id' => $item->item_id,
                             'code' => $item->item_code,
-                            'description' => $item->description,
+                            'description' => $item->item?->description,
                             // 'unit' => $item->itemUnit->name
                         ],
                     ];
