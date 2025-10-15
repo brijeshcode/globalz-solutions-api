@@ -22,7 +22,13 @@ class ItemsImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => 'required|file|mimes:csv,xlsx,xls|max:10240', // Max 10MB
+            'file' => [
+                'required',
+                'file',
+                'mimes:csv,xlsx,xls', // Extension validation
+                'mimetypes:text/csv,text/plain,application/csv,text/comma-separated-values,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'max:10240', // Max 10MB
+            ],
             'skip_duplicates' => 'sometimes|boolean',
             'update_existing' => 'sometimes|boolean',
         ];
