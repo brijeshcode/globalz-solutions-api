@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Accounts;
 
+use App\Helpers\CurrencyHelper;
 use App\Helpers\DataHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
@@ -12,6 +13,7 @@ use App\Models\Suppliers\Purchase;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Calculation\DateTimeExcel\Current;
 
 class AccountStatementController extends Controller
 {
@@ -172,9 +174,9 @@ class AccountStatementController extends Controller
             );
         }
 
-        // Sort by date
+        // Sort by date ascending to calculate running balance correctly
         $sortedTransactions = $allTransactions->sortBy('timestamp')->values();
-        // info($sortedTransactions);
+
         // Calculate running balance
         $balance = 0;
         $transactionsWithBalance = $sortedTransactions->map(function ($transaction) use (&$balance) {
@@ -183,7 +185,8 @@ class AccountStatementController extends Controller
             return $transaction;
         });
 
-        return $transactionsWithBalance->values();
+        // Reverse to show latest transactions on top
+        return $transactionsWithBalance->reverse()->values();
     }
 
     private function getCustomerPayments(Request $request, Account $account, ?string $noteSearch = null)
@@ -289,12 +292,14 @@ class AccountStatementController extends Controller
     {
         $openingBalance = $account->opening_balance ?? 0;
 
+        $balance = $transactions->last()['balance'] ?? $openingBalance;
         return [
             'opening_balance' => $openingBalance,
             'total_debit' => $transactions->sum('debit'),
             'total_credit' => $transactions->sum('credit'),
-            'balance' => $transactions->last()['balance'] ?? $openingBalance,
+            'balance' => $balance,
             'current_balance' => $account->current_balance ?? 0,
+            'balance_in_usd' => CurrencyHelper::toUsd($account->currency_id, $balance)
         ];
     }
 

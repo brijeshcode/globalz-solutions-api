@@ -25,6 +25,7 @@ class AccountResource extends JsonResource
                 return [
                     'id' => $this->currency->id,
                     'name' => $this->currency->name,
+                    'code' => $this->currency->code,
                 ];
             }),
             'account_type' => $this->whenLoaded('accountType', function () {

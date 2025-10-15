@@ -15,6 +15,7 @@ class PurchasesUpdateRequest extends FormRequest
     {
         return [
             'date' => 'sometimes|required|date',
+            'prefix' => 'sometimes|required|in:PAX,PUR',
             'supplier_id' => 'sometimes|required|integer|exists:suppliers,id',
             'warehouse_id' => 'sometimes|required|integer|exists:warehouses,id',
             'currency_id' => 'sometimes|required|integer|exists:currencies,id',

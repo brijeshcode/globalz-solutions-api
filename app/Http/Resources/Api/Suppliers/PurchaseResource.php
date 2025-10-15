@@ -17,6 +17,7 @@ class PurchaseResource extends JsonResource
         return [
             'id' => $this->id,
             'code' => $this->code,
+            'prefix' => $this->prefix,
             'date' => $this->date?->format('Y-m-d'),
             'supplier_invoice_number' => $this->supplier_invoice_number,
             'currency_rate' => $this->currency_rate,

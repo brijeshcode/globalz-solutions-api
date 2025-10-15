@@ -29,6 +29,7 @@ class Purchase extends Model
     protected $fillable = [
         'code',
         'date',
+        'prefix',
         'supplier_id',
         'warehouse_id',
         'currency_id',
@@ -77,6 +78,7 @@ class Purchase extends Model
 
     protected $searchable = [
         'code',
+        'prefix',
         'supplier_invoice_number',
         'note',
     ];
@@ -86,6 +88,7 @@ class Purchase extends Model
         'code',
         'date',
         'supplier_id',
+        'prefix',
         'warehouse_id',
         'currency_id',
         'supplier_invoice_number',
@@ -174,6 +177,11 @@ class Purchase extends Model
     public function getTotalItemsCountAttribute(): int
     {
         return $this->purchaseItems()->count();
+    }
+
+    public function getPurchaseCodeAttribute(): string
+    {
+        return $this->prefix . $this->code;
     }
 
     public function getTotalQuantityAttribute(): float

@@ -14,6 +14,7 @@ class PurchasesStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'prefix' => 'required|in:PAX,PUR',
             'date' => 'required|date',
             'supplier_id' => 'required|integer|exists:suppliers,id',
             'warehouse_id' => 'required|integer|exists:warehouses,id',

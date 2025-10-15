@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Accounts;
 
+use App\Helpers\CurrencyHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Accounts\AccountsStoreRequest;
 use App\Http\Requests\Api\Accounts\AccountsUpdateRequest;
@@ -18,30 +19,7 @@ class AccountsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Account::query()
-            ->with([
-                'accountType:id,name',
-                'currency:id,name,code,symbol',
-                'createdBy:id,name',
-                'updatedBy:id,name'
-            ])
-            ->searchable($request)
-            ->sortable($request);
-
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        // Filter by account type
-        if ($request->has('account_type_id')) {
-            $query->where('account_type_id', $request->account_type_id);
-        }
-
-        // Filter by currency
-        if ($request->has('currency_id')) {
-            $query->where('currency_id', $request->currency_id);
-        }
+        $query = $this->query($request);
 
         $accounts = $this->applyPagination($query, $request);
 
@@ -174,25 +152,63 @@ class AccountsController extends Controller
         return ApiResponse::delete('Account permanently deleted successfully');
     }
 
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
+        $query = $this->query($request);
+        $accounts =  (clone $query)->with('currency:id,code')->get();
+
+        // Calculate total current balance in USD
+        $totalCurrentBalanceUsd = 0;
+
+        foreach ($accounts as $account) {
+            $balance = $account->current_balance ?? 0;
+
+            // Skip conversion if currency is already USD
+            if ($account->currency && strtoupper($account->currency->code) === 'USD') {
+                $totalCurrentBalanceUsd += $balance;
+            } else {
+                $balanceUsd = CurrencyHelper::toUsd(
+                    $account->currency_id,
+                    $balance
+                );
+                $totalCurrentBalanceUsd += $balanceUsd;
+            }
+        }
+
         $stats = [
-            'total_accounts' => Account::count(),
-            'active_accounts' => Account::where('is_active', true)->count(),
-            'inactive_accounts' => Account::where('is_active', false)->count(),
-            'trashed_accounts' => Account::onlyTrashed()->count(),
-            'accounts_by_type' => Account::with('accountType:id,name')
-                ->selectRaw('account_type_id, count(*) as count')
-                ->groupBy('account_type_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'accounts_by_currency' => Account::with('currency:id,name,code')
-                ->selectRaw('currency_id, count(*) as count')
-                ->groupBy('currency_id')
-                ->having('count', '>', 0)
-                ->get(),
+            'total_accounts' => $accounts->count(),
+            'total_current_balance_usd' => round($totalCurrentBalanceUsd, 2),
         ];
 
         return ApiResponse::show('Account statistics retrieved successfully', $stats);
+    }
+
+    private function query( Request $request)
+    {
+        $query = Account::query()
+            ->with([
+                'accountType:id,name',
+                'currency:id,name,code,symbol',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ])
+            ->searchable($request)
+            ->sortable($request);
+
+        // Filter by active status
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        // Filter by account type
+        if ($request->has('account_type_id')) {
+            $query->where('account_type_id', $request->account_type_id);
+        }
+
+        // Filter by currency
+        if ($request->has('currency_id')) {
+            $query->where('currency_id', $request->currency_id);
+        }
+        return $query; 
     }
 }

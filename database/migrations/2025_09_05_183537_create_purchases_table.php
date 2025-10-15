@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('purchases', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique(); // auto generated invoice code
+            $table->enum('prefix', ['PUR', 'PAX'])->default('PUR');
             $table->datetime('date');
 
             $table->unsignedBigInteger('supplier_id')->nullable()->index();
