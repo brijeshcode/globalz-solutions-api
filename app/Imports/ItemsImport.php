@@ -214,7 +214,7 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
         // Lookup tax code by name (REQUIRED)
         if (!empty($row['tax_code']) || !empty($row['tax'])) {
             $taxName = $row['tax_code'] ?? $row['tax'];
-            $taxCode = TaxCode::where('name', $taxName)->first();
+            $taxCode = TaxCode::where('code', $taxName)->first();
             if ($taxCode) {
                 $data['tax_code_id'] = $taxCode->id;
             } else {
