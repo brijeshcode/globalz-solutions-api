@@ -15,10 +15,23 @@ class SetupSeeder extends Seeder
 
         // Core setup data (currencies and countries)
         $this->call(CurrencySeeder::class);
-        $this->call(CountrySeeder::class);
-        
+
         // Employee setup data
         $this->call(DepartmentSeeder::class);
+
+        // Run testing setup only in local environment
+        if (app()->environment('local')) {
+            $this->command->info('Running testing setup for local environment...');
+            $this->testingSetup();
+        }
+
+        $this->command->info('Setup seeders completed successfully!');
+    }
+
+    private function testingSetup() : void 
+    {
+        $this->call(CountrySeeder::class);
+
 
         // Customer setup data
         $this->call(CustomerSetupSeeder::class);
@@ -45,7 +58,5 @@ class SetupSeeder extends Seeder
         $this->call(WarehouseSeeder::class);
         $this->call(SupplierTypeSeeder::class);
         $this->call(SupplierPaymentTermSeeder::class);
-
-        $this->command->info('Setup seeders completed successfully!');
     }
 }

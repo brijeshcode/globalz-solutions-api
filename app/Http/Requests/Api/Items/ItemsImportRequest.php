@@ -25,8 +25,8 @@ class ItemsImportRequest extends FormRequest
             'file' => [
                 'required',
                 'file',
-                'mimes:csv,xlsx,xls', // Extension validation
                 'mimetypes:text/csv,text/plain,application/csv,text/comma-separated-values,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'mimes:csv,xlsx,xls', // Extension validation
                 'max:10240', // Max 10MB
             ],
             'skip_duplicates' => 'sometimes|boolean',

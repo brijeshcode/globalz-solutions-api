@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
 use App\Http\Controllers\Api\Suppliers\PurchasesController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
+use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -237,6 +238,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('setups')->name('setups.')->group(function () {
         
+        Route::prefix('customers')->middleware(['auth'])->group(function () {
+            Route::post('/import', [ImportCustomerSetupController::class, 'import'])->name('customer.import');
+            // Route::get('/settings/template', [ImportCustomerSetupController::class, 'downloadTemplate'])->name('settings.template');
+        });
+
         Route::controller(CompanyController::class)->prefix('company')->name('company.')->group(function () {
             Route::get('/', 'get')->name('get');
             Route::post('/getSelected', 'getSelected')->name('getSelected');

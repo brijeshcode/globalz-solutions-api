@@ -67,7 +67,7 @@ class DatabaseSeeder extends Seeder
         $this->call(SetupSeeder::class);
         $this->call(SettingsSeeder::class);
         
-        // Seed development data
+        // // Seed development data
         $this->call(SupplierSeeder::class);
         $this->call(EmployeeSeeder::class);
         $this->call(CustomerSeeder::class);
