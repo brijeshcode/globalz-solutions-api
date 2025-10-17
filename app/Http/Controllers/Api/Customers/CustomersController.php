@@ -528,6 +528,8 @@ class CustomersController extends Controller
             'discount_percentage',
             'credit_limit',
             'notes',
+            'created_at',
+            'total_old_sales',
             'is_active'
         ];
 
@@ -554,6 +556,8 @@ class CustomersController extends Controller
                 5,
                 100000,
                 'VIP Customer',
+                '22-12-2025',
+                0,
                 true
             ]
         ];

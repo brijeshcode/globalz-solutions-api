@@ -15,6 +15,7 @@ use App\Helpers\ApiHelper;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
@@ -158,6 +159,8 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             'credit_limit' => $row['credit_limit'] ?? null,
             'notes' => $row['notes'] ?? $row['remarks'] ?? null,
             'is_active' => isset($row['is_active']) ? filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN) : true,
+            'created_at' => $this->parseDate($row['created_at'] ?? null),
+            'total_old_sales' => $row['total_old_sales'] ?? 0,
         ];
 
         // Required field validation
@@ -244,6 +247,51 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             'data' => $data,
             'starting_balance' => $startingBalance
         ];
+    }
+
+    /**
+     * Parse date from various formats
+     */
+    protected function parseDate($dateValue): ?string
+    {
+        if (empty($dateValue)) {
+            return null;
+        }
+
+        try {
+            // Handle Excel numeric date format
+            if (is_numeric($dateValue)) {
+                // Excel dates are stored as number of days since 1900-01-01
+                $unix_date = ($dateValue - 25569) * 86400;
+                return Carbon::createFromTimestamp($unix_date)->format('Y-m-d H:i:s');
+            }
+
+            // Try parsing common date formats
+            $formats = [
+                'Y-m-d H:i:s',  // 2025-12-22 10:30:00
+                'Y-m-d',        // 2025-12-22
+                'd-m-Y',        // 22-12-2025
+                'd/m/Y',        // 22/12/2025
+                'm-d-Y',        // 12-22-2025
+                'm/d/Y',        // 12/22/2025
+                'd-m-Y H:i:s',  // 22-12-2025 10:30:00
+                'd/m/Y H:i:s',  // 22/12/2025 10:30:00
+            ];
+
+            foreach ($formats as $format) {
+                $date = Carbon::createFromFormat($format, $dateValue);
+                if ($date !== false) {
+                    return $date->format('Y-m-d H:i:s');
+                }
+            }
+
+            // Try Carbon's flexible parser as fallback
+            return Carbon::parse($dateValue)->format('Y-m-d H:i:s');
+        } catch (\Exception $e) {
+            // If date parsing fails, log and return null
+            Log::warning("Failed to parse date: {$dateValue}", ['error' => $e->getMessage()]);
+            return null;
+        }
     }
 
     /**

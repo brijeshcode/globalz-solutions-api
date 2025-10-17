@@ -34,6 +34,7 @@ class Customer extends Model
         'customer_province_id',
         'customer_zone_id',
         // 'opening_balance',
+        'total_old_sales',
         'current_balance',
         'address',
         'city',

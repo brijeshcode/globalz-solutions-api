@@ -72,7 +72,8 @@ class CustomerResource extends JsonResource
             'current_balance' => $this->current_balance ? (float) $this->current_balance : 0,
             'balance_status' => $this->getBalanceStatusAttribute(),
             // 'current_balance' => $this->getCurrentBalanceAttribute(),
-
+            'total_old_sales' => $this->total_old_sales,
+            
             // Additional Information
             'address' => $this->address,
             'city' => $this->city,

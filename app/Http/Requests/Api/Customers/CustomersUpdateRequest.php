@@ -40,6 +40,7 @@ class CustomersUpdateRequest extends FormRequest
             
             // Balance Information
             // 'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
+            'total_old_sales' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
             'current_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
 
             // Additional Info Tab

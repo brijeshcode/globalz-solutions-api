@@ -26,6 +26,7 @@ return new class extends Migration
 
 
             // $table->decimal('opening_balance', 15, 4)->default(0); // Starting balance
+            $table->decimal('total_old_sales', 15, 4)->default(0); // sales of old system
             $table->decimal('current_balance', 15, 4)->default(0); // Running balance
 
             // Additional Info Tab
