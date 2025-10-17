@@ -126,6 +126,9 @@ class PurchaseResource extends JsonResource
                 });
             }),
             
+            // Shipping status
+            'status' => $this->status,
+            
             'documents' => $this->whenLoaded('documents', function () {
                 return $this->documents->map(function ($doc) {
                     return [

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Suppliers;
 
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Suppliers\PurchasesStoreRequest;
 use App\Http\Requests\Api\Suppliers\PurchasesUpdateRequest;
@@ -237,6 +238,20 @@ class PurchasesController extends Controller
             $purchases,
             PurchaseResource::class
         );
+    }
+
+    public function changeStatus(Request $request, Purchase $purchase): JsonResponse
+    {
+        if (! RoleHelper::isWarehouseManager()) {
+            return ApiResponse::customError('Only warehouse manager can change the status.', 422);
+        }
+
+        $purchase->update(['status' => $request->status]);
+        return ApiResponse::update(
+            'Purchase status updated successfully',
+            new PurchaseResource($purchase)
+        );
+        $purchase->load(['purchaseItems.item', 'warehouse', 'currency']);
     }
 
     /**

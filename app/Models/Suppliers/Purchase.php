@@ -29,6 +29,7 @@ class Purchase extends Model
     protected $fillable = [
         'code',
         'date',
+        'status',
         'prefix',
         'supplier_id',
         'warehouse_id',
@@ -78,6 +79,7 @@ class Purchase extends Model
 
     protected $searchable = [
         'code',
+        'status',
         'prefix',
         'supplier_invoice_number',
         'note',
@@ -87,6 +89,7 @@ class Purchase extends Model
         'id',
         'code',
         'date',
+        'status',
         'supplier_id',
         'prefix',
         'warehouse_id',
@@ -293,6 +296,7 @@ class Purchase extends Model
         parent::boot();
         
         static::creating(function ($purchase) {
+            $purchase->status = 'Waiting';
             if (!$purchase->code) {
                 $purchase->setPurchaseCode();
             }

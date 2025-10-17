@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('code')->unique(); // auto generated invoice code
             $table->enum('prefix', ['PUR', 'PAX'])->default('PUR');
+            $table->enum('status', ['Waiting', 'Shipped', 'Delivered'])->default('Waiting'); // null untill its been approved
             $table->datetime('date');
 
             $table->unsignedBigInteger('supplier_id')->nullable()->index();
