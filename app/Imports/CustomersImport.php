@@ -65,14 +65,10 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
                 $validatedData = $result['data'];
                 $startingBalance = $result['starting_balance'] ?? null;
 
-                // Check for duplicates by code or name
+                // Check for duplicates by code only (allow duplicate names)
                 $existingCustomer = null;
                 if (!empty($validatedData['code'])) {
                     $existingCustomer = Customer::withTrashed()->where('code', $validatedData['code'])->first();
-                }
-
-                if (!$existingCustomer && !empty($validatedData['name'])) {
-                    $existingCustomer = Customer::withTrashed()->where('name', $validatedData['name'])->first();
                 }
 
                 // Handle duplicate logic
@@ -88,7 +84,7 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
                         $this->results['skipped']++;
                         $this->results['errors'][] = [
                             'row' => $rowNumber,
-                            'error' => "Customer already exists with code: {$validatedData['code']} or name: {$validatedData['name']}"
+                            'error' => "Customer already exists with code: {$validatedData['code']}"
                         ];
                     }
                 } else {
