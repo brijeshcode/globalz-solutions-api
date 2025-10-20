@@ -112,7 +112,7 @@ class ListDataController extends Controller
     // suppliers
     private function suppliers()
     {
-        return Supplier::active()->orderby('name')->get(['id', 'name', 'email', 'phone']);
+        return Supplier::active()->orderby('name')->get(['id', 'code', 'name', 'email', 'phone']);
     }
 
     //customers

@@ -79,7 +79,6 @@ class Purchase extends Model
 
     protected $searchable = [
         'code',
-        'status',
         'prefix',
         'supplier_invoice_number',
         'note',

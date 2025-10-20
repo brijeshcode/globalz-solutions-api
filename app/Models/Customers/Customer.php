@@ -84,7 +84,7 @@ class Customer extends Model
         'customer_zone_id',
         'city',
         // 'opening_balance',
-        'current_balance',
+        // 'current_balance', // Removed: This is a computed accessor, cannot be sorted at DB level
         'salesperson_id',
         'discount_percentage',
         'credit_limit',

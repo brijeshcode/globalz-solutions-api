@@ -224,6 +224,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('suppliers')->name('suppliers.')->group(function () {
 
         Route::controller(PurchasesController::class)->prefix('purchases')->name('purchases.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
             Route::get('trashed', 'trashed')->name('trashed');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');

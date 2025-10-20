@@ -46,6 +46,12 @@ class CustomerPaymentResource extends JsonResource
                     'address' => $this->when($this->customer->address, $this->customer->address),
                     'city' => $this->when($this->customer->city, $this->customer->city),
                     'mobile' => $this->when($this->customer->mobile, $this->customer->mobile),
+                    'salesperson' => $this->when($this->customer->relationLoaded('salesperson') && $this->customer->salesperson, function () {
+                        return [
+                            'id' => $this->customer->salesperson->id,
+                            'name' => $this->customer->salesperson->name,
+                        ];
+                    }),
                 ];
             }),
 

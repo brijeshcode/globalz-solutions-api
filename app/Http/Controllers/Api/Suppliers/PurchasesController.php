@@ -30,49 +30,7 @@ class PurchasesController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Purchase::query()
-            ->with([
-                'createdBy:id,name', 
-                'updatedBy:id,name', 
-                'supplier:id,code,name', 
-                'warehouse:id,name',
-                'currency:id,name,code,symbol',
-                'account:id,name'
-            ])
-            ->searchable($request)
-            ->sortable($request);
-
-        if ($request->has('supplier_id')) {
-            $query->where('supplier_id', $request->input('supplier_id'));
-        }
-
-        if ($request->has('warehouse_id')) {
-            $query->where('warehouse_id', $request->input('warehouse_id'));
-        }
-
-        if ($request->has('currency_id')) {
-            $query->where('currency_id', $request->input('currency_id'));
-        }
-
-        if ($request->has('account_id')) {
-            $query->where('account_id', $request->input('account_id'));
-        }
-
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->input('start_date'), $request->input('end_date'));
-        }
-
-        if ($request->has('date')) {
-            $query->whereDate('date', $request->input('date'));
-        }
-
-        if ($request->has('code')) {
-            $query->byCode($request->input('code'));
-        }
-
-        if ($request->has('supplier_invoice_number')) {
-            $query->bySupplierInvoiceNumber($request->input('supplier_invoice_number'));
-        }
+        $query = $this->purchaseQuery($request);
 
         $purchases = $this->applyPagination($query, $request);
 
@@ -382,5 +340,76 @@ class PurchasesController extends Controller
                 ];
             })
         );
+    }
+
+    public function stats(Request $request): JsonResponse
+    {
+        $query = $this->purchaseQuery($request);
+
+        $stats = [
+            'purchase_by_status' => (clone $query)->selectRaw('status, count(*) as count')
+                ->groupBy('status')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    return [$item->status => $item->count];
+                }),
+            
+        ];
+
+        return ApiResponse::show('Sale statistics retrieved successfully', $stats);
+    }
+
+    private function purchaseQuery(Request $request)
+    {
+        $query = Purchase::query()
+            ->with([
+                'createdBy:id,name', 
+                'updatedBy:id,name', 
+                'supplier:id,code,name', 
+                'warehouse:id,name',
+                'currency:id,name,code,symbol',
+                'account:id,name'
+            ])
+            ->searchable($request)
+            ->sortable($request);
+
+        if ($request->has('supplier_id')) {
+            $query->where('supplier_id', $request->input('supplier_id'));
+        }
+
+        if ($request->has('warehouse_id')) {
+            $query->where('warehouse_id', $request->input('warehouse_id'));
+        }
+
+        if ($request->has('currency_id')) {
+            $query->where('currency_id', $request->input('currency_id'));
+        }
+
+        if ($request->has('account_id')) {
+            $query->where('account_id', $request->input('account_id'));
+        }
+
+        if ($request->has('code')) {
+            $query->byCode($request->input('code'));
+        }
+
+        if ($request->has('supplier_invoice_number')) {
+            $query->bySupplierInvoiceNumber($request->input('supplier_invoice_number'));
+        }
+
+        if ($request->has('status')) {
+            $query->where('status' , $request->status);
+        }
+
+        if ($request->has('from_date')) {
+            info('from date');
+            $query->where('date', '>=', $request->from_date);
+        }
+
+        if ($request->has('to_date')) {
+            $query->where('date', '<=', $request->to_date);
+        }
+
+        return $query;
     }
 }
