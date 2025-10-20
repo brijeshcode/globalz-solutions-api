@@ -170,9 +170,6 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
         ];
 
         // Required field validation
-        if (empty($data['short_name'])) {
-            return ['error' => 'Item short name is required'];
-        }
 
         if (empty($data['description'])) {
             return ['error' => 'Item description is required'];
