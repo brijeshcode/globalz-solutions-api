@@ -16,13 +16,19 @@ trait Sortable
         $sortDirection = $request->input('sort_direction', $this->getDefaultSortDirection());
 
         // Validate sort direction
-        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) 
-            ? strtolower($sortDirection) 
+        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc'])
+            ? strtolower($sortDirection)
             : $this->getDefaultSortDirection();
 
         // Validate sort field
         if (!$this->isSortableField($sortBy)) {
             $sortBy = $this->getDefaultSortField();
+        }
+
+        // Check if model has custom sorting method for this field
+        $customSortMethod = 'sortBy' . str_replace('_', '', ucwords($sortBy, '_'));
+        if (method_exists($this, $customSortMethod)) {
+            return $this->$customSortMethod($query, $sortDirection);
         }
 
         return $query->orderBy($sortBy, $sortDirection);
