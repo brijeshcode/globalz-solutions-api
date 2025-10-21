@@ -22,45 +22,7 @@ class CustomerPaymentOrdersController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = CustomerPayment::query()
-            ->with([
-                'customer:id,name,code',
-                'currency:id,name,code',
-                'customerPaymentTerm:id,name,days',
-                'approvedBy:id,name',
-                'account:id,name',
-                'createdBy:id,name',
-                'updatedBy:id,name'
-            ])
-            ->pending()
-            ->searchable($request)
-            ->sortable($request);
-
-        if ($request->has('customer_id')) {
-            $query->byCustomer($request->customer_id);
-        }
-
-        if ($request->has('currency_id')) {
-            $query->byCurrency($request->currency_id);
-        }
-
-        if ($request->has('prefix')) {
-            $query->byPrefix($request->prefix);
-        }
-
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->start_date, $request->end_date);
-        }
-
-        // Filter by salesman if user has salesman role
-        if (RoleHelper::isSalesman()) {
-            $salesmanEmployee = RoleHelper::getSalesmanEmployee();
-            if ($salesmanEmployee) {
-                $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
-                    $q->where('salesperson_id', $salesmanEmployee->id);
-                });
-            }
-        }
+        $query = $this->paymentOrderQuery($request);
 
         $payments = $this->applyPagination($query, $request);
 
@@ -256,30 +218,60 @@ class CustomerPaymentOrdersController extends Controller
         return ApiResponse::delete('Customer payment permanently deleted successfully');
     }
 
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
+        $query = $this->paymentOrderQuery($request);
+
         $stats = [
-            'total_payments' => CustomerPayment::count(),
-            'pending_payments' => CustomerPayment::pending()->count(),
-            'approved_payments' => CustomerPayment::approved()->count(),
-            'trashed_payments' => CustomerPayment::onlyTrashed()->count(),
-            'total_amount' => CustomerPayment::approved()->sum('amount'),
-            'total_amount_usd' => CustomerPayment::approved()->sum('amount_usd'),
-            'payments_by_prefix' => CustomerPayment::selectRaw('prefix, count(*) as count, sum(amount) as total_amount')
-                ->groupBy('prefix')
-                ->get(),
-            'payments_by_currency' => CustomerPayment::with('currency:id,name,code')
-                ->selectRaw('currency_id, count(*) as count, sum(amount) as total_amount')
-                ->groupBy('currency_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'recent_approved' => CustomerPayment::approved()
-                ->with(['customer:id,name,code', 'approvedBy:id,name'])
-                ->orderBy('approved_at', 'desc')
-                ->limit(5)
-                ->get(),
+            'total_payments' => (clone $query)->pending()->count(),
+            'total_amount_usd' => (clone $query)->pending()->sum('amount_usd'),
         ];
 
         return ApiResponse::show('Customer payment statistics retrieved successfully', $stats);
+    }
+
+    private function paymentOrderQuery(Request $request)
+    {
+        $query = CustomerPayment::query()
+            ->with([
+                'customer:id,name,code',
+                'currency:id,name,code',
+                'customerPaymentTerm:id,name,days',
+                'approvedBy:id,name',
+                'account:id,name',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ])
+            ->pending()
+            ->searchable($request)
+            ->sortable($request);
+
+        if ($request->has('customer_id')) {
+            $query->byCustomer($request->customer_id);
+        }
+
+        if ($request->has('currency_id')) {
+            $query->byCurrency($request->currency_id);
+        }
+
+        if ($request->has('prefix')) {
+            $query->byPrefix($request->prefix);
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->byDateRange($request->start_date, $request->end_date);
+        }
+
+        // Filter by salesman if user has salesman role
+        if (RoleHelper::isSalesman()) {
+            $salesmanEmployee = RoleHelper::getSalesmanEmployee();
+            if ($salesmanEmployee) {
+                $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
+                    $q->where('salesperson_id', $salesmanEmployee->id);
+                });
+            }
+        }
+
+        return $query;
     }
 }
