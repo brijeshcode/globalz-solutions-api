@@ -12,6 +12,7 @@ use App\Http\Responses\ApiResponse;
 use App\Imports\CustomersImport;
 use App\Models\Customers\Customer;
 use App\Models\Setups\Employees\Department;
+use App\Services\Customers\CustomerBalanceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -702,5 +703,42 @@ class CustomersController extends Controller
 
         return $query;
 
+    }
+
+    /**
+     * Refresh all customer balances
+     * This recalculates current_balance for all customers based on monthly balance data
+     */
+    public function refreshBalances(Request $request): JsonResponse
+    { 
+        try {
+
+            // Call the balance service to refresh all customers
+            $stats = CustomerBalanceService::refreshAllCustomerBalance();
+
+            // Check if it was skipped
+            if (isset($stats['skipped']) && $stats['skipped'] === true) {
+                return ApiResponse::show(
+                    'Customer balance refresh was skipped. Use force_refresh=true to execute.',
+                    $stats
+                );
+            }
+
+            // Success response with statistics
+            return ApiResponse::show(
+                'Customer balances refreshed successfully',
+                $stats
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Customer balance refresh failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ApiResponse::error(
+                'Failed to refresh customer balances: ' . $e->getMessage()
+            );
+        }
     }
 }

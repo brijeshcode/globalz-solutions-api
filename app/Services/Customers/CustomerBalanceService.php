@@ -98,6 +98,62 @@ class CustomerBalanceService
         }
     }
 
+    /**
+     * Refresh balance for all customers
+     *
+     * @param bool $forceRefresh - Set to true to force refresh, false to skip
+     * @return array - Statistics about the refresh operation
+     */
+    public static function refreshAllCustomerBalance(): array
+    {
+
+        $stats = [
+            'total' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => 0,
+            'error_details' => []
+        ];
+
+        try {
+            // Use chunk to handle large datasets efficiently
+            // Process 500 customers at a time to balance memory usage and performance
+            Customer::select('id', 'current_balance')->chunk(500, function ($customers) use (&$stats) {
+                foreach ($customers as $customer) {
+                    $stats['total']++;
+
+                    try {
+                        $customerId = $customer->id;
+                        $totalBalance = self::currentTransactionTotal($customerId) + self::latestClosingBalance($customerId);
+
+                        if ($customer->current_balance != $totalBalance) {
+                            $customer->current_balance = $totalBalance;
+                            $customer->save();
+                            $stats['updated']++;
+                        } else {
+                            $stats['skipped']++;
+                        }
+                    } catch (\Exception $e) {
+                        $stats['errors']++;
+                        $stats['error_details'][] = [
+                            'customer_id' => $customer->id,
+                            'error' => $e->getMessage()
+                        ];
+                        Log::error("Failed to refresh balance for customer {$customer->id}: " . $e->getMessage());
+                    }
+                }
+            });
+
+            Log::info("Customer balance refresh completed", $stats);
+
+        } catch (\Exception $e) {
+            Log::error("Customer balance refresh failed: " . $e->getMessage());
+            throw $e;
+        }
+
+        return $stats;
+    }
+
     private static function updateCustomerCurrentBalance(int $customerId): void
     {
         // Sum all monthly closing balances for the customer

@@ -84,7 +84,7 @@ class Customer extends Model
         'customer_zone_id',
         'city',
         // 'opening_balance',
-        // 'current_balance', // Removed: This is a computed accessor, cannot be sorted at DB level
+        'current_balance',
         'salesperson_id',
         'discount_percentage',
         'credit_limit',
@@ -199,42 +199,6 @@ class Customer extends Model
                     ->whereNotNull('credit_limit');
     }
 
-    /**
-     * Custom sorting for current_balance field based on accessor calculation
-     * This method is called by the Sortable trait when sorting by 'current_balance'
-     */
-    public function sortByCurrentBalance($query, $direction = 'asc')
-    {
-        // Subquery to get the latest closing balance
-        $closingBalanceSubquery = \DB::table('customer_balance_monthlies')
-            ->select('closing_balance')
-            ->whereColumn('customer_balance_monthlies.customer_id', 'customers.id')
-            ->where('transaction_total', '>', 0)
-            ->where('closing_balance', '>', 0)
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc')
-            ->limit(1);
-
-        // Subquery to get current month transaction
-        $currentMonthSubquery = \DB::table('customer_balance_monthlies')
-            ->select('transaction_total')
-            ->whereColumn('customer_balance_monthlies.customer_id', 'customers.id')
-            ->where('closing_balance', 0)
-            ->where('year', now()->year)
-            ->where('month', now()->month)
-            ->limit(1);
-
-        // Add calculated balance column and sort by it
-        return $query->selectRaw(
-            'customers.*,
-            (COALESCE((' . $closingBalanceSubquery->toSql() . '), 0) +
-             COALESCE((' . $currentMonthSubquery->toSql() . '), 0)) as calculated_current_balance'
-        )
-        ->mergeBindings($closingBalanceSubquery)
-        ->mergeBindings($currentMonthSubquery)
-        ->orderBy('calculated_current_balance', $direction);
-    }
-
     // Helper Methods
     public function hasParent(): bool
     {
@@ -302,32 +266,6 @@ class Customer extends Model
 
         return $latestBalance ? (float) $latestBalance->transaction_total : 0.0;
     }
-
-    public function getCurrentBalanceAttribute(): float
-    {
-        $customerId = $this->id;
-        $closingBalanceData = CustomerBalanceMonthly::select('closing_balance')
-            ->where('transaction_total', '>', 0)
-            ->where('customer_id', $customerId)
-            ->where('closing_balance' , '>', 0)
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc')
-            ->first();
-
-        $closingBalance = $closingBalanceData ? (float) $closingBalanceData->closing_balance : 0.0;
-
-        $latestBalance = CustomerBalanceMonthly::select('transaction_total')
-            ->where('customer_id', $customerId)
-            ->where('closing_balance' , 0)
-            ->where('year', now()->year)
-            ->where('month', now()->month)
-            ->first();
-
-        $thisMonthBalance =  $latestBalance ? (float) $latestBalance->transaction_total : 0.0;
-         
-        return $closingBalance + $thisMonthBalance;    
-    }
-
 
     // Code Generation Methods
     
