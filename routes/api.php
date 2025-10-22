@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Accounts\AccountsController;
 use App\Http\Controllers\Api\Accounts\AccountStatementController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\HomePageController;
 use App\Http\Controllers\Api\Customers\CustomersController;
 use App\Http\Controllers\Api\Customers\CustomerCreditDebitNotesController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentsController;
@@ -59,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/homepage', [HomePageController::class, 'HomePage'])->name('homepage');
 
     Route::get('/list-data/{type}', [ListDataController::class, 'getList'])->name('getList');
 
