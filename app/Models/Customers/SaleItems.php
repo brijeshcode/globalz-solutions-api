@@ -47,7 +47,7 @@ class SaleItems extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:4',
+        'quantity' => 'decimal:0',
         'cost_price' => 'decimal:2',
         'price' => 'decimal:2',
         'price_usd' => 'decimal:2',
@@ -67,8 +67,8 @@ class SaleItems extends Model
         'total_profit' => 'decimal:2',
         'unit_volume_cbm' => 'decimal:4',
         'unit_weight_kg' => 'decimal:4',
-        'total_volume_cbm' => 'decimal:4',
-        'total_weight_kg' => 'decimal:4',
+        'total_volume_cbm' => 'decimal:3',
+        'total_weight_kg' => 'decimal:3',
     ];
 
     protected $searchable = [
