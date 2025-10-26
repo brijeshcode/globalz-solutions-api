@@ -27,7 +27,7 @@ class SaleOrdersController extends Controller
         $query = Sale::query()
             ->with([
                 'customer:id,name,code',
-                'currency:id,name,code',
+                'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
                 'warehouse:id,name',
                 'salesperson:id,name',
                 'approvedBy:id,name',
@@ -128,7 +128,7 @@ class SaleOrdersController extends Controller
 
         $sale->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name',
             'salesperson:id,name',
             'items.item:id,short_name,code',
@@ -156,7 +156,7 @@ class SaleOrdersController extends Controller
 
         $sale->load([
             'customer:id,name,code,address,city,mobile,mof_tax_number',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'approvedBy',
@@ -250,7 +250,7 @@ class SaleOrdersController extends Controller
 
         $sale->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name',
             'salesperson:id,name',
             'items.item:id,short_name,description,code',
@@ -328,7 +328,7 @@ class SaleOrdersController extends Controller
 
         $sale->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name',
             'salesperson:id,name',
             'approvedBy:id,name',
@@ -358,7 +358,7 @@ class SaleOrdersController extends Controller
         $query = Sale::onlyTrashed()
             ->with([
                 'customer:id,name,code',
-                'currency:id,name,code',
+                'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
                 'warehouse:id,name',
                 'salesperson:id,name',
                 'approvedBy:id,name',
@@ -417,7 +417,7 @@ class SaleOrdersController extends Controller
 
         $sale->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name',
             'salesperson:id,name',
             'approvedBy:id,name',

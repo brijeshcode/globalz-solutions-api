@@ -29,7 +29,7 @@ class CustomerReturnOrdersController extends Controller
         $query = CustomerReturn::query()
             ->with([
                 'customer:id,name,code',
-                'currency:id,name,code',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'warehouse:id,name',
                 'salesperson:id,name',
                 'approvedBy:id,name',
@@ -97,7 +97,7 @@ class CustomerReturnOrdersController extends Controller
 
         $return->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name',
             'salesperson:id,name',
             'items.item:id,short_name,code',
@@ -125,7 +125,7 @@ class CustomerReturnOrdersController extends Controller
 
         $customerReturn->load([
             'customer:id,name,code,address,city,mobile',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'approvedBy',
@@ -190,7 +190,7 @@ class CustomerReturnOrdersController extends Controller
 
         $customerReturn->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name',
             'salesperson:id,name',
             'items.item:id,short_name,description,code',
@@ -257,7 +257,7 @@ class CustomerReturnOrdersController extends Controller
 
         $customerReturn->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name',
             'salesperson:id,name',
             'approvedBy:id,name',
@@ -280,7 +280,7 @@ class CustomerReturnOrdersController extends Controller
         $query = CustomerReturn::onlyTrashed()
             ->with([
                 'customer:id,name,code',
-                'currency:id,name,code',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'warehouse:id,name',
                 'salesperson:id,name',
                 'approvedBy:id,name',
@@ -328,7 +328,7 @@ class CustomerReturnOrdersController extends Controller
 
         $return->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name',
             'salesperson:id,name',
             'approvedBy:id,name',

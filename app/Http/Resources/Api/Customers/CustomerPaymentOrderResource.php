@@ -60,6 +60,11 @@ class CustomerPaymentOrderResource extends JsonResource
                     'name' => $this->currency->name,
                     'code' => $this->currency->code,
                     'symbol' => $this->when($this->currency->symbol, $this->currency->symbol),
+                    'calculation_type' => $this->currency->calculation_type,
+                    'symbol_position' => $this->currency->symbol_position,
+                    'decimal_places' => $this->currency->decimal_places,
+                    'decimal_separator' => $this->currency->decimal_separator,
+                    'thousand_separator' => $this->currency->thousand_separator,
                 ];
             }),
 

@@ -79,7 +79,7 @@ class PurchasesController extends Controller
             'updatedBy:id,name', 
             'supplier:id,code,name', 
             'warehouse:id,name',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'account:id,name',
             'purchaseItems.item:id,code,short_name',
             'documents'
@@ -101,7 +101,7 @@ class PurchasesController extends Controller
             'updatedBy:id,name', 
             'supplier:id,code,name', 
             'warehouse:id,name',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'account:id,name',
             'purchaseItems.item:id,code,short_name',
             'documents'
@@ -150,7 +150,7 @@ class PurchasesController extends Controller
             'updatedBy:id,name', 
             'supplier:id,code,name', 
             'warehouse:id,name',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'account:id,name',
             'purchaseItems.item:id,code,short_name',
             'documents'
@@ -183,7 +183,7 @@ class PurchasesController extends Controller
                 'updatedBy:id,name', 
                 'supplier:id,code,name', 
                 'warehouse:id,name',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'account:id,name'
             ])
             ->searchable($request)
@@ -367,7 +367,7 @@ class PurchasesController extends Controller
                 'updatedBy:id,name', 
                 'supplier:id,code,name', 
                 'warehouse:id,name',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'account:id,name'
             ])
             ->searchable($request)

@@ -30,7 +30,7 @@ class CustomerReturnsController extends Controller
         $query = CustomerReturn::query()
             ->with([
                 'customer:id,name,code,address,city,mobile,mof_tax_number',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'warehouse:id,name,address_line_1',
                 'salesperson:id,name',
                 'approvedBy:id,name',
@@ -145,7 +145,7 @@ class CustomerReturnsController extends Controller
 
             $customerReturn->load([
                 'customer:id,name,code,address,city,mobile,mof_tax_number',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'warehouse:id,name,address_line_1',
                 'salesperson:id,name',
                 'approvedBy:id,name',
@@ -184,7 +184,7 @@ class CustomerReturnsController extends Controller
 
         $customerReturn->load([
             'customer:id,name,code,address,city,mobile,mof_tax_number',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'approvedBy:id,name',
@@ -254,7 +254,7 @@ class CustomerReturnsController extends Controller
 
         $customerReturn->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name',
             'salesperson:id,name',
             'approvedBy:id,name',
@@ -277,7 +277,7 @@ class CustomerReturnsController extends Controller
         $query = CustomerReturn::onlyTrashed()
             ->with([
                 'customer:id,name,code,address,city,mobile,mof_tax_number',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'warehouse:id,name,address_line_1',
                 'salesperson:id,name',
                 'approvedBy:id,name',
@@ -336,7 +336,7 @@ class CustomerReturnsController extends Controller
 
         $return->load([
             'customer:id,name,code,address,city,mobile,mof_tax_number',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'approvedBy:id,name',

@@ -48,7 +48,7 @@ class CustomerPaymentsController extends Controller
 
         $payment->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'customerPaymentTerm:id,name,days',
             'approvedBy:id,name',
             'account:id,name',
@@ -66,7 +66,7 @@ class CustomerPaymentsController extends Controller
         $customerPayment->load([
             'customer:id,name,code,address,city,mobile',
             'customer.salesperson',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'customerPaymentTerm:id,name,days',
             'approvedBy:id,name',
             'account:id,name',
@@ -89,7 +89,7 @@ class CustomerPaymentsController extends Controller
 
         $customerPayment->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'customerPaymentTerm:id,name,days',
             'approvedBy:id,name',
             'account:id,name',
@@ -145,7 +145,7 @@ class CustomerPaymentsController extends Controller
 
         $customerPayment->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'customerPaymentTerm:id,name,days',
             'approvedBy:id,name',
             'account:id,name',
@@ -165,7 +165,7 @@ class CustomerPaymentsController extends Controller
         $query = CustomerPayment::onlyTrashed()
             ->with([
                 'customer:id,name,code',
-                'currency:id,name,code',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'customerPaymentTerm:id,name,days',
                 'approvedBy:id,name',
                 'account:id,name',
@@ -200,7 +200,7 @@ class CustomerPaymentsController extends Controller
 
         $payment->load([
             'customer:id,name,code',
-            'currency:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'customerPaymentTerm:id,name,days',
             'approvedBy:id,name',
             'account:id,name',
@@ -257,7 +257,7 @@ class CustomerPaymentsController extends Controller
             ->with([
                 'customer:id,name,code,salesperson_id',
                 'customer.salesperson',
-                'currency:id,name,code',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'customerPaymentTerm:id,name,days',
                 'approvedBy:id,name',
                 'account:id,name',

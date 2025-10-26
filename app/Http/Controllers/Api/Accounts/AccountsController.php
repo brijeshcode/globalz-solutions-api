@@ -38,7 +38,7 @@ class AccountsController extends Controller
 
         $account->load([
             'accountType:id,name',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -53,7 +53,7 @@ class AccountsController extends Controller
     {
         $account->load([
             'accountType:id,name',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -72,7 +72,7 @@ class AccountsController extends Controller
 
         $account->load([
             'accountType:id,name',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -95,7 +95,7 @@ class AccountsController extends Controller
         $query = Account::onlyTrashed()
             ->with([
                 'accountType:id,name',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'createdBy:id,name',
                 'updatedBy:id,name'
             ])
@@ -132,7 +132,7 @@ class AccountsController extends Controller
         
         $account->load([
             'accountType:id,name',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -188,7 +188,7 @@ class AccountsController extends Controller
         $query = Account::query()
             ->with([
                 'accountType:id,name',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'createdBy:id,name',
                 'updatedBy:id,name'
             ])

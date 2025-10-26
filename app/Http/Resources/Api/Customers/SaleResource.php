@@ -53,7 +53,19 @@ class SaleResource extends JsonResource
             'sale_items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
             'items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
             'warehouse' => $this->whenLoaded('warehouse'),
-            'currency' => $this->whenLoaded('currency'),
+            'currency' => $this->whenLoaded('currency', function () {
+                return [
+                    'id' => $this->currency->id,
+                    'name' => $this->currency->name,
+                    'code' => $this->currency->code,
+                    'symbol' => $this->when($this->currency->symbol, $this->currency->symbol),
+                    'calculation_type' => $this->currency->calculation_type,
+                    'symbol_position' => $this->currency->symbol_position,
+                    'decimal_places' => $this->currency->decimal_places,
+                    'decimal_separator' => $this->currency->decimal_separator,
+                    'thousand_separator' => $this->currency->thousand_separator,
+                ];
+            }),
             'salesperson' => $this->whenLoaded('salesperson'),
             'customer' => $this->whenLoaded('customer'),
         ];

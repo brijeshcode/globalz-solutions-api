@@ -25,7 +25,7 @@ class CustomerCreditDebitNotesController extends Controller
         $query = CustomerCreditDebitNote::query()
             ->with([
                 'customer:id,name,code',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'createdBy:id,name',
                 'updatedBy:id,name'
             ])
@@ -81,7 +81,7 @@ class CustomerCreditDebitNotesController extends Controller
 
                 $note->load([
                     'customer:id,name,code',
-                    'currency:id,name,code,symbol',
+                    'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                     'createdBy:id,name',
                     'updatedBy:id,name'
                 ]);
@@ -102,7 +102,7 @@ class CustomerCreditDebitNotesController extends Controller
     {
         $customerCreditDebitNote->load([
             'customer:id,name,code,address,city,mobile',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -123,7 +123,7 @@ class CustomerCreditDebitNotesController extends Controller
 
                 $customerCreditDebitNote->load([
                     'customer:id,name,code',
-                    'currency:id,name,code,symbol',
+                    'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                     'createdBy:id,name',
                     'updatedBy:id,name'
                 ]);
@@ -164,7 +164,7 @@ class CustomerCreditDebitNotesController extends Controller
         $query = CustomerCreditDebitNote::onlyTrashed()
             ->with([
                 'customer:id,name,code',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'createdBy:id,name',
                 'updatedBy:id,name'
             ])
@@ -207,7 +207,7 @@ class CustomerCreditDebitNotesController extends Controller
 
         $note->load([
             'customer:id,name,code',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);

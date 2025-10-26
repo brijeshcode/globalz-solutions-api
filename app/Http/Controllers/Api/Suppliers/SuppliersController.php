@@ -23,7 +23,7 @@ class SuppliersController extends Controller
                 'supplierType:id,name',
                 'country:id,name,code',
                 'paymentTerm:id,name,days,type',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'createdBy:id,name',
                 'updatedBy:id,name',
                 'documents'
@@ -95,7 +95,7 @@ class SuppliersController extends Controller
             'supplierType:id,name',
             'country:id,name,code',
             'paymentTerm:id,name,days,type',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name',
             'documents'
@@ -113,7 +113,7 @@ class SuppliersController extends Controller
             'supplierType:id,name',
             'country:id,name,code',
             'paymentTerm:id,name,days,type',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name',
             'documents'
@@ -142,7 +142,7 @@ class SuppliersController extends Controller
             'supplierType:id,name',
             'country:id,name,code',
             'paymentTerm:id,name,days,type',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name',
             'documents'
@@ -172,7 +172,7 @@ class SuppliersController extends Controller
                 'supplierType:id,name',
                 'country:id,name,code',
                 'paymentTerm:id,name,days,type',
-                'currency:id,name,code,symbol',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'createdBy:id,name',
                 'updatedBy:id,name',
                 'documents' => function($query) {
@@ -218,7 +218,7 @@ class SuppliersController extends Controller
             'supplierType:id,name',
             'country:id,name,code',
             'paymentTerm:id,name,days,type',
-            'currency:id,name,code,symbol',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name',
             'documents'
@@ -309,7 +309,7 @@ class SuppliersController extends Controller
             ->with([
                 'supplierType:id,name',
                 'country:id,name,code',
-                'currency:id,name,code,symbol'
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             ])
             ->select(['id', 'code', 'name', 'opening_balance', 'supplier_type_id', 'country_id', 'currency_id', 'is_active']);
 
