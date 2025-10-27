@@ -28,7 +28,7 @@ return new class extends Migration
             $table->money('amount_usd')->default(0);
             $table->money('credit_limit')->default(0);
             $table->money('last_payment_amount')->default(0)->comment('this is last payment done by this customer');
-            $table->string('rtc_book_number')->unique()->comment('manualy added by user');
+            $table->string('rtc_book_number')->nullable()->unique()->comment('manualy added by user');
             $table->text('note')->nullable(); // for remark 
 
 

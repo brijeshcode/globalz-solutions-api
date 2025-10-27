@@ -695,9 +695,11 @@ class CustomersController extends Controller
 
         if (RoleHelper::isSalesman()) {
             $employee = RoleHelper::getSalesmanEmployee();
-
-            if($employee){
+            if ($employee) {
                 $query->where('salesperson_id', $employee->id);
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
             }
         }
 

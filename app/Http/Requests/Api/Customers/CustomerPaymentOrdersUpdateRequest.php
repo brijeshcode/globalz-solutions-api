@@ -29,7 +29,7 @@ class CustomerPaymentOrdersUpdateRequest extends FormRequest
             'credit_limit' => 'nullable|numeric|min:0',
             'last_payment_amount' => 'nullable|numeric|min:0',
             'rtc_book_number' => [
-                'required',
+                'nullable',
                 'string',
                 'max:255',
                 Rule::unique('customer_payments', 'rtc_book_number')->ignore($paymentId)
@@ -56,7 +56,6 @@ class CustomerPaymentOrdersUpdateRequest extends FormRequest
             'amount.min' => 'Payment amount must be greater than 0',
             'amount_usd.required' => 'Payment amount in USD is required',
             'amount_usd.min' => 'Payment amount in USD must be greater than 0',
-            'rtc_book_number.required' => 'RTC book number is required',
             'rtc_book_number.unique' => 'RTC book number must be unique',
             'credit_limit.min' => 'Credit limit must be 0 or greater',
             'last_payment_amount.min' => 'Last payment amount must be 0 or greater',

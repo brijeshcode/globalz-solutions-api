@@ -45,9 +45,11 @@ class CustomerReturnsController extends Controller
         // Role-based filtering: salesman can only see their own returns
         if (RoleHelper::isSalesman()) {
             $employee = RoleHelper::getSalesmanEmployee();
-
-            if($employee){
+            if ($employee) {
                 $query->where('salesperson_id', $employee->id);
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
             }
         }
 

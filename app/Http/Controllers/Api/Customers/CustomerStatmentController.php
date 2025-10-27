@@ -24,8 +24,10 @@ class CustomerStatmentController extends Controller
         // Check if salesman can access this customer
         if (RoleHelper::isSalesman()) {
             $employee = RoleHelper::getSalesmanEmployee();
-
-            if ($employee && $customer->salesperson_id !== $employee->id) {
+            if (!$employee) {
+                return ApiResponse::customError('You are not authorized to view this customer\'s statement', 403);
+            }
+            if ($customer->salesperson_id !== $employee->id) {
                 return ApiResponse::customError('You are not authorized to view this customer\'s statement', 403);
             }
         }
@@ -74,9 +76,11 @@ class CustomerStatmentController extends Controller
 
         if (RoleHelper::isSalesman()) {
             $employee = RoleHelper::getSalesmanEmployee();
-
-            if($employee){
+            if ($employee) {
                 $query->where('salesperson_id', $employee->id);
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
             }
         }
 
@@ -141,6 +145,7 @@ class CustomerStatmentController extends Controller
         if($customer->current_balance == $balance){
             return;
         }
+        info('here we need to change the order of display: latest transaction on top');
         $customer->update(['current_balance' => $balance]);
     }
 

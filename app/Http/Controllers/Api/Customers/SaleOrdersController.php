@@ -43,6 +43,9 @@ class SaleOrdersController extends Controller
             $employee = RoleHelper::getSalesmanEmployee();
             if ($employee) {
                 $query->where('salesperson_id', $employee->id);
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
             }
         }
 
@@ -143,6 +146,7 @@ class SaleOrdersController extends Controller
 
     public function show(Sale $sale): JsonResponse
     {
+        info('here not come');
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
@@ -373,6 +377,9 @@ class SaleOrdersController extends Controller
             $employee = RoleHelper::getSalesmanEmployee();
             if ($employee) {
                 $query->where('salesperson_id', $employee->id);
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
             }
         }
 
@@ -465,6 +472,9 @@ class SaleOrdersController extends Controller
             $employee = RoleHelper::getSalesmanEmployee();
             if ($employee) {
                 $query->where('salesperson_id', $employee->id);
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
             }
         }
 

@@ -299,6 +299,9 @@ class CustomerPaymentsController extends Controller
                 $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
                     $q->where('salesperson_id', $salesmanEmployee->id);
                 });
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
             }
         }
 

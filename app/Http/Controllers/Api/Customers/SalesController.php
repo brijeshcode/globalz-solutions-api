@@ -370,7 +370,12 @@ class SalesController extends Controller
         // Role-based filtering: salesman can only see their own returns
         if (RoleHelper::isSalesman()) {
             $employee = RoleHelper::getSalesmanEmployee();
-            $query->where('salesperson_id', $employee?->id);
+            if ($employee) {
+                $query->where('salesperson_id', $employee->id);
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Role-based filtering: warehouse manager can only see their assigned warehouses' sales
