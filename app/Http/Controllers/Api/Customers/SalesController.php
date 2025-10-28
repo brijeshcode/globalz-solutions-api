@@ -79,8 +79,8 @@ class SalesController extends Controller
                     $unitDiscountAmountUsd = $unitDiscountAmount * $currencyRate;
                     $discountAmountUsd = $discountAmount * $currencyRate;
 
-                    // Calculate profit using USD values: ttc_price_usd - cost_price
-                    $unitProfit = $ttcPriceUsd - $costPrice;
+                    // Calculate profit using USD values: (sale_price - discount) - cost_price
+                    $unitProfit = ($sellingPriceUsd - $unitDiscountAmountUsd) - $costPrice;
                     $itemTotalProfit = $unitProfit * $quantity;
 
                     $saleItems[$index]['cost_price'] = $costPrice;
@@ -173,8 +173,8 @@ class SalesController extends Controller
                         $unitDiscountAmountUsd = $unitDiscountAmount * $currencyRate;
                         $discountAmountUsd = $discountAmount * $currencyRate;
 
-                        // Calculate profit using USD values: ttc_price_usd - cost_price
-                        $unitProfit = $ttcPriceUsd - $costPrice;
+                        // Calculate profit using USD values: (sale_price - discount) - cost_price
+                        $unitProfit = ($sellingPriceUsd - $unitDiscountAmountUsd) - $costPrice;
                         $itemTotalProfit = $unitProfit * $quantity;
 
                         $saleItems[$index]['cost_price'] = $costPrice;
