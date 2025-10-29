@@ -9,6 +9,8 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
 use App\Services\Customers\CustomerBalanceService;
+use App\Services\Currency\CurrencyService;
+use App\Helpers\CurrencyHelper;
 use App\Traits\Authorable;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
@@ -198,6 +200,39 @@ class Sale extends Model
     public function getInvoicePrefixsAttribure(): array
     {
         return [self::TAXSALEPREFIX, self::NOTAXSALEPREFIX];
+    }
+
+    /**
+     * Setter for total_tax_amount_usd attribute.
+     * Automatically converts total_tax_amount to USD based on currency_id.
+     * If currency is already USD, uses the same value as total_tax_amount.
+     */
+    public function setTotalTaxAmountUsdAttribute($value): void
+    {
+        // Check if currency_id is set
+        if (!$this->currency_id) {
+            $this->attributes['total_tax_amount_usd'] = $value;
+            return;
+        }
+
+        // Check if total_tax_amount is set
+        if (!isset($this->attributes['total_tax_amount'])) {
+            $this->attributes['total_tax_amount_usd'] = $value;
+            return;
+        }
+
+        // If currency is USD, use the same value as total_tax_amount
+        if (CurrencyService::isUSD($this->currency_id)) {
+            $this->attributes['total_tax_amount_usd'] = $this->attributes['total_tax_amount'];
+        } else {
+            // Convert total_tax_amount to USD
+            $currencyRate = $this->currency_rate ?? null;
+            $this->attributes['total_tax_amount_usd'] = CurrencyHelper::toUsd(
+                $this->currency_id,
+                (float) $this->attributes['total_tax_amount'],
+                $currencyRate
+            );
+        }
     }
 
     public static function reserveNextCode(): string
