@@ -31,7 +31,7 @@ class CustomerPaymentsUpdateRequest extends FormRequest
             'credit_limit' => 'nullable|numeric|min:0',
             'last_payment_amount' => 'nullable|numeric|min:0',
             'rtc_book_number' => [
-                'required',
+                'nullable',
                 'string',
                 'max:255',
                 Rule::unique('customer_payments', 'rtc_book_number')->ignore($paymentId)
