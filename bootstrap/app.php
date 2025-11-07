@@ -22,9 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         //     ->withoutOverlapping()
         //     ->runInBackground();
 
-        $schedule->call(function () {
-            info('Scheduler is working!');
-            })->everyMinute();
+        
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
