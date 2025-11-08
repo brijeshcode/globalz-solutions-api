@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx\Rels;
 
 class CustomerCreditDebitNotesController extends Controller
 {
@@ -22,45 +23,7 @@ class CustomerCreditDebitNotesController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = CustomerCreditDebitNote::query()
-            ->with([
-                'customer:id,name,code',
-                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'createdBy:id,name',
-                'updatedBy:id,name'
-            ])
-            ->searchable($request)
-            ->sortable($request);
-
-        if ($request->has('customer_id')) {
-            $query->byCustomer($request->customer_id);
-        }
-
-        if ($request->has('currency_id')) {
-            $query->byCurrency($request->currency_id);
-        }
-
-        if ($request->has('type')) {
-            $query->byType($request->type);
-        }
-
-        if ($request->has('prefix')) {
-            $query->byPrefix($request->prefix);
-        }
-
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->start_date, $request->end_date);
-        }
-
-        // Filter by salesman if user has salesman role
-        if (RoleHelper::isSalesman()) {
-            $salesmanEmployee = RoleHelper::getSalesmanEmployee();
-            if ($salesmanEmployee) {
-                $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
-                    $q->where('salesperson_id', $salesmanEmployee->id);
-                });
-            }
-        }
+        $query = $this->query($request);
 
         $notes = $this->applyPagination($query, $request);
 
@@ -234,31 +197,78 @@ class CustomerCreditDebitNotesController extends Controller
         return ApiResponse::delete('Customer credit/debit note permanently deleted successfully');
     }
 
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
+        $query = $this->query($request);
+
         $stats = [
-            'total_notes' => CustomerCreditDebitNote::count(),
-            'credit_notes' => CustomerCreditDebitNote::credit()->count(),
-            'debit_notes' => CustomerCreditDebitNote::debit()->count(),
-            'trashed_notes' => CustomerCreditDebitNote::onlyTrashed()->count(),
-            'total_credit_amount' => CustomerCreditDebitNote::credit()->sum('amount'),
-            'total_debit_amount' => CustomerCreditDebitNote::debit()->sum('amount'),
-            'total_credit_amount_usd' => CustomerCreditDebitNote::credit()->sum('amount_usd'),
-            'total_debit_amount_usd' => CustomerCreditDebitNote::debit()->sum('amount_usd'),
-            'notes_by_prefix' => CustomerCreditDebitNote::selectRaw('prefix, count(*) as count, sum(amount) as total_amount')
-                ->groupBy('prefix')
-                ->get(),
-            'notes_by_currency' => CustomerCreditDebitNote::with('currency:id,name,code')
-                ->selectRaw('currency_id, count(*) as count, sum(amount) as total_amount')
-                ->groupBy('currency_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'recent_notes' => CustomerCreditDebitNote::with(['customer:id,name,code', 'createdBy:id,name'])
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get(),
+            'total_notes' => (clone $query)->count(),
+            'credit_notes' => (clone $query)->credit()->count(),
+            'debit_notes' => (clone $query)->debit()->count(),
+            'trashed_notes' => (clone $query)->onlyTrashed()->count(),
+            'total_credit_amount' => (clone $query)->credit()->sum('amount'),
+            'total_debit_amount' => (clone $query)->debit()->sum('amount'),
+            'total_credit_amount_usd' => (clone $query)->credit()->sum('amount_usd'),
+            'total_debit_amount_usd' => (clone $query)->debit()->sum('amount_usd'),
+            // 'notes_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(amount) as total_amount')
+            //     ->groupBy('prefix')
+            //     ->get(),
+            // 'notes_by_currency' => (clone $query)->with('currency:id,name,code')
+            //     ->selectRaw('currency_id, count(*) as count, sum(amount) as total_amount')
+            //     ->groupBy('currency_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'recent_notes' => (clone $query)->with(['customer:id,name,code', 'createdBy:id,name'])
+            //     ->orderBy('created_at', 'desc')
+            //     ->limit(10)
+            //     ->get(),
         ];
 
         return ApiResponse::show('Customer credit/debit note statistics retrieved successfully', $stats);
+    }
+
+    private function query(Request $request)
+    {
+        $query = CustomerCreditDebitNote::query()
+            ->with([
+                'customer:id,name,code',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ])
+            ->searchable($request)
+            ->sortable($request);
+
+        if ($request->has('customer_id')) {
+            $query->byCustomer($request->customer_id);
+        }
+
+        if ($request->has('currency_id')) {
+            $query->byCurrency($request->currency_id);
+        }
+
+        if ($request->has('type')) {
+            $query->byType($request->type);
+        }
+
+        if ($request->has('prefix')) {
+            $query->byPrefix($request->prefix);
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->byDateRange($request->start_date, $request->end_date);
+        }
+
+        // Filter by salesman if user has salesman role
+        if (RoleHelper::isSalesman()) {
+            $salesmanEmployee = RoleHelper::getSalesmanEmployee();
+            if ($salesmanEmployee) {
+                $query->whereHas('customer', function ($q) use ($salesmanEmployee) {
+                    $q->where('salesperson_id', $salesmanEmployee->id);
+                });
+            }
+        }
+
+        return $query;
     }
 }

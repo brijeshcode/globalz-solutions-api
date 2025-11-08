@@ -25,6 +25,7 @@ class CustomerBalanceMonthly extends Model
         'closing_balance',
         'last_updated_by',
         'updated_by_entry_id',
+        'last_verified_at',
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class CustomerBalanceMonthly extends Model
         'total_payment_amount' => 'decimal:2',
         'transaction_total' => 'decimal:2',
         'closing_balance' => 'decimal:2',
+        'last_verified_at' => 'datetime',
     ];
 
     public function customer(): BelongsTo

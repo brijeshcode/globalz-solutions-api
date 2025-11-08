@@ -16,13 +16,27 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withSchedule(function (Schedule $schedule): void {
-        // Calculate monthly closing balance at 00:01 on the 1st of each month
-        // $schedule->command('customers:calculate-monthly-closing')
-        //     ->monthlyOn(1, '00:01')
-        //     ->withoutOverlapping()
-        //     ->runInBackground();
+        // Daily refresh of all customer balances at 23:59 (incremental - last 1 month)
+        $schedule->call(function () {
+            \App\Services\Customers\CustomerBalanceService::refreshAllCustomerBalancesDaily();
+        })
+            ->daily()
+            ->at('23:59')
+            ->withoutOverlapping()
+            ->runInBackground();
 
-        
+        // Calculate monthly closing balance at 00:01 on the 1st of each month
+        $schedule->command('customers:calculate-monthly-closing')
+            ->monthlyOn(1, '00:01')
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Calculate yearly closing balance at 00:59 on January 1st of each year
+        $schedule->command('customers:calculate-yearly-closing')
+            ->yearlyOn(1, 1, '00:59')
+            ->withoutOverlapping()
+            ->runInBackground();
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -709,28 +709,60 @@ class CustomersController extends Controller
 
     /**
      * Refresh all customer balances
-     * This recalculates current_balance for all customers based on monthly balance data
+     * This recalculates current_balance for all customers
+     *
+     * Query parameters:
+     * - full_rebuild: bool (default false) - Do full rebuild from all transactions
+     * - months_back: int (default 3) - Number of months to recalculate (for incremental mode)
      */
     public function refreshBalances(Request $request): JsonResponse
-    { 
+    {
+      
         try {
+            $fullRebuild = $request->boolean('full_rebuild', true);
+            $monthsBack = $request->integer('months_back', 3);
 
-            // Call the balance service to refresh all customers
-            $stats = CustomerBalanceService::refreshAllCustomerBalance();
+            $mode = $fullRebuild ? 'full_rebuild' : 'incremental';
+            $options = ['months_back' => $monthsBack];
 
-            // Check if it was skipped
-            if (isset($stats['skipped']) && $stats['skipped'] === true) {
-                return ApiResponse::show(
-                    'Customer balance refresh was skipped. Use force_refresh=true to execute.',
-                    $stats
-                );
-            }
+            $stats = [
+                'mode' => $mode,
+                'total' => 0,
+                'processed' => 0,
+                'errors' => 0,
+                'error_details' => []
+            ];
 
-            // Success response with statistics
-            return ApiResponse::show(
-                'Customer balances refreshed successfully',
-                $stats
-            );
+          
+
+            // Process customers in chunks
+            Customer::select('id')->chunk(500, function ($customers) use (&$stats, $mode, $options) {
+                foreach ($customers as $customer) {
+                    $stats['total']++;
+
+                    try {
+                        CustomerBalanceService::calculateCustomerBalance(
+                            $customer->id,
+                            $mode,
+                            $options
+                        );
+                        $stats['processed']++;
+                    } catch (\Exception $e) {
+                        $stats['errors']++;
+                        $stats['error_details'][] = [
+                            'customer_id' => $customer->id,
+                            'error' => $e->getMessage()
+                        ];
+                        Log::error("Failed to refresh balance for customer {$customer->id}: " . $e->getMessage());
+                    }
+                }
+            });
+
+            $message = $fullRebuild
+                ? 'Customer balances fully rebuilt from transactions successfully'
+                : "Customer balances refreshed successfully (last {$monthsBack} months)";
+
+            return ApiResponse::show($message, $stats);
 
         } catch (\Exception $e) {
             Log::error('Customer balance refresh failed', [
