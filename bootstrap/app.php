@@ -22,18 +22,20 @@ return Application::configure(basePath: dirname(__DIR__))
         })
             ->daily()
             ->at('23:59')
-            ->withoutOverlapping()
-            ->runInBackground();
+            ->name('refresh-customer-balances-daily')
+            ->withoutOverlapping();
 
         // Calculate monthly closing balance at 00:01 on the 1st of each month
         $schedule->command('customers:calculate-monthly-closing')
             ->monthlyOn(1, '00:01')
+            ->name('calculate-monthly-closing-balance')
             ->withoutOverlapping()
             ->runInBackground();
 
         // Calculate yearly closing balance at 00:59 on January 1st of each year
         $schedule->command('customers:calculate-yearly-closing')
             ->yearlyOn(1, 1, '00:59')
+            ->name('calculate-yearly-closing-balance')
             ->withoutOverlapping()
             ->runInBackground();
 
