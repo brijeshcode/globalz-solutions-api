@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\Setups\CountriesController;
 use App\Http\Controllers\Api\Setups\SupplierPaymentTermsController;
 use App\Http\Controllers\Api\Setups\TaxCodesController;
 use App\Http\Controllers\Api\Items\ItemsController;
+use App\Http\Controllers\Api\Items\PriceListsController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerGroupsController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerPaymentTermsController;
@@ -63,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/homepage', [HomePageController::class, 'HomePage'])->name('homepage');
 
     Route::get('/list-data/{type}', [ListDataController::class, 'getList'])->name('getList');
+    Route::get('/list-data/items-with-parameters', [ListDataController::class, 'itemWithParameter'])->name('itemWithParameter');
 
     // Employees Controller
     Route::controller(EmployeesController::class)->prefix('employees')->name('employees.')->group(function () {
@@ -559,6 +561,26 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{item}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Price Lists Controller
+        Route::controller(PriceListsController::class)->prefix('price-lists')->name('price-lists.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{priceList}', 'show')->name('show');
+            Route::put('{priceList}', 'update')->name('update');
+            Route::delete('{priceList}', 'destroy')->name('destroy');
+            Route::post('{priceList}/duplicate', 'duplicate')->name('duplicate');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+
+            // Price List Items Management
+            Route::get('{priceList}/items', 'getItems')->name('items.index');
+            Route::post('{priceList}/items', 'addItem')->name('items.store');
+            Route::put('{priceList}/items/{priceListItem}', 'updateItem')->name('items.update');
+            Route::delete('items/{priceListItem}', 'deleteItem')->name('items.delete');
         });
 
         Route::prefix('expenses')->name('expenses.')->group(function() {
