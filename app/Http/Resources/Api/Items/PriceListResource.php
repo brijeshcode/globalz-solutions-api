@@ -20,11 +20,21 @@ class PriceListResource extends JsonResource
             'description' => $this->description,
             'item_count' => $this->item_count,
             'note' => $this->note,
-            // 'created_at' => $this->created_at,
-            // 'updated_at' => $this->updated_at,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
             // 'deleted_at' => $this->deleted_at,
-            // 'created_by' => $this->created_by,
-            // 'updated_by' => $this->updated_by,
+            'created_by' => $this->whenLoaded('createdBy', function () {
+                return $this->createdBy ? [
+                    'id' => $this->createdBy->id,
+                    'name' => $this->createdBy->name,
+                ] : null;
+            }),
+            'updated_by' => $this->whenLoaded('updatedBy', function () {
+                return $this->updatedBy ? [
+                    'id' => $this->updatedBy->id,
+                    'name' => $this->updatedBy->name,
+                ] : null;
+            }),
 
             // Relationships
             'items' => PriceListItemResource::collection($this->whenLoaded('items')),
