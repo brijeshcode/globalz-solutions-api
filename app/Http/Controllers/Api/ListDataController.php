@@ -9,6 +9,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
 use App\Models\Customers\Customer;
 use App\Models\Employees\Employee;
+use App\Models\Items\Item;
 use App\Models\Setups\Accounts\AccountType;
 use App\Models\Setups\Country;
 use App\Models\Setups\Customers\CustomerGroup;
@@ -58,6 +59,7 @@ class ListDataController extends Controller
             'expenseCategories' => $this->expenseCategories(),
 
             // items
+            'items' => $this->items(),
             'itemBrands' => $this->itemBrands(),
             'itemCategories' => $this->itemCategories(),
             'itemFamilies' => $this->itemFamilies(),
@@ -199,6 +201,67 @@ class ListDataController extends Controller
     }
 
     // items
+
+    private function items()
+    {
+        $with = ['itemUnit:id,name,short_name', 'itemPrice:id,item_id,price_usd', 'inventories:id,warehouse_id,item_id,quantity'];
+        return Item::with($with)->active()->get(['id', 'description', 'code', 'short_name', 'item_unit_id']);
+    }
+
+    public function itemWithParameter(array $files = [] , array $relations = ['tax_code']): JsonResponse
+    {
+        $defaultFields = ['id', 'description', 'code', 'short_name', 'item_unit_id'];
+        $defaultRelations = ['itemUnit:id,name,short_name', 'itemPrice', 'inventories'];
+
+        $fields = empty($files) ? $defaultFields : array_merge($defaultFields, $files);
+
+        $with = $defaultRelations;
+
+        if (!empty($relations)) {
+            foreach ($relations as $relation) {
+                switch ($relation) {
+                    case 'type':
+                        $with[] = 'itemType:id,name';
+                        break;
+                    case 'family':
+                        $with[] = 'itemFamily:id,name';
+                        break;
+                    case 'group':
+                        $with[] = 'itemGroup:id,name';
+                        break;
+                    case 'category':
+                        $with[] = 'itemCategory:id,name';
+                        break;
+                    case 'brand':
+                        $with[] = 'itemBrand:id,name';
+                        break;
+                    case 'profit_margin':
+                        $with[] = 'itemProfitMargin:id,name';
+                        break;
+                    case 'supplier':
+                        $with[] = 'supplier:id,code,name';
+                        break;
+                    case 'tax_code':
+                        $fields[] = 'tax_code_id';
+                        $with[] = 'taxCode:id,name,tax_percent';
+                        break;
+                    case 'created_by':
+                        $with[] = 'createdBy:id,name';
+                        break;
+                    case 'updated_by':
+                        $with[] = 'updatedBy:id,name';
+                        break;
+                    case 'documents':
+                        $with[] = 'documents';
+                        break;
+                }
+            }
+        }
+
+        $items = Item::select($fields)->with($with)->active()->get();
+        return ApiResponse::index('item with parameter data', $items);
+    }
+
     private function itemBrands()
     {
         return ItemBrand::active()->orderBy('name')->get(['id', 'name']);

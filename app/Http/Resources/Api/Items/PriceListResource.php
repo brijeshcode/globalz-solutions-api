@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Http\Resources\Api\Items;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class PriceListResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'code' => $this->code,
+            'description' => $this->description,
+            'item_count' => $this->item_count,
+            'note' => $this->note,
+            // 'created_at' => $this->created_at,
+            // 'updated_at' => $this->updated_at,
+            // 'deleted_at' => $this->deleted_at,
+            // 'created_by' => $this->created_by,
+            // 'updated_by' => $this->updated_by,
+
+            // Relationships
+            'items' => PriceListItemResource::collection($this->whenLoaded('items')),
+            'price_list_items' => PriceListItemResource::collection($this->whenLoaded('priceListItems')),
+            'createdBy' => $this->whenLoaded('createdBy', function () {
+                return [
+                    'id' => $this->createdBy->id,
+                    'name' => $this->createdBy->name,
+                ];
+            }),
+            'updatedBy' => $this->whenLoaded('updatedBy', function () {
+                return [
+                    'id' => $this->updatedBy->id,
+                    'name' => $this->updatedBy->name,
+                ];
+            }),
+        ];
+    }
+}
