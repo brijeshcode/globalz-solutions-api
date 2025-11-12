@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('code');
             $table->string('description');
+            $table->boolean('is_default')->default(false);
             $table->integer('item_count');
             $table->text('note')->nullable();  // for remark
 

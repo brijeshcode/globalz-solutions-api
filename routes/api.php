@@ -575,6 +575,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('{priceList}/duplicate', 'duplicate')->name('duplicate');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::patch('{priceList}/setdefault', 'setDefault')->name('setDefault');
 
             // Price List Items Management
             Route::get('{priceList}/items', 'getItems')->name('items.index');

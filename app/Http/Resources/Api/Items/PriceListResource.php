@@ -20,6 +20,7 @@ class PriceListResource extends JsonResource
             'description' => $this->description,
             'item_count' => $this->item_count,
             'note' => $this->note,
+            'is_default' => $this->is_default,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             // 'deleted_at' => $this->deleted_at,

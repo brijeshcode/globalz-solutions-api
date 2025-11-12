@@ -2,6 +2,7 @@
 
 namespace App\Models\Items;
 
+use App\Models\Customers\Customer;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -18,12 +19,14 @@ class PriceList extends Model
     protected $fillable = [
         'code',
         'description',
+        'is_default',
         'item_count',
         'note',
     ];
 
     protected $casts = [
         'item_count' => 'integer',
+        'is_default' => 'boolean'
     ];
 
     protected $searchable = [
@@ -55,10 +58,26 @@ class PriceList extends Model
         return $this->hasMany(PriceListItem::class);
     }
 
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
     // Scopes
     public function scopeByCode($query, $code)
     {
         return $query->where('code', $code);
+    }
+
+    public function scopeDefault($query)
+    {
+        return $query->where('is_default', true);
+    }
+
+    // Static Methods
+    public static function getDefault(): ?self
+    {
+        return static::where('is_default', true)->first();
     }
 
     // Helper Methods
