@@ -480,4 +480,15 @@ class PriceListsController extends Controller
 
         return ApiResponse::delete('Price list item deleted successfully');
     }
+
+    public function setDefault(PriceList $priceList): JsonResponse
+    { 
+        PriceList::where('is_default', true)->update(['is_default' => false]);
+        $priceList->update(['is_default' => true]);
+        
+        return ApiResponse::update(
+            'PriceList default set',
+            new PriceListResource($priceList)
+        );
+    }
 }

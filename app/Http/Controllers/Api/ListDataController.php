@@ -10,6 +10,7 @@ use App\Models\Accounts\Account;
 use App\Models\Customers\Customer;
 use App\Models\Employees\Employee;
 use App\Models\Items\Item;
+use App\Models\Items\PriceList;
 use App\Models\Setups\Accounts\AccountType;
 use App\Models\Setups\Country;
 use App\Models\Setups\Customers\CustomerGroup;
@@ -60,6 +61,7 @@ class ListDataController extends Controller
 
             // items
             'items' => $this->items(),
+            'itemPriceLists' => $this->itemPriceLists(),
             'itemBrands' => $this->itemBrands(),
             'itemCategories' => $this->itemCategories(),
             'itemFamilies' => $this->itemFamilies(),
@@ -206,6 +208,11 @@ class ListDataController extends Controller
     {
         $with = ['itemUnit:id,name,short_name', 'itemPrice:id,item_id,price_usd', 'inventories:id,warehouse_id,item_id,quantity'];
         return Item::with($with)->active()->get(['id', 'description', 'code', 'short_name', 'item_unit_id']);
+    }
+
+    private function itemPriceLists()
+    {
+        return PriceList::orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default']);
     }
 
     public function itemWithParameter(array $files = [] , array $relations = ['tax_code']): JsonResponse
