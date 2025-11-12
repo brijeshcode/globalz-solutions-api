@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('code')->unique(); // auto generated invoice code
             $table->datetime('date');
-            $table->enum('prefix', ['RTX', 'RTV'])->default('RTV');
+            $table->enum('prefix', ['RTX', 'RTN'])->default('RTN');
 
             $table->unsignedBigInteger('salesperson_id')->nullable()->index();
             $table->unsignedBigInteger('customer_id')->nullable()->index();
