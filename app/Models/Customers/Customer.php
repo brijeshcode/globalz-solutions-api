@@ -9,6 +9,7 @@ use App\Models\Setups\Customers\CustomerProvince;
 use App\Models\Setups\Customers\CustomerType;
 use App\Models\Setups\Customers\CustomerZone;
 use App\Models\Employees\Employee;
+use App\Models\Items\PriceList;
 use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
@@ -47,6 +48,7 @@ class Customer extends Model
         'mof_tax_number',
         'salesperson_id',
         'customer_payment_term_id',
+        'price_list_id',
         'discount_percentage',
         'credit_limit',
         'notes',
@@ -86,6 +88,8 @@ class Customer extends Model
         // 'opening_balance',
         'current_balance',
         'salesperson_id',
+        'customer_payment_term_id',
+        'price_list_id',
         'discount_percentage',
         'credit_limit',
         'is_active',
@@ -135,6 +139,11 @@ class Customer extends Model
     public function customerPaymentTerm(): BelongsTo
     {
         return $this->belongsTo(CustomerPaymentTerm::class);
+    }
+
+    public function priceList(): BelongsTo
+    {
+        return $this->belongsTo(PriceList::class)->with('priceListItems:id,item_code,item_id,price_list_id,sell_price');
     }
 
     public function monthlyBalances(): HasMany

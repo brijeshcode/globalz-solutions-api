@@ -85,7 +85,7 @@ class CustomerResource extends JsonResource
             'gps_coordinates' => $this->gps_coordinates,
             'formatted_gps' => $this->getFormattedGpsAttribute(),
             'mof_tax_number' => $this->mof_tax_number,
-
+            'price_list_id' => $this->price_list_id,
             // Sales Information
             'salesperson' => $this->whenLoaded('salesperson', function () {
                 return $this->salesperson ? [
@@ -105,6 +105,14 @@ class CustomerResource extends JsonResource
                     'id' => $this->customerPaymentTerm->id,
                     'name' => $this->customerPaymentTerm->name,
                     'days' => $this->customerPaymentTerm->days,
+                ] : null;
+            }),
+            'price_list' => $this->whenLoaded('priceList', function () {
+                return $this->priceList ? [
+                    'id' => $this->priceList->id,
+                    'code' => $this->priceList->code,
+                    'description' => $this->priceList->description,
+                    'item_count' => $this->priceList->item_count,
                 ] : null;
             }),
             'discount_percentage' => $this->discount_percentage ? (float) $this->discount_percentage : 0,

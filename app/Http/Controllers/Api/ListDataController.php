@@ -62,6 +62,7 @@ class ListDataController extends Controller
             // items
             'items' => $this->items(),
             'itemPriceLists' => $this->itemPriceLists(),
+            'itemDefaultPriceList' => $this->itemDefaultPriceList(),
             'itemBrands' => $this->itemBrands(),
             'itemCategories' => $this->itemCategories(),
             'itemFamilies' => $this->itemFamilies(),
@@ -122,7 +123,7 @@ class ListDataController extends Controller
     //customers
     private function customers()
     {
-        $query = Customer::active()->orderby('name');
+        $query = Customer::with('priceList:id,code,description,is_default')->active()->orderby('name');
 
         if (RoleHelper::isSalesman()) {
             $employee = Employee::where('user_id', ApiHelper::authUser()->id )->first();
@@ -141,6 +142,7 @@ class ListDataController extends Controller
         'customer_group_id',
         'customer_province_id',
         'customer_zone_id',
+        'price_list_id',
         // 'opening_balance',
         'current_balance',
         'address',
@@ -213,6 +215,11 @@ class ListDataController extends Controller
     private function itemPriceLists()
     {
         return PriceList::orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default']);
+    }
+
+    private function itemDefaultPriceList()
+    {
+        return PriceList::with('priceListItems')->select('id', 'code', 'description', 'item_count', 'is_default')->default()->first();
     }
 
     public function itemWithParameter(array $files = [] , array $relations = ['tax_code']): JsonResponse

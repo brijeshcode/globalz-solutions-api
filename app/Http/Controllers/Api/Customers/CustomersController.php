@@ -11,6 +11,7 @@ use App\Http\Resources\Api\Customers\CustomerResource;
 use App\Http\Responses\ApiResponse;
 use App\Imports\CustomersImport;
 use App\Models\Customers\Customer;
+use App\Models\Items\PriceList;
 use App\Models\Setups\Employees\Department;
 use App\Services\Customers\CustomerBalanceService;
 use App\Traits\HasPagination;
@@ -42,9 +43,17 @@ class CustomersController extends Controller
     public function store(CustomersStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
-        
+
         // Auto-generate customer code (system generated only)
         $data['code'] = Customer::reserveNextCode();
+
+        // Set default price list if not provided
+        if (empty($data['price_list_id'])) {
+            $defaultPriceList = PriceList::getDefault();
+            if ($defaultPriceList) {
+                $data['price_list_id'] = $defaultPriceList->id;
+            }
+        }
 
         // Create customer
         $customer = Customer::create($data);
@@ -73,6 +82,7 @@ class CustomersController extends Controller
         $customer->load([
             'parent:id,code,name',
             'customerType:id,name',
+            'priceList:id,code,description',
             'customerGroup:id,name',
             'customerProvince:id,name',
             'customerZone:id,name',
@@ -95,6 +105,7 @@ class CustomersController extends Controller
         $customer->load([
             'parent:id,code,name',
             'children:id,code,name,current_balance',
+            'priceList:id,code,description',
             'customerType:id,name',
             'customerGroup:id,name',
             'customerProvince:id,name',
@@ -145,6 +156,7 @@ class CustomersController extends Controller
         $customer->load([
             'parent:id,code,name',
             'customerType:id,name',
+            'priceList:id,code,description',
             'customerGroup:id,name',
             'customerProvince:id,name',
             'customerZone:id,name',
@@ -610,11 +622,12 @@ class CustomersController extends Controller
     public function customerQuery(Request $request)
     {
         $query = Customer::query()
-           
+
             ->with([
                 'parent:id,code,name',
                 'customerType:id,name',
                 'customerGroup:id,name',
+                'priceList:id,code,description',
                 'customerProvince:id,name',
                 'customerZone:id,name',
                 'salesperson:id,code,name,department_id',
@@ -640,6 +653,11 @@ class CustomersController extends Controller
         // Filter by customer group
         if ($request->has('customer_group_id')) {
             $query->where('customer_group_id', $request->customer_group_id);
+        }
+
+        // Filter by customer price list
+        if ($request->has('price_list_id')) {
+            $query->where('price_list_id', $request->price_list_id);
         }
 
         // Filter by customer province

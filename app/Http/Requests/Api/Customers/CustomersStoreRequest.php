@@ -28,6 +28,7 @@ class CustomersStoreRequest extends FormRequest
             'name' => 'required|string|max:255',
             'customer_type_id' => 'nullable|exists:customer_types,id',
             'customer_group_id' => 'nullable|exists:customer_groups,id',
+            'price_list_id' => 'nullable|exists:price_lists,id',
             'customer_province_id' => 'nullable|exists:customer_provinces,id',
             'customer_zone_id' => 'nullable|exists:customer_zones,id',
             
