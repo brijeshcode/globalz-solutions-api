@@ -298,7 +298,7 @@ class ListDataController extends Controller
 
     private function itemProfitMargins()
     {
-        return ItemProfitMargin::active()->orderBy('name')->get(['id', 'name', 'percentage']);
+        return ItemProfitMargin::active()->orderBy('name')->get(['id', 'name', 'margin_percentage']);
     }
 
     private function itemTypes()
@@ -308,7 +308,7 @@ class ListDataController extends Controller
 
     private function itemUnits()
     {
-        return ItemUnit::active()->orderBy('name')->get(['id', 'name', 'abbreviation']);
+        return ItemUnit::active()->orderBy('name')->get(['id', 'name', 'short_name', 'description']);
     }
 
     // supplier terms and types
