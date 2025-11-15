@@ -190,7 +190,7 @@ class ListDataController extends Controller
     // accounts
     private function accounts()
     {
-        return Account::active()->orderBy('name')->get(['id', 'name']);
+        return Account::with('currency:id,symbol,code,decimal_places,decimal_separator,calculation_type')->active()->orderBy('name')->get(['id', 'name', 'currency_id']);
     }
 
     private function accountTypes()

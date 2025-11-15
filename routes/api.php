@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Accounts\AccountsController;
 use App\Http\Controllers\Api\Accounts\AccountStatementController;
+use App\Http\Controllers\Api\Accounts\AccountTransfersController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\HomePageController;
 use App\Http\Controllers\Api\Customers\CustomersController;
@@ -210,6 +211,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::controller(AccountStatementController::class)->prefix('statements')->name('statements.')->group(function () {
             Route::get('/', 'statements')->name('index');
             Route::get('{account}', 'accountStatements')->name('account');
+        });
+
+        // Account Transfers Controller - Must be defined BEFORE {account} routes to avoid conflicts
+        Route::controller(AccountTransfersController::class)->prefix('transfers')->name('transfers.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{accountTransfer}', 'show')->name('show');
+            Route::put('{accountTransfer}', 'update')->name('update');
+            Route::delete('{accountTransfer}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
 
         // Accounts Controller

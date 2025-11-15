@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Accounts;
 
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class AccountsStoreRequest extends FormRequest
@@ -11,7 +12,7 @@ class AccountsStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::isSuperAdmin();
     }
 
     /**
