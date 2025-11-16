@@ -7,6 +7,7 @@ use App\Helpers\DataHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
+use App\Models\Accounts\AccountTransfer;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Suppliers\Purchase;
@@ -178,6 +179,12 @@ class AccountStatementController extends Controller
             );
         }
 
+        if (!$transactionType || $transactionType === 'account_transfer') {
+            $allTransactions = $allTransactions->concat(
+                $this->getAccountTransfers($request, $account, $noteSearch)
+            );
+        }
+
         // Sort by date ascending to calculate running balance correctly
         $sortedTransactions = $allTransactions->sortBy('timestamp')->values();
 
@@ -298,6 +305,75 @@ class AccountStatementController extends Controller
         });
     }
 
+    private function getAccountTransfers(Request $request, Account $account, ?string $noteSearch = null)
+    {
+        $transfers = collect();
+
+        // Get transfers where this account is sending money (debit)
+        $queryFrom = AccountTransfer::query()
+            ->select('id', 'code', 'prefix', 'date', 'sent_amount', 'note', 'from_account_id', 'to_account_id', 'created_at')
+            ->where('from_account_id', $account->id);
+
+        $this->applyDateAndSearchFilters($queryFrom, $request, $noteSearch);
+
+        $transfersFrom = $queryFrom->with('toAccount:id,name')->get()->map(function ($item) use ($account) {
+            return [
+                'id' => $item->id,
+                'code' => $item->prefix . $item->code,
+                'type' => 'Account Transfer (Sent)',
+                'date' => $item->date->format('Y-m-d'),
+                'amount' => -$item->sent_amount,
+                'debit' => $item->sent_amount,
+                'credit' => 0,
+                'note' => $item->note,
+                'to_account' => [
+                    'id' => $item->toAccount->id,
+                    'name' => $item->toAccount->name,
+                ],
+                'account' => [
+                    'id' => $account->id,
+                    'name' => $account->name,
+                ],
+                'transaction_type' => 'account_transfer_sent',
+                'source_table' => 'account_transfers',
+                'timestamp' => $item->date->timestamp,
+            ];
+        });
+
+        // Get transfers where this account is receiving money (credit)
+        $queryTo = AccountTransfer::query()
+            ->select('id', 'code', 'prefix', 'date', 'received_amount', 'note', 'from_account_id', 'to_account_id', 'created_at')
+            ->where('to_account_id', $account->id);
+
+        $this->applyDateAndSearchFilters($queryTo, $request, $noteSearch);
+
+        $transfersTo = $queryTo->with('fromAccount:id,name')->get()->map(function ($item) use ($account) {
+            return [
+                'id' => $item->id,
+                'code' => $item->prefix . $item->code,
+                'type' => 'Account Transfer (Received)',
+                'date' => $item->date->format('Y-m-d'),
+                'amount' => $item->received_amount,
+                'debit' => 0,
+                'credit' => $item->received_amount,
+                'note' => $item->note,
+                'from_account' => [
+                    'id' => $item->fromAccount->id,
+                    'name' => $item->fromAccount->name,
+                ],
+                'account' => [
+                    'id' => $account->id,
+                    'name' => $account->name,
+                ],
+                'transaction_type' => 'account_transfer_received',
+                'source_table' => 'account_transfers',
+                'timestamp' => $item->date->timestamp,
+            ];
+        });
+
+        return $transfers->concat($transfersFrom)->concat($transfersTo);
+    }
+
     private function calculateStats($transactions, Account $account, float $finalBalance)
     {
         $openingBalance = $account->opening_balance ?? 0;
@@ -312,12 +388,8 @@ class AccountStatementController extends Controller
         ];
     }
 
-    private function applyFilters($query, Request $request, Account $account, ?string $noteSearch = null)
+    private function applyDateAndSearchFilters($query, Request $request, ?string $noteSearch = null)
     {
-        if ($account) {
-            $query->where('account_id', $account->id);
-        }
-
         if ($request->has('from_date')) {
             $query->where('date', '>=', $request->get('from_date'));
         }
@@ -332,5 +404,11 @@ class AccountStatementController extends Controller
                   ->orWhere('code', 'like', "%{$noteSearch}%");
             });
         }
+    }
+
+    private function applyFilters($query, Request $request, Account $account, ?string $noteSearch = null)
+    {
+        $query->where('account_id', $account->id);
+        $this->applyDateAndSearchFilters($query, $request, $noteSearch);
     }
 }

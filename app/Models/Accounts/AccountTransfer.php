@@ -6,6 +6,7 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AccountTransfer extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, Searchable, Sortable;
 
     protected $fillable = [
         'date',
