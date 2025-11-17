@@ -147,24 +147,28 @@ class PriceService
      */
     protected static function calculateWeightedAveragePrice(PurchaseItem $purchaseItem, float $currentPriceUsd): float
     {
-        // Get current inventory quantity
-        $currentQuantity = InventoryService::getQuantity(
+        // Get current inventory quantity (this already includes the newly added purchase)
+        $inventoryAfterPurchase = InventoryService::getQuantity(
             $purchaseItem->item_id,
             $purchaseItem->purchase->warehouse_id
         );
-        
+
         $newQuantity = $purchaseItem->quantity;
         $newPriceUsd = $purchaseItem->cost_per_item_usd;
-        
+
+        // Calculate inventory BEFORE this purchase was added
+        // (Inventory is updated before price calculation, so we need to subtract the new quantity)
+        $currentQuantity = $inventoryAfterPurchase - $newQuantity;
+
         if ($currentQuantity <= 0) {
             return $newPriceUsd;
         }
-        
-        // Weighted average formula: 
+
+        // Weighted average formula:
         // ((current_qty * current_price) + (new_qty * new_price)) / (current_qty + new_qty)
         $totalValue = ($currentQuantity * $currentPriceUsd) + ($newQuantity * $newPriceUsd);
         $totalQuantity = $currentQuantity + $newQuantity;
-        
+
         return $totalQuantity > 0 ? ($totalValue / $totalQuantity) : $newPriceUsd;
     }
 
