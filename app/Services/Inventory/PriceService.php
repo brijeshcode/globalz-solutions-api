@@ -15,23 +15,23 @@ class PriceService
     /**
      * Update item price based on purchase
      */
-    public static function updateFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): void
+    public static function updateFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, ?float $oldCostPerItemUsd = null, ?int $oldQuantity = null): void
     {
         $item = $purchaseItem->item;
         $newPriceUsd = $purchaseItem->cost_per_item_usd;
-        
+
         $currentItemPrice = self::getCurrentPrice($purchaseItem->item_id);
-        
+
         if ($currentItemPrice) {
             $oldPriceUsd = $currentItemPrice->price_usd;
             // Calculate price based on item's cost calculation method
             if ($item->cost_calculation === Item::COST_WEIGHTED_AVERAGE) {
-                $newPriceUsd = self::calculateWeightedAveragePrice($purchaseItem, $oldPriceUsd);
+                $newPriceUsd = self::calculateWeightedAveragePrice($purchaseItem, $oldPriceUsd, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
             }
             // For COST_LAST_COST, use the new price as-is
-             
+
             $priceDifference = abs($newPriceUsd - $oldPriceUsd);
-            
+
             if ($priceDifference > 0) {
                 self::updatePrice($purchaseItem->item_id, $newPriceUsd, $purchase->date, $oldPriceUsd, "Purchase #{$purchase->id}", 'purchase', $purchase->id);
             }
@@ -145,7 +145,7 @@ class PriceService
     /**
      * Calculate weighted average price for an item
      */
-    protected static function calculateWeightedAveragePrice(PurchaseItem $purchaseItem, float $currentPriceUsd): float
+    protected static function calculateWeightedAveragePrice(PurchaseItem $purchaseItem, float $currentPriceUsd, bool $isUpdate = false, ?float $oldCostPerItemUsd = null, ?int $oldQuantity = null): float
     {
         // Get current inventory quantity (this already includes the newly added purchase)
         $inventoryAfterPurchase = InventoryService::getQuantity(
@@ -156,7 +156,21 @@ class PriceService
         $newQuantity = $purchaseItem->quantity;
         $newPriceUsd = $purchaseItem->cost_per_item_usd;
 
-        // Calculate inventory BEFORE this purchase was added
+        if ($isUpdate && $oldCostPerItemUsd !== null && $oldQuantity !== null) {
+            // For updates: Recalculate from scratch using actual PurchaseItem records
+            // This approach automatically fixes any previously corrupted prices
+
+            return self::recalculateFromPurchaseHistory(
+                $purchaseItem->item_id,
+                $purchaseItem->purchase->warehouse_id,
+                $purchaseItem->id, // Exclude this purchase item
+                $newQuantity,
+                $newPriceUsd,
+                $inventoryAfterPurchase
+            );
+        }
+
+        // For new purchases: calculate inventory BEFORE this purchase was added
         // (Inventory is updated before price calculation, so we need to subtract the new quantity)
         $currentQuantity = $inventoryAfterPurchase - $newQuantity;
 
@@ -168,6 +182,66 @@ class PriceService
         // ((current_qty * current_price) + (new_qty * new_price)) / (current_qty + new_qty)
         $totalValue = ($currentQuantity * $currentPriceUsd) + ($newQuantity * $newPriceUsd);
         $totalQuantity = $currentQuantity + $newQuantity;
+
+        return $totalQuantity > 0 ? ($totalValue / $totalQuantity) : $newPriceUsd;
+    }
+
+    /**
+     * Recalculate weighted average from actual purchase history
+     * This is used for updates to ensure accuracy even if previous prices were corrupted
+     */
+    protected static function recalculateFromPurchaseHistory(
+        int $itemId,
+        int $warehouseId,
+        int $excludePurchaseItemId,
+        int $newQuantity,
+        float $newPriceUsd,
+        int $currentInventory
+    ): float {
+        // Get all OTHER purchase items for this item in this warehouse
+        $otherPurchases = \App\Models\Suppliers\PurchaseItem::where('item_id', $itemId)
+            ->where('id', '!=', $excludePurchaseItemId)
+            ->whereHas('purchase', function ($query) use ($warehouseId) {
+                $query->where('warehouse_id', $warehouseId);
+            })
+            ->get(['quantity', 'cost_per_item_usd']);
+
+        // Calculate total value and quantity from other purchases
+        $totalValueFromOthers = 0;
+        $totalQtyFromOthers = 0;
+
+        foreach ($otherPurchases as $purchase) {
+            $totalValueFromOthers += ($purchase->quantity * $purchase->cost_per_item_usd);
+            $totalQtyFromOthers += $purchase->quantity;
+        }
+
+        // Calculate how much inventory remains from other purchases
+        // (Current inventory - new purchase quantity)
+        $inventoryWithoutNewPurchase = $currentInventory - $newQuantity;
+
+        if ($inventoryWithoutNewPurchase <= 0) {
+            // No other inventory, just use the new price
+            return $newPriceUsd;
+        }
+
+        // If we have other purchases but inventory is less than total purchased
+        // (meaning some was sold), we need to calculate the average of what remains
+        if ($inventoryWithoutNewPurchase < $totalQtyFromOthers) {
+            // Some inventory was sold, so we calculate average cost of remaining inventory
+            // Use the weighted average of all other purchases as the base cost
+            $averageCostOfOthers = $totalQtyFromOthers > 0
+                ? ($totalValueFromOthers / $totalQtyFromOthers)
+                : 0;
+
+            $baseValue = $inventoryWithoutNewPurchase * $averageCostOfOthers;
+        } else {
+            // All purchased inventory is still in stock
+            $baseValue = $totalValueFromOthers;
+        }
+
+        // Add the new purchase
+        $totalValue = $baseValue + ($newQuantity * $newPriceUsd);
+        $totalQuantity = $inventoryWithoutNewPurchase + $newQuantity;
 
         return $totalQuantity > 0 ? ($totalValue / $totalQuantity) : $newPriceUsd;
     }

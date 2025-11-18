@@ -112,6 +112,10 @@ class PurchaseService
                         'total_price_usd' => CurrencyHelper::toUsd($purchase->currency_id, $totalPrice, $purchase->currency_rate),
                         'note' => $itemData['note'] ?? $purchaseItem->note,
                     ]);
+
+                    // Refresh purchase to get updated totals from the saved event
+                    $purchase->refresh();
+
                     // Recalculate derived fields
                     $updatedData = $this->preparePurchaseItemData($purchase, $itemData);
                     $purchaseItem->update([
@@ -124,7 +128,7 @@ class PurchaseService
                     
                     // Update related data if cost or quantity changed
                     if ($oldCostPerItemUsd != $purchaseItem->cost_per_item_usd || (float)$oldQuantity != (float)$purchaseItem->quantity) {
-                        $this->processPurchaseItemRelatedData($purchase, $purchaseItem, true, (float)$oldQuantity);
+                        $this->processPurchaseItemRelatedData($purchase, $purchaseItem, true, (float)$oldQuantity, $oldCostPerItemUsd);
                     }
                     $processedItemIds[] = $purchaseItem->id;
                 }
@@ -230,16 +234,16 @@ class PurchaseService
     /**
      * Process all related data for a purchase item
      */
-    protected function processPurchaseItemRelatedData(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0): void
+    protected function processPurchaseItemRelatedData(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0, ?float $oldCostPerItemUsd = null): void
     {
         // 1. Update inventory
         $this->updateInventory($purchase, $purchaseItem, $isUpdate, $oldQuantity);
-        
+
         // 2. Update supplier item prices
         SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
-        
+
         // 3. Update item price and price history
-        PriceService::updateFromPurchase($purchase, $purchaseItem);
+        PriceService::updateFromPurchase($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
     }
 
     /**
