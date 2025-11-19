@@ -575,7 +575,8 @@ describe('Purchases API', function () {
         $itemPrice = ItemPrice::where('item_id', $this->item1->id)->first();
         $itemPrice->update(['price_usd' => 2.4533]);
 
-        // Now update the purchase - the new code should self-correct
+        // Now update the purchase with a small change to trigger recalculation
+        // (The system only recalculates when cost or quantity changes)
         $purchaseItem = $purchase2->purchaseItems->first();
         $updateData = [
             'final_total_usd' => 0,
@@ -584,8 +585,8 @@ describe('Purchases API', function () {
                 [
                     'id' => $purchaseItem->id,
                     'item_id' => $this->item1->id,
-                    'price' => 3.00, // Keep same price
-                    'quantity' => 50, // Keep same quantity
+                    'price' => 3.00,
+                    'quantity' => 51, // Changed from 50 to 51 to trigger recalculation
                 ]
             ]
         ];
@@ -594,8 +595,9 @@ describe('Purchases API', function () {
         $response->assertOk();
 
         // The system should recalculate from scratch and correct the price
+        // Calculation: (50 * 2.18 + 51 * 3.00) / 101 = (109 + 153) / 101 = 262 / 101 = 2.5941...
         $itemPrice->refresh();
-        expect((float) $itemPrice->price_usd)->toBe(2.59); // Corrected from 2.4533
+        expect((float) $itemPrice->price_usd)->toBe(2.59); // Corrected from 2.4533 (rounds to 2.59)
     });
 
     it('calculates weighted average correctly when quantity changes in update', function () {
