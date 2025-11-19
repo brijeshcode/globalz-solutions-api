@@ -19,7 +19,7 @@ class ItemPriceHistory extends Model
     protected $fillable = [
         'item_id',
         'price_usd',
-        'average_waited_price',
+        'average_weighted_price',
         'latest_price',
         'effective_date',
         'source_type',
@@ -29,7 +29,7 @@ class ItemPriceHistory extends Model
 
     protected $casts = [
         'price_usd' => 'decimal:4',
-        'average_waited_price' => 'decimal:4',
+        'average_weighted_price' => 'decimal:4',
         'latest_price' => 'decimal:4',
         'effective_date' => 'date',
     ];
@@ -40,7 +40,7 @@ class ItemPriceHistory extends Model
         'id',
         'item_id',
         'price_usd',
-        'average_waited_price',
+        'average_weighted_price',
         'latest_price',
         'effective_date',
         'source_type',
@@ -105,7 +105,7 @@ class ItemPriceHistory extends Model
 
     public function getFormattedAveragePriceAttribute(): string
     {
-        return '$' . number_format($this->average_waited_price ?? 0, 2);
+        return '$' . number_format($this->average_weighted_price ?? 0, 2);
     }
 
     public function getFormattedLatestPriceAttribute(): string

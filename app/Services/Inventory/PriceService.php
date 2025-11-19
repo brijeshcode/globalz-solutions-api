@@ -10,6 +10,21 @@ use App\Models\Suppliers\PurchaseItem;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
+/**
+ * Item Price Calculation Service
+ *
+ * Manages item pricing using Weighted Average Cost method. Price calculation happens
+ * BEFORE inventory updates to ensure accurate calculations without backwards math.
+ *
+ * Key Features:
+ * - Weighted average price calculation on each purchase
+ * - Global pricing across all warehouses
+ * - Immutable price history for audit trail
+ * - Support for multiple cost calculation methods (Weighted Average, Last Cost)
+ *
+ * @see docs/INVENTORY_PRICING.md For complete documentation
+ * @package App\Services\Inventory
+ */
 class PriceService
 {
     /**
@@ -58,70 +73,6 @@ class PriceService
     }
 
     /**
-     * Update item price from stock adjustment
-     */
-    public static function updateFromAdjustment(int $itemId, float $newPriceUsd, string $effectiveDate, ?string $reason = null): void
-    {
-        $currentItemPrice = self::getCurrentPrice($itemId);
-        
-        if ($currentItemPrice) {
-            $oldPriceUsd = $currentItemPrice->price_usd;
-            $priceDifference = abs($newPriceUsd - $oldPriceUsd);
-            
-            if ($priceDifference > 0.01) {
-                self::updatePrice($itemId, $newPriceUsd, $effectiveDate, $oldPriceUsd, $reason, 'adjustment');
-            }
-        } else {
-            self::createPrice($itemId, $newPriceUsd, $effectiveDate, $reason, 'adjustment');
-        }
-    }
-
-    /**
-     * Update price when stock is physically adjusted (stock reconciliation)
-     */
-    public static function updateFromStockAdjustment(int $itemId, int $physicalQuantity, int $systemQuantity, ?float $adjustedPriceUsd = null, ?string $reason = null): void
-    {
-        $item = Item::findOrFail($itemId);
-        $effectiveDate = now()->format('Y-m-d');
-        $defaultReason = "Stock adjustment - Physical: {$physicalQuantity}, System: {$systemQuantity}";
-        $finalReason = $reason ?? $defaultReason;
-
-        // If adjusted price is provided, update it
-        if ($adjustedPriceUsd !== null) {
-            self::updateFromAdjustment($itemId, $adjustedPriceUsd, $effectiveDate, $finalReason);
-            return;
-        }
-
-        // If no price provided but item uses weighted average, recalculate based on adjustment
-        if ($item->cost_calculation === Item::COST_WEIGHTED_AVERAGE) {
-            $currentPrice = self::getCurrentPrice($itemId);
-            
-            if ($currentPrice && $physicalQuantity > 0 && $systemQuantity > 0) {
-                // Calculate price adjustment based on quantity difference
-                $quantityDifference = $physicalQuantity - $systemQuantity;
-                
-                if ($quantityDifference != 0) {
-                    // For weighted average, we might need to adjust the price based on the lost/found inventory
-                    // This is complex and might require additional business logic
-                    // For now, we'll just log the adjustment without changing price
-                    
-                    // Create history entry for stock adjustment (no price change)
-                    ItemPriceHistory::create([
-                        'item_id' => $itemId,
-                        'price_usd' => $currentPrice->price_usd,
-                        'average_waited_price' => $currentPrice->price_usd,
-                        'latest_price' => $currentPrice->price_usd,
-                        'effective_date' => $effectiveDate,
-                        'source_type' => 'stock_adjustment',
-                        'source_id' => null,
-                        'note' => $finalReason . ' (no price change)',
-                    ]);
-                }
-            }
-        }
-    }
-
-    /**
      * Get current price for an item
      */
     public static function getCurrentPrice(int $itemId): ?ItemPrice
@@ -130,29 +81,10 @@ class PriceService
     }
 
     /**
-     * Get price history for an item
-     */
-    public static function getPriceHistory(int $itemId, ?int $limit = 50): array
-    {
-        return ItemPriceHistory::where('item_id', $itemId)
-            ->orderBy('effective_date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->limit($limit)
-            ->get()
-            ->toArray();
-    }
-
-    /**
      * Calculate weighted average price for an item
      */
-    protected static function calculateWeightedAveragePrice(PurchaseItem $purchaseItem, float $currentPriceUsd, bool $isUpdate = false, ?float $oldCostPerItemUsd = null, ?int $oldQuantity = null): float
+    private static function calculateWeightedAveragePrice(PurchaseItem $purchaseItem, float $currentPriceUsd, bool $isUpdate = false, ?float $oldCostPerItemUsd = null, ?int $oldQuantity = null): float
     {
-        // Get current inventory quantity (this already includes the newly added purchase)
-        $inventoryAfterPurchase = InventoryService::getQuantity(
-            $purchaseItem->item_id,
-            $purchaseItem->purchase->warehouse_id
-        );
-
         $newQuantity = $purchaseItem->quantity;
         $newPriceUsd = $purchaseItem->cost_per_item_usd;
 
@@ -160,19 +92,23 @@ class PriceService
             // For updates: Recalculate from scratch using actual PurchaseItem records
             // This approach automatically fixes any previously corrupted prices
 
+            // Get current inventory (BEFORE this purchase update is applied to inventory)
+            // Note: Current inventory includes the OLD quantity from this purchase
+            $currentInventory = InventoryService::getTotalQuantityAcrossWarehouses($purchaseItem->item_id);
+
             return self::recalculateFromPurchaseHistory(
                 $purchaseItem->item_id,
-                $purchaseItem->purchase->warehouse_id,
                 $purchaseItem->id, // Exclude this purchase item
+                $oldQuantity,      // Old quantity (currently in inventory)
                 $newQuantity,
                 $newPriceUsd,
-                $inventoryAfterPurchase
+                $currentInventory
             );
         }
 
-        // For new purchases: calculate inventory BEFORE this purchase was added
-        // (Inventory is updated before price calculation, so we need to subtract the new quantity)
-        $currentQuantity = $inventoryAfterPurchase - $newQuantity;
+        // For new purchases: Get current inventory BEFORE this purchase
+        // (Price calculation now happens BEFORE inventory update, so this is the actual current inventory)
+        $currentQuantity = InventoryService::getTotalQuantityAcrossWarehouses($purchaseItem->item_id);
 
         if ($currentQuantity <= 0) {
             return $newPriceUsd;
@@ -190,20 +126,17 @@ class PriceService
      * Recalculate weighted average from actual purchase history
      * This is used for updates to ensure accuracy even if previous prices were corrupted
      */
-    protected static function recalculateFromPurchaseHistory(
+    private static function recalculateFromPurchaseHistory(
         int $itemId,
-        int $warehouseId,
         int $excludePurchaseItemId,
+        int $oldQuantity,
         int $newQuantity,
         float $newPriceUsd,
         int $currentInventory
     ): float {
-        // Get all OTHER purchase items for this item in this warehouse
+        // Get all OTHER purchase items for this item across all warehouses
         $otherPurchases = \App\Models\Suppliers\PurchaseItem::where('item_id', $itemId)
             ->where('id', '!=', $excludePurchaseItemId)
-            ->whereHas('purchase', function ($query) use ($warehouseId) {
-                $query->where('warehouse_id', $warehouseId);
-            })
             ->get(['quantity', 'cost_per_item_usd']);
 
         // Calculate total value and quantity from other purchases
@@ -215,25 +148,25 @@ class PriceService
             $totalQtyFromOthers += $purchase->quantity;
         }
 
-        // Calculate how much inventory remains from other purchases
-        // (Current inventory - new purchase quantity)
-        $inventoryWithoutNewPurchase = $currentInventory - $newQuantity;
+        // Calculate inventory WITHOUT the purchase being updated
+        // (Current inventory still includes the OLD quantity from this purchase)
+        $inventoryWithoutThisPurchase = $currentInventory - $oldQuantity;
 
-        if ($inventoryWithoutNewPurchase <= 0) {
+        if ($inventoryWithoutThisPurchase <= 0) {
             // No other inventory, just use the new price
             return $newPriceUsd;
         }
 
         // If we have other purchases but inventory is less than total purchased
         // (meaning some was sold), we need to calculate the average of what remains
-        if ($inventoryWithoutNewPurchase < $totalQtyFromOthers) {
+        if ($inventoryWithoutThisPurchase < $totalQtyFromOthers) {
             // Some inventory was sold, so we calculate average cost of remaining inventory
             // Use the weighted average of all other purchases as the base cost
             $averageCostOfOthers = $totalQtyFromOthers > 0
                 ? ($totalValueFromOthers / $totalQtyFromOthers)
                 : 0;
 
-            $baseValue = $inventoryWithoutNewPurchase * $averageCostOfOthers;
+            $baseValue = $inventoryWithoutThisPurchase * $averageCostOfOthers;
         } else {
             // All purchased inventory is still in stock
             $baseValue = $totalValueFromOthers;
@@ -241,7 +174,7 @@ class PriceService
 
         // Add the new purchase
         $totalValue = $baseValue + ($newQuantity * $newPriceUsd);
-        $totalQuantity = $inventoryWithoutNewPurchase + $newQuantity;
+        $totalQuantity = $inventoryWithoutThisPurchase + $newQuantity;
 
         return $totalQuantity > 0 ? ($totalValue / $totalQuantity) : $newPriceUsd;
     }
@@ -249,7 +182,7 @@ class PriceService
     /**
      * Create new item price record
      */
-    protected static function createPrice(int $itemId, float $priceUsd, string $effectiveDate, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null): ItemPrice
+    private static function createPrice(int $itemId, float $priceUsd, string $effectiveDate, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null): ItemPrice
     {
         return DB::transaction(function () use ($itemId, $priceUsd, $effectiveDate, $reason, $sourceType, $sourceId) {
             $itemPrice = ItemPrice::create([
@@ -262,7 +195,7 @@ class PriceService
             ItemPriceHistory::create([
                 'item_id' => $itemId,
                 'price_usd' => $priceUsd,
-                'average_waited_price' => $priceUsd,
+                'average_weighted_price' => $priceUsd,
                 'latest_price' => 0, // No previous price
                 'effective_date' => $effectiveDate,
                 'source_type' => $sourceType ?? 'initial',
@@ -277,7 +210,7 @@ class PriceService
     /**
      * Update existing item price
      */
-    protected static function updatePrice(int $itemId, float $newPriceUsd, string $effectiveDate, ?float $oldPriceUsd = null, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null): ItemPrice
+    private static function updatePrice(int $itemId, float $newPriceUsd, string $effectiveDate, ?float $oldPriceUsd = null, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null): ItemPrice
     {
         return DB::transaction(function () use ($itemId, $newPriceUsd, $effectiveDate, $oldPriceUsd, $reason, $sourceType, $sourceId) {
             $itemPrice = ItemPrice::byItem($itemId)->first();
@@ -293,7 +226,7 @@ class PriceService
             ItemPriceHistory::create([
                 'item_id' => $itemId,
                 'price_usd' => $newPriceUsd,
-                'average_waited_price' => $newPriceUsd,
+                'average_weighted_price' => $newPriceUsd,
                 'latest_price' => $oldPrice,
                 'effective_date' => $effectiveDate,
                 'source_type' => $sourceType ?? 'manual',
@@ -305,119 +238,6 @@ class PriceService
         });
     }
 
-
-    /**
-     * Set item price manually (for adjustments)
-     */
-    public static function setPrice(int $itemId, float $priceUsd, string $effectiveDate, ?string $reason = null): ItemPrice
-    {
-        self::validateItem($itemId);
-
-        $currentPrice = self::getCurrentPrice($itemId);
-
-        if ($currentPrice) {
-            return self::updatePrice($itemId, $priceUsd, $effectiveDate, $currentPrice->price_usd, $reason);
-        } else {
-            return self::createPrice($itemId, $priceUsd, $effectiveDate, $reason);
-        }
-    }
-
-    /**
-     * Bulk price updates
-     */
-    public static function bulkUpdatePrices(array $priceUpdates, string $effectiveDate, ?string $reason = null): array
-    {
-        return DB::transaction(function () use ($priceUpdates, $effectiveDate, $reason) {
-            $results = [];
-
-            foreach ($priceUpdates as $update) {
-                $itemId = $update['item_id'];
-                $priceUsd = $update['price_usd'];
-                $itemReason = $update['reason'] ?? $reason;
-
-                $results[] = self::setPrice($itemId, $priceUsd, $effectiveDate, $itemReason);
-            }
-
-            return $results;
-        });
-    }
-
-    /**
-     * Get price trend analysis for an item
-     */
-    public static function getPriceTrend(int $itemId, int $days = 30): array
-    {
-        $startDate = now()->subDays($days)->format('Y-m-d');
-
-        $history = ItemPriceHistory::where('item_id', $itemId)
-            ->where('effective_date', '>=', $startDate)
-            ->orderBy('effective_date', 'asc')
-            ->get(['effective_date', 'price_usd'])
-            ->toArray();
-
-        if (empty($history)) {
-            return [
-                'trend' => 'stable',
-                'change_percent' => 0,
-                'history' => []
-            ];
-        }
-
-        $firstPrice = $history[0]['price_usd'];
-        $lastPrice = end($history)['price_usd'];
-        $changePercent = $firstPrice > 0 ? (($lastPrice - $firstPrice) / $firstPrice) * 100 : 0;
-
-        $trend = 'stable';
-        if ($changePercent > 5) {
-            $trend = 'increasing';
-        } elseif ($changePercent < -5) {
-            $trend = 'decreasing';
-        }
-
-        return [
-            'trend' => $trend,
-            'change_percent' => round($changePercent, 2),
-            'first_price' => $firstPrice,
-            'last_price' => $lastPrice,
-            'history' => $history
-        ];
-    }
-
-    /**
-     * Calculate price based on item's cost calculation method
-     */
-    public static function calculatePrice(Item $item, float $newCostUsd, int $newQuantity, ?int $warehouseId = null): float
-    {
-        if ($item->cost_calculation === Item::COST_LAST_COST) {
-            return $newCostUsd;
-        }
-
-        if ($item->cost_calculation === Item::COST_WEIGHTED_AVERAGE) {
-            $currentPrice = self::getCurrentPrice($item->id);
-            
-            if (!$currentPrice) {
-                return $newCostUsd;
-            }
-
-            // Get total current inventory across all warehouses if no specific warehouse
-            // $currentQuantity = $warehouseId 
-            //     ? InventoryService::getQuantity($item->id, $warehouseId)
-            //     : InventoryService::getTotalQuantityAcrossWarehouses($item->id);
-
-            $currentQuantity = InventoryService::getTotalQuantityAcrossWarehouses($item->id);
-
-            if ($currentQuantity <= 0) {
-                return $newCostUsd;
-            }
-
-            $totalValue = ($currentQuantity * $currentPrice->price_usd) + ($newQuantity * $newCostUsd);
-            $totalQuantity = $currentQuantity + $newQuantity;
-
-            return $totalQuantity > 0 ? ($totalValue / $totalQuantity) : $newCostUsd;
-        }
-
-        return $newCostUsd;
-    }
 
     /**
      * Check if item can have its starting price changed
@@ -457,13 +277,4 @@ class PriceService
         ];
     }
 
-    /**
-     * Validate item exists
-     */
-    protected static function validateItem(int $itemId): void
-    {
-        if (!Item::find($itemId)) {
-            throw new InvalidArgumentException("Item with ID {$itemId} not found");
-        }
-    }
 }

@@ -14,6 +14,7 @@ use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\PriceService;
 use App\Services\Suppliers\SupplierItemPriceService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PurchaseService
 {
@@ -22,20 +23,48 @@ class PurchaseService
      */
     public function createPurchaseWithItems(array $purchaseData, array $items = []): Purchase
     {
-        return DB::transaction(function () use ($purchaseData, $items) {
-            // Create the purchase
-            $purchase = Purchase::create($purchaseData);
-            
-            // Process purchase items
-            if (!empty($items)) {
-                $this->processPurchaseItems($purchase, $items);
-            }
-            
-            // Recalculate purchase totals
-            $this->recalculatePurchaseTotals($purchase);
-            
-            return $purchase->fresh();
-        });
+        try {
+            return DB::transaction(function () use ($purchaseData, $items) {
+                // Create the purchase
+                $purchase = Purchase::create($purchaseData);
+
+                // Process purchase items
+                if (!empty($items)) {
+                    $this->processPurchaseItems($purchase, $items);
+                }
+
+                // Recalculate purchase totals
+                $this->recalculatePurchaseTotals($purchase);
+
+                return $purchase->fresh();
+            });
+        } catch (\InvalidArgumentException $e) {
+            // Validation errors are already user-friendly, just log and re-throw
+            Log::warning('Purchase creation validation failed', [
+                'error' => $e->getMessage(),
+                'purchase_data' => $purchaseData,
+                'items_count' => count($items),
+            ]);
+
+            // Re-throw validation errors as-is (already have clear messages)
+            throw $e;
+        } catch (\Exception $e) {
+            // System/unexpected errors need context and user-friendly wrapping
+            Log::error('Failed to create purchase with items', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'purchase_data' => $purchaseData,
+                'items_count' => count($items),
+            ]);
+
+            // Re-throw with user-friendly message
+            throw new \RuntimeException(
+                "Failed to create purchase: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
     }
 
     /**
@@ -43,25 +72,55 @@ class PurchaseService
      */
     public function updatePurchaseWithItems(Purchase $purchase, array $purchaseData, array $items = []): Purchase
     {
-        return DB::transaction(function () use ($purchase, $purchaseData, $items) {
-            // Update purchase data (exclude items from purchaseData)
-          
-            
-            $purchase->update($purchaseData);
+        try {
+            return DB::transaction(function () use ($purchase, $purchaseData, $items) {
+                // Update purchase data (exclude items from purchaseData)
 
-            $this->updatePurchaseItems($purchase, $items);
 
-            // Recalculate purchase totals
-            $this->recalculatePurchaseTotals($purchase);
-            
-            return $purchase->fresh();
-        });
+                $purchase->update($purchaseData);
+
+                $this->updatePurchaseItems($purchase, $items);
+
+                // Recalculate purchase totals
+                $this->recalculatePurchaseTotals($purchase);
+
+                return $purchase->fresh();
+            });
+        } catch (\InvalidArgumentException $e) {
+            // Validation errors are already user-friendly, just log and re-throw
+            Log::warning('Purchase update validation failed', [
+                'error' => $e->getMessage(),
+                'purchase_id' => $purchase->id,
+                'purchase_code' => $purchase->code ?? 'N/A',
+                'items_count' => count($items),
+            ]);
+
+            // Re-throw validation errors as-is (already have clear messages)
+            throw $e;
+        } catch (\Exception $e) {
+            // System/unexpected errors need context and user-friendly wrapping
+            Log::error('Failed to update purchase with items', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'purchase_id' => $purchase->id,
+                'purchase_code' => $purchase->code ?? 'N/A',
+                'items_count' => count($items),
+            ]);
+
+            // Re-throw with user-friendly message
+            throw new \RuntimeException(
+                "Failed to update purchase #{$purchase->id}: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
     }
 
     /**
      * Process purchase items for creation
      */
-    protected function processPurchaseItems(Purchase $purchase, array $items): void
+    private function processPurchaseItems(Purchase $purchase, array $items): void
     {
         foreach ($items as $itemData) {
             $purchaseItem = $this->createPurchaseItem($purchase, $itemData);
@@ -74,7 +133,7 @@ class PurchaseService
     /**
      * Update purchase items individually
      */
-    protected function updatePurchaseItems(Purchase $purchase, array $items): void
+    private function updatePurchaseItems(Purchase $purchase, array $items): void
     {
         $processedItemIds = [];
         foreach ($items as $itemData) {
@@ -157,7 +216,7 @@ class PurchaseService
     /**
      * Create a single purchase item
      */
-    protected function createPurchaseItem(Purchase $purchase, array $itemData): PurchaseItem
+    private function createPurchaseItem(Purchase $purchase, array $itemData): PurchaseItem
     {
         $preparedData = $this->preparePurchaseItemData($purchase, $itemData);
         return PurchaseItem::create($preparedData);
@@ -166,7 +225,7 @@ class PurchaseService
     /**
      * Prepare purchase item data with calculations
      */
-    protected function preparePurchaseItemData(Purchase $purchase, array $itemData): array
+    private function preparePurchaseItemData(Purchase $purchase, array $itemData): array
     {
         $item = Item::findOrFail($itemData['item_id']);
         
@@ -215,7 +274,7 @@ class PurchaseService
     /**
      * Calculate proportional fees for purchase item
      */
-    protected function calculateProportionalFee(float $itemTotalUsd, Purchase $purchase, string $feeField, string $percentField): float
+    private function calculateProportionalFee(float $itemTotalUsd, Purchase $purchase, string $feeField, string $percentField): float
     {
         // If percentage is set, calculate based on item total
         if ($purchase->{$percentField} > 0) {
@@ -234,28 +293,94 @@ class PurchaseService
     /**
      * Process all related data for a purchase item
      */
-    protected function processPurchaseItemRelatedData(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0, ?float $oldCostPerItemUsd = null): void
+    private function processPurchaseItemRelatedData(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0, ?float $oldCostPerItemUsd = null): void
     {
-        // 1. Update inventory
-        $this->updateInventory($purchase, $purchaseItem, $isUpdate, $oldQuantity);
+        // 1. Update item price and price history (BEFORE updating inventory)
+        PriceService::updateFromPurchase($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
 
         // 2. Update supplier item prices
         SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
 
-        // 3. Update item price and price history
-        PriceService::updateFromPurchase($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
+        // 3. Update inventory (AFTER price calculation)
+        $this->updateInventory($purchase, $purchaseItem, $isUpdate, $oldQuantity);
+    }
+
+    /**
+     * Validate that reducing purchase quantity won't cause negative inventory
+     */
+    private function validateInventoryBeforeReduction(int $itemId, int $warehouseId, int $reductionAmount, int $oldPurchaseQty, int $newPurchaseQty): void
+    {
+        $currentInventory = InventoryService::getQuantity($itemId, $warehouseId);
+        $inventoryAfterReduction = $currentInventory - $reductionAmount;
+
+        if ($inventoryAfterReduction < 0) {
+            $item = Item::find($itemId);
+            $itemName = $item ? $item->name : "Item #{$itemId}";
+
+            // Calculate how many units have already been sold/used from this purchase
+            $soldFromThisPurchase = $oldPurchaseQty - $currentInventory;
+
+            // Maximum quantity we can reduce to
+            $maxAllowedReduction = $currentInventory;
+            $minAllowedNewQuantity = $oldPurchaseQty - $maxAllowedReduction;
+
+            throw new \InvalidArgumentException(
+                "Cannot reduce purchase quantity for '{$itemName}'. " .
+                "Original purchase: {$oldPurchaseQty} units. " .
+                "Current inventory: {$currentInventory} units ({$soldFromThisPurchase} already sold/used). " .
+                "You tried to reduce to: {$newPurchaseQty} units (reduction of {$reductionAmount}). " .
+                "Minimum allowed: {$minAllowedNewQuantity} units (can reduce by maximum {$maxAllowedReduction} units)."
+            );
+        }
+    }
+
+    /**
+     * Validate that removing a purchase item won't cause negative inventory
+     *
+     * @throws \InvalidArgumentException if removal would cause negative inventory
+     */
+    private function validateInventoryBeforeDeletion(int $itemId, int $warehouseId, int $purchaseQuantity): void
+    {
+        $currentInventory = InventoryService::getQuantity($itemId, $warehouseId);
+
+        if ($currentInventory < $purchaseQuantity) {
+            $item = Item::find($itemId);
+            $itemName = $item ? $item->name : "Item #{$itemId}";
+
+            // Calculate how many units have already been sold/used from this purchase
+            $soldFromThisPurchase = $purchaseQuantity - $currentInventory;
+
+            throw new \InvalidArgumentException(
+                "Cannot remove '{$itemName}' from this purchase. " .
+                "Purchased quantity: {$purchaseQuantity} units. " .
+                "Current inventory: {$currentInventory} units ({$soldFromThisPurchase} already sold/used). " .
+                "You cannot remove an item that has already been partially or fully sold/used. " .
+                "Please adjust quantities instead of removing the item completely."
+            );
+        }
     }
 
     /**
      * Update inventory for purchase item
      */
-    protected function updateInventory(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0): void
+    private function updateInventory(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0): void
     {
-        
+
         if ($isUpdate) {
             // For updates, adjust inventory by the difference between old and new quantities
             $quantityDifference = $purchaseItem->quantity - $oldQuantity;
             if ($quantityDifference != 0) {
+                // Validate: Reducing purchase quantity shouldn't cause negative inventory
+                if ($quantityDifference < 0) {
+                    $this->validateInventoryBeforeReduction(
+                        $purchaseItem->item_id,
+                        $purchase->warehouse_id,
+                        abs($quantityDifference),
+                        $oldQuantity,
+                        $purchaseItem->quantity
+                    );
+                }
+
                 InventoryService::adjust(
                     $purchaseItem->item_id,
                     $purchase->warehouse_id,
@@ -275,22 +400,29 @@ class PurchaseService
     /**
      * Handle purchase item deletion
      */
-    protected function handlePurchaseItemDeletion(Purchase $purchase, PurchaseItem $purchaseItem): void
+    private function handlePurchaseItemDeletion(Purchase $purchase, PurchaseItem $purchaseItem): void
     {
+        // Validate: Removing item shouldn't cause negative inventory
+        $this->validateInventoryBeforeDeletion(
+            $purchaseItem->item_id,
+            $purchase->warehouse_id,
+            $purchaseItem->quantity
+        );
+
         // Adjust inventory (remove quantity)
         InventoryService::subtract(
             $purchaseItem->item_id,
             $purchase->warehouse_id,
             $purchaseItem->quantity
         );
-        
+
         // Note: We don't remove supplier prices or item price history as they are historical records
     }
 
     /**
      * Recalculate purchase totals from items
      */
-    protected function recalculatePurchaseTotals(Purchase $purchase): void
+    private function recalculatePurchaseTotals(Purchase $purchase): void
     {
         $items = $purchase->purchaseItems;
         

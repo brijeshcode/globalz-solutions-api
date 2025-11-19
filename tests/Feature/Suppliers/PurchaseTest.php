@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\PurchaseItem;
 use App\Models\Suppliers\SupplierItemPrice;
@@ -16,7 +17,7 @@ use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-uses()->group('api', 'suppliers', 'purchases');
+uses(RefreshDatabase::class)->group('api', 'suppliers', 'purchases');
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -52,6 +53,7 @@ beforeEach(function () {
     // Helper method for base purchase data
     $this->getBasePurchaseData = function ($overrides = []) {
         return array_merge([
+            'prefix' => 'PUR',
             'date' => '2025-01-15',
             'supplier_id' => $this->supplier->id,
             'warehouse_id' => $this->warehouse->id,
@@ -59,6 +61,18 @@ beforeEach(function () {
             'account_id' => $this->account->id,
             'supplier_invoice_number' => 'INV-2025-001',
             'currency_rate' => 1.25,
+            'final_total_usd' => 0,
+            'total_usd' => 0,
+            'shipping_fee_usd' => 0,
+            'customs_fee_usd' => 0,
+            'other_fee_usd' => 0,
+            'tax_usd' => 0,
+            'shipping_fee_usd_percent' => 0,
+            'customs_fee_usd_percent' => 0,
+            'other_fee_usd_percent' => 0,
+            'tax_usd_percent' => 0,
+            'discount_amount' => 0,
+            'discount_amount_usd' => 0,
         ], $overrides);
     };
 
@@ -80,7 +94,9 @@ beforeEach(function () {
         $response = $this->postJson(route('suppliers.purchases.store'), $purchaseData);
         $response->assertCreated();
 
-        return Purchase::latest()->first();
+        // Get the purchase from the response to ensure we have the correct one
+        $purchaseId = $response->json('data.id');
+        return Purchase::find($purchaseId);
     };
 });
 
@@ -90,6 +106,7 @@ describe('Purchases API', function () {
             'supplier_id' => $this->supplier->id,
             'warehouse_id' => $this->warehouse->id,
             'currency_id' => $this->currency->id,
+            'account_id' => $this->account->id,
         ]);
 
         $response = $this->getJson(route('suppliers.purchases.index'));
@@ -372,8 +389,346 @@ describe('Purchases API', function () {
             ->first();
         expect($inventory->quantity)->toBe('15.0000');
     });
+ 
 
-    todo('calculates weighted average price correctly: in this test do type cast check');
+    it('calculates weighted average price correctly for new purchases', function () {
+        // First purchase: 50 items @ $2.18
+        $purchase1 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 2.18,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Verify first purchase price
+        $itemPrice = ItemPrice::where('item_id', $this->item1->id)->first();
+        expect((float) $itemPrice->price_usd)->toBe(2.18);
+
+        // Second purchase: 50 items @ $3.00
+        $purchase2 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 3.00,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Verify weighted average was calculated correctly
+        // Expected: ((50 * 2.18) + (50 * 3.00)) / (50 + 50) = (109 + 150) / 100 = 2.59
+        $itemPrice->refresh();
+        expect((float) $itemPrice->price_usd)->toBe(2.59);
+
+        // Verify inventory
+        $inventory = Inventory::where('warehouse_id', $this->warehouse->id)
+            ->where('item_id', $this->item1->id)
+            ->first();
+        expect((float) $inventory->quantity)->toBe(100.0);
+    });
+
+    it('recalculates weighted average correctly when updating purchase price', function () {
+        // First purchase: 50 items @ $2.18
+        $purchase1 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 2.18,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Second purchase: 50 items @ $3.00
+        $purchase2 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 3.00,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Verify initial weighted average is correct
+        $itemPrice = ItemPrice::where('item_id', $this->item1->id)->first();
+        expect((float) $itemPrice->price_usd)->toBe(2.59);
+
+        // Update second purchase price from $3.00 to $3.10
+        $purchaseItem = $purchase2->purchaseItems->first();
+        $updateData = [
+            'final_total_usd' => 155,
+            'total_usd' => 155,
+            'items' => [
+                [
+                    'id' => $purchaseItem->id,
+                    'item_id' => $this->item1->id,
+                    'price' => 3.10,
+                    'quantity' => 50,
+                ]
+            ]
+        ];
+
+        $response = $this->putJson(route('suppliers.purchases.update', $purchase2), $updateData);
+        $response->assertOk();
+
+        // Verify weighted average was recalculated correctly
+        // Expected: ((50 * 2.18) + (50 * 3.10)) / 100 = (109 + 155) / 100 = 2.64
+        $itemPrice->refresh();
+        expect((float) $itemPrice->price_usd)->toBe(2.64);
+    });
+
+    it('maintains correct weighted average through multiple updates', function () {
+        // First purchase: 50 items @ $2.18
+        $purchase1 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 2.18,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Second purchase: 50 items @ $3.00
+        $purchase2 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 3.00,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        $itemPrice = ItemPrice::where('item_id', $this->item1->id)->first();
+        expect((float) $itemPrice->price_usd)->toBe(2.59);
+
+        // Update 1: Change price from $3.00 to $3.10
+        $purchaseItem = $purchase2->purchaseItems->first();
+        $updateData = [
+            'final_total_usd' => 0,
+            'total_usd' => 0,
+            'items' => [
+                [
+                    'id' => $purchaseItem->id,
+                    'item_id' => $this->item1->id,
+                    'price' => 3.10,
+                    'quantity' => 50,
+                ]
+            ]
+        ];
+        $this->putJson(route('suppliers.purchases.update', $purchase2), $updateData)->assertOk();
+
+        $itemPrice->refresh();
+        expect((float) $itemPrice->price_usd)->toBe(2.64);
+
+        // Update 2: Change price back from $3.10 to $3.00
+        $purchaseItem->refresh();
+        $updateData['items'][0]['price'] = 3.00;
+        $this->putJson(route('suppliers.purchases.update', $purchase2), $updateData)->assertOk();
+
+        // Should return to original weighted average
+        $itemPrice->refresh();
+        expect((float) $itemPrice->price_usd)->toBe(2.59);
+    });
+
+    it('self-corrects weighted average when updating purchase with corrupted price data', function () {
+        // This test simulates a scenario where the database has corrupted price data
+        // (as if it was calculated with the old buggy code)
+
+        // First purchase: 50 items @ $2.18
+        $purchase1 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 2.18,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Second purchase: 50 items @ $3.00
+        $purchase2 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 3.00,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Manually corrupt the price to simulate old buggy calculation
+        // (simulating the bug where it calculated $2.4533 instead of $2.59)
+        $itemPrice = ItemPrice::where('item_id', $this->item1->id)->first();
+        $itemPrice->update(['price_usd' => 2.4533]);
+
+        // Now update the purchase - the new code should self-correct
+        $purchaseItem = $purchase2->purchaseItems->first();
+        $updateData = [
+            'final_total_usd' => 0,
+            'total_usd' => 0,
+            'items' => [
+                [
+                    'id' => $purchaseItem->id,
+                    'item_id' => $this->item1->id,
+                    'price' => 3.00, // Keep same price
+                    'quantity' => 50, // Keep same quantity
+                ]
+            ]
+        ];
+
+        $response = $this->putJson(route('suppliers.purchases.update', $purchase2), $updateData);
+        $response->assertOk();
+
+        // The system should recalculate from scratch and correct the price
+        $itemPrice->refresh();
+        expect((float) $itemPrice->price_usd)->toBe(2.59); // Corrected from 2.4533
+    });
+
+    it('calculates weighted average correctly when quantity changes in update', function () {
+        // First purchase: 50 items @ $2.18
+        $purchase1 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 2.18,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Second purchase: 50 items @ $3.00
+        $purchase2 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 3.00,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        $itemPrice = ItemPrice::where('item_id', $this->item1->id)->first();
+        expect((float) $itemPrice->price_usd)->toBe(2.59);
+
+        // Update second purchase quantity from 50 to 100
+        $purchaseItem = $purchase2->purchaseItems->first();
+        $updateData = [
+            'final_total_usd' => 0,
+            'total_usd' => 0,
+            'items' => [
+                [
+                    'id' => $purchaseItem->id,
+                    'item_id' => $this->item1->id,
+                    'price' => 3.00,
+                    'quantity' => 100, // Changed from 50 to 100
+                ]
+            ]
+        ];
+
+        $response = $this->putJson(route('suppliers.purchases.update', $purchase2), $updateData);
+        $response->assertOk();
+
+        // Expected: ((50 * 2.18) + (100 * 3.00)) / 150 = (109 + 300) / 150 = 2.7267
+        $itemPrice->refresh();
+        $actualPrice = round((float) $itemPrice->price_usd, 2);
+        expect($actualPrice)->toBe(2.73); // Rounded to 2 decimals
+
+        // Verify inventory was updated
+        $inventory = Inventory::where('warehouse_id', $this->warehouse->id)
+            ->where('item_id', $this->item1->id)
+            ->first();
+        expect((float) $inventory->quantity)->toBe(150.0);
+    });
+
+    it('calculates weighted average correctly with multiple purchases and updates', function () {
+        // Purchase 1: 100 items @ $10.00
+        $purchase1 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 10.00,
+                    'quantity' => 100,
+                ]
+            ]
+        ]);
+
+        $itemPrice = ItemPrice::where('item_id', $this->item1->id)->first();
+        expect((float) $itemPrice->price_usd)->toBe(10.00);
+
+        // Purchase 2: 50 items @ $12.00
+        $purchase2 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 12.00,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Expected: ((100 * 10) + (50 * 12)) / 150 = (1000 + 600) / 150 = 10.67
+        $itemPrice->refresh();
+        $actualPrice = round((float) $itemPrice->price_usd, 2);
+        expect($actualPrice)->toBe(10.67);
+
+        // Purchase 3: 50 items @ $15.00
+        $purchase3 = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'price' => 15.00,
+                    'quantity' => 50,
+                ]
+            ]
+        ]);
+
+        // Expected: ((150 * 10.67) + (50 * 15)) / 200 = (1600.5 + 750) / 200 = 11.75
+        $itemPrice->refresh();
+        $actualPrice = round((float) $itemPrice->price_usd, 1);
+        expect($actualPrice)->toBe(11.8); // Rounded to 1 decimal
+
+        // Update purchase 2: change price from $12.00 to $14.00
+        $purchaseItem2 = $purchase2->purchaseItems->first();
+        $updateData = [
+            'final_total_usd' => 0,
+            'total_usd' => 0,
+            'items' => [
+                [
+                    'id' => $purchaseItem2->id,
+                    'item_id' => $this->item1->id,
+                    'price' => 14.00,
+                    'quantity' => 50,
+                ]
+            ]
+        ];
+
+        $this->putJson(route('suppliers.purchases.update', $purchase2), $updateData)->assertOk();
+
+        // Expected after update:
+        // Purchase 1: 100 @ $10, Purchase 2: 50 @ $14, Purchase 3: 50 @ $15
+        // ((100 * 10) + (50 * 14) + (50 * 15)) / 200 = (1000 + 700 + 750) / 200 = 12.25
+        $itemPrice->refresh();
+        expect((float) $itemPrice->price_usd)->toBe(12.25);
+    });
 
     it('can show purchase with all relationships', function () {
         $purchase = ($this->createPurchaseViaApi)([
@@ -429,7 +784,7 @@ describe('Purchases API', function () {
 
     it('can soft delete purchase', function () {
         $purchase = Purchase::factory()->create([
-            'supplier_id' => $this->supplier->id,
+            'supplier_id' => $this->supplier->id, 'account_id' => $this->account
         ]);
 
         $response = $this->deleteJson(route('suppliers.purchases.destroy', $purchase));
@@ -440,7 +795,7 @@ describe('Purchases API', function () {
 
     it('can list trashed purchases', function () {
         $purchase = Purchase::factory()->create([
-            'supplier_id' => $this->supplier->id,
+            'supplier_id' => $this->supplier->id, 'account_id' => $this->account
         ]);
         $purchase->delete();
 
@@ -452,7 +807,7 @@ describe('Purchases API', function () {
 
     it('can restore trashed purchase', function () {
         $purchase = Purchase::factory()->create([
-            'supplier_id' => $this->supplier->id,
+            'supplier_id' => $this->supplier->id, 'account_id' => $this->account
         ]);
         $purchase->delete();
 
@@ -467,7 +822,7 @@ describe('Purchases API', function () {
 
     it('can force delete purchase', function () {
         $purchase = Purchase::factory()->create([
-            'supplier_id' => $this->supplier->id,
+            'supplier_id' => $this->supplier->id, 'account_id' => $this->account
         ]);
         $purchase->delete();
 
@@ -696,8 +1051,8 @@ describe('Purchases API', function () {
     it('can filter purchases by supplier', function () {
         $otherSupplier = Supplier::factory()->create(['name' => 'Other Supplier']);
 
-        Purchase::factory()->create(['supplier_id' => $this->supplier->id]);
-        Purchase::factory()->create(['supplier_id' => $otherSupplier->id]);
+        Purchase::factory()->create(['supplier_id' => $this->supplier->id, 'account_id' => $this->account]);
+        Purchase::factory()->create(['supplier_id' => $otherSupplier->id, 'account_id' => $this->account]);
 
         $response = $this->getJson(route('suppliers.purchases.index', ['supplier_id' => $this->supplier->id]));
 
@@ -706,13 +1061,13 @@ describe('Purchases API', function () {
     });
 
     it('can filter purchases by date range', function () {
-        Purchase::factory()->create(['date' => '2025-01-01']);
-        Purchase::factory()->create(['date' => '2025-02-15']);
-        Purchase::factory()->create(['date' => '2025-03-30']);
+        Purchase::factory()->create(['date' => '2025-01-01', 'account_id' => $this->account]);
+        Purchase::factory()->create(['date' => '2025-02-15', 'account_id' => $this->account]);
+        Purchase::factory()->create(['date' => '2025-03-30', 'account_id' => $this->account]);
 
         $response = $this->getJson(route('suppliers.purchases.index', [
-            'start_date' => '2025-02-01',
-            'end_date' => '2025-02-28'
+            'from_date' => '2025-02-01',
+            'to_date' => '2025-02-28'
         ]));
 
         $response->assertOk()
@@ -722,11 +1077,12 @@ describe('Purchases API', function () {
     it('can search purchases by code', function () {
         $purchase1 = Purchase::factory()->create([
             'code' => 'PUR-001001',
-            'supplier_id' => $this->supplier->id,
+            'supplier_id' => $this->supplier->id, 'account_id' => $this->account
+            
         ]);
         Purchase::factory()->create([
             'code' => 'PUR-001002',
-            'supplier_id' => $this->supplier->id,
+            'supplier_id' => $this->supplier->id, 'account_id' => $this->account
         ]);
 
         $response = $this->getJson(route('suppliers.purchases.index', ['search' => 'PUR-001001']));
@@ -741,7 +1097,8 @@ describe('Purchases API', function () {
     it('can search purchases by supplier invoice number', function () {
         Purchase::factory()->create([
             'supplier_invoice_number' => 'INV-12345',
-            'supplier_id' => $this->supplier->id,
+            'supplier_id' => $this->supplier->id
+            , 'account_id' => $this->account
         ]);
         Purchase::factory()->create([
             'supplier_invoice_number' => 'INV-67890',
@@ -760,7 +1117,8 @@ describe('Purchases API', function () {
     it('sets created_by and updated_by fields automatically', function () {
         $purchase = Purchase::factory()->create([
             'supplier_id' => $this->supplier->id,
-            'warehouse_id' => $this->warehouse->id,
+            'warehouse_id' => $this->warehouse->id
+            , 'account_id' => $this->account
         ]);
 
         expect($purchase->created_by)->toBe($this->user->id);
@@ -778,7 +1136,7 @@ describe('Purchases API', function () {
 
     it('can paginate purchases', function () {
         Purchase::factory()->count(7)->create([
-            'supplier_id' => $this->supplier->id,
+            'supplier_id' => $this->supplier->id, 'account_id' => $this->account
         ]);
 
         $response = $this->getJson(route('suppliers.purchases.index', ['per_page' => 3]));
@@ -855,4 +1213,164 @@ describe('Purchase Code Generation Tests', function () {
         $expected = str_pad((int)$code1 + 1, 6, '0', STR_PAD_LEFT);
         expect($code2)->toBe($expected);
     })->group('now');
+
+    it('prevents removing purchase items when inventory was already sold', function () {
+        // Step 1: Create a purchase with 2 items
+        $purchase = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'supplier_invoice_number' => 'INV-TEST-001',
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'quantity' => 100,
+                    'price' => 50.00,
+                ],
+                [
+                    'item_id' => $this->item2->id,
+                    'quantity' => 200,
+                    'price' => 30.00,
+                ]
+            ]
+        ]);
+
+        // Verify initial inventory
+        $inventory1 = Inventory::where('warehouse_id', $this->warehouse->id)
+            ->where('item_id', $this->item1->id)
+            ->first();
+        expect($inventory1->quantity)->toBe('100.0000');
+
+        $inventory2 = Inventory::where('warehouse_id', $this->warehouse->id)
+            ->where('item_id', $this->item2->id)
+            ->first();
+        expect($inventory2->quantity)->toBe('200.0000');
+
+        // Step 2: Simulate selling 60 units of item1 and 150 units of item2
+        // (In real scenario, this would happen through sales/consumption)
+        $inventory1->update(['quantity' => 40]); // 60 sold, 40 remaining
+        $inventory2->update(['quantity' => 50]); // 150 sold, 50 remaining
+
+        $item1PurchaseItem = $purchase->purchaseItems->where('item_id', $this->item1->id)->first();
+        $item2PurchaseItem = $purchase->purchaseItems->where('item_id', $this->item2->id)->first();
+
+        // Step 3: Try to remove item1 (purchased 100, sold 60, remaining 40)
+        // This should FAIL because we can't remove 100 units when only 40 remain
+        $updateData = [
+            'supplier_invoice_number' => 'INV-TEST-001',
+            'items' => [
+                // Only include item2, effectively removing item1
+                [
+                    'id' => $item2PurchaseItem->id,
+                    'item_id' => $this->item2->id,
+                    'quantity' => 200,
+                    'price' => 30.00,
+                ]
+            ]
+        ];
+
+        $response = $this->putJson(route('suppliers.purchases.update', $purchase), $updateData);
+
+        // Should fail with validation error
+        $response->assertStatus(500); // RuntimeException wrapped in transaction
+        expect($response->json('message'))->toContain("Cannot remove")
+            ->toContain($this->item1->name)
+            ->toContain('100 units')
+            ->toContain('40 units')
+            ->toContain('60 already sold/used');
+
+        // Verify inventory unchanged
+        $inventory1->refresh();
+        expect($inventory1->quantity)->toBe('40.0000');
+
+        // Step 4: Now try to remove item2 (purchased 200, sold 150, remaining 50)
+        // This should also FAIL
+        $updateData2 = [
+            'supplier_invoice_number' => 'INV-TEST-001',
+            'items' => [
+                // Only include item1, effectively removing item2
+                [
+                    'id' => $item1PurchaseItem->id,
+                    'item_id' => $this->item1->id,
+                    'quantity' => 100,
+                    'price' => 50.00,
+                ]
+            ]
+        ];
+
+        $response2 = $this->putJson(route('suppliers.purchases.update', $purchase), $updateData2);
+
+        $response2->assertStatus(500);
+        expect($response2->json('message'))->toContain("Cannot remove")
+            ->toContain($this->item2->name)
+            ->toContain('200 units')
+            ->toContain('50 units')
+            ->toContain('150 already sold/used');
+
+        // Verify purchase still has both items
+        $purchase->refresh();
+        expect($purchase->purchaseItems)->toHaveCount(2);
+    });
+
+    it('allows removing purchase items when full inventory is available', function () {
+        // Step 1: Create a purchase with 2 items
+        $purchase = ($this->createPurchaseViaApi)([
+            'currency_rate' => 1.0,
+            'supplier_invoice_number' => 'INV-TEST-002',
+            'items' => [
+                [
+                    'item_id' => $this->item1->id,
+                    'quantity' => 50,
+                    'price' => 25.00,
+                ],
+                [
+                    'item_id' => $this->item2->id,
+                    'quantity' => 100,
+                    'price' => 15.00,
+                ]
+            ]
+        ]);
+
+        // Verify initial inventory
+        $inventory1 = Inventory::where('warehouse_id', $this->warehouse->id)
+            ->where('item_id', $this->item1->id)
+            ->first();
+        expect($inventory1->quantity)->toBe('50.0000');
+
+        $inventory2 = Inventory::where('warehouse_id', $this->warehouse->id)
+            ->where('item_id', $this->item2->id)
+            ->first();
+        expect($inventory2->quantity)->toBe('100.0000');
+
+        // Step 2: Don't simulate any sales - full inventory available
+
+        $item2PurchaseItem = $purchase->purchaseItems->where('item_id', $this->item2->id)->first();
+
+        // Step 3: Remove item1 from the purchase (full 50 units still in inventory)
+        // This should SUCCEED
+        $updateData = [
+            'supplier_invoice_number' => 'INV-TEST-002',
+            'items' => [
+                // Only include item2, removing item1
+                [
+                    'id' => $item2PurchaseItem->id,
+                    'item_id' => $this->item2->id,
+                    'quantity' => 100,
+                    'price' => 15.00,
+                ]
+            ]
+        ];
+
+        $response = $this->putJson(route('suppliers.purchases.update', $purchase), $updateData);
+
+        // Should succeed
+        $response->assertOk();
+
+        // Verify purchase now has only 1 item
+        $purchase->refresh();
+        expect($purchase->purchaseItems)->toHaveCount(1);
+        expect($purchase->purchaseItems->first()->item_id)->toBe($this->item2->id);
+
+        // Verify inventory was adjusted (item1 removed from inventory)
+        $inventory1->refresh();
+        expect($inventory1->quantity)->toBe('0.0000'); // 50 - 50 = 0
+    });
 });
