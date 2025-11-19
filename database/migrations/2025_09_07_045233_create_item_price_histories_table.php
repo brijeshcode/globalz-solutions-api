@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('item_id')->index(); 
             
             $table->money('price_usd', 15, 4);
-            $table->money('average_waited_price')->nullable()->comment('for information');
+            $table->money('average_weighted_price')->nullable()->comment('for information');
             $table->money('latest_price')->nullable()->comment('for information');
             $table->date('effective_date');
             
