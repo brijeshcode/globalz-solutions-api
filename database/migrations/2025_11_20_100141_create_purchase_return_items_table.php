@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('purchase_return_items', function (Blueprint $table) {
             $table->id();
-            $table->string('item_code'); // comes form items table 
-
             $table->unsignedBigInteger('purchase_return_id')->index();
+            
+            $table->string('item_code'); // comes form items table 
             $table->unsignedBigInteger('item_id')->index();
 
             $table->money('price')->default(0);

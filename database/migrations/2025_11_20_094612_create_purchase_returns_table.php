@@ -17,7 +17,7 @@ return new class extends Migration
 
             $table->string('code')->unique()->comment('transction code');
             $table->enum('prefix', ['PURTN'])->default('PURTN');
-            $table->enum('shipping_status', ['Waiting', 'Shipped', 'Delivered'])->nullable(); // null untill its been approved
+            $table->enum('shipping_status', ['Waiting', 'Shipped', 'Delivered'])->default('Waiting'); // null untill its been approved
 
             $table->unsignedBigInteger('supplier_id')->nullable()->index();
             $table->unsignedBigInteger('warehouse_id')->nullable()->index();

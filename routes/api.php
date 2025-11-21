@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\Setups\CountriesController;
 use App\Http\Controllers\Api\Setups\SupplierPaymentTermsController;
 use App\Http\Controllers\Api\Setups\TaxCodesController;
 use App\Http\Controllers\Api\Items\ItemsController;
+use App\Http\Controllers\Api\Items\ItemTransfersController;
 use App\Http\Controllers\Api\Items\PriceListsController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerGroupsController;
@@ -269,6 +270,23 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('{purchaseReturn}/documents', 'uploadDocuments')->name('documents.upload');
             Route::delete('{purchaseReturn}/documents', 'deleteDocuments')->name('documents.delete');
             Route::get('{purchaseReturn}/documents', 'getDocuments')->name('documents.index');
+        });
+
+    });
+
+    Route::prefix('items')->name('items.')->group(function () {
+
+        // Item Transfers Controller
+        Route::controller(ItemTransfersController::class)->prefix('transfers')->name('transfers.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{itemTransfer}', 'show')->name('show');
+            Route::put('{itemTransfer}', 'update')->name('update');
+            Route::delete('{itemTransfer}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
 
     });

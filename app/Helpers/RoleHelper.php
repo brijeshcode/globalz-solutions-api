@@ -16,29 +16,59 @@ class RoleHelper {
         return $user;
     }
 
-    public static function isSalesman(): bool 
+    public static function isDeveloper(): bool
     {
-        return self::authUser()->isSalesman();
+        // Only developer role can access developer content
+        $user = self::authUser();
+        if (!$user) {
+            return false;
+        }
+        return $user->isDeveloper();
     }
 
-    public static function isWarehouseManager(): bool 
+    public static function isSuperAdmin(): bool
     {
+        // Developer has all access including super admin content
+        if (self::isDeveloper()) {
+            return true;
+        }
+
+        // Only super admin role can access super admin content
+        return self::authUser()->isSuperAdmin();
+    }
+
+    public static function isAdmin(): bool
+    {
+        // Super Admin can access admin content (this also includes Developer)
+        if (self::isSuperAdmin()) {
+            return true;
+        }
+
+        $user = self::authUser();
+        if (!$user) {
+            return false;
+        }
+        return $user->isAdmin();
+    }
+
+    public static function isWarehouseManager(): bool
+    {
+        // Admin can access warehouse manager content (this also includes Super Admin and Developer)
+        if (self::isAdmin()) {
+            return true;
+        }
+
         return self::authUser()->isWarehouseManager();
     }
 
-    public static function isAdmin(): bool 
+    public static function isSalesman(): bool
     {
-        return self::authUser()->isAdmin();
-    }
+        // Admin can access salesman content (this also includes Super Admin and Developer)
+        if (self::isAdmin()) {
+            return true;
+        }
 
-    public static function isDeveloper(): bool 
-    {
-        return self::authUser()->isDeveloper();
-    }
-
-    public static function isSuperAdmin(): bool 
-    {
-        return self::authUser()->isSuperAdmin();
+        return self::authUser()->isSalesman();
     }
 
     public static function getSalesmanEmployee(): Employee | null
