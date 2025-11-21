@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ItemAdjust extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, Searchable, Sortable;
+    public const TYPE_ADD= 'Add';
+    public const TYPE_REMOVE = 'Subtract';
 
     protected $fillable = [
         'code',
