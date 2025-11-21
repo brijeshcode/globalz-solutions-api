@@ -181,13 +181,7 @@ class ItemTransfersController extends Controller
         $query = $this->itemTransferQuery($request);
 
         $stats = [
-            'item_transfers_by_shipping_status' => (clone $query)->selectRaw('shipping_status, count(*) as count')
-                ->whereNotNull('shipping_status')
-                ->groupBy('shipping_status')
-                ->get()
-                ->mapWithKeys(function ($item) {
-                    return [$item->shipping_status => $item->count];
-                }),
+             
             'total_transfers' => (clone $query)->count(),
             'total_items_transferred' => (clone $query)
                 ->join('item_transfer_items', 'item_transfers.id', '=', 'item_transfer_items.item_transfer_id')
@@ -222,10 +216,6 @@ class ItemTransfersController extends Controller
 
         if ($request->has('code')) {
             $query->byCode($request->input('code'));
-        }
-
-        if ($request->has('shipping_status')) {
-            $query->byShippingStatus($request->input('shipping_status'));
         }
 
         if ($request->has('from_date')) {

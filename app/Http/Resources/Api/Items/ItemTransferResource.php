@@ -19,7 +19,6 @@ class ItemTransferResource extends JsonResource
             'code' => $this->code,
             'prefix' => $this->prefix,
             'date' => $this->date?->format('Y-m-d H:i:s'),
-            'shipping_status' => $this->shipping_status,
 
             // Computed attributes
             'total_items_count' => $this->getTotalItemsCountAttribute(),

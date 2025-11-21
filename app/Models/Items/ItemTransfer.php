@@ -23,8 +23,7 @@ class ItemTransfer extends Model
     protected $fillable = [
         'code',
         'date',
-        'prefix',
-        'shipping_status',
+        'prefix', 
         'from_warehouse_id',
         'to_warehouse_id',
         'note',
@@ -45,7 +44,6 @@ class ItemTransfer extends Model
         'code',
         'date',
         'prefix',
-        'shipping_status',
         'from_warehouse_id',
         'to_warehouse_id',
         'created_at',
@@ -97,10 +95,7 @@ class ItemTransfer extends Model
         return $query->where('code', $code);
     }
 
-    public function scopeByShippingStatus($query, $shippingStatus)
-    {
-        return $query->where('shipping_status', $shippingStatus);
-    }
+     
 
     // Accessors & Mutators
     public function getTotalItemsCountAttribute(): int

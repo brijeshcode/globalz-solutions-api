@@ -41,7 +41,6 @@ beforeEach(function () {
             'date' => '2025-01-15',
             'from_warehouse_id' => $this->fromWarehouse->id,
             'to_warehouse_id' => $this->toWarehouse->id,
-            'shipping_status' => 'Waiting',
         ], $overrides);
     };
 
@@ -99,7 +98,6 @@ describe('Item Transfers API', function () {
                         'date',
                         'from_warehouse',
                         'to_warehouse',
-                        'shipping_status',
                     ]
                 ],
                 'pagination'
@@ -220,8 +218,7 @@ describe('Item Transfers API', function () {
         $existingItem = $itemTransfer->itemTransferItems->first();
 
         // Update item transfer data
-        $updateData = [
-            'shipping_status' => 'Shipped',
+        $updateData = [ 
             'items' => [
                 // Update existing item
                 [
@@ -245,7 +242,6 @@ describe('Item Transfers API', function () {
 
         // Verify item transfer was updated
         $itemTransfer->refresh();
-        expect($itemTransfer->shipping_status)->toBe('Shipped');
 
         // Verify items were synced
         expect($itemTransfer->itemTransferItems)->toHaveCount(2);
@@ -431,24 +427,7 @@ describe('Item Transfers API', function () {
             ->assertJsonCount(1, 'data');
     });
 
-    it('can filter item transfers by shipping status', function () {
-        ItemTransfer::factory()->create([
-            'shipping_status' => 'Waiting',
-            'from_warehouse_id' => $this->fromWarehouse->id,
-            'to_warehouse_id' => $this->toWarehouse->id,
-        ]);
-        ItemTransfer::factory()->create([
-            'shipping_status' => 'Shipped',
-            'from_warehouse_id' => $this->fromWarehouse->id,
-            'to_warehouse_id' => $this->toWarehouse->id,
-        ]);
-
-        $response = $this->getJson(route('items.transfers.index', ['shipping_status' => 'Waiting']));
-
-        $response->assertOk()
-            ->assertJsonCount(1, 'data');
-    });
-
+     
     it('sets created_by and updated_by fields automatically', function () {
         ($this->setupInitialInventory)($this->item1->id, $this->fromWarehouse->id, 50);
 
@@ -482,36 +461,7 @@ describe('Item Transfers API', function () {
         expect($pagination['last_page'])->toBe(3);
     });
 
-    it('can get item transfer statistics', function () {
-        ItemTransfer::factory()->waiting()->create([
-            'from_warehouse_id' => $this->fromWarehouse->id,
-            'to_warehouse_id' => $this->toWarehouse->id,
-        ]);
-        ItemTransfer::factory()->shipped()->create([
-            'from_warehouse_id' => $this->fromWarehouse->id,
-            'to_warehouse_id' => $this->toWarehouse->id,
-        ]);
-        ItemTransfer::factory()->delivered()->create([
-            'from_warehouse_id' => $this->fromWarehouse->id,
-            'to_warehouse_id' => $this->toWarehouse->id,
-        ]);
-
-        $response = $this->getJson(route('items.transfers.stats'));
-
-        $response->assertOk()
-            ->assertJsonStructure([
-                'message',
-                'data' => [
-                    'item_transfers_by_shipping_status',
-                    'total_transfers',
-                ]
-            ]);
-
-        $stats = $response->json('data.item_transfers_by_shipping_status');
-        expect($stats['Waiting'])->toBe(1);
-        expect($stats['Shipped'])->toBe(1);
-        expect($stats['Delivered'])->toBe(1);
-    });
+     
 });
 
 describe('Item Transfer Authorization Tests', function () {
@@ -627,7 +577,6 @@ describe('Item Transfer Authorization Tests', function () {
         ]);
 
         $updateData = [
-            'shipping_status' => 'Shipped',
             'items' => [
                 [
                     'item_id' => $this->item1->id,
@@ -652,8 +601,7 @@ describe('Item Transfer Authorization Tests', function () {
             'to_warehouse_id' => $this->toWarehouse->id,
         ]);
 
-        $updateData = [
-            'shipping_status' => 'Shipped',
+        $updateData = [ 
             'items' => [
                 [
                     'item_id' => $this->item1->id,

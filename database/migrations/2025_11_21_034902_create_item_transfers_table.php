@@ -14,8 +14,7 @@ return new class extends Migration
         Schema::create('item_transfers', function (Blueprint $table) {
             $table->id();
 
-            $table->datetime('date');
-            $table->enum('shipping_status', ['Waiting', 'Shipped', 'Delivered'])->default('Waiting'); // null untill its been approved
+            $table->datetime('date'); 
 
             $table->string('code')->unique()->comment('transction code');
             $table->enum('prefix', ['TRAN'])->default('TRAN');

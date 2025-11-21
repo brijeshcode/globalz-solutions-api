@@ -16,7 +16,6 @@ class ItemTransfersStoreRequest extends FormRequest
     {
         return [
             'date' => 'required|date',
-            'shipping_status' => 'nullable|in:Waiting,Shipped,Delivered',
             'from_warehouse_id' => 'required|integer|exists:warehouses,id',
             'to_warehouse_id' => 'required|integer|exists:warehouses,id|different:from_warehouse_id',
             'note' => 'nullable|string|max:1000',
@@ -36,7 +35,6 @@ class ItemTransfersStoreRequest extends FormRequest
             'from_warehouse_id.required' => 'Source warehouse is required.',
             'to_warehouse_id.required' => 'Destination warehouse is required.',
             'to_warehouse_id.different' => 'Destination warehouse must be different from source warehouse.',
-            'shipping_status.in' => 'Shipping status must be one of: Waiting, Shipped, Delivered.',
             'items.*.item_id.required_with' => 'Item is required for each transfer item.',
             'items.*.quantity.required_with' => 'Quantity is required for each transfer item.',
             'items.*.quantity.min' => 'Quantity must be greater than 0.',
@@ -49,7 +47,6 @@ class ItemTransfersStoreRequest extends FormRequest
     {
         // Set default shipping status if not provided
         $this->merge([
-            'shipping_status' => $this->shipping_status ?? 'Waiting',
         ]);
     }
 }
