@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\Setups\Generals\CompanyController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
 use App\Http\Controllers\Api\Suppliers\PurchasesController;
+use App\Http\Controllers\Api\Suppliers\PurchaseReturnsController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
@@ -254,7 +255,22 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
-         
+
+        Route::controller(PurchaseReturnsController::class)->prefix('purchase-returns')->name('purchase-returns.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{purchaseReturn}', 'show')->name('show');
+            Route::put('{purchaseReturn}', 'update')->name('update');
+            Route::delete('{purchaseReturn}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::post('{purchaseReturn}/documents', 'uploadDocuments')->name('documents.upload');
+            Route::delete('{purchaseReturn}/documents', 'deleteDocuments')->name('documents.delete');
+            Route::get('{purchaseReturn}/documents', 'getDocuments')->name('documents.index');
+        });
+
     });
 
     Route::prefix('setups')->name('setups.')->group(function () {

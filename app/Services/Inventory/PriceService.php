@@ -56,6 +56,47 @@ class PriceService
     }
 
     /**
+     * Update item price based on purchase return
+     */
+    public static function updateFromPurchaseReturn(\App\Models\Suppliers\PurchaseReturn $purchaseReturn, \App\Models\Suppliers\PurchaseReturnItem $purchaseReturnItem, bool $isUpdate = false, ?int $oldQuantity = null): void
+    {
+        $item = $purchaseReturnItem->item;
+        $currentItemPrice = self::getCurrentPrice($purchaseReturnItem->item_id);
+
+        if (!$currentItemPrice) {
+            // No current price exists, nothing to update
+            return;
+        }
+
+        // Only recalculate for weighted average cost items
+        if ($item->cost_calculation !== Item::COST_WEIGHTED_AVERAGE) {
+            return;
+        }
+
+        $oldPriceUsd = $currentItemPrice->price_usd;
+        $newPriceUsd = self::calculateWeightedAveragePriceAfterReturn(
+            $purchaseReturnItem,
+            $oldPriceUsd,
+            $isUpdate,
+            $oldQuantity
+        );
+
+        $priceDifference = abs($newPriceUsd - $oldPriceUsd);
+
+        if ($priceDifference > 0) {
+            self::updatePrice(
+                $purchaseReturnItem->item_id,
+                $newPriceUsd,
+                $purchaseReturn->date,
+                $oldPriceUsd,
+                "Purchase Return #{$purchaseReturn->id}",
+                'purchase_return',
+                $purchaseReturn->id
+            );
+        }
+    }
+
+    /**
      * Initialize price when creating a new item
      */
     public static function initializeFromItem(Item $item): void
@@ -78,6 +119,44 @@ class PriceService
     public static function getCurrentPrice(int $itemId): ?ItemPrice
     {
         return ItemPrice::byItem($itemId)->first();
+    }
+
+    /**
+     * Calculate weighted average price after purchase return
+     */
+    private static function calculateWeightedAveragePriceAfterReturn(\App\Models\Suppliers\PurchaseReturnItem $purchaseReturnItem, float $currentPriceUsd, bool $isUpdate = false, ?int $oldQuantity = null): float
+    {
+        $returnedQuantity = $purchaseReturnItem->quantity;
+        $returnedPriceUsd = $purchaseReturnItem->cost_per_item_usd;
+
+        // Get current inventory BEFORE this return is processed
+        $currentInventory = InventoryService::getTotalQuantityAcrossWarehouses($purchaseReturnItem->item_id);
+
+        if ($isUpdate && $oldQuantity !== null) {
+            // For updates: adjust current inventory for the old quantity
+            $currentInventory = $currentInventory + $oldQuantity;
+        }
+
+        // Calculate inventory after return
+        $inventoryAfterReturn = $currentInventory - $returnedQuantity;
+
+        if ($inventoryAfterReturn <= 0) {
+            // All inventory returned, price becomes 0 or we keep current price
+            return $currentPriceUsd;
+        }
+
+        // Calculate new weighted average by removing returned items value
+        // Formula: ((current_qty × current_price) - (returned_qty × returned_price)) / (current_qty - returned_qty)
+        $currentTotalValue = $currentInventory * $currentPriceUsd;
+        $returnedTotalValue = $returnedQuantity * $returnedPriceUsd;
+        $newTotalValue = $currentTotalValue - $returnedTotalValue;
+
+        // Ensure we don't get negative value
+        if ($newTotalValue < 0) {
+            $newTotalValue = 0;
+        }
+
+        return $inventoryAfterReturn > 0 ? ($newTotalValue / $inventoryAfterReturn) : $currentPriceUsd;
     }
 
     /**
