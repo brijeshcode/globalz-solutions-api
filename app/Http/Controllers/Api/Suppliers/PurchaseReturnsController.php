@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Suppliers;
 
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Suppliers\PurchaseReturnsStoreRequest;
 use App\Http\Requests\Api\Suppliers\PurchaseReturnsUpdateRequest;
@@ -328,6 +329,20 @@ class PurchaseReturnsController extends Controller
         ];
 
         return ApiResponse::show('Purchase return statistics retrieved successfully', $stats);
+    }
+
+    public function changeStatus(Request $request, PurchaseReturn $purchaseReturn): JsonResponse
+    {
+
+        if (! RoleHelper::isWarehouseManager() && ! RoleHelper::isAdmin()) {
+            return ApiResponse::customError('Only warehouse manager or admin can change the status.', 422);
+        }
+
+        $purchaseReturn->update(['shipping_status' => $request->shipping_status]);
+        return ApiResponse::update(
+            'PurchaseReturn status updated successfully',
+            new PurchaseReturnResource($purchaseReturn)
+        );
     }
 
     /**

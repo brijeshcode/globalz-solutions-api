@@ -269,6 +269,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('{purchaseReturn}', 'update')->name('update');
             Route::delete('{purchaseReturn}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::patch('{purchaseReturn}/changeStatus', 'changeStatus')->name('changeStatus');
+            Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             Route::post('{purchaseReturn}/documents', 'uploadDocuments')->name('documents.upload');
             Route::delete('{purchaseReturn}/documents', 'deleteDocuments')->name('documents.delete');
