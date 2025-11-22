@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Items\ItemsController;
 use App\Http\Controllers\Api\Items\ItemTransfersController;
 use App\Http\Controllers\Api\Items\ItemAdjustsController;
 use App\Http\Controllers\Api\Items\ItemMovementsController;
+use App\Http\Controllers\Api\Items\ItemCostHistoryController;
 use App\Http\Controllers\Api\Items\PriceListsController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerGroupsController;
@@ -280,6 +281,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Item Movements Controller - Must be defined BEFORE other item routes
         Route::controller(ItemMovementsController::class)->prefix('movements')->name('movements.')->group(function () {
+            Route::get('/', 'index')->name('index');
+        });
+
+        // Item Cost History Controller
+        Route::controller(ItemCostHistoryController::class)->prefix('cost-history')->name('cost-history.')->group(function () {
             Route::get('/', 'index')->name('index');
         });
 
