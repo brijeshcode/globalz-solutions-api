@@ -125,7 +125,7 @@ class ListDataController extends Controller
     {
         $query = Customer::with('priceList:id,code,description,is_default')->active()->orderby('name');
 
-        if (RoleHelper::isSalesman()) {
+        if (RoleHelper::isSalesman() && !RoleHelper::isAdmin()) {
             $employee = Employee::where('user_id', ApiHelper::authUser()->id )->first();
 
             if($employee){

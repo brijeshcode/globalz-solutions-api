@@ -368,7 +368,7 @@ class SalesController extends Controller
             ->sortable($request);
 
         // Role-based filtering: salesman can only see their own returns
-        if (RoleHelper::isSalesman()) {
+        if (RoleHelper::isSalesman() && !RoleHelper::isAdmin()) {
             $employee = RoleHelper::getSalesmanEmployee();
             if ($employee) {
                 $query->where('salesperson_id', $employee->id);
@@ -379,7 +379,7 @@ class SalesController extends Controller
         }
 
         // Role-based filtering: warehouse manager can only see their assigned warehouses' sales
-        if (RoleHelper::isWarehouseManager()) {
+        if (RoleHelper::isWarehouseManager()  && !RoleHelper::isAdmin()) {
             $employee = RoleHelper::getWarehouseEmployee();
             if (!$employee) {
                 // No employee found for warehouse manager, return empty query

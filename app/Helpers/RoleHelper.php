@@ -28,10 +28,10 @@ class RoleHelper {
 
     public static function isSuperAdmin(): bool
     {
-        // Developer has all access including super admin content
-        if (self::isDeveloper()) {
-            return true;
-        }
+        // // Developer has all access including super admin content
+        // if (self::isDeveloper()) {
+        //     return true;
+        // }
 
         // Only super admin role can access super admin content
         return self::authUser()->isSuperAdmin();
@@ -39,10 +39,10 @@ class RoleHelper {
 
     public static function isAdmin(): bool
     {
-        // Super Admin can access admin content (this also includes Developer)
-        if (self::isSuperAdmin()) {
-            return true;
-        }
+        // // Super Admin can access admin content (this also includes Developer)
+        // if (self::isSuperAdmin()) {
+        //     return true;
+        // }
 
         $user = self::authUser();
         if (!$user) {
@@ -53,28 +53,32 @@ class RoleHelper {
 
     public static function isWarehouseManager(): bool
     {
-        // Admin can access warehouse manager content (this also includes Super Admin and Developer)
-        if (self::isAdmin()) {
-            return true;
-        }
+        // // Admin can access warehouse manager content (this also includes Super Admin and Developer)
+        // if (self::isAdmin()) {
+        //     return true;
+        // }
 
         return self::authUser()->isWarehouseManager();
     }
 
     public static function isSalesman(): bool
     {
-        // Admin can access salesman content (this also includes Super Admin and Developer)
-        if (self::isAdmin()) {
-            return true;
+        $user = self::authUser();
+        if (!$user) {
+            return false;
         }
 
-        return self::authUser()->isSalesman();
+        return $user->isSalesman();
     }
 
     public static function getSalesmanEmployee(): Employee | null
     {
         $user = self::authUser();
-        return $user->isSalesman() ? Employee::where('user_id', $user->id )->first(): null;
+        if (!$user) {
+            return null;
+        }
+
+        return $user->isSalesman() ? Employee::where('user_id', $user->id)->first() : null;
     }
 
     public static function getWarehouseEmployee(): Employee | null
