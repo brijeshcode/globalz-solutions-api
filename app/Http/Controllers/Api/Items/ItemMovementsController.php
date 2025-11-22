@@ -117,6 +117,7 @@ class ItemMovementsController extends Controller
     {
         return [
             'id' => $movement->id,
+            'parent_id' => $movement->parent_id,
             'code' => $movement->transaction_code,
             'type' => $movement->transaction_type,
             'date' => $movement->transaction_date,
