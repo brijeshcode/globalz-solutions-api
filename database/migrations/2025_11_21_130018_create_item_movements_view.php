@@ -199,6 +199,33 @@ return new class extends Migration
             INNER JOIN item_adjusts ia ON iai.item_adjust_id = ia.id
             WHERE ia.deleted_at IS NULL
                 AND iai.deleted_at IS NULL
+
+            UNION ALL
+
+            -- Initial Inventory (from items table with starting_quantity)
+            SELECT
+                i.id,
+                i.id as item_id,
+                i.code as item_code,
+                w.id as warehouse_id,
+                CONCAT('INIT-', i.code) as transaction_code,
+                i.code as transaction_number,
+                'INIT' as transaction_prefix,
+                'Initial Inventory' as transaction_type,
+                'initial_inventory' as transaction_type_key,
+                i.created_at as transaction_date,
+                i.starting_quantity as quantity,
+                0 as debit,
+                i.starting_quantity as credit,
+                'Initial inventory from item creation' as note,
+                i.created_by,
+                'items' as source_table,
+                UNIX_TIMESTAMP(i.created_at) as timestamp
+            FROM items i
+            CROSS JOIN warehouses w
+            WHERE i.deleted_at IS NULL
+                AND i.starting_quantity > 0
+                AND w.is_default = 1
         ");
     }
 
