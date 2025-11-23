@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Accounts\AccountsController;
 use App\Http\Controllers\Api\Accounts\AccountStatementController;
 use App\Http\Controllers\Api\Accounts\AccountTransfersController;
+use App\Http\Controllers\Api\Accounts\AccountAdjustsController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\LoginLogsController;
 use App\Http\Controllers\Api\HomePageController;
@@ -232,6 +233,19 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{accountTransfer}', 'show')->name('show');
             Route::put('{accountTransfer}', 'update')->name('update');
             Route::delete('{accountTransfer}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Account Adjusts Controller (Admin only) - Must be defined BEFORE {account} routes to avoid conflicts
+        Route::controller(AccountAdjustsController::class)->prefix('adjusts')->name('adjusts.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{accountAdjust}', 'show')->name('show');
+            Route::put('{accountAdjust}', 'update')->name('update');
+            Route::delete('{accountAdjust}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
