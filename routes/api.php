@@ -54,6 +54,7 @@ use App\Http\Controllers\Api\Suppliers\PurchasesController;
 use App\Http\Controllers\Api\Suppliers\PurchaseReturnsController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
+use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use Illuminate\Support\Facades\Route;
 
@@ -679,6 +680,27 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('items/{priceListItem}', 'deleteItem')->name('items.delete');
         });
 
+        Route::prefix('incomes')->name('incomes.')->group(function() {
+            
+            // Income Categories Controller
+            Route::controller(IncomeCategoriesController::class)->prefix('categories')->name('categories.')->group(function () {
+                Route::get('roots', 'roots')->name('roots');
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{incomeCategory}', 'show')->name('show');
+                Route::get('{incomeCategory}/children', 'children')->name('children');
+                Route::get('{incomeCategory}/ancestors', 'ancestors')->name('ancestors');
+                Route::get('{incomeCategory}/descendants', 'descendants')->name('descendants');
+                Route::get('{incomeCategory}/tree', 'tree')->name('tree');
+                Route::patch('{incomeCategory}/move', 'move')->name('move');
+                Route::put('{incomeCategory}', 'update')->name('update');
+                Route::delete('{incomeCategory}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+        });
+        
         Route::prefix('expenses')->name('expenses.')->group(function() {
             
             // Expense Categories Controller
