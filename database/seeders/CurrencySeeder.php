@@ -38,6 +38,7 @@ class CurrencySeeder extends Seeder
                 'decimal_places' => 2,
                 'decimal_separator' => ',',
                 'thousand_separator' => '.',
+                'calculation_type' => 'multiply',
                 'is_active' => true,
             ],
             [
@@ -46,6 +47,7 @@ class CurrencySeeder extends Seeder
                 'symbol' => '£',
                 'symbol_position' => 'before',
                 'decimal_places' => 2,
+                'calculation_type' => 'multiply',
                 'decimal_separator' => '.',
                 'thousand_separator' => ',',
                 'is_active' => true,

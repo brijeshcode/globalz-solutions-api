@@ -31,6 +31,7 @@ class SetupSeeder extends Seeder
     private function testingSetup() : void 
     {
         $this->call(CountrySeeder::class);
+        $this->call(CurrencyRateSeeder::class);
 
 
         // Customer setup data
