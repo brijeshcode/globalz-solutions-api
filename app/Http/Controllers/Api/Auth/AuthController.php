@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\User;
+use App\Models\Advance\LoginLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -82,6 +83,15 @@ class AuthController extends Controller
         // Verify credentials
         if (!$user || !Hash::check($validated['password'], $user->password)) {
             RateLimiter::hit($key);
+
+            // Log failed login attempt
+            LoginLog::logFailedLogin(
+                $user?->id,
+                $user?->role,
+                $request->ip(),
+                $request->userAgent() ?? 'Unknown'
+            );
+
             return ApiResponse::throw(
                 ['email' => ['The provided credentials are incorrect.']],
                 'Invalid credentials',
@@ -92,6 +102,15 @@ class AuthController extends Controller
         // Check if user account is active
         if (!$user->is_active) {
             RateLimiter::hit($key);
+
+            // Log failed login attempt due to inactive account
+            LoginLog::logFailedLogin(
+                $user->id,
+                $user->role,
+                $request->ip(),
+                $request->userAgent() ?? 'Unknown'
+            );
+
             return ApiResponse::throw(
                 ['email' => ['Your account has been deactivated. Please contact administrator.']],
                 'Account deactivated',
@@ -107,6 +126,19 @@ class AuthController extends Controller
 
         // Update last login timestamp using the model method
         $user->updateLastLogin();
+
+        // Log successful login
+        $loginLog = LoginLog::logSuccessfulLogin(
+            $user->id,
+            $user->role,
+            $request->ip(),
+            $request->userAgent() ?? 'Unknown'
+        );
+
+        // Store login log ID in token metadata for logout tracking
+        $token->accessToken->forceFill([
+            'name' => 'web-app-token-' . $loginLog->id
+        ])->save();
 
         return ApiResponse::send('Login successful', 200, [
             'user' => [
@@ -135,6 +167,19 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
+        // Get the current token name to extract login log ID
+        $tokenName = $request->user()->currentAccessToken()->name;
+
+        // Extract login log ID from token name (format: web-app-token-{id})
+        if (preg_match('/web-app-token-(\d+)/', $tokenName, $matches)) {
+            $loginLogId = $matches[1];
+            $loginLog = LoginLog::find($loginLogId);
+
+            if ($loginLog) {
+                $loginLog->markLogout();
+            }
+        }
+
         // Revoke current access token
         $request->user()->currentAccessToken()->delete();
 
@@ -154,6 +199,11 @@ class AuthController extends Controller
      */
     public function logoutAll(Request $request): JsonResponse
     {
+        // Mark all active login sessions as logged out
+        LoginLog::where('user_id', $request->user()->id)
+            ->whereNull('logout_at')
+            ->update(['logout_at' => now()]);
+
         // Revoke all tokens for this user
         $request->user()->tokens()->delete();
 
