@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Expenses;
 
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,7 +13,7 @@ class ExpenseTransactionsUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::isAdmin();
     }
 
     /**
