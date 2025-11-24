@@ -402,7 +402,6 @@ class PurchasesController extends Controller
         }
 
         if ($request->has('from_date')) {
-            info('from date');
             $query->where('date', '>=', $request->from_date);
         }
 

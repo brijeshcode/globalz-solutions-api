@@ -29,8 +29,6 @@ class LoginLogResource extends JsonResource
             'logout_at' => $this->logout_at?->format('Y-m-d H:i:s'),
             'login_successful' => $this->login_successful,
             'session_duration' => $this->getSessionDuration(),
-            'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
         ];
     }
 

@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Requests\Api\Expenses;
+namespace App\Http\Requests\Api\Accounts;
 
 use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ExpenseTransactionsStoreRequest extends FormRequest
+class IncomeTransactionsUpdateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,7 +24,7 @@ class ExpenseTransactionsStoreRequest extends FormRequest
     {
         return [
             'date' => 'required|date',
-            'expense_category_id' => 'required|integer|exists:expense_categories,id',
+            'income_category_id' => 'required|integer|exists:income_categories,id',
             'account_id' => 'required|integer|exists:accounts,id',
             'subject' => 'nullable|string|max:200',
             'amount' => 'required|numeric|min:0|max:999999999999.99',
@@ -45,10 +45,8 @@ class ExpenseTransactionsStoreRequest extends FormRequest
         return [
             'date.required' => 'Transaction date is required.',
             'date.date' => 'Please provide a valid date.',
-            'code.unique' => 'This transaction code is already in use.',
-            'code.max' => 'Transaction code cannot exceed 200 characters.',
-            'expense_category_id.required' => 'Expense category is required.',
-            'expense_category_id.exists' => 'Selected expense category does not exist.',
+            'income_category_id.required' => 'Income category is required.',
+            'income_category_id.exists' => 'Selected income category does not exist.',
             'account_id.required' => 'Account is required.',
             'account_id.exists' => 'Selected account does not exist.',
             'subject.max' => 'Subject cannot exceed 200 characters.',
@@ -71,7 +69,7 @@ class ExpenseTransactionsStoreRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'expense_category_id' => 'expense category',
+            'income_category_id' => 'income category',
             'account_id' => 'account',
             'bank_ref_number' => 'bank reference number',
         ];

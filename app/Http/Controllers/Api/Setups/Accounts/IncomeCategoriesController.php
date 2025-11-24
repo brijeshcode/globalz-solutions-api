@@ -9,8 +9,8 @@ use App\Http\Resources\Api\Setups\Accounts\IncomeCategoryResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setups\Accounts\IncomeCategory;
 use App\Traits\HasPagination;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request; 
 
 class IncomeCategoriesController extends Controller
 {

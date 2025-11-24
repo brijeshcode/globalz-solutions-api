@@ -46,12 +46,12 @@ class LoginLogsController extends Controller
         }
 
         // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('login_at', '>=', $request->date_from);
+        if ($request->has('from_date')) {
+            $query->whereDate('login_at', '>=', $request->from_date);
         }
 
-        if ($request->filled('date_to')) {
-            $query->whereDate('login_at', '<=', $request->date_to);
+        if ($request->has('to_date')) {
+            $query->whereDate('login_at', '<=', $request->to_date);
         }
 
         $log = $this->applyPagination($query, $request);

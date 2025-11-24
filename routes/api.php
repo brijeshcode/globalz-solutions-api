@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Accounts\AccountsController;
 use App\Http\Controllers\Api\Accounts\AccountStatementController;
 use App\Http\Controllers\Api\Accounts\AccountTransfersController;
 use App\Http\Controllers\Api\Accounts\AccountAdjustsController;
+use App\Http\Controllers\Api\Accounts\IncomeTransactionsController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\LoginLogsController;
 use App\Http\Controllers\Api\HomePageController;
@@ -731,6 +732,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{expenseTransaction}', 'show')->name('show');
         Route::put('{expenseTransaction}', 'update')->name('update');
         Route::delete('{expenseTransaction}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+
+    });
+
+    // income transactions controller
+    Route::controller(IncomeTransactionsController::class)->prefix('income-transactions')->name('income-transactions.')->group(function () {
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{incomeTransaction}', 'show')->name('show');
+        Route::put('{incomeTransaction}', 'update')->name('update');
+        Route::delete('{incomeTransaction}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
 
