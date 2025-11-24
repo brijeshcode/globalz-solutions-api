@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             
             // Main Info Tab
-            $table->string('code')->unique()->comment('Unique supplier code starting from 1000');
+            $table->string('code', 50)->unique()->comment('Unique supplier code starting from 1000');
             $table->string('name');
             $table->foreignId('supplier_type_id')->nullable()->constrained('supplier_types')->onDelete('set null');
             $table->foreignId('country_id')->nullable()->constrained('countries')->onDelete('set null');

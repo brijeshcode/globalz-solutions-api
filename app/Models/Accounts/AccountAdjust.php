@@ -35,6 +35,7 @@ class AccountAdjust extends Model
     protected $searchable = [
         'code',
         'note',
+        'amount',
     ];
 
     protected $sortable = [

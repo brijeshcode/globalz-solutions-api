@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('account_adjusts', function (Blueprint $table) {
             $table->id();
+            $table->string('code', 50)->unique()->index(); // Auto-generated starting from 100
             $table->datetime('date'); 
             $table->enum('prefix', ['ADJ'])->default('ADJ');
             $table->enum('type', ['Credit', 'Debit'])->default('Debit');

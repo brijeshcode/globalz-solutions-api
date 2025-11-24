@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('purchases', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique(); // auto generated invoice code
+            $table->string('code', 50)->unique(); // auto generated invoice code
             $table->enum('prefix', ['PUR', 'PAX'])->default('PUR');
             $table->enum('status', ['Waiting', 'Shipped', 'Delivered'])->default('Waiting'); // null untill its been approved
             $table->datetime('date');

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('customer_credit_debit_notes', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique(); // auto generated invoice code
+            $table->string('code', 50)->unique(); // auto generated invoice code
             $table->datetime('date');
             $table->enum('prefix', ['CRX', 'CRN','DBX', 'DBN',])->default('CRN');
             $table->enum('type', ['credit', 'debit'])->default('credit');

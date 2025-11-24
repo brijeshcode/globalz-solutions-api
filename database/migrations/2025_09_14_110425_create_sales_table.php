@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique(); // auto generated invoice code
+            $table->string('code', 50)->unique(); // auto generated invoice code
             $table->datetime('date');
             $table->datetime('value_date')->nullable()->comment('date by payment term');
             $table->enum('prefix', ['INX', 'INV'])->default('INV');

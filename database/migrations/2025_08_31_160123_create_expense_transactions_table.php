@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('expense_transactions', function (Blueprint $table) {
             $table->id(); 
             $table->datetime('date');
-            $table->string('code', 200)->unique()->index(); // Auto-generated starting from 100
+            $table->string('code', 50)->unique()->index(); // Auto-generated starting from 100
 
             $table->foreignId('expense_category_id')->constrained('expense_categories')->onDelete('restrict');
             $table->foreignId('account_id')->constrained('accounts')->onDelete('restrict');

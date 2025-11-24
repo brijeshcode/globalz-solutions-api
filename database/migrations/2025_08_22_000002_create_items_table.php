@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             
             // Main Information
-            $table->string('code')->unique()->index(); // Auto-generated starting from 5000, supports existing codes like "800947000018A"
+            $table->string('code', 50)->unique()->index(); // Auto-generated starting from 5000, supports existing codes like "800947000018A"
             $table->string('short_name')->nullable();
             $table->text('description'); // Required field
             $table->unsignedBigInteger('item_type_id')->nullable(); // Required - references item_types table

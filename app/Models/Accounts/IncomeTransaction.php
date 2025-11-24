@@ -63,11 +63,11 @@ class IncomeTransaction extends Model
     protected $defaultSortDirection = 'desc';
 
     /**
-     * Get the code attribute with "EXP" prefix
+     * Get the code attribute with "INC" prefix
      */
     public function getCodeAttribute($value): ?string
     {
-        return $value ? 'EXP' . $value : null;
+        return $value ? 'INC' . $value : null;
     }
 
     public function incomeCategory(): BelongsTo

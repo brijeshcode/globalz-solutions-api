@@ -12,6 +12,7 @@ use App\Models\Employees\Employee;
 use App\Models\Items\Item;
 use App\Models\Items\PriceList;
 use App\Models\Setups\Accounts\AccountType;
+use App\Models\Setups\Accounts\IncomeCategory;
 use App\Models\Setups\Country;
 use App\Models\Setups\Customers\CustomerGroup;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
@@ -33,6 +34,7 @@ use App\Models\Setups\SupplierPaymentTerm;
 use App\Models\Setups\SupplierType;
 use App\Models\Setups\TaxCode;
 use App\Models\Setups\Warehouse;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +46,7 @@ class ListDataController extends Controller
         $dataList = match($type) {
             'warehouses' => $this->warehouses(),
             'currencies' => $this->currencies(),
+            'users' => $this->users(),
             
             'customers' => $this->customers(),
             'customerPaymentTerms'  => $this->customerPaymentTerms(),
@@ -58,6 +61,9 @@ class ListDataController extends Controller
 
             // expenses
             'expenseCategories' => $this->expenseCategories(),
+
+            // expenses
+            'incomeCategories' => $this->incomeCategories(),
 
             // items
             'items' => $this->items(),
@@ -204,6 +210,18 @@ class ListDataController extends Controller
         return ExpenseCategory::active()->orderBy('name')->get(['id', 'name']);
     }
 
+    // incomes
+    private function incomeCategories()
+    {
+        return IncomeCategory::active()->orderBy('name')->get(['id', 'name']);
+    }
+
+    // users
+    private function users()
+    {
+        return User::active()->orderBy('name')->get(['id', 'name', 'email', 'role']);
+    }
+    
     // items
 
     private function items()

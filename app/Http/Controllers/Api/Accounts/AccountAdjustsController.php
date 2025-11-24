@@ -48,7 +48,7 @@ class AccountAdjustsController extends Controller
     {
         $query = AccountAdjust::onlyTrashed()
             ->with([
-                'account:id,name,code',
+                'account:id,name',
                 'createdBy:id,name',
                 'updatedBy:id,name',
             ]);
@@ -80,7 +80,7 @@ class AccountAdjustsController extends Controller
         $accountAdjust = AccountAdjust::create($data);
 
         $accountAdjust->load([
-            'account:id,name,code',
+            'account:id,name',
             'createdBy:id,name',
             'updatedBy:id,name',
         ]);
@@ -97,7 +97,7 @@ class AccountAdjustsController extends Controller
     public function show(AccountAdjust $accountAdjust): JsonResponse
     {
         $accountAdjust->load([
-            'account:id,name,code,current_balance',
+            'account:id,name,current_balance',
             'createdBy:id,name',
             'updatedBy:id,name',
         ]);
@@ -119,7 +119,7 @@ class AccountAdjustsController extends Controller
         $accountAdjust->update($data);
 
         $accountAdjust->load([
-            'account:id,name,code',
+            'account:id,name',
             'createdBy:id,name',
             'updatedBy:id,name',
         ]);
@@ -153,7 +153,7 @@ class AccountAdjustsController extends Controller
         $accountAdjust->restore();
 
         $accountAdjust->load([
-            'account:id,name,code',
+            'account:id,name',
             'createdBy:id,name',
             'updatedBy:id,name',
         ]);
@@ -208,7 +208,7 @@ class AccountAdjustsController extends Controller
     {
         $query = AccountAdjust::query()
             ->with([
-                'account:id,name,code',
+                'account:id,name',
                 'createdBy:id,name',
                 'updatedBy:id,name',
             ])
@@ -225,13 +225,17 @@ class AccountAdjustsController extends Controller
             $query->where('account_id', $request->account_id);
         }
 
-        // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('date', '>=', $request->date_from);
+        if ($request->filled('user_id')) {
+            $query->where('created_by', $request->user_id);
         }
 
-        if ($request->filled('date_to')) {
-            $query->whereDate('date', '<=', $request->date_to);
+        // Filter by date range
+        if ($request->filled('from_date')) {
+            $query->whereDate('date', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('date', '<=', $request->to_date);
         }
 
         // Filter by date range (alternative)

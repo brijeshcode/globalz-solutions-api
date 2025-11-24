@@ -16,7 +16,7 @@ return new class extends Migration
 
             $table->datetime('date'); 
 
-            $table->string('code')->unique()->comment('transction code');
+            $table->string('code', 50)->unique()->comment('transction code');
             $table->enum('prefix', ['TRAN'])->default('TRAN');
 
             $table->unsignedBigInteger('from_warehouse_id')->index();

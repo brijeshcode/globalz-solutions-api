@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('prefix', ['RCT', 'RCX'])->default('RCT');
             
             // auto generated payment order code 
-            $table->string('code')->unique()->comment('rct_number');
+            $table->string('code', 50)->unique()->comment('rct_number');
             
             $table->unsignedBigInteger('customer_id')->nullable()->index();
             $table->unsignedBigInteger('customer_payment_term_id')->nullable()->index();

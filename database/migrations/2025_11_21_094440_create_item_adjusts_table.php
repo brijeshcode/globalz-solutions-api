@@ -16,7 +16,7 @@ return new class extends Migration
             
             $table->datetime('date'); 
 
-            $table->string('code')->unique()->comment('transction code');
+            $table->string('code', 50)->unique()->comment('transction code');
             $table->enum('prefix', ['ADJ'])->default('ADJ');
             $table->enum('type', ['Add', 'Subtract'])->default('Subtract');
  

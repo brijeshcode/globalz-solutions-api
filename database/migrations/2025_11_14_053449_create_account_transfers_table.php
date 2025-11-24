@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->datetime('date');
 
-            $table->string('code')->unique()->comment('transction code');
+            $table->string('code', 50)->unique()->comment('transction code');
             $table->enum('prefix', ['TRF'])->default('TRF');
 
             $table->unsignedBigInteger('from_account_id')->index();
