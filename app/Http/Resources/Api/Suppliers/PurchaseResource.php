@@ -83,14 +83,15 @@ class PurchaseResource extends JsonResource
                 ];
             }),
             
-            'account_id' => $this->account_id,
-            'account' => $this->whenLoaded('account', function () {
-                return [
-                    'id' => $this->account->id,
-                    'name' => $this->account->name,
-                    'type' => $this->when($this->account->type, $this->account->type),
-                ];
-            }),
+            // remove this completealty if we find no error in the system
+            // 'account_id' => $this->account_id,
+            // 'account' => $this->whenLoaded('account', function () {
+            //     return [
+            //         'id' => $this->account->id,
+            //         'name' => $this->account->name,
+            //         'type' => $this->when($this->account->type, $this->account->type),
+            //     ];
+            // }),
             
             'items' => $this->whenLoaded('purchaseItems', function () {
                 return $this->purchaseItems->map(function ($item) {

@@ -19,7 +19,7 @@ class PurchasesStoreRequest extends FormRequest
             'supplier_id' => 'required|integer|exists:suppliers,id',
             'warehouse_id' => 'required|integer|exists:warehouses,id',
             'currency_id' => 'required|integer|exists:currencies,id',
-            'account_id' => 'nullable|integer|exists:accounts,id',
+            // 'account_id' => 'nullable|integer|exists:accounts,id',
             'supplier_invoice_number' => 'nullable|string|max:255',
             'currency_rate' => 'required|numeric|min:0.000001|max:999999.999999',
             'final_total_usd' => 'required|numeric|min:0.000000|max:999999.999999',

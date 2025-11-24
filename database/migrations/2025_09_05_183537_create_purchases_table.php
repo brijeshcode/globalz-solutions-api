@@ -21,7 +21,7 @@ return new class extends Migration
             $table->unsignedBigInteger('supplier_id')->nullable()->index();
             $table->unsignedBigInteger('warehouse_id')->nullable()->index();
             $table->unsignedBigInteger('currency_id')->nullable()->index();
-            $table->unsignedBigInteger('account_id')->nullable()->index();
+            // $table->unsignedBigInteger('account_id')->nullable()->index();
             $table->string('supplier_invoice_number')->nullable();
 
             $table->rate('currency_rate')->default(0);

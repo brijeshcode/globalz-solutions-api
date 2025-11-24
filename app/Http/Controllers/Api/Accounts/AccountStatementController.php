@@ -8,9 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
 use App\Models\Accounts\AccountTransfer;
+use App\Models\Accounts\IncomeTransaction;
+use App\Models\Accounts\AccountAdjust;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Expenses\ExpenseTransaction;
-use App\Models\Suppliers\Purchase;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -167,21 +168,27 @@ class AccountStatementController extends Controller
             );
         }
 
-        if (!$transactionType || $transactionType === 'purchase') {
-            $allTransactions = $allTransactions->concat(
-                $this->getPurchases($request, $account, $noteSearch)
-            );
-        }
-
         if (!$transactionType || $transactionType === 'expense') {
             $allTransactions = $allTransactions->concat(
                 $this->getExpenseTransactions($request, $account, $noteSearch)
             );
         }
 
+        if (!$transactionType || $transactionType === 'income') {
+            $allTransactions = $allTransactions->concat(
+                $this->getIncomeTransactions($request, $account, $noteSearch)
+            );
+        }
+
         if (!$transactionType || $transactionType === 'account_transfer') {
             $allTransactions = $allTransactions->concat(
                 $this->getAccountTransfers($request, $account, $noteSearch)
+            );
+        }
+
+        if (!$transactionType || $transactionType === 'account_adjust') {
+            $allTransactions = $allTransactions->concat(
+                $this->getAccountAdjusts($request, $account, $noteSearch)
             );
         }
 
@@ -240,34 +247,33 @@ class AccountStatementController extends Controller
         });
     }
 
-    private function getPurchases(Request $request, Account $account, ?string $noteSearch = null)
+    private function getIncomeTransactions(Request $request, Account $account, ?string $noteSearch = null)
     {
-        $query = Purchase::query()
-            ->select('id', 'code', 'date', 'final_total_usd', 'note', 'supplier_id', 'account_id', 'created_at');
+        $query = IncomeTransaction::query()
+            ->select('id', 'code', 'date', 'amount', 'subject', 'note', 'income_category_id', 'account_id', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
-        return $query->with('supplier:id,code,name')->get()->map(function ($item) use ($account) {
+        return $query->with('incomeCategory:id,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'code' => $item->code,
-                'type' => 'Purchase',
+                'type' => 'Income',
                 'date' => $item->date->format('Y-m-d'),
-                'amount' => -$item->final_total_usd,
-                'debit' => $item->final_total_usd,
-                'credit' => 0,
-                'note' => $item->note,
-                'supplier' => [
-                    'id' => $item->supplier->id,
-                    'code' => $item->supplier->code,
-                    'name' => $item->supplier->name,
+                'amount' => $item->amount,
+                'debit' => 0,
+                'credit' => $item->amount,
+                'note' => $item->note ?? $item->subject,
+                'income_category' => [
+                    'id' => $item->incomeCategory->id,
+                    'name' => $item->incomeCategory->name,
                 ],
                 'account' => [
                     'id' => $account->id,
                     'name' => $account->name,
                 ],
-                'transaction_type' => 'purchase',
-                'source_table' => 'purchases',
+                'transaction_type' => 'income',
+                'source_table' => 'income_transactions',
                 'timestamp' => $item->date->timestamp,
             ];
         });
@@ -372,6 +378,37 @@ class AccountStatementController extends Controller
         });
 
         return $transfers->concat($transfersFrom)->concat($transfersTo);
+    }
+
+    private function getAccountAdjusts(Request $request, Account $account, ?string $noteSearch = null)
+    {
+        $query = AccountAdjust::query()
+            ->select('id', 'code', 'prefix', 'date', 'type', 'amount', 'note', 'account_id', 'created_at');
+
+        $this->applyFilters($query, $request, $account, $noteSearch);
+
+        return $query->get()->map(function ($item) use ($account) {
+            $isCredit = $item->type === 'Credit';
+
+            return [
+                'id' => $item->id,
+                'code' => $item->prefix . $item->code,
+                'type' => 'Account Adjust (' . $item->type . ')',
+                'date' => $item->date->format('Y-m-d'),
+                'amount' => $isCredit ? $item->amount : -$item->amount,
+                'debit' => $isCredit ? 0 : $item->amount,
+                'credit' => $isCredit ? $item->amount : 0,
+                'note' => $item->note,
+                'adjust_type' => $item->type,
+                'account' => [
+                    'id' => $account->id,
+                    'name' => $account->name,
+                ],
+                'transaction_type' => 'account_adjust',
+                'source_table' => 'account_adjusts',
+                'timestamp' => $item->date->timestamp,
+            ];
+        });
     }
 
     private function calculateStats($transactions, Account $account, float $finalBalance)

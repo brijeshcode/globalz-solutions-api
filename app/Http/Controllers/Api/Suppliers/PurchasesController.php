@@ -80,7 +80,7 @@ class PurchasesController extends Controller
             'supplier:id,code,name', 
             'warehouse:id,name',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'account:id,name',
+            // 'account:id,name',
             'purchaseItems.item:id,code,short_name',
             'documents'
         ]);
@@ -102,7 +102,7 @@ class PurchasesController extends Controller
             'supplier:id,code,name', 
             'warehouse:id,name',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'account:id,name',
+            // 'account:id,name',
             'purchaseItems.item:id,code,short_name',
             'documents'
         ]);
@@ -151,7 +151,7 @@ class PurchasesController extends Controller
             'supplier:id,code,name', 
             'warehouse:id,name',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'account:id,name',
+            // 'account:id,name',
             'purchaseItems.item:id,code,short_name',
             'documents'
         ]);
@@ -184,7 +184,7 @@ class PurchasesController extends Controller
                 'supplier:id,code,name', 
                 'warehouse:id,name',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'account:id,name'
+                // 'account:id,name'
             ])
             ->searchable($request)
             ->sortable($request);
@@ -368,7 +368,7 @@ class PurchasesController extends Controller
                 'supplier:id,code,name', 
                 'warehouse:id,name',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'account:id,name'
+                // 'account:id,name'
             ])
             ->searchable($request)
             ->sortable($request);
@@ -385,9 +385,9 @@ class PurchasesController extends Controller
             $query->where('currency_id', $request->input('currency_id'));
         }
 
-        if ($request->has('account_id')) {
-            $query->where('account_id', $request->input('account_id'));
-        }
+        // if ($request->has('account_id')) {
+        //     $query->where('account_id', $request->input('account_id'));
+        // }
 
         if ($request->has('code')) {
             $query->byCode($request->input('code'));
