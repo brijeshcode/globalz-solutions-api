@@ -23,6 +23,7 @@ class Supplier extends Model
         'supplier_type_id',
         'country_id',
         'opening_balance',
+        'current_balance',
         'address',
         'phone',
         'mobile',
@@ -98,9 +99,7 @@ class Supplier extends Model
     // Accessors & Mutators
     public function getBalanceAttribute(): float
     {
-        // This would calculate current balance based on transactions
-        // For now, return opening balance as placeholder
-        return (float) ($this->opening_balance ?? 0);
+        return (float) ($this->current_balance ?? 0);
     }
 
     // Scopes
@@ -119,4 +118,8 @@ class Supplier extends Model
         return $query->where('supplier_type_id', $typeId);
     }
 
+    protected static function boot()
+    {
+        parent::boot();
+    }
 }

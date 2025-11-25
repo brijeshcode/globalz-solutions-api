@@ -2,6 +2,7 @@
 
 namespace App\Models\Suppliers;
 
+use App\Helpers\SuppliersHelper;
 use App\Models\Setting;
 use App\Models\Setups\Supplier;
 use App\Models\Setups\Generals\Currencies\Currency;
@@ -248,6 +249,31 @@ class PurchaseReturn extends Model
                 $purchaseReturn->setPurchaseReturnCode();
             }
             $purchaseReturn->prefix = 'PURTN';
+        });
+
+        static::created(function ($purchaseReturn) {
+            // Purchase return reduces supplier balance (we returned goods to them)
+            SuppliersHelper::removeBalance(Supplier::find($purchaseReturn->supplier_id), $purchaseReturn->final_total_usd);
+        });
+
+        static::updated(function ($purchaseReturn) {
+            $original = $purchaseReturn->getOriginal();
+
+            // Case 1: Supplier changed
+            if ($original['supplier_id'] != $purchaseReturn->supplier_id) {
+                SuppliersHelper::addBalance(Supplier::find($original['supplier_id']), $original['final_total_usd']);
+                SuppliersHelper::removeBalance(Supplier::find($purchaseReturn->supplier_id), $purchaseReturn->final_total_usd);
+            }
+            // Case 2: Amount changed on same supplier
+            elseif ($original['final_total_usd'] != $purchaseReturn->final_total_usd) {
+                $difference = $purchaseReturn->final_total_usd - $original['final_total_usd'];
+                SuppliersHelper::removeBalance(Supplier::find($purchaseReturn->supplier_id), $difference);
+            }
+        });
+
+        static::deleted(function ($purchaseReturn) {
+            // Restore supplier balance when purchase return is deleted
+            SuppliersHelper::addBalance(Supplier::find($purchaseReturn->supplier_id), $purchaseReturn->final_total_usd);
         });
     }
 }

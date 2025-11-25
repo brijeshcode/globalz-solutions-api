@@ -16,7 +16,9 @@ return new class extends Migration
             $table->string('name');
             $table->foreignId('supplier_type_id')->nullable()->constrained('supplier_types')->onDelete('set null');
             $table->foreignId('country_id')->nullable()->constrained('countries')->onDelete('set null');
+            // we will remove the opening balance once client confirms if he aggree to use credit note for supplier 
             $table->decimal('opening_balance', 15, 2)->default(0)->comment('Starting balance');
+            $table->decimal('current_balance', 15, 4)->default(0); // Running balance
             
             // Contact Info Tab
             $table->text('address')->nullable()->comment('Full address');
@@ -57,7 +59,6 @@ return new class extends Migration
             $table->index('supplier_type_id');
             $table->index('payment_term_id');
             $table->index('currency_id');
-            $table->index('opening_balance');
             $table->index('created_at');
         });
     }

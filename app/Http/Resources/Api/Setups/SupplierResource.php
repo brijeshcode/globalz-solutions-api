@@ -26,7 +26,6 @@ class SupplierResource extends JsonResource
                 'name' => $this->country?->name,
                 'code' => $this->country?->code,
             ],
-            'opening_balance' => $this->opening_balance,
             'balance' => $this->balance, // Calculated current balance
             
             // Contact Info Tab

@@ -3,6 +3,7 @@
 namespace App\Models\Suppliers;
 
 use App\Helpers\AccountsHelper;
+use App\Helpers\SuppliersHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Items\Item;
@@ -293,12 +294,37 @@ class Purchase extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($purchase) {
             $purchase->status = 'Waiting';
             if (!$purchase->code) {
                 $purchase->setPurchaseCode();
             }
+        });
+
+        static::created(function ($purchase) {
+            // Add to supplier balance when purchase is created
+            SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+        });
+
+        static::updated(function ($purchase) {
+            $original = $purchase->getOriginal();
+
+            // Case 1: Supplier changed
+            if ($original['supplier_id'] != $purchase->supplier_id) {
+                SuppliersHelper::removeBalance(Supplier::find($original['supplier_id']), $original['final_total_usd']);
+                SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+            }
+            // Case 2: Amount changed on same supplier
+            elseif ($original['final_total_usd'] != $purchase->final_total_usd) {
+                $difference = $purchase->final_total_usd - $original['final_total_usd'];
+                SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $difference);
+            }
+        });
+
+        static::deleted(function ($purchase) {
+            // Remove from supplier balance when purchase is deleted
+            SuppliersHelper::removeBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
         });
 
     }
