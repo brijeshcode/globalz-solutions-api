@@ -145,7 +145,8 @@ class CustomerStatmentController extends Controller
         if($customer->current_balance == $balance){
             return;
         }
-        info('here we need to change the order of display: latest transaction on top');
+
+        // Update customer balance
         $customer->update(['current_balance' => $balance]);
     }
 

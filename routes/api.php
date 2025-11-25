@@ -53,6 +53,7 @@ use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
 use App\Http\Controllers\Api\Suppliers\PurchasesController;
 use App\Http\Controllers\Api\Suppliers\PurchaseReturnsController;
+use App\Http\Controllers\Api\Suppliers\SupplierCreditDebitNotesController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
@@ -296,6 +297,19 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('{purchaseReturn}/documents', 'uploadDocuments')->name('documents.upload');
             Route::delete('{purchaseReturn}/documents', 'deleteDocuments')->name('documents.delete');
             Route::get('{purchaseReturn}/documents', 'getDocuments')->name('documents.index');
+        });
+
+        // Supplier Credit/Debit Notes Controller - Must be defined BEFORE {supplier} routes to avoid conflicts
+        Route::controller(SupplierCreditDebitNotesController::class)->prefix('credit-debit-notes')->name('credit-debit-notes.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{supplierCreditDebitNote}', 'show')->name('show');
+            Route::put('{supplierCreditDebitNote}', 'update')->name('update');
+            Route::delete('{supplierCreditDebitNote}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
 
     });
