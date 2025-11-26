@@ -217,7 +217,9 @@ class SupplierPaymentsController extends Controller
                 'supplierPaymentTerm:id,name,days',
                 'account:id,name',
                 'createdBy:id,name',
-                'updatedBy:id,name'
+                'updatedBy:id,name',
+                'documents'
+
             ])
             ->searchable($request)
             ->sortable($request);
@@ -228,6 +230,9 @@ class SupplierPaymentsController extends Controller
 
         if ($request->has('currency_id')) {
             $query->byCurrency($request->currency_id);
+        }
+        if ($request->has('account_id')) {
+            $query->byCurrency($request->account_id);
         }
 
         if ($request->has('prefix')) {

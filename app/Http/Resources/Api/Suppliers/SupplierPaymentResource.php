@@ -95,6 +95,8 @@ class SupplierPaymentResource extends JsonResource
                     return [
                         'id' => $document->id,
                         'documentable_type' => $document->documentable_type,
+                        'file_name' => $document->file_name,
+                        'file_size' => $document->file_size,
                         'documentable_id' => $document->documentable_id,
                         // Appended attributes from Document model
                         'thumbnail_url' => $document->thumbnail_url,
