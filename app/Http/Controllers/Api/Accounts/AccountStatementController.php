@@ -12,6 +12,7 @@ use App\Models\Accounts\IncomeTransaction;
 use App\Models\Accounts\AccountAdjust;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Expenses\ExpenseTransaction;
+use App\Models\Suppliers\SupplierPayment;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -168,6 +169,12 @@ class AccountStatementController extends Controller
             );
         }
 
+        if (!$transactionType || $transactionType === 'supplier_payment') {
+            $allTransactions = $allTransactions->concat(
+                $this->getSupplierPayments($request, $account, $noteSearch)
+            );
+        }
+
         if (!$transactionType || $transactionType === 'expense') {
             $allTransactions = $allTransactions->concat(
                 $this->getExpenseTransactions($request, $account, $noteSearch)
@@ -242,6 +249,39 @@ class AccountStatementController extends Controller
                 ],
                 'transaction_type' => 'customer_payment',
                 'source_table' => 'customer_payments',
+                'timestamp' => $item->date->timestamp,
+            ];
+        });
+    }
+
+    private function getSupplierPayments(Request $request, Account $account, ?string $noteSearch = null)
+    {
+        $query = SupplierPayment::query()
+            ->select('id', 'code', 'prefix', 'date', 'amount_usd', 'note', 'supplier_id', 'account_id', 'created_at');
+
+        $this->applyFilters($query, $request, $account, $noteSearch);
+
+        return $query->with('supplier:id,code,name')->get()->map(function ($item) use ($account) {
+            return [
+                'id' => $item->id,
+                'code' => $item->prefix . $item->code,
+                'type' => 'Supplier Payment',
+                'date' => $item->date->format('Y-m-d'),
+                'amount' => -$item->amount_usd,
+                'debit' => $item->amount_usd,
+                'credit' => 0,
+                'note' => $item->note,
+                'supplier' => [
+                    'id' => $item->supplier->id,
+                    'code' => $item->supplier->code,
+                    'name' => $item->supplier->name,
+                ],
+                'account' => [
+                    'id' => $account->id,
+                    'name' => $account->name,
+                ],
+                'transaction_type' => 'supplier_payment',
+                'source_table' => 'supplier_payments',
                 'timestamp' => $item->date->timestamp,
             ];
         });
