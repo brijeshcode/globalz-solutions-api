@@ -54,6 +54,7 @@ use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
 use App\Http\Controllers\Api\Suppliers\PurchasesController;
 use App\Http\Controllers\Api\Suppliers\PurchaseReturnsController;
 use App\Http\Controllers\Api\Suppliers\SupplierCreditDebitNotesController;
+use App\Http\Controllers\Api\Suppliers\SupplierPaymentsController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
@@ -308,6 +309,19 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{supplierCreditDebitNote}', 'show')->name('show');
             Route::put('{supplierCreditDebitNote}', 'update')->name('update');
             Route::delete('{supplierCreditDebitNote}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Supplier Payments Controller - Must be defined BEFORE {supplier} routes to avoid conflicts
+        Route::controller(SupplierPaymentsController::class)->prefix('payments')->name('payments.')->group(function () {
+            Route::get('stats', 'stats')->name('stats');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{supplierPayment}', 'show')->name('show');
+            Route::put('{supplierPayment}', 'update')->name('update');
+            Route::delete('{supplierPayment}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
