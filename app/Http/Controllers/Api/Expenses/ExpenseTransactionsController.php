@@ -123,11 +123,7 @@ class ExpenseTransactionsController extends Controller
      */
     public function update(ExpenseTransactionsUpdateRequest $request, ExpenseTransaction $expenseTransaction): JsonResponse
     {
-        $data = $request->validated();
-        // Remove code from data if present (code is system generated only, not updatable)
-        unset($data['code']);
-
-        $expenseTransaction->update($data);
+        $expenseTransaction->update($request->validated());
 
         // Handle document uploads
         if ($request->hasFile('documents')) {
