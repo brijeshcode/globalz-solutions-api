@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use App\Http\Controllers\Api\Employees\AllowancesController;
+use App\Http\Controllers\Api\Employees\CommissionTargetsController;
 use App\Http\Controllers\Api\ListDataController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
 use App\Http\Controllers\Api\Setups\Generals\CompanyController;
@@ -105,6 +106,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{allowance}', 'show')->name('show');
         Route::put('{allowance}', 'update')->name('update');
         Route::delete('{allowance}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
+
+    // Commission Targets Controller
+    Route::controller(CommissionTargetsController::class)->prefix('commission-targets')->name('commission-targets.')->group(function () {
+        Route::get('stats', 'stats')->name('stats');
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{commissionTarget}', 'show')->name('show');
+        Route::put('{commissionTarget}', 'update')->name('update');
+        Route::delete('{commissionTarget}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });
