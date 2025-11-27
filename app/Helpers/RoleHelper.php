@@ -28,22 +28,17 @@ class RoleHelper {
 
     public static function isSuperAdmin(): bool
     {
-        // // Developer has all access including super admin content
-        // if (self::isDeveloper()) {
-        //     return true;
-        // }
-
         // Only super admin role can access super admin content
-        return self::authUser()->isSuperAdmin();
+        $user = self::authUser();
+        if (!$user) {
+            return false;
+        }
+
+        return $user->isSuperAdmin();
     }
 
     public static function isAdmin(): bool
     {
-        // // Super Admin can access admin content (this also includes Developer)
-        // if (self::isSuperAdmin()) {
-        //     return true;
-        // }
-
         $user = self::authUser();
         if (!$user) {
             return false;
@@ -53,12 +48,11 @@ class RoleHelper {
 
     public static function isWarehouseManager(): bool
     {
-        // // Admin can access warehouse manager content (this also includes Super Admin and Developer)
-        // if (self::isAdmin()) {
-        //     return true;
-        // }
-
-        return self::authUser()->isWarehouseManager();
+        $user = self::authUser();
+        if (!$user) {
+            return false;
+        }
+        return $user->isWarehouseManager();
     }
 
     public static function isSalesman(): bool
@@ -67,10 +61,36 @@ class RoleHelper {
         if (!$user) {
             return false;
         }
-
         return $user->isSalesman();
     }
 
+    // --- Hierarchical Access Check Methods (New and Shortened Logic) ---
+    public static function canDeveloper(): bool
+    {
+        return self::isDeveloper();
+    }
+
+    public static function canSuperAdmin(): bool
+    {
+        return self::isDeveloper() || self::isSuperAdmin();
+    }
+
+    public static function canAdmin(): bool
+    {
+        return self::canSuperAdmin() || self::isAdmin();
+    }
+
+    public static function canWarehouseManager(): bool
+    {
+        return self::canAdmin() || self::isWarehouseManager();
+    }
+
+    public static function canSalesman(): bool
+    {
+        return self::canAdmin() || self::isSalesman();
+    }
+
+    // --- Employee Retrieval Methods (Unchanged) ---
     public static function getSalesmanEmployee(): Employee | null
     {
         $user = self::authUser();
@@ -84,6 +104,9 @@ class RoleHelper {
     public static function getWarehouseEmployee(): Employee | null
     {
         $user = self::authUser();
+        if (!$user) {
+            return null;
+        }
         return $user->isWarehouseManager() ? Employee::where('user_id', $user->id )->first(): null;
     }
 }

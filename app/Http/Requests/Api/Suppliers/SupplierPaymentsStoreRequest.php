@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Api\Suppliers;
 
-use App\Helpers\ApiHelper;
+use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -77,9 +77,10 @@ class SupplierPaymentsStoreRequest extends FormRequest
             $amount = $this->input('amount');
             $amountUsd = $this->input('amount_usd');
             $currencyRate = $this->input('currency_rate');
+            $currencyId = $this->input('currency_id');
 
-            if ($amount && $amountUsd && $currencyRate) {
-                $expectedAmountUsd = ApiHelper::toUsd($amount, $currencyRate);
+            if ($amount && $amountUsd && $currencyRate && $currencyId) {
+                $expectedAmountUsd = CurrencyHelper::toUsd($currencyId, $amount, $currencyRate);
                 $tolerance = 0.01;
 
                 if (abs($expectedAmountUsd - $amountUsd) > $tolerance) {

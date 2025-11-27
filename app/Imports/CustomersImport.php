@@ -11,7 +11,7 @@ use App\Models\Setups\Customers\CustomerZone;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Employees\Employee;
 use App\Models\Setting;
-use App\Helpers\ApiHelper;
+use App\Helpers\CurrencyHelper;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -313,7 +313,7 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             $currencyRate = 1.0;
 
             // Convert to USD
-            $amountUsd = ApiHelper::toUsd($amount, $currencyRate);
+            $amountUsd = CurrencyHelper::toUsd($defaultCurrencyId, $amount, $currencyRate);
 
             // Create the credit/debit note
             CustomerCreditDebitNote::create([

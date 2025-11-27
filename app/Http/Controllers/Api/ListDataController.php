@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Helpers\ApiHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
@@ -131,8 +130,8 @@ class ListDataController extends Controller
     {
         $query = Customer::with('priceList:id,code,description,is_default')->active()->orderby('name');
 
-        if (RoleHelper::isSalesman() && !RoleHelper::isAdmin()) {
-            $employee = Employee::where('user_id', ApiHelper::authUser()->id )->first();
+        if (RoleHelper::isSalesman()) {
+            $employee = Employee::where('user_id', RoleHelper::authUser()->id )->first();
 
             if($employee){
                 $query->where('salesperson_id', $employee->id);

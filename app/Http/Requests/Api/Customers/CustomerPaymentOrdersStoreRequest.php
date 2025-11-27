@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Api\Customers;
 
-use App\Helpers\ApiHelper;
+use App\Helpers\CurrencyHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CustomerPaymentOrdersStoreRequest extends FormRequest
@@ -70,15 +70,13 @@ class CustomerPaymentOrdersStoreRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            /** @var \App\Models\User $user */
-            
-
             $amount = $this->input('amount');
             $amountUsd = $this->input('amount_usd');
             $currencyRate = $this->input('currency_rate');
+            $currencyId = $this->input('currency_id');
 
-            if ($amount && $amountUsd && $currencyRate) {
-                $expectedAmountUsd = ApiHelper::toUsd($amount, $currencyRate);
+            if ($amount && $amountUsd && $currencyRate && $currencyId) {
+                $expectedAmountUsd = CurrencyHelper::toUsd($currencyId, $amount, $currencyRate);
                 $tolerance = 0.01;
 
                 if (abs($expectedAmountUsd - $amountUsd) > $tolerance) {

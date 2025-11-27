@@ -2,7 +2,8 @@
 
 namespace App\Http\Requests\Api\Customers;
 
-use App\Helpers\ApiHelper;
+use App\Helpers\CurrencyHelper;
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -63,11 +64,8 @@ class CustomerCreditDebitNotesUpdateRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            $user = Auth::user();
-            $isAdmin = $user && $user->isAdmin();
-            $note = $this->route('customerCreditDebitNote');
 
-            if (!$isAdmin) {
+            if (! RoleHelper::canAdmin()) {
                 $validator->errors()->add('authorization', 'Only administrators can update credit/debit notes');
                 return;
             }
@@ -75,9 +73,10 @@ class CustomerCreditDebitNotesUpdateRequest extends FormRequest
             $amount = $this->input('amount');
             $amountUsd = $this->input('amount_usd');
             $currencyRate = $this->input('currency_rate');
+            $currencyId = $this->input('currency_id');
 
             if ($amount && $amountUsd && $currencyRate) {
-                $expectedAmountUsd = ApiHelper::toUsd($amount, $currencyRate);
+                $expectedAmountUsd = CurrencyHelper::toUsd($currencyId, $amount, $currencyRate);
                 $tolerance = 0.01;
 
                 if (abs($expectedAmountUsd - $amountUsd) > $tolerance) {

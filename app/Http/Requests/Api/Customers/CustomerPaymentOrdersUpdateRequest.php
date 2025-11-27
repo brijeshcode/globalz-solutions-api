@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Api\Customers;
 
-use App\Helpers\ApiHelper;
+use App\Helpers\CurrencyHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -88,9 +88,10 @@ class CustomerPaymentOrdersUpdateRequest extends FormRequest
             $amount = $this->input('amount');
             $amountUsd = $this->input('amount_usd');
             $currencyRate = $this->input('currency_rate');
+            $currencyId = $this->input('currency_id');
 
-            if ($amount && $amountUsd && $currencyRate) {
-                $expectedAmountUsd = ApiHelper::toUsd($amount, $currencyRate);
+            if ($amount && $amountUsd && $currencyRate && $currencyId) {
+                $expectedAmountUsd = CurrencyHelper::toUsd($currencyId, $amount, $currencyRate);
                 $tolerance = 0.01;
 
                 if (abs($expectedAmountUsd - $amountUsd) > $tolerance) {
