@@ -17,7 +17,6 @@ class CommissionTargetRule extends Model
         'minimum_amount',
         'maximum_amount',
         'percent',
-        'rate',
         'comission_label',
     ];
 
@@ -25,7 +24,6 @@ class CommissionTargetRule extends Model
         'minimum_amount' => 'decimal:4',
         'maximum_amount' => 'decimal:4',
         'percent' => 'decimal:4',
-        'rate' => 'decimal:4',
     ];
 
     // Relationships
@@ -57,12 +55,12 @@ class CommissionTargetRule extends Model
         return $amount >= $this->minimum_amount && $amount <= $this->maximum_amount;
     }
 
-    public function calculateCommission(float $amount): float
-    {
-        if (!$this->isInRange($amount)) {
-            return 0;
-        }
+    // public function calculateCommission(float $amount): float
+    // {
+    //     if (!$this->isInRange($amount)) {
+    //         return 0;
+    //     }
 
-        return $amount * ($this->percent / 100) * $this->rate;
-    }
+    //     return $amount * ($this->percent / 100);
+    // }
 }

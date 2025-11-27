@@ -38,11 +38,10 @@ class CommissionTargetsUpdateRequest extends FormRequest
 
             // Commission target rules (nested items)
             'rules' => 'required|array|min:1',
-            'rules.*.type' => 'required|in:fule,payment,sale',
+            'rules.*.type' => 'required|in:fuel,payment,sale',
             'rules.*.minimum_amount' => 'required|numeric|min:0|max:9999999999.9999',
             'rules.*.maximum_amount' => 'required|numeric|min:0|max:9999999999.9999|gte:rules.*.minimum_amount',
             'rules.*.percent' => 'required|numeric|min:0|max:100',
-            'rules.*.rate' => 'required|numeric|min:0|max:9.9999',
             'rules.*.comission_label' => 'required|string|max:100',
         ];
     }

@@ -15,11 +15,10 @@ return new class extends Migration
             $table->id();
 
             $table->unsignedBigInteger('commission_target_id')->index();
-            $table->enum('type',['fule', 'payment', 'sale']);
+            $table->enum('type',['fuel', 'payment', 'sale']);
             $table->decimal('minimum_amount',14, 4);
             $table->decimal('maximum_amount',14, 4);
             $table->decimal('percent',8, 4);
-            $table->decimal('rate', 5, 4);
             $table->string('comission_label', 100);
 
             $table->timestamps();
