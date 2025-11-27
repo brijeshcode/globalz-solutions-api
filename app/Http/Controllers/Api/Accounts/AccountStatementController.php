@@ -147,6 +147,7 @@ class AccountStatementController extends Controller
             $allTransactions->push([
                 'id' => null,
                 'code' => 'OPENING',
+                'name' => $account->name,
                 'type' => 'Opening Balance',
                 'date' => $account->created_at->format('Y-m-d'),
                 'amount' => $openingBalance,
@@ -233,6 +234,7 @@ class AccountStatementController extends Controller
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
                 'type' => 'Customer Payment',
+                'name' => $item->customer->name,
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => $item->amount_usd,
                 'debit' => 0,
@@ -266,6 +268,7 @@ class AccountStatementController extends Controller
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
                 'type' => 'Supplier Payment',
+                'name' => $item->supplier->name,
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => -$item->amount_usd,
                 'debit' => $item->amount_usd,
@@ -298,6 +301,7 @@ class AccountStatementController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->code,
+                'name' => $item->incomeCategory->name,
                 'type' => 'Income',
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => $item->amount,
@@ -330,6 +334,7 @@ class AccountStatementController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->code,
+                'name' => $item->expenseCategory->name,
                 'type' => 'Expense',
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => -$item->amount,
@@ -366,6 +371,7 @@ class AccountStatementController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
+                'name' => $account->name,
                 'type' => 'Account Transfer (Sent)',
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => -$item->sent_amount,
@@ -397,6 +403,7 @@ class AccountStatementController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
+                'name' => $account->name,
                 'type' => 'Account Transfer (Received)',
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => $item->received_amount,
@@ -433,6 +440,7 @@ class AccountStatementController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
+                'name' => $account->name,
                 'type' => 'Account Adjust (' . $item->type . ')',
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => $isCredit ? $item->amount : -$item->amount,
