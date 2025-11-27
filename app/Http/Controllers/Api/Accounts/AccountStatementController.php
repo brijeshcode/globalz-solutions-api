@@ -11,6 +11,7 @@ use App\Models\Accounts\AccountTransfer;
 use App\Models\Accounts\IncomeTransaction;
 use App\Models\Accounts\AccountAdjust;
 use App\Models\Customers\CustomerPayment;
+use App\Models\Employees\Allowance;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Suppliers\SupplierPayment;
 use App\Traits\HasPagination;
@@ -182,6 +183,13 @@ class AccountStatementController extends Controller
             );
         }
 
+        if (!$transactionType || $transactionType === 'allowance') {
+            $allTransactions = $allTransactions->concat(
+                $this->getAllowanceTransactions($request, $account, $noteSearch)
+            );
+        }
+
+
         if (!$transactionType || $transactionType === 'income') {
             $allTransactions = $allTransactions->concat(
                 $this->getIncomeTransactions($request, $account, $noteSearch)
@@ -351,6 +359,40 @@ class AccountStatementController extends Controller
                 ],
                 'transaction_type' => 'expense',
                 'source_table' => 'expense_transactions',
+                'timestamp' => $item->date->timestamp,
+            ];
+        });
+    }
+
+    private function getAllowanceTransactions(Request $request, Account $account, ?string $noteSearch = null)
+    {
+        $query = Allowance::query()
+            ->select('id', 'code', 'prefix', 'date', 'amount_usd', 'note', 'employee_id', 'account_id', 'created_at');
+
+        $this->applyFilters($query, $request, $account, $noteSearch);
+
+        return $query->with('employee:id,code,name')->get()->map(function ($item) use ($account) {
+            return [
+                'id' => $item->id,
+                'code' => $item->prefix . $item->code,
+                'type' => 'Allowance',
+                'name' => $item->employee->name,
+                'date' => $item->date->format('Y-m-d'),
+                'amount' => $item->amount_usd,
+                'debit' => $item->amount_usd,
+                'credit' => 0,
+                'note' => $item->note,
+                'employee' => [
+                    'id' => $item->employee->id,
+                    'code' => $item->employee->code,
+                    'name' => $item->employee->name,
+                ],
+                'account' => [
+                    'id' => $account->id,
+                    'name' => $account->name,
+                ],
+                'transaction_type' => 'allowance',
+                'source_table' => 'allowances',
                 'timestamp' => $item->date->timestamp,
             ];
         });
