@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
 use App\Models\Customers\Customer;
+use App\Models\Employees\CommissionTarget;
 use App\Models\Employees\Employee;
 use App\Models\Items\Item;
 use App\Models\Items\PriceList;
@@ -83,6 +84,7 @@ class ListDataController extends Controller
 
             // employees
             'employees' => $this->employees(),
+            'commissionTargets' => $this->commissionTargets(),
             'sales-employees' => $this->salesEmployee(),
             'departments' => $this->departments(),
 
@@ -343,6 +345,11 @@ class ListDataController extends Controller
     private function employees()
     {
         return Employee::active()->with('department:id,name')->orderBy('name')->get(['id', 'name', 'email', 'phone', 'department_id']);
+    }
+
+    private function commissionTargets()
+    {
+        return CommissionTarget::active()->with('rules')->orderBy('name')->get();
     }
 
     private function salesEmployee()

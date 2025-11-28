@@ -95,6 +95,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('{employee}/assign-warehouse', 'assignWarehouse')->name('assignWarehouse');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        Route::post('commission-setup', 'setCommissionTarget')->name('commission-setup');
+        Route::get('employee-commissions', 'getEmployeeCommissionTarget')->name('employee-commissions');
     });
 
     // Allowances Controller

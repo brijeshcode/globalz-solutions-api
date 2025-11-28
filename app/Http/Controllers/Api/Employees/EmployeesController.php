@@ -8,6 +8,7 @@ use App\Http\Requests\Api\Employees\EmployeesUpdateRequest;
 use App\Http\Resources\Api\Employees\EmployeeResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Employees\Employee;
+use App\Models\Employees\EmployeeCommissionTarget;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class EmployeesController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Employee::query()
-            ->with(['department:id,name', 'user:id,name,email', 'createdBy:id,name', 'warehouses', 'updatedBy:id,name'])
+            ->with(['department:id,name', 'user:id,name,email', 'createdBy:id,name', 'warehouses', 'updatedBy:id,name', 'employeeCommissionTargets.commissionTarget:id,name'])
             ->searchable($request)
             ->sortable($request);
 
@@ -59,7 +60,7 @@ class EmployeesController extends Controller
 
     public function show(Employee $employee): JsonResponse
     {
-        $employee->load(['department:id,name', 'user:id,name,email', 'zones:id,name', 'createdBy:id,name', 'updatedBy:id,name']);
+        $employee->load(['department:id,name', 'user:id,name,email', 'zones:id,name', 'createdBy:id,name', 'updatedBy:id,name', 'employeeCommissionTargets.commissionTarget:id,name']);
 
         return ApiResponse::show(
             'Employee retrieved successfully',
@@ -148,5 +149,43 @@ class EmployeesController extends Controller
             'Employee warehouses assigned successfully',
             new EmployeeResource($employee->load('warehouses'))
         );
+    }
+
+    public function setCommissionTarget(Request $request): JsonResponse
+    {
+        foreach($request->commissions as $commission){
+            EmployeeCommissionTarget::updateOrCreate([
+                'employee_id' => $request->employee_id,
+                'month' => $commission['month'],
+                'year' => $request->year
+            ],
+            [
+                'commission_target_id' => $commission['commission_target_id'],
+                'note' => $commission['note'],
+            ]);
+        }
+
+        return ApiResponse::store('commission set completed successfull');
+    }
+
+    public function getEmployeeCommissionTarget(Request $request): JsonResponse
+    {
+        $query = EmployeeCommissionTarget::query()->with('commissionTarget:id,name')
+            ->where('employee_id', $request->employee_id);
+
+        $year = date('Y');
+        
+        if ($request->has('year')) {
+            $year = $request->year;
+        }
+
+        if ($request->has('month')) {
+            $query->whereMonth($request->month);
+        }
+         
+        $query->whereYear($year);
+        $commissions = $query->get();
+
+        return ApiResponse::index('commissions targets', $commissions);
     }
 }

@@ -53,6 +53,21 @@ class EmployeeResource extends JsonResource
                     ];
                 });
             }),
+            'employee_commission_targets' => $this->whenLoaded('employeeCommissionTargets', function () {
+                return $this->employeeCommissionTargets->map(function ($target) {
+                    return [
+                        'id' => $target->id,
+                        'commission_target_id' => $target->commission_target_id,
+                        'commission_target' => [
+                            'id' => $target->commissionTarget?->id,
+                            'name' => $target->commissionTarget?->name,
+                        ],
+                        'month' => $target->month,
+                        'year' => $target->year,
+                        'note' => $target->note,
+                    ];
+                });
+            }),
             'created_by' => [
                 'id' => $this->createdBy?->id,
                 'name' => $this->createdBy?->name,
