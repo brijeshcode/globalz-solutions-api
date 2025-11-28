@@ -16,7 +16,6 @@ return new class extends Migration
             $table->string('code', 50)->unique();
             $table->enum('prefix', ['COMTAR'])->default('COMTAR');
             $table->datetime('date');
-            $table->date('effective_date')->comment('always first date on the month');
             
             $table->string('name', 50)->unique();
             $table->text('note')->nullable();

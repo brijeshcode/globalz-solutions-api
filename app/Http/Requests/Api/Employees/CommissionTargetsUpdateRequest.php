@@ -27,7 +27,6 @@ class CommissionTargetsUpdateRequest extends FormRequest
 
         return [
             'date' => 'required|date',
-            'effective_date' => 'required|date',
             'name' => [
                 'required',
                 'string',
@@ -50,7 +49,6 @@ class CommissionTargetsUpdateRequest extends FormRequest
     {
         return [
             'date.required' => 'Commission target date is required',
-            'effective_date.required' => 'Effective date is required',
             'name.required' => 'Commission target name is required',
             'name.unique' => 'Commission target name already exists',
             'name.max' => 'Commission target name cannot exceed 50 characters',
@@ -78,7 +76,6 @@ class CommissionTargetsUpdateRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'effective_date' => 'effective date',
             'rules.*.minimum_amount' => 'minimum amount',
             'rules.*.maximum_amount' => 'maximum amount',
             'rules.*.percent' => 'percent',

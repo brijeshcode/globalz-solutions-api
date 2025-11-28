@@ -20,24 +20,16 @@ class CommissionTarget extends Model
     protected $fillable = [
         'code',
         'prefix',
-        'date',
-        'effective_date',
+        'date', 
         'name',
         'note',
     ];
 
     protected $casts = [
-        'date' => 'datetime',
-        'effective_date' => 'date',
+        'date' => 'datetime', 
     ];
 
-    // Mutators
-    public function setEffectiveDateAttribute($value)
-    {
-        // Automatically set to the first day of the month
-        $this->attributes['effective_date'] = \Carbon\Carbon::parse($value)->startOfMonth()->toDateString();
-    }
-
+    
     protected $searchable = [
         'code',
         'name',
@@ -47,8 +39,7 @@ class CommissionTarget extends Model
     protected $sortable = [
         'id',
         'code',
-        'date',
-        'effective_date',
+        'date', 
         'name',
         'created_at',
         'updated_at',
@@ -67,11 +58,6 @@ class CommissionTarget extends Model
     public function scopeByDateRange($query, $startDate, $endDate)
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
-    }
-
-    public function scopeByEffectiveDateRange($query, $startDate, $endDate)
-    {
-        return $query->whereBetween('effective_date', [$startDate, $endDate]);
     }
 
     public function scopeByCode($query, $code)

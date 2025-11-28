@@ -223,14 +223,6 @@ class CommissionTargetsController extends Controller
             $query->where('date', '<=', $request->to_date);
         }
 
-        if ($request->has('effective_from_date') && $request->has('effective_to_date')) {
-            $query->byEffectiveDateRange($request->effective_from_date, $request->effective_to_date);
-        } elseif ($request->has('effective_from_date')) {
-            $query->where('effective_date', '>=', $request->effective_from_date);
-        } elseif ($request->has('effective_to_date')) {
-            $query->where('effective_date', '<=', $request->effective_to_date);
-        }
-
         return $query;
     }
 }
