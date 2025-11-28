@@ -23,10 +23,12 @@ class CommissionTarget extends Model
         'date', 
         'name',
         'note',
+        'active'
     ];
 
     protected $casts = [
         'date' => 'datetime', 
+        'is_active' => 'boolean',
     ];
 
     
@@ -53,6 +55,17 @@ class CommissionTarget extends Model
     {
         return $this->hasMany(CommissionTargetRule::class);
     }
+
+    public function employeeCommissionTargets(): HasMany
+    {
+        return $this->hasMany(EmployeeCommissionTarget::class);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
 
     // Scopes
     public function scopeByDateRange($query, $startDate, $endDate)
