@@ -62,6 +62,105 @@ class CustomerStatmentController extends Controller
         );
     }
 
+    /**
+     * Recalculate balance for all customers
+     */
+    public function recalculateAllBalances(Request $request): JsonResponse
+    {
+        // Only allow admin to recalculate all balances
+        if (!RoleHelper::isAdmin()) {
+            return ApiResponse::customError('Only admins can recalculate all customer balances', 403);
+        }
+
+        // Increase time limit for large datasets
+        set_time_limit(3600); // 1 hour
+
+        $result = $this->processBalanceRecalculation();
+
+        return ApiResponse::show(
+            "Balance recalculation completed. {$result['updated_count']} customer(s) updated out of {$result['total_customers']} total customers.",
+            $result
+        );
+    }
+
+    /**
+     * Process balance recalculation for all customers
+     * This method can be called from other controllers
+     * Uses chunking to prevent memory issues with large datasets
+     */
+    public function processBalanceRecalculation(?array $customerIds = null): array
+    {
+        $query = Customer::query()->active();
+
+        // If specific customer IDs are provided, only recalculate those
+        if ($customerIds !== null) {
+            $query->whereIn('id', $customerIds);
+        }
+
+        $totalCustomers = $query->count();
+        $updatedCount = 0;
+        $results = [];
+
+        // Process customers in chunks of 100 to prevent memory issues
+        $query->chunk(100, function ($customers) use (&$updatedCount, &$results) {
+            foreach ($customers as $customer) {
+                $customerResult = $this->processCustomerBalanceRecalculation($customer);
+
+                if ($customerResult['updated']) {
+                    $updatedCount++;
+                    $results[] = $customerResult;
+                }
+            }
+        });
+
+        return [
+            'total_customers' => $totalCustomers,
+            'updated_count' => $updatedCount,
+            'unchanged_count' => $totalCustomers - $updatedCount,
+            'updated_customers' => $results,
+        ];
+    }
+
+    /**
+     * Process balance recalculation for a single customer
+     * This method can be called from other controllers
+     */
+    public function processCustomerBalanceRecalculation(Customer $customer): array
+    {
+        // Create empty request for getTransactions
+        $request = new Request();
+
+        $transactions = $this->getTransactions($request, $customer, null);
+
+        // Calculate the correct balance
+        $calculatedBalance = $transactions->last()['balance'] ?? 0;
+        $oldBalance = $customer->current_balance;
+
+        // Check if balance is different
+        if ($customer->current_balance != $calculatedBalance) {
+            // Update the customer balance
+            $customer->update(['current_balance' => $calculatedBalance]);
+
+            return [
+                'updated' => true,
+                'customer_id' => $customer->id,
+                'customer_code' => $customer->code,
+                'customer_name' => $customer->name,
+                'old_balance' => $oldBalance,
+                'new_balance' => $calculatedBalance,
+                'difference' => $calculatedBalance - $oldBalance,
+            ];
+        }
+
+        return [
+            'updated' => false,
+            'customer_id' => $customer->id,
+            'customer_code' => $customer->code,
+            'customer_name' => $customer->name,
+            'current_balance' => $oldBalance,
+        ];
+    }
+
     public function statements(Request $request): JsonResponse
     {
         $customerSearch = $request->get('customer'); // customer code or name

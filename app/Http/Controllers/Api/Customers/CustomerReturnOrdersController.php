@@ -257,7 +257,7 @@ class CustomerReturnOrdersController extends Controller
             'approved_at' => now(),
             'approve_note' => $request->approve_note
         ]);
-
+        // we do not update customer balance on approve, in case of return we update balance when it is received
         $customerReturn->load([
             'customer:id,name,code',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',

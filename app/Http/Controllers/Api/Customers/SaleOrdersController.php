@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SaleOrdersStoreRequest;
@@ -323,12 +324,8 @@ class SaleOrdersController extends Controller
         ]);
 
         // Update customer balance when sale order is approved
-        \App\Services\Customers\CustomerBalanceService::updateMonthlyTotal(
-            $sale->customer_id,
-            'sale',
-            $sale->total_usd,
-            $sale->id
-        );
+
+        CustomersHelper::removeBalance(Customer::find($sale->customer_id), $sale->total_usd);
 
         $sale->load([
             'customer:id,name,code',

@@ -238,7 +238,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('next-code', 'getNextCode')->name('next-code');
             Route::get('salespersons', 'getSalespersons')->name('salespersons');
             Route::get('trashed', 'trashed')->name('trashed');
-            Route::post('refresh-balances', 'refreshBalances')->name('refresh-balances');
+            // this is pause due to code refactore, we are removing customerbalanceservice and refineing the logic
+            Route::post('refresh-balances', 'recalculateBalances')->name('refresh-balances'); 
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customer}', 'show')->name('show');

@@ -9,9 +9,9 @@ use App\Http\Resources\Api\Customers\CustomerPaymentOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerPayment;
 use App\Traits\HasPagination;
-use App\Helpers\ApiHelper;
+use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
-use App\Services\Customers\CustomerBalanceService;
+use App\Models\Customers\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -138,7 +138,7 @@ class CustomerPaymentOrdersController extends Controller
             'approve_note' => $request->approve_note
         ]);
 
-        CustomerBalanceService::updateMonthlyTotal($customerPayment->customer_id, 'payment', $customerPayment->amount_usd, $customerPayment->id); 
+        CustomersHelper::addBalance(Customer::find($customerPayment->customer_id), $customerPayment->amount_usd);
         $customerPayment->load([
             'customer:id,name,code',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',

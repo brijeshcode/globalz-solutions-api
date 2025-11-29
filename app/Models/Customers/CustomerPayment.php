@@ -3,6 +3,7 @@
 namespace App\Models\Customers;
 
 use App\Helpers\AccountsHelper;
+use App\Helpers\CustomersHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
@@ -177,9 +178,12 @@ class CustomerPayment extends Model
         });
 
         static::created(function ($payment) {
-            // Only add balance if payment is approved
+            // Only update balances if payment is approved
             if ($payment->isApproved()) {
+                // Add to account balance
                 AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
+                // Add to customer balance (payment reduces what customer owes)
+                CustomersHelper::addBalance(Customer::find($payment->customer_id), $payment->amount_usd);
             }
         });
 
@@ -191,27 +195,38 @@ class CustomerPayment extends Model
             // Case 1: Payment just got approved (was pending, now approved)
             if (!$wasApproved && $isNowApproved) {
                 AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
+                CustomersHelper::addBalance(Customer::find($payment->customer_id), $payment->amount_usd);
             }
             // Case 2: Payment was unapproved (was approved, now pending)
             elseif ($wasApproved && !$isNowApproved) {
                 AccountsHelper::removeBalance(Account::find($original['account_id']), $original['amount_usd']);
+                CustomersHelper::removeBalance(Customer::find($payment->customer_id), $original['amount_usd']);
             }
             // Case 3: Payment is approved and account changed
             elseif ($isNowApproved && $original['account_id'] != $payment->account_id) {
                 AccountsHelper::removeBalance(Account::find($original['account_id']), $original['amount_usd']);
                 AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
+                // Customer balance doesn't change when account changes
             }
-            // Case 4: Payment is approved and amount changed on same account
+            // Case 4: Payment is approved and customer changed
+            elseif ($isNowApproved && $original['customer_id'] != $payment->customer_id) {
+                CustomersHelper::removeBalance(Customer::find($original['customer_id']), $original['amount_usd']);
+                CustomersHelper::addBalance(Customer::find($payment->customer_id), $payment->amount_usd);
+                // Account balance doesn't change when customer changes
+            }
+            // Case 5: Payment is approved and amount changed
             elseif ($isNowApproved && $original['amount_usd'] != $payment->amount_usd) {
                 $difference = $payment->amount_usd - $original['amount_usd'];
                 AccountsHelper::addBalance(Account::find($payment->account_id), $difference);
+                CustomersHelper::addBalance(Customer::find($payment->customer_id), $difference);
             }
         });
 
         static::deleted(function ($payment) {
-            // Only remove balance if payment was approved
+            // Only remove balances if payment was approved
             if ($payment->isApproved()) {
                 AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount_usd);
+                CustomersHelper::removeBalance(Customer::find($payment->customer_id), $payment->amount_usd);
             }
         });
     }

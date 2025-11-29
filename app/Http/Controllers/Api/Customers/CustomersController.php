@@ -13,7 +13,6 @@ use App\Imports\CustomersImport;
 use App\Models\Customers\Customer;
 use App\Models\Items\PriceList;
 use App\Models\Setups\Employees\Department;
-use App\Services\Customers\CustomerBalanceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -619,6 +618,31 @@ class CustomersController extends Controller
         }
     }
 
+    /**
+     * Recalculate balance for all customers
+     */
+    public function recalculateBalances(Request $request): JsonResponse
+    {
+        // Only allow admin to recalculate balances
+        if (!RoleHelper::isAdmin()) {
+            return ApiResponse::customError('Only admins can recalculate customer balances', 403);
+        }
+
+        // Increase time limit for large datasets
+        set_time_limit(3600); // 1 hour
+
+        // Get the statement controller instance
+        $statementController = app(CustomerStatmentController::class);
+
+        // Call the balance recalculation method
+        $result = $statementController->processBalanceRecalculation();
+
+        return ApiResponse::show(
+            "Balance recalculation completed. {$result['updated_count']} customer(s) updated out of {$result['total_customers']} total customers.",
+            $result
+        );
+    }
+
     public function customerQuery(Request $request)
     {
         $query = Customer::query()
@@ -725,72 +749,5 @@ class CustomersController extends Controller
 
     }
 
-    /**
-     * Refresh all customer balances
-     * This recalculates current_balance for all customers
-     *
-     * Query parameters:
-     * - full_rebuild: bool (default false) - Do full rebuild from all transactions
-     * - months_back: int (default 3) - Number of months to recalculate (for incremental mode)
-     */
-    public function refreshBalances(Request $request): JsonResponse
-    {
-      
-        try {
-            $fullRebuild = $request->boolean('full_rebuild', true);
-            $monthsBack = $request->integer('months_back', 3);
-
-            $mode = $fullRebuild ? 'full_rebuild' : 'incremental';
-            $options = ['months_back' => $monthsBack];
-
-            $stats = [
-                'mode' => $mode,
-                'total' => 0,
-                'processed' => 0,
-                'errors' => 0,
-                'error_details' => []
-            ];
-
-          
-
-            // Process customers in chunks
-            Customer::select('id')->chunk(500, function ($customers) use (&$stats, $mode, $options) {
-                foreach ($customers as $customer) {
-                    $stats['total']++;
-
-                    try {
-                        CustomerBalanceService::calculateCustomerBalance(
-                            $customer->id,
-                            $mode,
-                            $options
-                        );
-                        $stats['processed']++;
-                    } catch (\Exception $e) {
-                        $stats['errors']++;
-                        $stats['error_details'][] = [
-                            'customer_id' => $customer->id,
-                            'error' => $e->getMessage()
-                        ];
-                        Log::error("Failed to refresh balance for customer {$customer->id}: " . $e->getMessage());
-                    }
-                }
-            });
-
-            $message = $fullRebuild
-                ? 'Customer balances fully rebuilt from transactions successfully'
-                : "Customer balances refreshed successfully (last {$monthsBack} months)";
-
-            return ApiResponse::show($message, $stats);
-
-        } catch (\Exception $e) {
-            Log::error('Customer balance refresh failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return ApiResponse::error(
-                'Failed to refresh customer balances: ' . $e->getMessage()
-            );
-        }
-    }
+ 
 }

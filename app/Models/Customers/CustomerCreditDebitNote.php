@@ -2,10 +2,10 @@
 
 namespace App\Models\Customers;
 
+use App\Helpers\CustomersHelper;
 use App\Models\Setting;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
-use App\Services\Customers\CustomerBalanceService;
 use App\Traits\Authorable;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
@@ -153,24 +153,59 @@ class CustomerCreditDebitNote extends Model
         });
 
         static::created(function ($note) {
-            CustomerBalanceService::updateMonthlyTotal($note->customer_id, $note->type, $note->amount_usd, $note->id);
+            // Credit note increases customer balance (they paid us)
+            // Debit note reduces customer balance (we paid them)
+            if ($note->isCredit()) {
+                CustomersHelper::addBalance(Customer::find($note->customer_id), $note->amount_usd);
+            } else {
+                CustomersHelper::removeBalance(Customer::find($note->customer_id), $note->amount_usd);
+            }
         });
 
         static::updated(function ($note) {
-            $originalAmount = $note->getOriginal('amount_usd');
-            $originalType = $note->getOriginal('type');
+            $original = $note->getOriginal();
 
-            // Remove the old amount
-            if ($originalAmount) {
-                CustomerBalanceService::updateMonthlyTotal($note->customer_id, $originalType, -$originalAmount, $note->id);
+            // Case 1: Customer changed
+            if ($original['customer_id'] != $note->customer_id) {
+                // Reverse the original entry
+                if ($note->isCredit()) {
+                    CustomersHelper::removeBalance(Customer::find($original['customer_id']), $original['amount_usd']);
+                    CustomersHelper::addBalance(Customer::find($note->customer_id), $note->amount_usd);
+                } else {
+                    CustomersHelper::addBalance(Customer::find($original['customer_id']), $original['amount_usd']);
+                    CustomersHelper::removeBalance(Customer::find($note->customer_id), $note->amount_usd);
+                }
             }
-
-            // Add the new amount
-            CustomerBalanceService::updateMonthlyTotal($note->customer_id, $note->type, $note->amount_usd, $note->id);
+            // Case 2: Type changed (credit to debit or vice versa)
+            elseif ($original['type'] != $note->type) {
+                if ($note->isCredit()) {
+                    // Was debit, now credit - reverse remove and do add
+                    CustomersHelper::addBalance(Customer::find($note->customer_id), $original['amount_usd']);
+                    CustomersHelper::addBalance(Customer::find($note->customer_id), $note->amount_usd);
+                } else {
+                    // Was credit, now debit - reverse add and do remove
+                    CustomersHelper::removeBalance(Customer::find($note->customer_id), $original['amount_usd']);
+                    CustomersHelper::removeBalance(Customer::find($note->customer_id), $note->amount_usd);
+                }
+            }
+            // Case 3: Amount changed on same customer and same type
+            elseif ($original['amount_usd'] != $note->amount_usd) {
+                $difference = $note->amount_usd - $original['amount_usd'];
+                if ($note->isCredit()) {
+                    CustomersHelper::addBalance(Customer::find($note->customer_id), $difference);
+                } else {
+                    CustomersHelper::removeBalance(Customer::find($note->customer_id), $difference);
+                }
+            }
         });
 
         static::deleted(function ($note) {
-            CustomerBalanceService::updateMonthlyTotal($note->customer_id, $note->type, -$note->amount_usd, $note->id);
+            // Reverse the balance change
+            if ($note->isCredit()) {
+                CustomersHelper::removeBalance(Customer::find($note->customer_id), $note->amount_usd);
+            } else {
+                CustomersHelper::addBalance(Customer::find($note->customer_id), $note->amount_usd);
+            }
         });
     }
 }

@@ -10,7 +10,6 @@ use App\Http\Requests\Api\Customers\CustomerPaymentsUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerPaymentResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerPayment;
-use App\Services\Customers\CustomerBalanceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,8 +42,6 @@ class CustomerPaymentsController extends Controller
         $data['approved_at'] = now();
 
         $payment = CustomerPayment::create($data);
-
-        CustomerBalanceService::updateMonthlyTotal($payment->customer_id, 'payment', $payment->amount_usd, $payment->id);
 
         $payment->load([
             'customer:id,name,code',
@@ -83,8 +80,7 @@ class CustomerPaymentsController extends Controller
     public function update(CustomerPaymentsUpdateRequest $request, CustomerPayment $customerPayment): JsonResponse
     {
         $data = $request->validated();
-        $originalAmount = $customerPayment->amount_usd;
- 
+
         $customerPayment->update($data);
 
         $customerPayment->load([
@@ -96,10 +92,6 @@ class CustomerPaymentsController extends Controller
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
-
-        // remove old amount 
-        CustomerBalanceService::updateMonthlyTotal($customerPayment->customer_id, 'payment', -$originalAmount, $customerPayment->id);
-        CustomerBalanceService::updateMonthlyTotal($customerPayment->customer_id, 'payment', $customerPayment->amount_usd, $customerPayment->id);
 
         $message = $customerPayment->isApproved()
             ? 'Customer payment updated and approved successfully'
@@ -115,7 +107,6 @@ class CustomerPaymentsController extends Controller
         }
 
         $customerPayment->delete();
-        CustomerBalanceService::updateMonthlyTotal($customerPayment->customer_id, 'payment', -$customerPayment->amount_usd, $customerPayment->id);
 
         return ApiResponse::delete('Customer payment deleted successfully');
     }

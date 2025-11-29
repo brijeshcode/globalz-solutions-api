@@ -8,9 +8,9 @@ use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
-use App\Services\Customers\CustomerBalanceService;
 use App\Services\Currency\CurrencyService;
 use App\Helpers\CurrencyHelper;
+use App\Helpers\CustomersHelper;
 use App\Traits\Authorable;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
@@ -303,7 +303,7 @@ class Sale extends Model
         static::created(function ($sale) {
             // Only update customer balance if sale is approved
             if ($sale->isApproved()) {
-                CustomerBalanceService::updateMonthlyTotal($sale->customer_id, 'sale', $sale->total_usd, $sale->id);
+                CustomersHelper::removeBalance(Customer::find($sale->customer_id), $sale->total_usd);
             }
         });
 
@@ -319,7 +319,32 @@ class Sale extends Model
             }
         });
 
+        static::updated(function ($sale) {
+            // Only update balance for approved sales
+            if (!$sale->isApproved()) {
+                return;
+            }
+
+            $original = $sale->getOriginal();
+
+            // Case 1: Customer changed
+            if ($original['customer_id'] != $sale->customer_id) {
+                CustomersHelper::addBalance(Customer::find($original['customer_id']), $original['total_usd']);
+                CustomersHelper::removeBalance(Customer::find($sale->customer_id), $sale->total_usd);
+            }
+            // Case 2: Total amount changed
+            elseif ($original['total_usd'] != $sale->total_usd) {
+                $difference = $sale->total_usd - $original['total_usd'];
+                CustomersHelper::removeBalance(Customer::find($sale->customer_id), $difference);
+            }
+        });
+
         static::deleted(function ($sale) {
+            // Restore customer balance if sale was approved
+            if ($sale->isApproved()) {
+                CustomersHelper::addBalance(Customer::find($sale->customer_id), $sale->total_usd);
+            }
+
             // When sale is deleted, restore inventory by manually processing each sale item
             // since the relationship might not work correctly after soft delete
             $saleItems = \App\Models\Customers\SaleItems::where('sale_id', $sale->id)->get();
