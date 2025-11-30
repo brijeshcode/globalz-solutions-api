@@ -5,7 +5,7 @@ namespace App\Http\Resources\Api\Employees;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class AllowanceResource extends JsonResource
+class AdvanceLoanResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -19,7 +19,7 @@ class AllowanceResource extends JsonResource
             'date' => $this->date,
             'prefix' => $this->prefix,
             'code' => $this->code,
-            'allowance_code' => $this->allowance_code,
+            'advanceLoan_code' => $this->advanceLoan_code,
             'employee_id' => $this->employee_id,
             'account_id' => $this->account_id,
             'currency_id' => $this->currency_id,

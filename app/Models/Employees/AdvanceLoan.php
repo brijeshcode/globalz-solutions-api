@@ -15,9 +15,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Allowance extends Model
+class AdvanceLoan extends Model
 {
-    /** @use HasFactory<\Database\Factories\Employees\AllowanceFactory> */
+    /** @use HasFactory<\Database\Factories\Employees\AdvanceLoanFactory> */
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
 
     protected $fillable = [
@@ -103,7 +103,7 @@ class Allowance extends Model
     }
 
     // Helper Methods
-    public function getAllowanceCodeAttribute(): string
+    public function getAdvanceLoanCodeAttribute(): string
     {
         return $this->prefix . $this->code;
     }
@@ -111,12 +111,12 @@ class Allowance extends Model
     // Code Generation Methods
     public static function reserveNextCode(): string
     {
-        $defaultValue = config('app.allowance_code_start', 1000);
-        $newValue = Setting::incrementValue('allowances', 'code_counter', 1, $defaultValue);
+        $defaultValue = config('app.advanceLoan_code_start', 1000);
+        $newValue = Setting::incrementValue('advanceLoans', 'code_counter', 1, $defaultValue);
         return str_pad($newValue, 6, '0', STR_PAD_LEFT);
     }
 
-    public function setAllowanceCode(): string
+    public function setAdvanceLoanCode(): string
     {
         return $this->code = self::reserveNextCode();
     }
@@ -126,41 +126,41 @@ class Allowance extends Model
     {
         parent::boot();
 
-        static::creating(function ($allowance) {
-            if (!$allowance->code) {
-                $allowance->setAllowanceCode();
+        static::creating(function ($advanceLoan) {
+            if (!$advanceLoan->code) {
+                $advanceLoan->setAdvanceLoanCode();
             }
 
-            $allowance->prefix = 'ALL';
+            $advanceLoan->prefix = 'ADL';
         });
 
-        static::created(function ($allowance) {
-            // Allowance removes balance from account (money going out)
-            AccountsHelper::removeBalance(Account::find($allowance->account_id), $allowance->amount_usd);
+        static::created(function ($advanceLoan) {
+            // AdvanceLoan removes balance from account (money going out)
+            AccountsHelper::removeBalance(Account::find($advanceLoan->account_id), $advanceLoan->amount_usd);
         });
 
-        static::updated(function ($allowance) {
-            $original = $allowance->getOriginal();
+        static::updated(function ($advanceLoan) {
+            $original = $advanceLoan->getOriginal();
 
             // Update Account Balance
             // Case 1: Account changed
-            if ($original['account_id'] != $allowance->account_id) {
+            if ($original['account_id'] != $advanceLoan->account_id) {
                 // Add balance back to old account
                 AccountsHelper::addBalance(Account::find($original['account_id']), $original['amount_usd']);
                 // Remove balance from new account
-                AccountsHelper::removeBalance(Account::find($allowance->account_id), $allowance->amount_usd);
+                AccountsHelper::removeBalance(Account::find($advanceLoan->account_id), $advanceLoan->amount_usd);
             }
             // Case 2: Amount changed on same account
-            elseif ($original['amount_usd'] != $allowance->amount_usd) {
-                $difference = $allowance->amount_usd - $original['amount_usd'];
+            elseif ($original['amount_usd'] != $advanceLoan->amount_usd) {
+                $difference = $advanceLoan->amount_usd - $original['amount_usd'];
                 // If amount increased, remove more; if decreased, add back
-                AccountsHelper::removeBalance(Account::find($allowance->account_id), $difference);
+                AccountsHelper::removeBalance(Account::find($advanceLoan->account_id), $difference);
             }
         });
 
-        static::deleted(function ($allowance) {
-            // Add balance back to account when allowance is deleted
-            AccountsHelper::addBalance(Account::find($allowance->account_id), $allowance->amount_usd);
+        static::deleted(function ($advanceLoan) {
+            // Add balance back to account when advanceLoan is deleted
+            AccountsHelper::addBalance(Account::find($advanceLoan->account_id), $advanceLoan->amount_usd);
         });
     }
 }

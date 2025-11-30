@@ -46,7 +46,7 @@ use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
-use App\Http\Controllers\Api\Employees\AllowancesController;
+use App\Http\Controllers\Api\Employees\AdvanceLoansController;
 use App\Http\Controllers\Api\Employees\CommissionTargetsController;
 use App\Http\Controllers\Api\ListDataController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
@@ -100,15 +100,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('employee-commissions', 'getEmployeeCommissionTarget')->name('employee-commissions');
     });
 
-    // Allowances Controller
-    Route::controller(AllowancesController::class)->prefix('allowances')->name('allowances.')->group(function () {
+    // AdvanceLoans Controller
+    Route::controller(AdvanceLoansController::class)->prefix('advanceLoans')->name('advanceLoans.')->group(function () {
         Route::get('stats', 'stats')->name('stats');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
-        Route::get('{allowance}', 'show')->name('show');
-        Route::put('{allowance}', 'update')->name('update');
-        Route::delete('{allowance}', 'destroy')->name('destroy');
+        Route::get('{advanceLoan}', 'show')->name('show');
+        Route::put('{advanceLoan}', 'update')->name('update');
+        Route::delete('{advanceLoan}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });

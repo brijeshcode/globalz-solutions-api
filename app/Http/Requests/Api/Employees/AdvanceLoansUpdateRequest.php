@@ -6,7 +6,7 @@ use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
-class AllowancesUpdateRequest extends FormRequest
+class AdvanceLoansUpdateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -38,7 +38,7 @@ class AllowancesUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'date.required' => 'Allowance date is required',
+            'date.required' => 'AdvanceLoan date is required',
             'employee_id.required' => 'Employee is required',
             'employee_id.exists' => 'Selected employee does not exist',
             'account_id.required' => 'Account is required',
@@ -47,10 +47,10 @@ class AllowancesUpdateRequest extends FormRequest
             'currency_id.exists' => 'Selected currency does not exist',
             'currency_rate.required' => 'Currency rate is required',
             'currency_rate.min' => 'Currency rate must be greater than 0',
-            'amount.required' => 'Allowance amount is required',
-            'amount.min' => 'Allowance amount must be greater than 0',
-            'amount_usd.required' => 'Allowance amount in USD is required',
-            'amount_usd.min' => 'Allowance amount in USD must be greater than 0',
+            'amount.required' => 'AdvanceLoan amount is required',
+            'amount.min' => 'AdvanceLoan amount must be greater than 0',
+            'amount_usd.required' => 'AdvanceLoan amount in USD is required',
+            'amount_usd.min' => 'AdvanceLoan amount in USD must be greater than 0',
         ];
     }
 

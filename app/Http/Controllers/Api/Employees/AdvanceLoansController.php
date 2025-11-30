@@ -4,39 +4,39 @@ namespace App\Http\Controllers\Api\Employees;
 
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Employees\AllowancesStoreRequest;
-use App\Http\Requests\Api\Employees\AllowancesUpdateRequest;
-use App\Http\Resources\Api\Employees\AllowanceResource;
+use App\Http\Requests\Api\Employees\AdvanceLoansStoreRequest;
+use App\Http\Requests\Api\Employees\AdvanceLoansUpdateRequest;
+use App\Http\Resources\Api\Employees\AdvanceLoanResource;
 use App\Http\Responses\ApiResponse;
-use App\Models\Employees\Allowance;
+use App\Models\Employees\AdvanceLoan;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class AllowancesController extends Controller
+class AdvanceLoansController extends Controller
 {
     use HasPagination;
 
     public function index(Request $request): JsonResponse
     {
-        $query = $this->allowanceQuery($request);
+        $query = $this->advanceLoanQuery($request);
 
-        $allowances = $this->applyPagination($query, $request);
+        $advanceLoans = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
-            'Allowances retrieved successfully',
-            $allowances,
-            AllowanceResource::class
+            'AdvanceLoans retrieved successfully',
+            $advanceLoans,
+            AdvanceLoanResource::class
         );
     }
 
-    public function store(AllowancesStoreRequest $request): JsonResponse
+    public function store(AdvanceLoansStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
 
-        $allowance = Allowance::create($data);
+        $advanceLoan = AdvanceLoan::create($data);
 
-        $allowance->load([
+        $advanceLoan->load([
             'employee:id,name,code',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'account:id,name',
@@ -44,12 +44,12 @@ class AllowancesController extends Controller
             'updatedBy:id,name'
         ]);
 
-        return ApiResponse::store('Allowance created successfully', new AllowanceResource($allowance));
+        return ApiResponse::store('AdvanceLoan created successfully', new AdvanceLoanResource($advanceLoan));
     }
 
-    public function show(Allowance $allowance): JsonResponse
+    public function show(AdvanceLoan $advanceLoan): JsonResponse
     {
-        $allowance->load([
+        $advanceLoan->load([
             'employee:id,name,code,address,phone,mobile,email,is_active',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'account:id,name',
@@ -58,16 +58,16 @@ class AllowancesController extends Controller
         ]);
 
         return ApiResponse::show(
-            'Allowance retrieved successfully',
-            new AllowanceResource($allowance)
+            'AdvanceLoan retrieved successfully',
+            new AdvanceLoanResource($advanceLoan)
         );
     }
 
-    public function update(AllowancesUpdateRequest $request, Allowance $allowance): JsonResponse
+    public function update(AdvanceLoansUpdateRequest $request, AdvanceLoan $advanceLoan): JsonResponse
     {
-        $allowance->update($request->validated());
+        $advanceLoan->update($request->validated());
 
-        $allowance->load([
+        $advanceLoan->load([
             'employee:id,name,code',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'account:id,name',
@@ -75,23 +75,23 @@ class AllowancesController extends Controller
             'updatedBy:id,name'
         ]);
 
-        return ApiResponse::update('Allowance updated successfully', new AllowanceResource($allowance));
+        return ApiResponse::update('AdvanceLoan updated successfully', new AdvanceLoanResource($advanceLoan));
     }
 
-    public function destroy(Allowance $allowance): JsonResponse
+    public function destroy(AdvanceLoan $advanceLoan): JsonResponse
     {
         if (!RoleHelper::isSuperAdmin()) {
-            return ApiResponse::customError('Only super administrators can delete allowances', 403);
+            return ApiResponse::customError('Only super administrators can delete advanceLoans', 403);
         }
 
-        $allowance->delete();
+        $advanceLoan->delete();
 
-        return ApiResponse::delete('Allowance deleted successfully');
+        return ApiResponse::delete('AdvanceLoan deleted successfully');
     }
 
     public function trashed(Request $request): JsonResponse
     {
-        $query = Allowance::onlyTrashed()
+        $query = AdvanceLoan::onlyTrashed()
             ->with([
                 'employee:id,name,code',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
@@ -110,22 +110,22 @@ class AllowancesController extends Controller
             $query->byCurrency($request->currency_id);
         }
 
-        $allowances = $this->applyPagination($query, $request);
+        $advanceLoans = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
-            'Trashed allowances retrieved successfully',
-            $allowances,
-            AllowanceResource::class
+            'Trashed advanceLoans retrieved successfully',
+            $advanceLoans,
+            AdvanceLoanResource::class
         );
     }
 
     public function restore(int $id): JsonResponse
     {
-        $allowance = Allowance::onlyTrashed()->findOrFail($id);
+        $advanceLoan = AdvanceLoan::onlyTrashed()->findOrFail($id);
 
-        $allowance->restore();
+        $advanceLoan->restore();
 
-        $allowance->load([
+        $advanceLoan->load([
             'employee:id,name,code',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'account:id,name',
@@ -134,35 +134,35 @@ class AllowancesController extends Controller
         ]);
 
         return ApiResponse::update(
-            'Allowance restored successfully',
-            new AllowanceResource($allowance)
+            'AdvanceLoan restored successfully',
+            new AdvanceLoanResource($advanceLoan)
         );
     }
 
     public function forceDelete(int $id): JsonResponse
     {
-        $allowance = Allowance::onlyTrashed()->findOrFail($id);
+        $advanceLoan = AdvanceLoan::onlyTrashed()->findOrFail($id);
 
-        $allowance->forceDelete();
+        $advanceLoan->forceDelete();
 
-        return ApiResponse::delete('Allowance permanently deleted successfully');
+        return ApiResponse::delete('AdvanceLoan permanently deleted successfully');
     }
 
     public function stats(Request $request): JsonResponse
     {
-        $query = $this->allowanceQuery($request);
+        $query = $this->advanceLoanQuery($request);
 
         $stats = [
-            'total_allowances' => (clone $query)->count(),
+            'total_advanceLoans' => (clone $query)->count(),
             'total_amount_usd' => (clone $query)->sum('amount_usd'),
         ];
 
-        return ApiResponse::show('Allowance statistics retrieved successfully', $stats);
+        return ApiResponse::show('AdvanceLoan statistics retrieved successfully', $stats);
     }
 
-    private function allowanceQuery(Request $request)
+    private function advanceLoanQuery(Request $request)
     {
-        $query = Allowance::query()
+        $query = AdvanceLoan::query()
             ->with([
                 'employee:id,name,code',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',

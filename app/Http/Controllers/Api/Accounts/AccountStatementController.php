@@ -11,7 +11,7 @@ use App\Models\Accounts\AccountTransfer;
 use App\Models\Accounts\IncomeTransaction;
 use App\Models\Accounts\AccountAdjust;
 use App\Models\Customers\CustomerPayment;
-use App\Models\Employees\Allowance;
+use App\Models\Employees\AdvanceLoan;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Suppliers\SupplierPayment;
 use App\Traits\HasPagination;
@@ -183,9 +183,9 @@ class AccountStatementController extends Controller
             );
         }
 
-        if (!$transactionType || $transactionType === 'allowance') {
+        if (!$transactionType || $transactionType === 'advance_loan') {
             $allTransactions = $allTransactions->concat(
-                $this->getAllowanceTransactions($request, $account, $noteSearch)
+                $this->getAdvanceLoanTransactions($request, $account, $noteSearch)
             );
         }
 
@@ -364,9 +364,9 @@ class AccountStatementController extends Controller
         });
     }
 
-    private function getAllowanceTransactions(Request $request, Account $account, ?string $noteSearch = null)
+    private function getAdvanceLoanTransactions(Request $request, Account $account, ?string $noteSearch = null)
     {
-        $query = Allowance::query()
+        $query = AdvanceLoan::query()
             ->select('id', 'code', 'prefix', 'date', 'amount_usd', 'note', 'employee_id', 'account_id', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
@@ -375,7 +375,7 @@ class AccountStatementController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
-                'type' => 'Allowance',
+                'type' => 'AdvanceLoan',
                 'name' => $item->employee->name,
                 'date' => $item->date->format('Y-m-d'),
                 'amount' => $item->amount_usd,
@@ -391,8 +391,8 @@ class AccountStatementController extends Controller
                     'id' => $account->id,
                     'name' => $account->name,
                 ],
-                'transaction_type' => 'allowance',
-                'source_table' => 'allowances',
+                'transaction_type' => 'advance_loan',
+                'source_table' => 'advance_loans',
                 'timestamp' => $item->date->timestamp,
             ];
         });

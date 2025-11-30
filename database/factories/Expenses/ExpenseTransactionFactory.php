@@ -29,7 +29,7 @@ class ExpenseTransactionFactory extends Factory
             'Fuel Expense',
             'Marketing Campaign',
             'Equipment Maintenance',
-            'Travel Allowance',
+            'Travel Feess',
             'Professional Services',
             'Utility Bills',
             'Insurance Premium',

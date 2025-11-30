@@ -30,7 +30,7 @@ class IncomeTransactionFactory extends Factory
             'Fuel Income',
             'Marketing Campaign',
             'Equipment Maintenance',
-            'Travel Allowance',
+            'Travel Fees',
             'Professional Services',
             'Utility Bills',
             'Insurance Premium',

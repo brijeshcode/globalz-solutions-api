@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('allowances', function (Blueprint $table) {
+        Schema::create('advance_loans', function (Blueprint $table) {
             $table->id();
 
             $table->datetime('date');
             
-            $table->enum('prefix', ['ALL'])->default('ALL');
+            $table->enum('prefix', ['ADL'])->default('ADL');
             $table->string('code', 50)->unique();
             
             $table->unsignedBigInteger('employee_id')->index()->comment('only sales departments');
@@ -44,6 +44,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('allowances');
+        Schema::dropIfExists('advance_loans');
     }
 };
