@@ -10,7 +10,8 @@ class CommissionTargetRule extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\CommissionTargetRuleFactory> */
     use HasFactory;
-
+    public const TYPES= ['fuel', 'payment', 'sale'];
+    
     protected $fillable = [
         'commission_target_id',
         'type',

@@ -24,4 +24,19 @@ class EmployeeCommissionTarget extends Model
     {
         return $this->belongsTo(Employee::class);
     }
+
+    public function scopeByEmployee($query, $employeeId)
+    {
+        return $query->where('employee_id', $employeeId);
+    }
+    
+    public function scopeByMonth($query, $month)
+    {
+        return $query->where('month', $month);
+    }
+
+    public function scopeByYear($query, $year)
+    {
+        return $query->where('year', $year);
+    }
 }

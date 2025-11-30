@@ -59,6 +59,7 @@ use App\Http\Controllers\Api\Suppliers\SupplierCreditDebitNotesController;
 use App\Http\Controllers\Api\Suppliers\SupplierPaymentsController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
+use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use Illuminate\Support\Facades\Route;
@@ -110,6 +111,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('{allowance}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
+
+    Route::controller(EmployeeCommissionsController::class)->prefix('employee/business')->name('employee.business.')->group(function () {
+        Route::get('monthly/commission', 'getMonthlyCommission')->name('getMonthlyCommission');
+        Route::get('my-monthly/commission', 'getEmployeeMonthlyCommission')->name('myMonthlyCommission');
     });
 
     // Commission Targets Controller

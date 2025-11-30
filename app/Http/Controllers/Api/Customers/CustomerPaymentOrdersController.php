@@ -54,6 +54,10 @@ class CustomerPaymentOrdersController extends Controller
 
     public function show(CustomerPayment $customerPayment): JsonResponse
     {
+        if($customerPayment->isApproved()){
+            return ApiResponse::customError('Payment order not found payments', 422);
+        }
+
         // Check if user is salesman and has access to this customer
         if (RoleHelper::isSalesman()) {
             $salesmanEmployee = RoleHelper::getSalesmanEmployee();
@@ -138,7 +142,6 @@ class CustomerPaymentOrdersController extends Controller
             'approve_note' => $request->approve_note
         ]);
 
-        CustomersHelper::addBalance(Customer::find($customerPayment->customer_id), $customerPayment->amount_usd);
         $customerPayment->load([
             'customer:id,name,code',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',

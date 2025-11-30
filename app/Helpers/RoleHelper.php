@@ -109,4 +109,13 @@ class RoleHelper {
         }
         return $user->isWarehouseManager() ? Employee::where('user_id', $user->id )->first(): null;
     }
+
+    public static function getEmployee(): Employee | null
+    {
+        $user = self::authUser();
+        if (!$user) {
+            return null;
+        }
+        return $user ? Employee::where('user_id', $user->id )->first(): null;
+    }
 }
