@@ -11,10 +11,12 @@ class CommissionTargetRule extends Model
     /** @use HasFactory<\Database\Factories\Employees\CommissionTargetRuleFactory> */
     use HasFactory;
     public const TYPES= ['fuel', 'payment', 'sale'];
-    
+    public const PERCENTAGE_TYPE = ['fixed', 'dynamic'];
+
     protected $fillable = [
         'commission_target_id',
         'type',
+        'percent_type',
         'minimum_amount',
         'maximum_amount',
         'percent',
@@ -42,6 +44,11 @@ class CommissionTargetRule extends Model
     public function scopeByType($query, $type)
     {
         return $query->where('type', $type);
+    }
+
+    public function scopeByPercentType($query, $type)
+    {
+        return $query->where('percent_type', $type);
     }
 
     public function scopeInAmountRange($query, $amount)

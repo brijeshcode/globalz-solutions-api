@@ -292,7 +292,7 @@ class EmployeeCommissionsController extends Controller
             case 'sale':
                 $commissionAmount = $this->calculateSaleCommission($rule, $totalSales);
                 $baseAmount = $totalSales;
-                $achievementPercent = $rule->minimum_amount > 0
+                $achievementPercent = $rule->minimum_amount < $totalSales
                     ? ($totalSales / $rule->minimum_amount) * 100
                     : 0;
                 break;
@@ -300,11 +300,17 @@ class EmployeeCommissionsController extends Controller
             case 'payment':
                 $commissionAmount = $this->calculatePaymentCommission($rule, $totalPayments);
                 $baseAmount = $totalPayments;
-                $achievementPercent = $rule->minimum_amount > 0
-                    ? ($totalPayments / $rule->minimum_amount) * 100
+                $achievementPercent = $rule->maximum_amount > 0
+                    ? ($totalPayments / $rule->maximum_amount) * 100
                     : 0;
                 break;
         }
+
+        // Cap achievement percent at 100%
+        $achievementPercent = min($achievementPercent, 100);
+
+        // Calculate percent commission based on achievement
+        $percentCommission = ($achievementPercent / 100) * $rule->percent;
 
         return [
             'rule_id' => $rule->id,
@@ -313,6 +319,7 @@ class EmployeeCommissionsController extends Controller
             'minimum_amount' => (float) $rule->minimum_amount,
             'maximum_amount' => (float) $rule->maximum_amount,
             'percent' => (float) $rule->percent,
+            'percent_commission' => round($percentCommission, 2),
             'base_amount' => (float) $baseAmount,
             'commission_amount' => (float) $commissionAmount,
             'achievement_percent' => round($achievementPercent, 2),
@@ -360,17 +367,18 @@ class EmployeeCommissionsController extends Controller
     /**
      * Calculate payment type commission
      * Formula:
-     * - Case 1: If payment < min_amount then: (payment / min_amount) x comm%
-     * - Case 2: If payment >= min_amount then: min_amount x comm%
+     * - Case 1: If payment < max_amount then: (payment / max_amount) x comm%
+     * - Case 2: If payment >= max_amount then: max_amount x comm%
      */
     private function calculatePaymentCommission($rule, float $totalPayments): float
     {
-        if ($totalPayments < $rule->minimum_amount) {
+        if ($totalPayments < $rule->maximum_amount) {
             // Case 1
-            return ($totalPayments / $rule->minimum_amount) * $rule->percent;
+            $dynamicPercent = ($totalPayments / $rule->maximum_amount) * $rule->percent;
+            return ($dynamicPercent / 100) * $totalPayments;
         } else {
             // Case 2
-            return $rule->minimum_amount * ($rule->percent / 100);
+            return $rule->maximum_amount * ($rule->percent / 100);
         }
     }
 }

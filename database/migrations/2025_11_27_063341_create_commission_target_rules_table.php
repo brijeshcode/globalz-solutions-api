@@ -16,6 +16,7 @@ return new class extends Migration
 
             $table->unsignedBigInteger('commission_target_id')->index();
             $table->enum('type',['fuel', 'payment', 'sale']);
+            $table->enum('percent_type',['fixed', 'dynamic'])->default('dynamic');
             $table->decimal('minimum_amount',14, 4);
             $table->decimal('maximum_amount',14, 4);
             $table->decimal('percent',8, 4);
