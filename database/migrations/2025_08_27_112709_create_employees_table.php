@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('mobile', 20); // Required
             $table->string('email')->nullable();
             $table->date('start_date')->nullable();
+            $table->decimal('base_salary',8, 2)->nullable();
             
             $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true);

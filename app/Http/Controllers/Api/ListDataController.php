@@ -344,7 +344,7 @@ class ListDataController extends Controller
     // employees
     private function employees()
     {
-        return Employee::active()->with('department:id,name')->orderBy('name')->get(['id', 'name', 'email', 'phone', 'department_id']);
+        return Employee::active()->with('department:id,name')->orderBy('name')->get(['id', 'base_salary', 'name', 'email', 'phone', 'department_id']);
     }
 
     private function commissionTargets()

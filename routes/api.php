@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use App\Http\Controllers\Api\Employees\AdvanceLoansController;
+use App\Http\Controllers\Api\Employees\SalariesController;
 use App\Http\Controllers\Api\Employees\CommissionTargetsController;
 use App\Http\Controllers\Api\ListDataController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
@@ -109,6 +110,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{advanceLoan}', 'show')->name('show');
         Route::put('{advanceLoan}', 'update')->name('update');
         Route::delete('{advanceLoan}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
+
+    // Salaries Controller
+    Route::controller(SalariesController::class)->prefix('salaries')->name('salaries.')->group(function () {
+        Route::get('stats', 'stats')->name('stats');
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('pending-loans/{employeeId}', 'getPendingLoans')->name('pendingLoans');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{salary}', 'show')->name('show');
+        Route::put('{salary}', 'update')->name('update');
+        Route::delete('{salary}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });

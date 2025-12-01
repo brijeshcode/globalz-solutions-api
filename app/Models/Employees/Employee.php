@@ -30,6 +30,7 @@ class Employee extends Model
         'phone',
         'mobile',
         'email',
+        'base_salary',
         'start_date',
         'department_id',
         'is_active',
