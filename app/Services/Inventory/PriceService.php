@@ -213,14 +213,25 @@ class PriceService
         float $newPriceUsd,
         int $currentInventory
     ): float {
+        // Get the item to check for starting inventory
+        $item = Item::find($itemId);
+        $startingQuantity = $item && $item->starting_quantity > 0 ? $item->starting_quantity : 0;
+        $startingPrice = $item && $item->starting_price > 0 ? $item->starting_price : 0;
+
         // Get all OTHER purchase items for this item across all warehouses
         $otherPurchases = \App\Models\Suppliers\PurchaseItem::where('item_id', $itemId)
             ->where('id', '!=', $excludePurchaseItemId)
             ->get(['quantity', 'cost_per_item_usd']);
 
-        // Calculate total value and quantity from other purchases
+        // Calculate total value and quantity from other purchases AND starting inventory
         $totalValueFromOthers = 0;
         $totalQtyFromOthers = 0;
+
+        // Include starting inventory in calculations
+        if ($startingQuantity > 0 && $startingPrice > 0) {
+            $totalValueFromOthers += ($startingQuantity * $startingPrice);
+            $totalQtyFromOthers += $startingQuantity;
+        }
 
         foreach ($otherPurchases as $purchase) {
             $totalValueFromOthers += ($purchase->quantity * $purchase->cost_per_item_usd);
