@@ -12,6 +12,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\CustomerReturnItem;
+use App\Services\Customers\CustomerReturnService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,13 @@ use Illuminate\Support\Facades\DB;
 class CustomerReturnsController extends Controller
 {
     use HasPagination;
+
+    protected $customerReturnService;
+
+    public function __construct(CustomerReturnService $customerReturnService)
+    {
+        $this->customerReturnService = $customerReturnService;
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -115,8 +123,8 @@ class CustomerReturnsController extends Controller
                 'warehouse_id' => $request->warehouse_id,
                 'total' => $request->total,
                 'total_usd' => $request->total_usd,
-                'total_volume_cbm' => $request->total_volume_cbm,
-                'total_weight_kg' => $request->total_weight_kg,
+                'total_volume_cbm' => $request->total_volume_cbm ?? 0,
+                'total_weight_kg' => $request->total_weight_kg ?? 0,
                 'note' => $request->note,
                 'approved_by' => $user->id,
                 'approved_at' => now(),
@@ -162,6 +170,7 @@ class CustomerReturnsController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollback();
+            info('Failed to create customer return: ' . $e->getMessage());
             return ApiResponse::customError('Failed to create customer return: ' . $e->getMessage(), 500);
         }
     }
@@ -204,71 +213,138 @@ class CustomerReturnsController extends Controller
         );
     }
 
+    public function update(Request $request, CustomerReturn $customerReturn): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
+            return ApiResponse::customError('Only admins can update customer returns', 403);
+        }
+
+        $request->validate([
+            'date' => 'sometimes|required|date',
+            'prefix' => 'sometimes|required|string|max:50',
+            'customer_id' => 'sometimes|required|exists:customers,id',
+            'salesperson_id' => 'sometimes|nullable|exists:employees,id',
+            'currency_id' => 'sometimes|required|exists:currencies,id',
+            'warehouse_id' => 'sometimes|required|exists:warehouses,id',
+            'total' => 'sometimes|required|numeric|min:0',
+            'total_usd' => 'sometimes|required|numeric|min:0',
+            'total_volume_cbm' => 'sometimes|nullable|numeric|min:0',
+            'total_weight_kg' => 'sometimes|nullable|numeric|min:0',
+            'note' => 'sometimes|nullable|string',
+            'items' => 'sometimes|required|array|min:1',
+            'items.*.id' => 'sometimes|nullable|exists:customer_return_items,id',
+            'items.*.item_code' => 'required_with:items|string',
+            'items.*.item_id' => 'nullable|exists:items,id',
+            'items.*.quantity' => 'required_with:items|numeric|min:0.01',
+            'items.*.price' => 'required_with:items|numeric|min:0',
+        ]);
+
+        try {
+            $data = $request->only([
+                'date', 'prefix', 'customer_id', 'salesperson_id', 'currency_id',
+                'warehouse_id', 'total', 'total_usd', 'total_volume_cbm',
+                'total_weight_kg', 'note'
+            ]);
+
+            $items = $request->input('items', []);
+
+            $customerReturn = $this->customerReturnService->updateCustomerReturnWithItems(
+                $customerReturn,
+                $data,
+                $items
+            );
+
+            $customerReturn->load([
+                'customer:id,name,code,address,city,mobile,mof_tax_number',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'warehouse:id,name,address_line_1',
+                'salesperson:id,name',
+                'approvedBy:id,name',
+                'returnReceivedBy:id,name',
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'items'
+            ]);
+
+            return ApiResponse::update(
+                'Customer return updated successfully',
+                new CustomerReturnResource($customerReturn)
+            );
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::customError($e->getMessage(), 422);
+        } catch (\Exception $e) {
+            return ApiResponse::customError('Failed to update customer return: ' . $e->getMessage(), 500);
+        }
+    }
+
     public function markReceived(Request $request, CustomerReturn $customerReturn): JsonResponse
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (!$user->isWarehouseManager() || !$user->isAdmin()) {
+        if (!$user->isWarehouseManager() && !$user->isAdmin()) {
             return ApiResponse::customError('Only warehouse managers can mark returns as received', 403);
-        }
-
-        if (!$customerReturn->isApproved()) {
-            return ApiResponse::customError('Return must be approved before marking as received', 422);
-        }
-
-        if ($customerReturn->isReceived()) {
-            return ApiResponse::customError('Return is already marked as received', 422);
         }
 
         $request->validate([
             'return_received_note' => 'nullable|string|max:1000'
         ]);
 
-        // Use database transaction to ensure inventory updates are atomic
-        DB::transaction(function () use ($customerReturn, $user, $request) {
-            // Update return status
-            $customerReturn->update([
-                'return_received_by' => $user->id,
-                'return_received_at' => now(),
-                'return_received_note' => $request->return_received_note
+        try {
+            // Use service to mark as received and update inventory
+            $customerReturn = $this->customerReturnService->markAsReceived(
+                $customerReturn,
+                $user->id,
+                $request->return_received_note
+            );
+
+            // Update customer balance
+            CustomersHelper::addBalance(
+                Customer::find($customerReturn->customer_id),
+                $customerReturn->total_usd
+            );
+
+            $customerReturn->load([
+                'customer:id,name,code',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'warehouse:id,name',
+                'salesperson:id,name',
+                'approvedBy:id,name',
+                'returnReceivedBy:id,name',
+                'createdBy:id,name',
+                'updatedBy:id,name'
             ]);
 
-            CustomersHelper::addBalance(Customer::find($customerReturn->customer_id), $customerReturn->total_usd);
-            // Update inventory for each returned item
-            // foreach ($customerReturn->items as $returnItem) {
-            //     if ($returnItem->item_id && $returnItem->quantity > 0) {
-            //         // Find or create inventory record for this item in the warehouse
-            //         $inventory = \App\Models\Inventories\Inventory::firstOrCreate([
-            //             'item_id' => $returnItem->item_id,
-            //             'warehouse_id' => $customerReturn->warehouse_id,
-            //         ], [
-            //             'quantity' => 0,
-            //             'reserved_quantity' => 0,
-            //         ]);
+            return ApiResponse::update(
+                'Customer return marked as received successfully and inventory updated',
+                new CustomerReturnResource($customerReturn)
+            );
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::customError($e->getMessage(), 422);
+        } catch (\Exception $e) {
+            return ApiResponse::customError('Failed to mark return as received: ' . $e->getMessage(), 500);
+        }
+    }
 
-            //         // Add returned quantity back to inventory
-            //         $inventory->increment('quantity', $returnItem->quantity);
+    public function destroy(CustomerReturn $customerReturn): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
-            //     }
-            // }
-        });
+        if (!$user->isAdmin()) {
+            return ApiResponse::customError('Only admins can delete returns', 403);
+        }
 
-        $customerReturn->load([
-            'customer:id,name,code',
-            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'warehouse:id,name',
-            'salesperson:id,name',
-            'approvedBy:id,name',
-            'returnReceivedBy:id,name',
-            'createdBy:id,name',
-            'updatedBy:id,name'
-        ]);
+        try {
+            $this->customerReturnService->deleteCustomerReturn($customerReturn);
 
-        return ApiResponse::update(
-            'Customer return marked as received successfully and inventory updated',
-            new CustomerReturnResource($customerReturn)
-        );
+            return ApiResponse::delete('Customer return deleted successfully');
+        } catch (\Exception $e) {
+            return ApiResponse::customError('Failed to delete customer return: ' . $e->getMessage(), 500);
+        }
     }
 
     public function trashed(Request $request): JsonResponse
@@ -333,24 +409,27 @@ class CustomerReturnsController extends Controller
             return ApiResponse::customError('Can only restore approved returns', 422);
         }
 
-        $return->restore();
-        $return->items()->withTrashed()->restore();
+        try {
+            $this->customerReturnService->restoreCustomerReturn($return);
 
-        $return->load([
-            'customer:id,name,code,address,city,mobile,mof_tax_number',
-            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'warehouse:id,name,address_line_1',
-            'salesperson:id,name',
-            'approvedBy:id,name',
-            'returnReceivedBy:id,name',
-            'createdBy:id,name',
-            'updatedBy:id,name'
-        ]);
+            $return->load([
+                'customer:id,name,code,address,city,mobile,mof_tax_number',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'warehouse:id,name,address_line_1',
+                'salesperson:id,name',
+                'approvedBy:id,name',
+                'returnReceivedBy:id,name',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ]);
 
-        return ApiResponse::update(
-            'Customer return restored successfully',
-            new CustomerReturnResource($return)
-        );
+            return ApiResponse::update(
+                'Customer return restored successfully',
+                new CustomerReturnResource($return)
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::customError('Failed to restore customer return: ' . $e->getMessage(), 500);
+        }
     }
 
     public function forceDelete(int $id): JsonResponse

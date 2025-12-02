@@ -54,7 +54,7 @@ class CustomerFactory extends Factory
             'salesperson_id' => fake()->boolean(60) ? \App\Models\Employees\Employee::factory() : null,
             'customer_payment_term_id' => fake()->boolean(70) ? \App\Models\Setups\Customers\CustomerPaymentTerm::factory() : null,
             'discount_percentage' => fake()->boolean(50) ? fake()->randomFloat(2, 0, 15) : 0,
-            'credit_limit' => fake()->boolean(80) ? fake()->randomFloat(4, 5000, 500000) : null,
+            'credit_limit' => 50000,
             
             // Other Information
             'notes' => fake()->boolean(30) ? fake()->paragraph() : null,
@@ -157,7 +157,7 @@ class CustomerFactory extends Factory
             'contact_name' => fake()->name(),
             'salesperson_id' => \App\Models\Employees\Employee::factory(),
             'customer_payment_term_id' => \App\Models\Setups\Customers\CustomerPaymentTerm::factory(),
-            'credit_limit' => fake()->randomFloat(4, 10000, 500000),
+            'credit_limit' => 50000,
         ]);
     }
 

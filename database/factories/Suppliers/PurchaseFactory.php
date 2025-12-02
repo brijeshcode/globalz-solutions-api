@@ -39,7 +39,6 @@ class PurchaseFactory extends Factory
             'supplier_id' => Supplier::first()?->id ?? Supplier::factory(),
             'warehouse_id' => Warehouse::first()?->id ?? Warehouse::factory(),
             'currency_id' => Currency::first()?->id ?? Currency::factory(),
-            'account_id' => $this->faker->boolean(70) ? (Account::first()?->id ?? Account::factory()) : null,
             'supplier_invoice_number' => $this->faker->unique()->regexify('[A-Z]{2,3}-[0-9]{4,6}'),
             'currency_rate' => $this->faker->randomFloat(6, 0.5, 2.0),
             

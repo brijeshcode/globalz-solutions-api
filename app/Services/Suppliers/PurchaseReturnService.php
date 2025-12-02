@@ -382,4 +382,86 @@ class PurchaseReturnService
             'final_total_usd' => $finalTotalUsd,
         ]);
     }
+
+    /**
+     * Delete a purchase return and restore inventory
+     * When we delete a return, items come back to our inventory (we're canceling the return to supplier)
+     */
+    public function deletePurchaseReturn(PurchaseReturn $purchaseReturn): void
+    {
+        try {
+            DB::transaction(function () use ($purchaseReturn) {
+                // Load purchase return items before deletion
+                $purchaseReturnItems = $purchaseReturn->purchaseReturnItems;
+
+                // Add inventory back for all items (canceling the return means items come back to stock)
+                foreach ($purchaseReturnItems as $purchaseReturnItem) {
+                    InventoryService::add(
+                        $purchaseReturnItem->item_id,
+                        $purchaseReturn->warehouse_id,
+                        $purchaseReturnItem->quantity
+                    );
+                }
+
+                // Delete the purchase return (this will trigger model events for supplier balance)
+                $purchaseReturn->delete();
+            });
+        } catch (\Exception $e) {
+            // System/unexpected errors need context and user-friendly wrapping
+            Log::error('Failed to delete purchase return', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'purchase_return_id' => $purchaseReturn->id,
+                'purchase_return_code' => $purchaseReturn->code ?? 'N/A',
+            ]);
+
+            // Re-throw with user-friendly message
+            throw new \RuntimeException(
+                "Failed to delete purchase return #{$purchaseReturn->id}: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Restore a deleted purchase return and subtract inventory
+     * When we restore a return, items are returned to supplier again (removing from our inventory)
+     */
+    public function restorePurchaseReturn(PurchaseReturn $purchaseReturn): void
+    {
+        try {
+            DB::transaction(function () use ($purchaseReturn) {
+                // Restore the purchase return first (this will trigger model events for supplier balance)
+                $purchaseReturn->restore();
+
+                // Load purchase return items and subtract inventory (items go back to supplier)
+                $purchaseReturnItems = $purchaseReturn->purchaseReturnItems;
+                foreach ($purchaseReturnItems as $purchaseReturnItem) {
+                    InventoryService::subtract(
+                        $purchaseReturnItem->item_id,
+                        $purchaseReturn->warehouse_id,
+                        $purchaseReturnItem->quantity
+                    );
+                }
+            });
+        } catch (\Exception $e) {
+            // System/unexpected errors need context and user-friendly wrapping
+            Log::error('Failed to restore purchase return', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'purchase_return_id' => $purchaseReturn->id,
+                'purchase_return_code' => $purchaseReturn->code ?? 'N/A',
+            ]);
+
+            // Re-throw with user-friendly message
+            throw new \RuntimeException(
+                "Failed to restore purchase return #{$purchaseReturn->id}: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
+    }
 }

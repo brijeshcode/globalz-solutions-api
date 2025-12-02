@@ -165,7 +165,7 @@ class PurchaseReturnsController extends Controller
      */
     public function destroy(PurchaseReturn $purchaseReturn): JsonResponse
     {
-        $purchaseReturn->delete();
+        $this->purchaseReturnService->deletePurchaseReturn($purchaseReturn);
 
         return ApiResponse::delete('Purchase return deleted successfully');
     }
@@ -201,7 +201,7 @@ class PurchaseReturnsController extends Controller
     public function restore(int $id): JsonResponse
     {
         $purchaseReturn = PurchaseReturn::onlyTrashed()->findOrFail($id);
-        $purchaseReturn->restore();
+        $this->purchaseReturnService->restorePurchaseReturn($purchaseReturn);
 
         return ApiResponse::update('Purchase return restored successfully');
     }

@@ -167,7 +167,7 @@ class PurchasesController extends Controller
      */
     public function destroy(Purchase $purchase): JsonResponse
     {
-        $purchase->delete();
+        $this->purchaseService->deletePurchase($purchase);
 
         return ApiResponse::delete('Purchase deleted successfully');
     }
@@ -218,7 +218,7 @@ class PurchasesController extends Controller
     public function restore(int $id): JsonResponse
     {
         $purchase = Purchase::onlyTrashed()->findOrFail($id);
-        $purchase->restore();
+        $this->purchaseService->restorePurchase($purchase);
 
         return ApiResponse::update('Purchase restored successfully');
     }

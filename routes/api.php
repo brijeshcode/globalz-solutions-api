@@ -217,10 +217,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerReturn}', 'show')->name('show');
+            Route::put('{customerReturn}', 'update')->name('update');
+            Route::delete('{customerReturn}', 'destroy')->name('destroy');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             Route::patch('{customerReturn}/mark-received', 'markReceived')->name('markReceived');
-            
+
         });
 
         // Customer Return Orders Controller (for pending return orders) - Must be defined BEFORE {customer} routes to avoid conflicts

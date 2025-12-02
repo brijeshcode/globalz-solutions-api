@@ -20,7 +20,7 @@ class CustomerReturnsStoreRequest extends FormRequest
     {
         return [
             'date' => 'required|date',
-            'prefix' => 'required|in:RTX,RTV',
+            'prefix' => 'required|in:RTX,RTN',
             'customer_id' => 'required|exists:customers,id',
             'salesperson_id' => 'nullable|exists:users,id',
             'currency_id' => 'required|exists:currencies,id',
@@ -28,8 +28,8 @@ class CustomerReturnsStoreRequest extends FormRequest
             'currency_rate' => 'required|numeric',
             'total' => 'required|numeric|min:0',
             'total_usd' => 'required|numeric|min:0',
-            'total_volume_cbm' => 'nullable|numeric|min:0',
-            'total_weight_kg' => 'nullable|numeric|min:0',
+            'total_volume_cbm' => 'nullable|numeric|min:0|default:0',
+            'total_weight_kg' => 'nullable|numeric|min:0|default:0',
             'note' => 'nullable|string',
             'approve_note' => 'nullable|string',
 
