@@ -421,16 +421,16 @@ class PurchaseService
     private function recalculatePurchaseTotals(Purchase $purchase): void
     {
         $items = $purchase->purchaseItems;
-        
+
         $subTotal = $items->sum('total_price');
         $subTotalUsd = $items->sum('total_price_usd');
         $total = $subTotal - $purchase->discount_amount;
         $totalUsd = $subTotalUsd - $purchase->discount_amount_usd;
-        
+
         $finalTotal = $total;
-        $finalTotalUsd = $totalUsd + $purchase->shipping_fee_usd + $purchase->customs_fee_usd 
+        $finalTotalUsd = $totalUsd + $purchase->shipping_fee_usd + $purchase->customs_fee_usd
                         + $purchase->other_fee_usd + $purchase->tax_usd;
-        
+
         $purchase->update([
             'sub_total' => $subTotal,
             'sub_total_usd' => $subTotalUsd,
@@ -439,5 +439,104 @@ class PurchaseService
             'final_total' => $finalTotal,
             'final_total_usd' => $finalTotalUsd,
         ]);
+    }
+
+    /**
+     * Delete a purchase and adjust inventory
+     */
+    public function deletePurchase(Purchase $purchase): void
+    {
+        try {
+            DB::transaction(function () use ($purchase) {
+                // Load purchase items before deletion
+                $purchaseItems = $purchase->purchaseItems;
+
+                // Validate that all items can be removed from inventory
+                foreach ($purchaseItems as $purchaseItem) {
+                    $this->validateInventoryBeforeDeletion(
+                        $purchaseItem->item_id,
+                        $purchase->warehouse_id,
+                        $purchaseItem->quantity
+                    );
+                }
+
+                // Subtract inventory for all items
+                foreach ($purchaseItems as $purchaseItem) {
+                    InventoryService::subtract(
+                        $purchaseItem->item_id,
+                        $purchase->warehouse_id,
+                        $purchaseItem->quantity
+                    );
+                }
+
+                // Delete the purchase (this will trigger model events for supplier balance)
+                $purchase->delete();
+            });
+        } catch (\InvalidArgumentException $e) {
+            // Validation errors are already user-friendly, just log and re-throw
+            Log::warning('Purchase deletion validation failed', [
+                'error' => $e->getMessage(),
+                'purchase_id' => $purchase->id,
+                'purchase_code' => $purchase->code ?? 'N/A',
+            ]);
+
+            // Re-throw validation errors as-is (already have clear messages)
+            throw $e;
+        } catch (\Exception $e) {
+            // System/unexpected errors need context and user-friendly wrapping
+            Log::error('Failed to delete purchase', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'purchase_id' => $purchase->id,
+                'purchase_code' => $purchase->code ?? 'N/A',
+            ]);
+
+            // Re-throw with user-friendly message
+            throw new \RuntimeException(
+                "Failed to delete purchase #{$purchase->id}: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Restore a deleted purchase and add inventory back
+     */
+    public function restorePurchase(Purchase $purchase): void
+    {
+        try {
+            DB::transaction(function () use ($purchase) {
+                // Restore the purchase first (this will trigger model events for supplier balance)
+                $purchase->restore();
+
+                // Load purchase items and add inventory back
+                $purchaseItems = $purchase->purchaseItems;
+                foreach ($purchaseItems as $purchaseItem) {
+                    InventoryService::add(
+                        $purchaseItem->item_id,
+                        $purchase->warehouse_id,
+                        $purchaseItem->quantity
+                    );
+                }
+            });
+        } catch (\Exception $e) {
+            // System/unexpected errors need context and user-friendly wrapping
+            Log::error('Failed to restore purchase', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'purchase_id' => $purchase->id,
+                'purchase_code' => $purchase->code ?? 'N/A',
+            ]);
+
+            // Re-throw with user-friendly message
+            throw new \RuntimeException(
+                "Failed to restore purchase #{$purchase->id}: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
     }
 }
