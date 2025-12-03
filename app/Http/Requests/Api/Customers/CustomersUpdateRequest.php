@@ -36,7 +36,8 @@ class CustomersUpdateRequest extends FormRequest
             'customer_type_id' => 'nullable|exists:customer_types,id',
             'customer_group_id' => 'nullable|exists:customer_groups,id',
             'customer_province_id' => 'nullable|exists:customer_provinces,id',
-            'price_list_id' => 'nullable|exists:price_lists,id',
+            'price_list_id_INV' => 'nullable|exists:price_lists,id',
+            'price_list_id_INX' => 'nullable|exists:price_lists,id',
             'customer_zone_id' => 'nullable|exists:customer_zones,id',
             
             // Balance Information

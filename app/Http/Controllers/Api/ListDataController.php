@@ -130,7 +130,7 @@ class ListDataController extends Controller
     //customers
     private function customers()
     {
-        $query = Customer::with('priceList:id,code,description,is_default')->active()->orderby('name');
+        $query = Customer::with('priceListINV:id,code,description,is_default', 'priceListINX:id,code,description,is_default')->active()->orderby('name');
 
         if (RoleHelper::isSalesman()) {
             $employee = Employee::where('user_id', RoleHelper::authUser()->id )->first();
@@ -149,7 +149,8 @@ class ListDataController extends Controller
         'customer_group_id',
         'customer_province_id',
         'customer_zone_id',
-        'price_list_id',
+        'price_list_id_INV',
+        'price_list_id_INX',
         // 'opening_balance',
         'current_balance',
         'address',

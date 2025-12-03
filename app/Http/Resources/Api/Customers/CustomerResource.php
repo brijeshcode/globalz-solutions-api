@@ -85,7 +85,8 @@ class CustomerResource extends JsonResource
             'gps_coordinates' => $this->gps_coordinates,
             'formatted_gps' => $this->getFormattedGpsAttribute(),
             'mof_tax_number' => $this->mof_tax_number,
-            'price_list_id' => $this->price_list_id,
+            'price_list_id_INV' => $this->price_list_id_INV,
+            'price_list_id_INX' => $this->price_list_id_INX,
             // Sales Information
             'salesperson' => $this->whenLoaded('salesperson', function () {
                 return $this->salesperson ? [
@@ -107,12 +108,20 @@ class CustomerResource extends JsonResource
                     'days' => $this->customerPaymentTerm->days,
                 ] : null;
             }),
-            'price_list' => $this->whenLoaded('priceList', function () {
-                return $this->priceList ? [
-                    'id' => $this->priceList->id,
-                    'code' => $this->priceList->code,
-                    'description' => $this->priceList->description,
-                    'item_count' => $this->priceList->item_count,
+            'price_list_INV' => $this->whenLoaded('priceListINV', function () {
+                return $this->priceListINV ? [
+                    'id' => $this->priceListINV->id,
+                    'code' => $this->priceListINV->code,
+                    'description' => $this->priceListINV->description,
+                    'item_count' => $this->priceListINV->item_count,
+                ] : null;
+            }),
+            'price_list_INX' => $this->whenLoaded('priceListINX', function () {
+                return $this->priceListINX ? [
+                    'id' => $this->priceListINX->id,
+                    'code' => $this->priceListINX->code,
+                    'description' => $this->priceListINX->description,
+                    'item_count' => $this->priceListINX->item_count,
                 ] : null;
             }),
             'discount_percentage' => $this->discount_percentage ? (float) $this->discount_percentage : 0,

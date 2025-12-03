@@ -48,7 +48,8 @@ class Customer extends Model
         'mof_tax_number',
         'salesperson_id',
         'customer_payment_term_id',
-        'price_list_id',
+        'price_list_id_INV',
+        'price_list_id_INX',
         'discount_percentage',
         'credit_limit',
         'notes',
@@ -89,7 +90,6 @@ class Customer extends Model
         'current_balance',
         'salesperson_id',
         'customer_payment_term_id',
-        'price_list_id',
         'discount_percentage',
         'credit_limit',
         'is_active',
@@ -141,9 +141,14 @@ class Customer extends Model
         return $this->belongsTo(CustomerPaymentTerm::class);
     }
 
-    public function priceList(): BelongsTo
+    public function priceListINV(): BelongsTo
     {
-        return $this->belongsTo(PriceList::class)->with('priceListItems:id,item_code,item_id,price_list_id,sell_price');
+        return $this->belongsTo(PriceList::class, 'price_list_id_INV')->with('priceListItems:id,item_code,item_id,price_list_id,sell_price');
+    }
+
+    public function priceListINX(): BelongsTo
+    {
+        return $this->belongsTo(PriceList::class, 'price_list_id_INX')->with('priceListItems:id,item_code,item_id,price_list_id,sell_price');
     }
 
     public function monthlyBalances(): HasMany

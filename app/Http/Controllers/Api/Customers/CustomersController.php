@@ -46,13 +46,16 @@ class CustomersController extends Controller
         // Auto-generate customer code (system generated only)
         $data['code'] = Customer::reserveNextCode();
 
-        // Set default price list if not provided
-        if (empty($data['price_list_id'])) {
-            $defaultPriceList = PriceList::getDefault();
-            if ($defaultPriceList) {
-                $data['price_list_id'] = $defaultPriceList->id;
-            }
-        }
+        // Set default price lists if not provided
+        // $defaultPriceList = PriceList::getDefault();
+        // if ($defaultPriceList) {
+        //     if (empty($data['price_list_id_INV'])) {
+        //         $data['price_list_id_INV'] = $defaultPriceList->id;
+        //     }
+        //     if (empty($data['price_list_id_INX'])) {
+        //         $data['price_list_id_INX'] = $defaultPriceList->id;
+        //     }
+        // }
 
         // Create customer
         $customer = Customer::create($data);
@@ -81,7 +84,8 @@ class CustomersController extends Controller
         $customer->load([
             'parent:id,code,name',
             'customerType:id,name',
-            'priceList:id,code,description',
+            'priceListINV:id,code,description',
+            'priceListINX:id,code,description',
             'customerGroup:id,name',
             'customerProvince:id,name',
             'customerZone:id,name',
@@ -104,7 +108,8 @@ class CustomersController extends Controller
         $customer->load([
             'parent:id,code,name',
             'children:id,code,name,current_balance',
-            'priceList:id,code,description',
+            'priceListINV:id,code,description',
+            'priceListINX:id,code,description',
             'customerType:id,name',
             'customerGroup:id,name',
             'customerProvince:id,name',
@@ -155,7 +160,8 @@ class CustomersController extends Controller
         $customer->load([
             'parent:id,code,name',
             'customerType:id,name',
-            'priceList:id,code,description',
+            'priceListINV:id,code,description',
+            'priceListINX:id,code,description',
             'customerGroup:id,name',
             'customerProvince:id,name',
             'customerZone:id,name',
@@ -238,6 +244,8 @@ class CustomersController extends Controller
         $customer->load([
             'parent:id,code,name',
             'customerType:id,name',
+            'priceListINV:id,code,description',
+            'priceListINX:id,code,description',
             'customerGroup:id,name',
             'customerProvince:id,name',
             'customerZone:id,name',
@@ -539,6 +547,8 @@ class CustomersController extends Controller
             'payment_term',
             'discount_percentage',
             'credit_limit',
+            'price_list_inv_code',
+            'price_list_inx_code',
             'notes',
             'created_at',
             'total_old_sales',
@@ -567,6 +577,8 @@ class CustomersController extends Controller
                 'Net 30',
                 5,
                 100000,
+                'price list one',
+                'price list two',
                 'VIP Customer',
                 '22-12-2025',
                 0,
@@ -651,7 +663,8 @@ class CustomersController extends Controller
                 'parent:id,code,name',
                 'customerType:id,name',
                 'customerGroup:id,name',
-                'priceList:id,code,description',
+                'priceListINV:id,code,description',
+                'priceListINX:id,code,description',
                 'customerProvince:id,name',
                 'customerZone:id,name',
                 'salesperson:id,code,name,department_id',
@@ -679,9 +692,13 @@ class CustomersController extends Controller
             $query->where('customer_group_id', $request->customer_group_id);
         }
 
-        // Filter by customer price list
-        if ($request->has('price_list_id')) {
-            $query->where('price_list_id', $request->price_list_id);
+        // Filter by customer price lists
+        if ($request->has('price_list_id_INV')) {
+            $query->where('price_list_id_INV', $request->price_list_id_INV);
+        }
+
+        if ($request->has('price_list_id_INX')) {
+            $query->where('price_list_id_INX', $request->price_list_id_INX);
         }
 
         // Filter by customer province

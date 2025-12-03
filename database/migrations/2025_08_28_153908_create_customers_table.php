@@ -23,6 +23,8 @@ return new class extends Migration
             $table->unsignedBigInteger('customer_group_id')->nullable()->index();
             $table->unsignedBigInteger('customer_province_id')->nullable()->index();
             $table->unsignedBigInteger('customer_zone_id')->nullable()->index();
+            $table->unsignedBigInteger('price_list_id_INV')->nullable();
+            $table->unsignedBigInteger('price_list_id_INX')->nullable();
 
 
             // $table->decimal('opening_balance', 15, 4)->default(0); // Starting balance

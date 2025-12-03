@@ -10,6 +10,7 @@ use App\Models\Setups\Customers\CustomerProvince;
 use App\Models\Setups\Customers\CustomerZone;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Employees\Employee;
+use App\Models\Items\PriceList;
 use App\Models\Setting;
 use App\Helpers\CurrencyHelper;
 use Illuminate\Support\Collection;
@@ -151,6 +152,8 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             'mof_tax_number' => $row['mof_tax_number'] ?? $row['tax_number'] ?? null,
             'salesperson_id' => null,
             'customer_payment_term_id' => null,
+            'price_list_id_INV' => null,
+            'price_list_id_INX' => null,
             'discount_percentage' => $row['discount_percentage'] ?? $row['discount'] ?? 0,
             'credit_limit' => $row['credit_limit'] ?? null,
             'notes' => $row['notes'] ?? $row['remarks'] ?? null,
@@ -221,6 +224,24 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
                 ->first();
             if ($paymentTerm) {
                 $data['customer_payment_term_id'] = $paymentTerm->id;
+            }
+        }
+
+        // Lookup price list INV by code
+        if (!empty($row['price_list_inv_code']) || !empty($row['price_list_code_inv'])) {
+            $priceListCode = $row['price_list_inv_code'] ?? $row['price_list_code_inv'];
+            $priceList = PriceList::where('code', $priceListCode)->first();
+            if ($priceList) {
+                $data['price_list_id_INV'] = $priceList->id;
+            }
+        }
+
+        // Lookup price list INX by code
+        if (!empty($row['price_list_inx_code']) || !empty($row['price_list_code_inx'])) {
+            $priceListCode = $row['price_list_inx_code'] ?? $row['price_list_code_inx'];
+            $priceList = PriceList::where('code', $priceListCode)->first();
+            if ($priceList) {
+                $data['price_list_id_INX'] = $priceList->id;
             }
         }
 
