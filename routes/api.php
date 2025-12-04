@@ -60,7 +60,7 @@ use App\Http\Controllers\Api\Suppliers\SupplierPaymentsController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
-use App\Http\Controllers\Api\Employees\SalariesController;
+use App\Http\Controllers\Api\Employees\SalaryController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use Illuminate\Support\Facades\Route;
@@ -115,7 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Salaries Controller
-    Route::controller(SalariesController::class)->prefix('salaries')->name('salaries.')->group(function () {
+    Route::controller(SalaryController::class)->prefix('salaries')->name('salaries.')->group(function () {
         Route::get('stats', 'stats')->name('stats');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('pending-loans/{employeeId}', 'getPendingLoans')->name('pendingLoans');
