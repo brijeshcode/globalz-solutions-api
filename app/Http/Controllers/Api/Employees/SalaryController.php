@@ -238,6 +238,7 @@ class SalaryController extends Controller
 
     public function mySalaryDetail(Salary $salary): JsonResponse
     {
+        // git refresh
         $myEmployee = RoleHelper::getEmployee();
 
         if(! $myEmployee) {
