@@ -215,4 +215,48 @@ class SalariesController extends Controller
 
         return $query;
     }
+
+    public function mySalaries(Request $request): JsonResponse
+    {
+        info('stop here');
+
+        $myEmployee = RoleHelper::getEmployee();
+        
+        if(! $myEmployee) {
+            return ApiResponse::notFound('Employee Not found');
+        }
+
+        $query = $this->salaryQuery($request);
+
+        $query->where('employee_id', $myEmployee->id);
+        $salaries = $this->applyPagination($query, $request);
+
+        return ApiResponse::paginated(
+            'Salaries retrieved successfully',
+            $salaries,
+            SalaryResource::class
+        );
+    }
+
+    public function mySalaryDetail(Salary $salary): JsonResponse
+    {
+        $myEmployee = RoleHelper::getEmployee();
+
+        if(! $myEmployee) {
+            return ApiResponse::notFound('Employee Not found');
+        }
+
+        if($salary->employee_id != $myEmployee->id){
+            return ApiResponse::unauthorized('Invalid Salary details');
+        }
+
+        $salary->load([
+            'employee:id,name,code,address,phone,mobile,email,is_active',
+        ]);
+
+        return ApiResponse::show(
+            'Salary retrieved successfully',
+            new SalaryResource($salary)
+        );
+    }
 }

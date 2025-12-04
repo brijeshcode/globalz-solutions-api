@@ -121,7 +121,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('pending-loans/{employeeId}', 'getPendingLoans')->name('pendingLoans');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
+        Route::get('my', 'mySalaries')->name('mySalaries');
         Route::get('{salary}', 'show')->name('show');
+        Route::get('my/show/{salary}', 'mySalaryDetail')->name('mySalaryDetail');
         Route::put('{salary}', 'update')->name('update');
         Route::delete('{salary}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
