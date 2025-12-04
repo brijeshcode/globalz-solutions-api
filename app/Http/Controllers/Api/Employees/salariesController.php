@@ -218,8 +218,6 @@ class SalariesController extends Controller
 
     public function mySalaries(Request $request): JsonResponse
     {
-        info('stop here');
-
         $myEmployee = RoleHelper::getEmployee();
         
         if(! $myEmployee) {
