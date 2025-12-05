@@ -29,7 +29,7 @@ class PriceListsUpdateRequest extends FormRequest
 
         return [
             'code' => 'sometimes|required|string|max:255|unique:price_lists,code,' . $priceList->id,
-            'description' => 'sometimes|required|string|max:500',
+            'description' => 'nullable|string|max:500',
             'note' => 'nullable|string',
 
             'items' => 'sometimes|required|array|min:1',
@@ -51,7 +51,6 @@ class PriceListsUpdateRequest extends FormRequest
         return [
             'code.required' => 'Price list code is required',
             'code.unique' => 'Price list code already exists',
-            'description.required' => 'Price list description is required',
             'items.required' => 'At least one item is required',
             'items.min' => 'At least one item is required',
             'items.*.item_code.required' => 'Item code is required for each item',

@@ -27,7 +27,7 @@ class PriceListsStoreRequest extends FormRequest
     {
         return [
             'code' => 'required|string|max:255|unique:price_lists,code',
-            'description' => 'required|string|max:500',
+            'description' => 'nullable|string|max:500',
             'note' => 'nullable|string',
 
             'items' => 'required|array|min:1',
