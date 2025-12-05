@@ -460,7 +460,7 @@ class PriceService
     public static function canUpdateStartingPrice(int $itemId): bool
     {
         // Check if any purchases exist
-        $hasPurchases = DB::table('purchase_items')->where('item_id', $itemId)->exists();
+        $hasPurchases = PurchaseItem::where('item_id', $itemId)->exists();
 
         // Check if any price history exists (excluding initial entries)
         // Allow updating starting price if only 'initial' price history entries exist
