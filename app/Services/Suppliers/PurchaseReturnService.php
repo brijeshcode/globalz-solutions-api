@@ -394,14 +394,21 @@ class PurchaseReturnService
                 // Load purchase return items before deletion
                 $purchaseReturnItems = $purchaseReturn->purchaseReturnItems;
 
-                // Add inventory back for all items (canceling the return means items come back to stock)
+                // Add inventory back and clean up price history for all items (canceling the return means items come back to stock)
                 foreach ($purchaseReturnItems as $purchaseReturnItem) {
+                    // Add inventory back
                     InventoryService::add(
                         $purchaseReturnItem->item_id,
                         $purchaseReturn->warehouse_id,
                         $purchaseReturnItem->quantity
                     );
+
+                    // Clean up price history and restore previous price
+                    PriceService::deleteFromPurchaseReturn($purchaseReturn, $purchaseReturnItem);
                 }
+
+                // Delete all purchase return items
+                $purchaseReturn->purchaseReturnItems()->delete();
 
                 // Delete the purchase return (this will trigger model events for supplier balance)
                 $purchaseReturn->delete();
@@ -436,14 +443,21 @@ class PurchaseReturnService
                 // Restore the purchase return first (this will trigger model events for supplier balance)
                 $purchaseReturn->restore();
 
-                // Load purchase return items and subtract inventory (items go back to supplier)
+                // Restore all soft-deleted purchase return items
+                $purchaseReturn->purchaseReturnItems()->onlyTrashed()->restore();
+
+                // Load purchase return items, subtract inventory, and restore price history (items go back to supplier)
                 $purchaseReturnItems = $purchaseReturn->purchaseReturnItems;
                 foreach ($purchaseReturnItems as $purchaseReturnItem) {
+                    // Subtract inventory
                     InventoryService::subtract(
                         $purchaseReturnItem->item_id,
                         $purchaseReturn->warehouse_id,
                         $purchaseReturnItem->quantity
                     );
+
+                    // Restore price history and update current price
+                    PriceService::restoreFromPurchaseReturn($purchaseReturn, $purchaseReturnItem);
                 }
             });
         } catch (\Exception $e) {

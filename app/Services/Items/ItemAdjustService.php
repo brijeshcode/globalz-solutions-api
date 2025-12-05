@@ -257,4 +257,108 @@ class ItemAdjustService
             );
         }
     }
+
+    /**
+     * Delete an item adjust and reverse inventory adjustments
+     */
+    public function deleteItemAdjust(ItemAdjust $itemAdjust): void
+    {
+        try {
+            DB::transaction(function () use ($itemAdjust) {
+                // Load item adjust items before deletion
+                $itemAdjustItems = $itemAdjust->itemAdjustItems;
+
+                // Reverse inventory adjustments for all items
+                foreach ($itemAdjustItems as $itemAdjustItem) {
+                    // Reverse the adjustment: if it was Add, now subtract; if it was Subtract, now add
+                    if ($itemAdjust->type === 'Add') {
+                        InventoryService::subtract(
+                            $itemAdjustItem->item_id,
+                            $itemAdjust->warehouse_id,
+                            $itemAdjustItem->quantity
+                        );
+                    } else {
+                        InventoryService::add(
+                            $itemAdjustItem->item_id,
+                            $itemAdjust->warehouse_id,
+                            $itemAdjustItem->quantity
+                        );
+                    }
+                }
+
+                // Delete all item adjust items
+                $itemAdjust->itemAdjustItems()->delete();
+
+                // Delete the item adjust
+                $itemAdjust->delete();
+            });
+        } catch (\Exception $e) {
+            // System/unexpected errors need context and user-friendly wrapping
+            Log::error('Failed to delete item adjust', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'item_adjust_id' => $itemAdjust->id,
+                'item_adjust_code' => $itemAdjust->code ?? 'N/A',
+            ]);
+
+            // Re-throw with user-friendly message
+            throw new \RuntimeException(
+                "Failed to delete item adjust #{$itemAdjust->id}: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Restore a deleted item adjust and reapply inventory adjustments
+     */
+    public function restoreItemAdjust(ItemAdjust $itemAdjust): void
+    {
+        try {
+            DB::transaction(function () use ($itemAdjust) {
+                // Restore the item adjust first
+                $itemAdjust->restore();
+
+                // Restore all soft-deleted item adjust items
+                $itemAdjust->itemAdjustItems()->onlyTrashed()->restore();
+
+                // Load item adjust items and reapply inventory adjustments
+                $itemAdjustItems = $itemAdjust->itemAdjustItems;
+                foreach ($itemAdjustItems as $itemAdjustItem) {
+                    // Reapply the adjustment: if it was Add, add again; if it was Subtract, subtract again
+                    if ($itemAdjust->type === 'Add') {
+                        InventoryService::add(
+                            $itemAdjustItem->item_id,
+                            $itemAdjust->warehouse_id,
+                            $itemAdjustItem->quantity
+                        );
+                    } else {
+                        InventoryService::subtract(
+                            $itemAdjustItem->item_id,
+                            $itemAdjust->warehouse_id,
+                            $itemAdjustItem->quantity
+                        );
+                    }
+                }
+            });
+        } catch (\Exception $e) {
+            // System/unexpected errors need context and user-friendly wrapping
+            Log::error('Failed to restore item adjust', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'item_adjust_id' => $itemAdjust->id,
+                'item_adjust_code' => $itemAdjust->code ?? 'N/A',
+            ]);
+
+            // Re-throw with user-friendly message
+            throw new \RuntimeException(
+                "Failed to restore item adjust #{$itemAdjust->id}: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
+    }
 }

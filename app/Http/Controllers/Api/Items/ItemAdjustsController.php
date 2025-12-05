@@ -120,7 +120,7 @@ class ItemAdjustsController extends Controller
      */
     public function destroy(ItemAdjust $itemAdjust): JsonResponse
     {
-        $itemAdjust->delete();
+        $this->itemAdjustService->deleteItemAdjust($itemAdjust);
 
         return ApiResponse::delete('Item adjustment deleted successfully');
     }
@@ -154,7 +154,7 @@ class ItemAdjustsController extends Controller
     public function restore(int $id): JsonResponse
     {
         $itemAdjust = ItemAdjust::onlyTrashed()->findOrFail($id);
-        $itemAdjust->restore();
+        $this->itemAdjustService->restoreItemAdjust($itemAdjust);
 
         return ApiResponse::update('Item adjustment restored successfully');
     }

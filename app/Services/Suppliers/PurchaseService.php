@@ -460,14 +460,21 @@ class PurchaseService
                     );
                 }
 
-                // Subtract inventory for all items
+                // Subtract inventory and clean up price history for all items
                 foreach ($purchaseItems as $purchaseItem) {
+                    // Subtract inventory
                     InventoryService::subtract(
                         $purchaseItem->item_id,
                         $purchase->warehouse_id,
                         $purchaseItem->quantity
                     );
+
+                    // Clean up price history and restore previous price
+                    PriceService::deleteFromPurchase($purchase, $purchaseItem);
                 }
+
+                // Delete all purchase items
+                $purchase->purchaseItems()->delete();
 
                 // Delete the purchase (this will trigger model events for supplier balance)
                 $purchase->delete();
@@ -511,14 +518,21 @@ class PurchaseService
                 // Restore the purchase first (this will trigger model events for supplier balance)
                 $purchase->restore();
 
-                // Load purchase items and add inventory back
+                // Restore all soft-deleted purchase items
+                $purchase->purchaseItems()->onlyTrashed()->restore();
+
+                // Load purchase items and add inventory back, restore price history
                 $purchaseItems = $purchase->purchaseItems;
                 foreach ($purchaseItems as $purchaseItem) {
+                    // Add inventory back
                     InventoryService::add(
                         $purchaseItem->item_id,
                         $purchase->warehouse_id,
                         $purchaseItem->quantity
                     );
+
+                    // Restore price history and update current price
+                    PriceService::restoreFromPurchase($purchase, $purchaseItem);
                 }
             });
         } catch (\Exception $e) {

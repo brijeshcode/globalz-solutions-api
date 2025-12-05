@@ -330,20 +330,148 @@ class PriceService
 
 
     /**
+     * Clean up price history and restore previous price when a purchase is deleted
+     */
+    public static function deleteFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): void
+    {
+        // Soft delete price history entries for this purchase
+        ItemPriceHistory::where('item_id', $purchaseItem->item_id)
+            ->where('source_type', 'purchase')
+            ->where('source_id', $purchase->id)
+            ->delete();
+
+        // Restore previous price from price history
+        self::restorePriceFromHistory($purchaseItem->item_id, $purchase->date);
+    }
+
+    /**
+     * Clean up price history and restore previous price when a purchase return is deleted
+     */
+    public static function deleteFromPurchaseReturn(\App\Models\Suppliers\PurchaseReturn $purchaseReturn, \App\Models\Suppliers\PurchaseReturnItem $purchaseReturnItem): void
+    {
+        // Soft delete price history entries for this purchase return
+        ItemPriceHistory::where('item_id', $purchaseReturnItem->item_id)
+            ->where('source_type', 'purchase_return')
+            ->where('source_id', $purchaseReturn->id)
+            ->delete();
+
+        // Restore previous price from price history
+        self::restorePriceFromHistory($purchaseReturnItem->item_id, $purchaseReturn->date);
+    }
+
+    /**
+     * Restore item price from the most recent price history record
+     * Used after deleting a purchase or purchase return
+     */
+    private static function restorePriceFromHistory(int $itemId, string $effectiveDate): void
+    {
+        // Get the most recent price history record (excluding soft-deleted ones)
+        $previousPriceHistory = ItemPriceHistory::where('item_id', $itemId)
+            ->orderBy('effective_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($previousPriceHistory) {
+            // Update current price to the previous price from history
+            $currentItemPrice = self::getCurrentPrice($itemId);
+            if ($currentItemPrice) {
+                $currentItemPrice->update([
+                    'price_usd' => $previousPriceHistory->price_usd,
+                    'effective_date' => $previousPriceHistory->effective_date,
+                ]);
+            }
+        } else {
+            // No price history found, check if item has starting price
+            $item = Item::find($itemId);
+            if ($item && $item->starting_price > 0) {
+                $currentItemPrice = self::getCurrentPrice($itemId);
+                if ($currentItemPrice) {
+                    $currentItemPrice->update([
+                        'price_usd' => $item->starting_price,
+                        'effective_date' => $effectiveDate,
+                    ]);
+                }
+            }
+            // If no starting price either, keep current price as is
+        }
+    }
+
+    /**
+     * Restore price history and recalculate price when a purchase is restored
+     */
+    public static function restoreFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): void
+    {
+        // Restore soft-deleted price history entries for this purchase
+        ItemPriceHistory::where('item_id', $purchaseItem->item_id)
+            ->where('source_type', 'purchase')
+            ->where('source_id', $purchase->id)
+            ->onlyTrashed()
+            ->restore();
+
+        // Update current price to the most recent price history (including just restored)
+        $latestPriceHistory = ItemPriceHistory::where('item_id', $purchaseItem->item_id)
+            ->orderBy('effective_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($latestPriceHistory) {
+            $currentItemPrice = self::getCurrentPrice($itemId = $purchaseItem->item_id);
+            if ($currentItemPrice) {
+                $currentItemPrice->update([
+                    'price_usd' => $latestPriceHistory->price_usd,
+                    'effective_date' => $latestPriceHistory->effective_date,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Restore price history and recalculate price when a purchase return is restored
+     */
+    public static function restoreFromPurchaseReturn(\App\Models\Suppliers\PurchaseReturn $purchaseReturn, \App\Models\Suppliers\PurchaseReturnItem $purchaseReturnItem): void
+    {
+        // Restore soft-deleted price history entries for this purchase return
+        ItemPriceHistory::where('item_id', $purchaseReturnItem->item_id)
+            ->where('source_type', 'purchase_return')
+            ->where('source_id', $purchaseReturn->id)
+            ->onlyTrashed()
+            ->restore();
+
+        // Update current price to the most recent price history (including just restored)
+        $latestPriceHistory = ItemPriceHistory::where('item_id', $purchaseReturnItem->item_id)
+            ->orderBy('effective_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($latestPriceHistory) {
+            $currentItemPrice = self::getCurrentPrice($itemId = $purchaseReturnItem->item_id);
+            if ($currentItemPrice) {
+                $currentItemPrice->update([
+                    'price_usd' => $latestPriceHistory->price_usd,
+                    'effective_date' => $latestPriceHistory->effective_date,
+                ]);
+            }
+        }
+    }
+
+    /**
      * Check if item can have its starting price changed
      */
     public static function canUpdateStartingPrice(int $itemId): bool
     {
         // Check if any purchases exist
         $hasPurchases = DB::table('purchase_items')->where('item_id', $itemId)->exists();
-        
-        // Check if any price history exists (indicating transactions)
-        $hasPriceHistory = ItemPriceHistory::where('item_id', $itemId)->exists();
-        
+
+        // Check if any price history exists (excluding initial entries)
+        // Allow updating starting price if only 'initial' price history entries exist
+        $hasNonInitialPriceHistory = ItemPriceHistory::where('item_id', $itemId)
+            ->where('source_type', '!=', 'initial')
+            ->exists();
+
         // Check if any inventory adjustments exist (future stock adjustment module)
         // $hasAdjustments = DB::table('inventory_adjustments')->where('item_id', $itemId)->exists();
-        
-        return !$hasPurchases && !$hasPriceHistory; // && !$hasAdjustments
+
+        return !$hasPurchases && !$hasNonInitialPriceHistory; // && !$hasAdjustments
     }
 
     /**
@@ -352,16 +480,27 @@ class PriceService
     public static function getStartingPriceChangeImpact(int $itemId): array
     {
         $purchaseCount = PurchaseItem::where('item_id', $itemId)->count();
-        $priceHistoryCount = ItemPriceHistory::where('item_id', $itemId)->count();
-        
-        $totalTransactions = $purchaseCount + $priceHistoryCount;
-        
+
+        // Get all price history counts in one query using selectRaw
+        $priceHistoryCounts = ItemPriceHistory::where('item_id', $itemId)
+            ->selectRaw('
+                COUNT(*) as total_count,
+                SUM(CASE WHEN source_type != "initial" THEN 1 ELSE 0 END) as non_initial_count
+            ')
+            ->first();
+
+        $priceHistoryCount = $priceHistoryCounts->total_count ?? 0;
+        $nonInitialPriceHistoryCount = $priceHistoryCounts->non_initial_count ?? 0;
+
+        $totalTransactions = $purchaseCount + $nonInitialPriceHistoryCount;
+
         return [
             'can_change' => $totalTransactions === 0,
             'purchase_count' => $purchaseCount,
             'price_history_count' => $priceHistoryCount,
+            'non_initial_price_history_count' => $nonInitialPriceHistoryCount,
             'total_transactions' => $totalTransactions,
-            'warning_message' => $totalTransactions > 0 
+            'warning_message' => $totalTransactions > 0
                 ? "Cannot change starting price. This item has {$totalTransactions} transaction(s) that would be affected."
                 : null
         ];
