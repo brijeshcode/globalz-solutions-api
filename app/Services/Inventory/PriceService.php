@@ -351,7 +351,7 @@ class PriceService
      */
     public static function getStartingPriceChangeImpact(int $itemId): array
     {
-        $purchaseCount = DB::table('purchase_items')->where('item_id', $itemId)->count();
+        $purchaseCount = PurchaseItem::where('item_id', $itemId)->count();
         $priceHistoryCount = ItemPriceHistory::where('item_id', $itemId)->count();
         
         $totalTransactions = $purchaseCount + $priceHistoryCount;
