@@ -340,7 +340,7 @@ class EmployeeCommissionsController extends Controller
 
         if ($fuelAmount < $rule->maximum_amount) {
             // Case 1
-            return ($fuelAmount / $rule->maximum_amount) * $rule->percent;
+            return ($fuelAmount / $rule->maximum_amount) * ($rule->percent / 100) ;
         } else {
             // Case 2
             return $rule->maximum_amount * ($rule->percent / 100);
