@@ -718,7 +718,7 @@ class ItemsController extends Controller
             }
         }
         // info($fields);
-        $items = Item::select($fields)->with($with)->active()->get();
+        $items = Item::select($fields)->with($with)->orderBy('description')->active()->get();
 
         return ApiResponse::index(
             'Items retrieved successfully',
