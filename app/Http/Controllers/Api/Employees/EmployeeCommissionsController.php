@@ -340,7 +340,7 @@ class EmployeeCommissionsController extends Controller
 
         if ($fuelAmount < $rule->maximum_amount) {
             // Case 1
-            $dynamicPercent = ($fuelAmount / $rule->maximum_amount) * ($rule->percent / 100);
+            $dynamicPercent = ($fuelAmount / $rule->maximum_amount) * ($rule->percent);
             return  $fuelAmount * ($dynamicPercent / 100);
         } else {
             // Case 2
