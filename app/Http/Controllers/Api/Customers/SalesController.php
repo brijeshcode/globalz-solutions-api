@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SalesStoreRequest;
@@ -56,7 +57,7 @@ class SalesController extends Controller
 
             // Calculate total profit from sale items
             $currencyRate = $data['currency_rate'] ?? 1;
-
+            $currencyId = $data['currency_rate'];
             foreach ($saleItems as $index => $itemData) {
                 if (isset($itemData['item_id'])) {
                     $item = Item::with('itemPrice')->find($itemData['item_id']);
@@ -73,10 +74,10 @@ class SalesController extends Controller
                     $discountAmount = $itemData['discount_amount'] ?? 0;
 
                     // Convert prices to USD (currency * rate = USD)
-                    $sellingPriceUsd = $sellingPrice * $currencyRate;
-                    $ttcPriceUsd = $ttcPrice * $currencyRate;
-                    $unitDiscountAmountUsd = $unitDiscountAmount * $currencyRate;
-                    $discountAmountUsd = $discountAmount * $currencyRate;
+                    $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice,  $currencyRate);
+                    $ttcPriceUsd = CurrencyHelper::toUsd($currencyId, $ttcPrice , $currencyRate);
+                    $unitDiscountAmountUsd = CurrencyHelper::toUsd($currencyId, $unitDiscountAmount, $currencyRate);
+                    $discountAmountUsd = CurrencyHelper::toUsd($currencyId,$discountAmount , $currencyRate);
 
                     // Calculate profit using USD values: (sale_price - discount) - cost_price
                     $unitProfit = ($sellingPriceUsd - $unitDiscountAmountUsd) - $costPrice;
@@ -153,7 +154,7 @@ class SalesController extends Controller
 
                 foreach ($saleItems as $index => $itemData) {
                     if (isset($itemData['item_id'])) {
-                        $item = \App\Models\Items\Item::with('itemPrice')->find($itemData['item_id']);
+                        $item = Item::with('itemPrice')->find($itemData['item_id']);
                         $saleItems[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
 
                         // Get cost price from item's price (already in USD)
@@ -167,10 +168,10 @@ class SalesController extends Controller
                         $discountAmount = $itemData['discount_amount'] ?? 0;
 
                         // Convert prices to USD (currency * rate = USD)
-                        $sellingPriceUsd = $sellingPrice * $currencyRate;
-                        $ttcPriceUsd = $ttcPrice * $currencyRate;
-                        $unitDiscountAmountUsd = $unitDiscountAmount * $currencyRate;
-                        $discountAmountUsd = $discountAmount * $currencyRate;
+                        $sellingPriceUsd = CurrencyHelper::toUsd($sale->currency_id, $sellingPrice , $currencyRate);
+                        $ttcPriceUsd = CurrencyHelper::toUsd($sale->currency_id,$ttcPrice , $currencyRate);
+                        $unitDiscountAmountUsd = CurrencyHelper::toUsd($sale->currency_id, $unitDiscountAmount , $currencyRate);
+                        $discountAmountUsd = CurrencyHelper::toUsd($sale->currency_id, $discountAmount, $currencyRate);
 
                         // Calculate profit using USD values: (sale_price - discount) - cost_price
                         $unitProfit = ($sellingPriceUsd - $unitDiscountAmountUsd) - $costPrice;
