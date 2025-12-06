@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Items;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PriceListsUpdateRequest extends FormRequest
 {
@@ -28,7 +29,15 @@ class PriceListsUpdateRequest extends FormRequest
         $priceList = $this->route('priceList');
 
         return [
-            'code' => 'sometimes|required|string|max:255|unique:price_lists,code,' . $priceList->id,
+            'code' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('price_lists', 'code')
+                    ->ignore($priceList->id)
+                    ->whereNull('deleted_at'),
+            ],
             'description' => 'nullable|string|max:500',
             'note' => 'nullable|string',
 
