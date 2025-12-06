@@ -18,7 +18,7 @@ class EmployeeCommissionsController extends Controller
     /**
      * Tax rate percentage (11%)
      */
-    private const TAX_RATE = 0.11;
+    private const TAX_RATE = 1.11;
 
     public function getMonthlyCommission(Request $request): JsonResponse
     {
@@ -351,7 +351,7 @@ class EmployeeCommissionsController extends Controller
         // Update with actual data
         foreach ($salesByPrefix as $prefix => $data) {
             $total = (float) $data->total;
-            $afterTaxTotal = $prefix === Sale::TAXPREFIX ? $total * (1 - self::TAX_RATE) : $total;
+            $afterTaxTotal = $prefix === Sale::TAXPREFIX ? $total / self::TAX_RATE : $total;
             $salesData[$prefix] = [
                 'count' => (int) $data->count,
                 'total' => $total,
@@ -371,7 +371,7 @@ class EmployeeCommissionsController extends Controller
         // Update with actual data
         foreach ($paymentsByPrefix as $prefix => $data) {
             $total = (float) $data->total;
-            $afterTaxTotal = $prefix === CustomerPayment::TAXPREFIX ? $total * (1 - self::TAX_RATE) : $total;
+            $afterTaxTotal = $prefix === CustomerPayment::TAXPREFIX ? $total * self::TAX_RATE : $total;
             $paymentsData[$prefix] = [
                 'count' => (int) $data->count,
                 'total' => $total,
@@ -391,7 +391,7 @@ class EmployeeCommissionsController extends Controller
         // Update with actual data
         foreach ($returnsByPrefix as $prefix => $data) {
             $total = (float) $data->total;
-            $afterTaxTotal = $prefix === CustomerReturn::TAXPREFIX ? $total * (1 - self::TAX_RATE) : $total;
+            $afterTaxTotal = $prefix === CustomerReturn::TAXPREFIX ? $total * self::TAX_RATE : $total;
             $returnsData[$prefix] = [
                 'count' => (int) $data->count,
                 'total' => $total,
