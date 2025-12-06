@@ -15,6 +15,11 @@ use Illuminate\Http\Request;
 
 class EmployeeCommissionsController extends Controller
 {
+    /**
+     * Tax rate percentage (11%)
+     */
+    private const TAX_RATE = 0.11;
+
     public function getMonthlyCommission(Request $request): JsonResponse
     {
         // Only admins can access this endpoint
@@ -164,29 +169,29 @@ class EmployeeCommissionsController extends Controller
         $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
         $lastDay = date('Y-m-t', strtotime($firstDay));
 
-        // Fetch approved sales by this employee in the date range
+        // Fetch approved sales by this employee in the date range, grouped by date and prefix
         $sales = Sale::query()
             ->approved()
             ->bySalesperson($employeeId)
             ->byDateRange($firstDay, $lastDay)
-            ->selectRaw('DATE(date) as transaction_date, COUNT(*) as count, SUM(total_usd) as total')
-            ->groupBy('transaction_date')
+            ->selectRaw('DATE(date) as transaction_date, prefix, COUNT(*) as count, SUM(total_usd) as total')
+            ->groupBy('transaction_date', 'prefix')
             ->get()
-            ->keyBy('transaction_date');
+            ->groupBy('transaction_date');
 
-        // Fetch approved payments for this employee's customers in the date range
+        // Fetch approved payments for this employee's customers in the date range, grouped by date and prefix
         $payments = CustomerPayment::query()
             ->approved()
             ->whereHas('customer', function ($q) use ($employeeId) {
                 $q->where('salesperson_id', $employeeId);
             })
             ->whereBetween('date', [$firstDay, $lastDay])
-            ->selectRaw('DATE(date) as transaction_date, SUM(amount_usd) as total')
-            ->groupBy('transaction_date')
+            ->selectRaw('DATE(date) as transaction_date, prefix, COUNT(*) as count, SUM(amount_usd) as total')
+            ->groupBy('transaction_date', 'prefix')
             ->get()
-            ->keyBy('transaction_date');
+            ->groupBy('transaction_date');
 
-        // Fetch approved and received returns by this employee in the date range
+        // Fetch approved and received returns by this employee in the date range, grouped by date and prefix
         $returns = CustomerReturn::query()
             ->approved()
             ->received()
@@ -194,10 +199,20 @@ class EmployeeCommissionsController extends Controller
                 $q->where('id', $employeeId);
             })
             ->whereBetween('date', [$firstDay, $lastDay])
-            ->selectRaw('DATE(date) as transaction_date, SUM(total_usd) as total')
-            ->groupBy('transaction_date')
+            ->selectRaw('DATE(date) as transaction_date, prefix, COUNT(*) as count, SUM(total_usd) as total')
+            ->groupBy('transaction_date', 'prefix')
             ->get()
-            ->keyBy('transaction_date');
+            ->groupBy('transaction_date');
+
+        // Always use default prefixes and merge with any found in data to ensure all prefixes are present
+        $foundSalePrefixes = $sales->flatten()->pluck('prefix')->unique()->values()->all();
+        $foundPaymentPrefixes = $payments->flatten()->pluck('prefix')->unique()->values()->all();
+        $foundReturnPrefixes = $returns->flatten()->pluck('prefix')->unique()->values()->all();
+
+        // Merge default prefixes with found prefixes to ensure both TAX and TAXFREE are always included
+        $allSalePrefixes = array_unique(array_merge([Sale::TAXPREFIX, Sale::TAXFREEPREFIX], $foundSalePrefixes));
+        $allPaymentPrefixes = array_unique(array_merge([CustomerPayment::TAXPREFIX, CustomerPayment::TAXFREEPREFIX], $foundPaymentPrefixes));
+        $allReturnPrefixes = array_unique(array_merge([CustomerReturn::TAXPREFIX, CustomerReturn::TAXFREEPREFIX], $foundReturnPrefixes));
 
         // Generate daily data for all days in the month
         $daysInMonth = date('t', strtotime($firstDay));
@@ -206,17 +221,70 @@ class EmployeeCommissionsController extends Controller
         for ($day = 1; $day <= $daysInMonth; $day++) {
             $date = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-" . str_pad($day, 2, '0', STR_PAD_LEFT);
 
-            $saleData = $sales->get($date);
-            $paymentData = $payments->get($date);
-            $returnData = $returns->get($date);
+            $salesByPrefix = [];
+            $paymentsByPrefix = [];
+            $returnsByPrefix = [];
+
+            // Initialize all sales prefixes with zero
+            foreach ($allSalePrefixes as $prefix) {
+                $salesByPrefix[$prefix] = [
+                    'count' => 0,
+                    'total' => 0,
+                ];
+            }
+
+            // Initialize all payment prefixes with zero
+            foreach ($allPaymentPrefixes as $prefix) {
+                $paymentsByPrefix[$prefix] = [
+                    'count' => 0,
+                    'total' => 0,
+                ];
+            }
+
+            // Initialize all return prefixes with zero
+            foreach ($allReturnPrefixes as $prefix) {
+                $returnsByPrefix[$prefix] = [
+                    'count' => 0,
+                    'total' => 0,
+                ];
+            }
+
+            // Update with actual sales data for this date
+            if ($sales->has($date)) {
+                foreach ($sales->get($date) as $sale) {
+                    $salesByPrefix[$sale->prefix] = [
+                        'count' => (int) $sale->count,
+                        'total' => (float) $sale->total,
+                    ];
+                }
+            }
+
+            // Update with actual payment data for this date
+            if ($payments->has($date)) {
+                foreach ($payments->get($date) as $payment) {
+                    $paymentsByPrefix[$payment->prefix] = [
+                        'count' => (int) $payment->count,
+                        'total' => (float) $payment->total,
+                    ];
+                }
+            }
+
+            // Update with actual return data for this date
+            if ($returns->has($date)) {
+                foreach ($returns->get($date) as $return) {
+                    $returnsByPrefix[$return->prefix] = [
+                        'count' => (int) $return->count,
+                        'total' => (float) $return->total,
+                    ];
+                }
+            }
 
             $dailyData[] = [
                 'day' => $day,
                 'date' => $date,
-                'invoice_count' => $saleData ? (int) $saleData->count : 0,
-                'sales' => $saleData ? (float) $saleData->total : 0,
-                'returns' => $returnData ? (float) $returnData->total : 0,
-                'payments' => $paymentData ? (float) $paymentData->total : 0,
+                'sales' => $salesByPrefix,
+                'payments' => $paymentsByPrefix,
+                'returns' => $returnsByPrefix,
             ];
         }
 
@@ -236,38 +304,127 @@ class EmployeeCommissionsController extends Controller
         $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
         $lastDay = date('Y-m-t', strtotime($firstDay));
 
-        $totalSales = Sale::query()
+        // Get sales grouped by prefix
+        $salesByPrefix = Sale::query()
             ->approved()
             ->bySalesperson($employeeId)
             ->byDateRange($firstDay, $lastDay)
-            ->sum('total_usd');
+            ->selectRaw('prefix, COUNT(*) as count, SUM(total_usd) as total')
+            ->groupBy('prefix')
+            ->get()
+            ->keyBy('prefix');
 
-        $totalPayments = CustomerPayment::query()
+        // Get payments grouped by prefix
+        $paymentsByPrefix = CustomerPayment::query()
             ->approved()
             ->whereHas('customer', function ($q) use ($employeeId) {
                 $q->where('salesperson_id', $employeeId);
             })
             ->whereBetween('date', [$firstDay, $lastDay])
-            ->sum('amount_usd');
+            ->selectRaw('prefix, COUNT(*) as count, SUM(amount_usd) as total')
+            ->groupBy('prefix')
+            ->get()
+            ->keyBy('prefix');
 
-        $totalReturns = CustomerReturn::query()
+        // Get returns grouped by prefix
+        $returnsByPrefix = CustomerReturn::query()
             ->approved()
             ->received()
             ->whereHas('salesperson', function ($q) use ($employeeId) {
                 $q->where('id', $employeeId);
             })
             ->whereBetween('date', [$firstDay, $lastDay])
-            ->sum('total_usd');
+            ->selectRaw('prefix, COUNT(*) as count, SUM(total_usd) as total')
+            ->groupBy('prefix')
+            ->get()
+            ->keyBy('prefix');
+
+        // Initialize sales with default prefixes
+        $salesData = [];
+        foreach ([Sale::TAXPREFIX, Sale::TAXFREEPREFIX] as $prefix) {
+            $salesData[$prefix] = [
+                'count' => 0,
+                'total' => 0,
+                'after_tax_total' => 0,
+            ];
+        }
+        // Update with actual data
+        foreach ($salesByPrefix as $prefix => $data) {
+            $total = (float) $data->total;
+            $afterTaxTotal = $prefix === Sale::TAXPREFIX ? $total * (1 - self::TAX_RATE) : $total;
+            $salesData[$prefix] = [
+                'count' => (int) $data->count,
+                'total' => $total,
+                'after_tax_total' => $afterTaxTotal,
+            ];
+        }
+
+        // Initialize payments with default prefixes
+        $paymentsData = [];
+        foreach ([CustomerPayment::TAXPREFIX, CustomerPayment::TAXFREEPREFIX] as $prefix) {
+            $paymentsData[$prefix] = [
+                'count' => 0,
+                'total' => 0,
+                'after_tax_total' => 0,
+            ];
+        }
+        // Update with actual data
+        foreach ($paymentsByPrefix as $prefix => $data) {
+            $total = (float) $data->total;
+            $afterTaxTotal = $prefix === CustomerPayment::TAXPREFIX ? $total * (1 - self::TAX_RATE) : $total;
+            $paymentsData[$prefix] = [
+                'count' => (int) $data->count,
+                'total' => $total,
+                'after_tax_total' => $afterTaxTotal,
+            ];
+        }
+
+        // Initialize returns with default prefixes
+        $returnsData = [];
+        foreach ([CustomerReturn::TAXPREFIX, CustomerReturn::TAXFREEPREFIX] as $prefix) {
+            $returnsData[$prefix] = [
+                'count' => 0,
+                'total' => 0,
+                'after_tax_total' => 0,
+            ];
+        }
+        // Update with actual data
+        foreach ($returnsByPrefix as $prefix => $data) {
+            $total = (float) $data->total;
+            $afterTaxTotal = $prefix === CustomerReturn::TAXPREFIX ? $total * (1 - self::TAX_RATE) : $total;
+            $returnsData[$prefix] = [
+                'count' => (int) $data->count,
+                'total' => $total,
+                'after_tax_total' => $afterTaxTotal,
+            ];
+        }
+
+        // Calculate subtotals (before tax deduction)
+        $subtotalSales = array_sum(array_column($salesData, 'total'));
+        $subtotalPayments = array_sum(array_column($paymentsData, 'total'));
+        $subtotalReturns = array_sum(array_column($returnsData, 'total'));
+
+        // Calculate after-tax totals (sum of after_tax_total from each prefix)
+        $totalSales = array_sum(array_column($salesData, 'after_tax_total'));
+        $totalPayments = array_sum(array_column($paymentsData, 'after_tax_total'));
+        $totalReturns = array_sum(array_column($returnsData, 'after_tax_total'));
 
         return [
             'employee_id' => $employee->id,
             'employee_name' => $employee->name ?? 'N/A',
             'month' => (int) $month,
             'year' => (int) $year,
+            'VAT' => self::TAX_RATE,
+            'subtotal_sales' => (float) $subtotalSales,
+            'subtotal_returns' => (float) $subtotalReturns,
+            'subtotal_payments' => (float) $subtotalPayments,
             'total_sales' => (float) $totalSales,
             'total_returns' => (float) $totalReturns,
             'total_payments' => (float) $totalPayments,
             'net_sales' => (float) ($totalSales - $totalReturns),
+            'sales_by_prefix' => $salesData,
+            'payments_by_prefix' => $paymentsData,
+            'returns_by_prefix' => $returnsData,
         ];
     }
 
