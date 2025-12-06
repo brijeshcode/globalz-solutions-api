@@ -26,6 +26,9 @@ class Sale extends Model
     public const TAXSALEPREFIX = 'INV';
     public const NOTAXSALEPREFIX = 'INX';
 
+    public const TAXPREFIX = 'INV';
+    public const TAXFREEPREFIX = 'INX';
+
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
 
     protected $fillable = [

@@ -21,6 +21,9 @@ class CustomerReturn extends Model
 {
     use HasFactory, SoftDeletes, Authorable,HasDateWithTime, Searchable, Sortable;
 
+    public const TAXPREFIX = 'RTN';
+    public const TAXFREEPREFIX = 'RTX';
+
     protected $fillable = [
         'code',
         'date',

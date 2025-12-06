@@ -22,6 +22,9 @@ class CustomerPayment extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
 
+    public const TAXPREFIX = 'RCT';
+    public const TAXFREEPREFIX = 'RCX';
+
     protected $fillable = [
         'date',
         'prefix',
