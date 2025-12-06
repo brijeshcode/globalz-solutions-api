@@ -26,6 +26,7 @@ class Salary extends Model
         'employee_id',
         'account_id',
         'month',
+        'base_salary',
         'year',
         'sub_total',
         'advance_payment',

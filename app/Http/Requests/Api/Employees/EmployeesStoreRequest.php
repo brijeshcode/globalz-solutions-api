@@ -24,7 +24,7 @@ class EmployeesStoreRequest extends FormRequest
         return [ 
             'name' => 'required|string|max:255',
             'address' => 'nullable|string|max:500',
-            'base_salary' => 'nullable|string:max:20',
+            'base_salary' => 'required|numeric|min:0',
             'phone' => 'nullable|string|max:20',
             'mobile' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255|unique:employees,email',

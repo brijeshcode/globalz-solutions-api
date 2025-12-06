@@ -25,13 +25,14 @@ return new class extends Migration
             $table->unsignedTinyInteger('month')->comment('1 for Jan, 12 for Dec');
             $table->year('year');
 
-            $table->decimal('sub_total', 8,2);
-            $table->decimal('advance_payment', 8,2);
-            $table->decimal('others', 8,2);
+            $table->decimal('sub_total', 8,2)->default(0);
+            $table->decimal('base_salary',8, 2)->default(0);
+            $table->decimal('advance_payment', 8,2)->default(0);
+            $table->decimal('others', 8,2)->default(0);
             $table->decimal('final_total', 8,2);
 
-            $table->text('others_note');
-            $table->text('note');
+            $table->text('others_note')->nullable();
+            $table->text('note')->nullable();
 
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');

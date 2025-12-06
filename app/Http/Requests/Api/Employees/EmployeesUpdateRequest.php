@@ -28,6 +28,7 @@ class EmployeesUpdateRequest extends FormRequest
             'address' => 'nullable|string|max:500',
             'phone' => 'nullable|string|max:20',
             'mobile' => 'nullable|string|max:20',
+            'base_salary' => 'required|numeric|min:0',
             'email' => 'nullable|email|max:255|unique:employees,email,' . $employeeId,
             'start_date' => 'required|date',
             'department_id' => 'required|exists:departments,id',

@@ -35,6 +35,7 @@ class SalariesStoreRequest extends FormRequest
                 }),
             ],
             'account_id' => 'required|exists:accounts,id',
+            'base_salary' => 'required|numeric|min:0',
             'month' => 'required|integer|min:1|max:12',
             'year' => 'required|integer|min:2000|max:2100',
             'sub_total' => 'required|numeric|min:0',
@@ -98,15 +99,16 @@ class SalariesStoreRequest extends FormRequest
             $subTotal = $this->input('sub_total', 0);
             $advancePayment = $this->input('advance_payment', 0);
             $others = $this->input('others', 0);
+            $baseSalary = $this->input('base_salary', 0);
             $finalTotal = $this->input('final_total', 0);
 
             if ($subTotal !== null && $advancePayment !== null && $others !== null && $finalTotal !== null) {
-                $expectedFinalTotal = $subTotal - $advancePayment + $others;
+                $expectedFinalTotal = $subTotal - $advancePayment + $others + $baseSalary;
                 $tolerance = 0.01; // Allow small floating point differences
 
                 if (abs($expectedFinalTotal - $finalTotal) > $tolerance) {
                     $validator->errors()->add('final_total',
-                        'Final total must equal: Sub Total - Advance Payment + Others (' . number_format($expectedFinalTotal, 2) . ')');
+                        'Final total must equal: Sub Total - Advance Payment + Base salary + Others (' . number_format($expectedFinalTotal, 2) . ')');
                 }
             }
         });

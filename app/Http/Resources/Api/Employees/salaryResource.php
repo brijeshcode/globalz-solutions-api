@@ -29,6 +29,7 @@ class SalaryResource extends JsonResource
             'others' => $this->others,
             'final_total' => $this->final_total,
             'others_note' => $this->others_note,
+            'base_salary' => $this->base_salary,
             'note' => $this->note,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

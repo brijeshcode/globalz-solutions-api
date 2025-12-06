@@ -412,6 +412,7 @@ class EmployeeCommissionsController extends Controller
         return [
             'employee_id' => $employee->id,
             'employee_name' => $employee->name ?? 'N/A',
+            'base_salary' => $employee->base_salary,
             'month' => (int) $month,
             'year' => (int) $year,
             'VAT' => self::TAX_RATE,
