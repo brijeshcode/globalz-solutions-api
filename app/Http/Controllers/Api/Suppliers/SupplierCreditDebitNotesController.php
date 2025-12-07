@@ -63,7 +63,7 @@ class SupplierCreditDebitNotesController extends Controller
     public function show(SupplierCreditDebitNote $supplierCreditDebitNote): JsonResponse
     {
         $supplierCreditDebitNote->load([
-            'supplier:id,name,code,address,city,mobile',
+            'supplier:id,name,code,address,mobile',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'createdBy:id,name',
             'updatedBy:id,name'

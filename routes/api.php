@@ -57,6 +57,7 @@ use App\Http\Controllers\Api\Suppliers\PurchasesController;
 use App\Http\Controllers\Api\Suppliers\PurchaseReturnsController;
 use App\Http\Controllers\Api\Suppliers\SupplierCreditDebitNotesController;
 use App\Http\Controllers\Api\Suppliers\SupplierPaymentsController;
+use App\Http\Controllers\Api\Suppliers\SupplierStatmentController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
@@ -325,6 +326,12 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('suppliers')->name('suppliers.')->group(function () {
+
+        // Supplier Statements Controller - Must be defined BEFORE {supplier} routes to avoid conflicts
+        Route::controller(SupplierStatmentController::class)->prefix('statements')->name('statements.')->group(function () {
+            // Route::get('/', 'statements')->name('index');
+            Route::get('{supplier}', 'supplierStatements')->name('supplier');
+        });
 
         Route::controller(PurchasesController::class)->prefix('purchases')->name('purchases.')->group(function () {
             Route::get('stats', 'stats')->name('stats');
