@@ -247,14 +247,25 @@ class ItemsController extends Controller
     {
         $data = $request->validated();
 
+        // Check if cost_calculation is being changed
+        $costCalculationChanged = isset($data['cost_calculation']) && $item->cost_calculation !== $data['cost_calculation'];
+        $oldCostCalculation = $item->cost_calculation;
+        $newCostCalculation = $data['cost_calculation'] ?? null;
+
         $item->update($data);
+
+        // Handle cost calculation change
+        if ($costCalculationChanged && $newCostCalculation) {
+            $this->handleCostCalculationChange($item, $newCostCalculation, $oldCostCalculation);
+        }
+
         // Handle image uploads
         if ($request->hasFile('documents')) {
             $files = $request->file('documents');
             if (!is_array($files)) {
                 $files = [$files];
             }
-            
+
             // Validate each image file
             foreach ($files as $file) {
                 $validationErrors = $item->validateDocumentFile($file);
@@ -984,5 +995,174 @@ class ItemsController extends Controller
                 'item_import_template.xlsx'
             );
         }
+    }
+
+    /**
+     * Handle cost calculation method change
+     */
+    private function handleCostCalculationChange(Item $item, string $newMethod, ?string $oldMethod): void
+    {
+        $newPrice = null;
+
+        if ($newMethod === 'last_cost') {
+            $newPrice = $this->calculateLastCost($item);
+        } elseif ($newMethod === 'weighted_average') {
+            $newPrice = $this->calculateWeightedAverage($item);
+        }
+
+        // If no purchase/return history exists, use existing item price as fallback
+        if ($newPrice === null || $newPrice <= 0) {
+            // Try to get existing item price
+            if ($item->itemPrice && $item->itemPrice->price_usd > 0) {
+                $newPrice = (float) $item->itemPrice->price_usd;
+            }
+            // If no item price, use base_cost
+            elseif ($item->base_cost > 0) {
+                $newPrice = (float) $item->base_cost;
+            }
+        }
+
+        if ($newPrice !== null && $newPrice > 0) {
+            $this->updateItemPrice($item, $newPrice, $oldMethod, $newMethod);
+        }
+    }
+
+    /**
+     * Calculate last cost from most recent purchase
+     */
+    private function calculateLastCost(Item $item): ?float
+    {
+        // Get the most recent purchase item for this item
+        $latestPurchaseItem = \App\Models\Suppliers\PurchaseItem::where('item_id', $item->id)
+            ->whereHas('purchase') // Only include items with valid purchases
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($latestPurchaseItem && $latestPurchaseItem->cost_per_item_usd > 0) {
+            return (float) $latestPurchaseItem->cost_per_item_usd;
+        }
+
+        return null;
+    }
+
+    /**
+     * Calculate weighted average cost from all purchase history
+     */
+    private function calculateWeightedAverage(Item $item): ?float
+    {
+        // Get all purchase items for this item
+        $purchaseItems = \App\Models\Suppliers\PurchaseItem::where('item_id', $item->id)
+            ->whereHas('purchase')
+            ->get();
+
+        // Get all purchase return items for this item
+        $returnItems = \App\Models\Suppliers\PurchaseReturnItem::where('item_id', $item->id)
+            ->whereHas('purchaseReturn')
+            ->get();
+
+        $totalCost = 0;
+        $totalQuantity = 0;
+
+        // Add purchase items (positive quantity)
+        foreach ($purchaseItems as $purchaseItem) {
+            if ($purchaseItem->quantity > 0 && $purchaseItem->cost_per_item_usd > 0) {
+                $totalCost += ($purchaseItem->cost_per_item_usd * $purchaseItem->quantity);
+                $totalQuantity += $purchaseItem->quantity;
+            }
+        }
+
+        // Subtract return items (negative impact on weighted average)
+        foreach ($returnItems as $returnItem) {
+            if ($returnItem->quantity > 0 && $returnItem->cost_per_item_usd > 0) {
+                $totalCost -= ($returnItem->cost_per_item_usd * $returnItem->quantity);
+                $totalQuantity -= $returnItem->quantity;
+            }
+        }
+
+        // Calculate weighted average
+        if ($totalQuantity > 0) {
+            return $totalCost / $totalQuantity;
+        }
+
+        return null;
+    }
+
+    /**
+     * Update item price and create price history record
+     */
+    private function updateItemPrice(Item $item, float $newPrice, ?string $oldMethod, string $newMethod): void
+    {
+        $effectiveDate = now()->toDateString();
+
+        // Get current price for history
+        $currentPrice = $item->itemPrice ? $item->itemPrice->price_usd : null;
+
+        // Determine price source for better tracking
+        $priceSource = $this->determinePriceSource($item, $newMethod);
+
+        // Update or create ItemPrice
+        $itemPrice = \App\Models\Inventory\ItemPrice::updateOrCreate(
+            ['item_id' => $item->id],
+            [
+                'price_usd' => $newPrice,
+                'effective_date' => $effectiveDate,
+            ]
+        );
+
+        // Create price history record
+        \App\Models\Inventory\ItemPriceHistory::create([
+            'item_id' => $item->id,
+            'price_usd' => $newPrice,
+            'average_weighted_price' => $newMethod === 'weighted_average' ? $newPrice : null,
+            'latest_price' => $currentPrice,
+            'effective_date' => $effectiveDate,
+            'source_type' => 'cost_calculation_change',
+            'source_id' => null,
+            'note' => "Cost calculation method changed from '{$oldMethod}' to '{$newMethod}'. Price source: {$priceSource}",
+        ]);
+
+        Log::info('Item price updated due to cost calculation change', [
+            'item_id' => $item->id,
+            'item_code' => $item->code,
+            'old_method' => $oldMethod,
+            'new_method' => $newMethod,
+            'old_price' => $currentPrice,
+            'new_price' => $newPrice,
+            'price_source' => $priceSource,
+        ]);
+    }
+
+    /**
+     * Determine the source of the price for tracking purposes
+     */
+    private function determinePriceSource(Item $item, string $method): string
+    {
+        if ($method === 'last_cost') {
+            $hasPurchase = \App\Models\Suppliers\PurchaseItem::where('item_id', $item->id)
+                ->whereHas('purchase')
+                ->exists();
+
+            if ($hasPurchase) {
+                return 'Last purchase cost';
+            }
+        } elseif ($method === 'weighted_average') {
+            $hasPurchaseHistory = \App\Models\Suppliers\PurchaseItem::where('item_id', $item->id)
+                ->whereHas('purchase')
+                ->exists() ||
+                \App\Models\Suppliers\PurchaseReturnItem::where('item_id', $item->id)
+                ->whereHas('purchaseReturn')
+                ->exists();
+
+            if ($hasPurchaseHistory) {
+                return 'Weighted average from purchase history';
+            }
+        }
+
+        // Fallback sources
+        if ($item->itemPrice && $item->itemPrice->price_usd > 0) {
+            return 'Existing item price (no purchase history)';
+        }
+
+        return 'Item base cost (no purchase history)';
     }
 }
