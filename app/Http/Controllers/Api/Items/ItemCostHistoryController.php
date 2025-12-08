@@ -49,6 +49,7 @@ class ItemCostHistoryController extends Controller
         // Build query with only necessary columns
         $query = PurchaseItem::query()
             ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+            ->join('currencies', 'purchases.currency_id', '=', 'currencies.id')
             ->select(
                 'purchase_items.id',
                 'purchase_items.purchase_id',
@@ -56,7 +57,13 @@ class ItemCostHistoryController extends Controller
                 'purchase_items.cost_per_item_usd',
                 'purchases.date as purchase_date',
                 'purchases.prefix as purchase_prefix',
-                'purchases.code as purchase_code'
+                'purchases.code as purchase_code',
+                'currencies.id as currency_id',
+                'currencies.symbol as currency_symbol',
+                'currencies.symbol_position as currency_symbol_position',
+                'currencies.decimal_places as currency_decimal_places',
+                'currencies.decimal_separator as currency_decimal_separator',
+                'currencies.thousand_separator as currency_thousand_separator'
             );
 
         // Apply item filter
@@ -113,6 +120,14 @@ class ItemCostHistoryController extends Controller
             'purchase_code' => $purchaseItem->purchase_code,
             'cost_price' => $purchaseItem->cost_price,
             'cost_price_usd' => $purchaseItem->cost_per_item_usd,
+            'currency' => [
+                'id' => $purchaseItem->currency_id,
+                'symbol' => $purchaseItem->currency_symbol,
+                'symbol_position' => $purchaseItem->currency_symbol_position,
+                'decimal_places' => $purchaseItem->currency_decimal_places,
+                'decimal_separator' => $purchaseItem->currency_decimal_separator,
+                'thousand_separator' => $purchaseItem->currency_thousand_separator,
+            ],
         ];
     }
 }
