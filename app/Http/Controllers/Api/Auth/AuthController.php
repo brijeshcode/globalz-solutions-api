@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Advance\LoginLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -212,11 +213,11 @@ class AuthController extends Controller
 
     /**
      * Get authenticated user information
-     * 
+     *
      * Retrieve the current authenticated user's information.
-     * 
+     *
      * @authenticated
-     * 
+     *
      * @response 200 {
      *   "message": "User information retrieved successfully",
      *   "data": {
@@ -247,5 +248,47 @@ class AuthController extends Controller
                 'created_at' => $user->created_at,
             ]
         ]);
+    }
+
+    /**
+     * Auto logout all users (scheduled task)
+     *
+     * Automatically logout all users by revoking all tokens and marking all active login sessions as logged out.
+     * This is typically called by a scheduled task.
+     *
+     * @return array
+     */
+    public static function autoLogoutAllUsers(): array
+    {
+        $loginLogsUpdated = 0;
+        $tokensDeleted = 0;
+
+        // Get all users with their tokens using eager loading to avoid N+1 queries
+        $users = User::has('tokens')->with('tokens')->get();
+
+        foreach ($users as $user) {
+            foreach ($user->tokens as $token) {
+                // Extract login log ID from token name (format: web-app-token-{id})
+                if (preg_match('/web-app-token-(\d+)/', $token->name, $matches)) {
+                    $loginLogId = $matches[1];
+                    $loginLog = LoginLog::find($loginLogId);
+
+                    if ($loginLog && is_null($loginLog->logout_at)) {
+                        $loginLog->markLogout();
+                        $loginLogsUpdated++;
+                    }
+                }
+            }
+
+            // Delete all tokens for this user
+            $tokensDeleted += $user->tokens()->delete();
+        }
+
+        return [
+            'users_processed' => $users->count(),
+            'login_logs_updated' => $loginLogsUpdated,
+            'tokens_deleted' => $tokensDeleted,
+            'logged_out_at' => now()->toDateTimeString()
+        ];
     }
 }

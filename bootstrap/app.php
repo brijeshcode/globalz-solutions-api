@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,6 +18,18 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withSchedule(function (Schedule $schedule): void {
+        // Auto logout all users daily at 1:00 AM
+        $schedule->call(function () {
+            $result = AuthController::autoLogoutAllUsers();
+
+            info('Auto logout all users completed', $result);
+        })
+        ->daily()
+        ->at('01:00')
+        ->name('auto-logout-all-users')
+        ->withoutOverlapping()
+        ->onOneServer();
+
         // Recalculate all customer balances daily at midnight
         // $schedule->call(function () {
         //     $statementController = app(CustomerStatmentController::class);
