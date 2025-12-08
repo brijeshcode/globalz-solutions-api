@@ -20,7 +20,7 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
     {
         return [
             'date' => 'required|date',
-            'prefix' => 'required|in:RTX,RTV',
+            'prefix' => 'required|in:RTX,RTN',
             'customer_id' => 'required|exists:customers,id',
             'salesperson_id' => 'nullable|exists:employees,id',
             'currency_id' => 'required|exists:currencies,id',
@@ -56,7 +56,7 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
         return [
             'date.required' => 'Return date is required',
             'prefix.required' => 'Return prefix is required',
-            'prefix.in' => 'Return prefix must be either RTX or RTV',
+            'prefix.in' => 'Return prefix must be either RTX or RTN',
             'customer_id.required' => 'Customer is required',
             'customer_id.exists' => 'Selected customer does not exist',
             'currency_id.required' => 'Currency is required',

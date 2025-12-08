@@ -53,7 +53,7 @@ class CustomerReturnsStoreRequest extends FormRequest
         return [
             'date.required' => 'Return date is required',
             'prefix.required' => 'Return prefix is required',
-            'prefix.in' => 'Return prefix must be either RTX or RTV',
+            'prefix.in' => 'Return prefix must be either RTX or RTN',
             'customer_id.required' => 'Customer is required',
             'customer_id.exists' => 'Selected customer does not exist',
             'currency_id.required' => 'Currency is required',
