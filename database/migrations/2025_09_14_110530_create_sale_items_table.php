@@ -24,7 +24,8 @@ return new class extends Migration
             $table->decimal('unit_volume_cbm', 10,4)->default(0);
             $table->decimal('unit_weight_kg', 10,4)->default(0);
             
-            $table->money('unit_profit')->default(0)->comment('ttc_price_usd - cost_price');
+            // profit always in usd 
+            $table->money('unit_profit')->default(0)->comment('ttc_price_usd - cost_price (cost price is already in usd)');
 
             $table->money('price')->default(0)->comment('sale price is in selected currency');
             $table->money('price_usd')->default(0)->comment('sale price_usd use for profit calculation');
@@ -47,6 +48,7 @@ return new class extends Migration
             
             $table->money('total_price')->default(0); // price - discount * quantity
             $table->money('total_price_usd')->default(0);
+            // profit always in usd 
             $table->money('total_profit')->default(0)->comment('total_price_usd - (cost_price * quantity)');
 
             $table->decimal('total_volume_cbm', 10,4)->default(0);

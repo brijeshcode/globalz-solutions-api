@@ -99,14 +99,16 @@ class SaleOrdersController extends Controller
                     $item = Item::with('itemPrice')->find($itemData['item_id']);
                     $items[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
 
-                    // Get cost price from item's price
+                    // Get cost price from item's price (cost price always in usd)
                     $costPrice = $item?->itemPrice?->price_usd ?? 0;
-                    $sellingPrice = $itemData['price'] ?? 0;
+                    $sellingPrice = $itemData['price_usd'] ?? 0;
                     $quantity = $itemData['quantity'] ?? 0;
-                    $discountAmount = $itemData['unit_discount_amount'] ?? 0;
+                    $discountAmountUsd = $itemData['unit_discount_amount_usd'] ?? 0;
 
-                    // Profit = (Sale Price - Discount) - Cost Price
-                    $priceAfterDiscount = $sellingPrice - $discountAmount;
+                    // Profit = (Sale Price - Discount) - Cost Price 
+                    $priceAfterDiscount = $sellingPrice - $discountAmountUsd;
+                    
+                    // profit always in usd 
                     $unitProfit = $priceAfterDiscount - $costPrice;
                     $itemTotalProfit = $unitProfit * $quantity;
 
@@ -118,8 +120,9 @@ class SaleOrdersController extends Controller
                 }
             }
 
+            $additionalDiscount = $data['discount_amount_usd '] || 0;
             // Add total profit to sale data
-            $data['total_profit'] = $totalProfit;
+            $data['total_profit'] = $totalProfit - $additionalDiscount;
 
             // Create the sale order
             $sale = Sale::create($data);

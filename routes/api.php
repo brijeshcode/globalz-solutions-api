@@ -866,4 +866,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('sales', 'clearSales')->name('sales');
         Route::delete('all', 'clearAll')->name('all');
     });
+
+    // Reports - Business Intelligence & Analytics
+    Route::prefix('reports')->name('reports.')->group(function () {
+
+        // Sales Reports
+        Route::prefix('sales')->name('sales.')->group(function () {
+            Route::get('category-sales', [\App\Http\Controllers\Api\Reports\Sales\CategorySalesReportController::class, 'index'])->name('category-sales');
+        });
+    });
 });

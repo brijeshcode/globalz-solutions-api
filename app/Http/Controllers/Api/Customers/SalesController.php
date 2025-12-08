@@ -95,8 +95,9 @@ class SalesController extends Controller
                 }
             }
 
+            $additionalDiscount = $data['discount_amount_usd '] || 0;
             // Add total profit to sale data
-            $data['total_profit'] = $totalProfit;
+            $data['total_profit'] = $totalProfit - $additionalDiscount;
 
             $sale = Sale::create($data);
 
