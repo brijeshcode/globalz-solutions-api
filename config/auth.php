@@ -116,4 +116,23 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Login Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | These options control the rate limiting for login attempts. After the
+    | specified number of failed attempts, the IP address will be blocked
+    | for the duration specified in seconds.
+    |
+    | max_attempts: Maximum number of failed login attempts before blocking
+    | decay_seconds: Duration in seconds that the IP will be blocked
+    |
+    */
+
+    'login_rate_limit' => [
+        'max_attempts' => (int) env('LOGIN_MAX_ATTEMPTS', 2),
+        'decay_seconds' => (int) env('LOGIN_BLOCK_DURATION', 3600), // 1 hour by default
+    ],
+
 ];

@@ -56,14 +56,20 @@ class AuthController extends Controller
      */
     public function login(LoginRequest  $request): JsonResponse
     {
+        // Rate limiting configuration from config/auth.php
+        $maxAttempts = config('auth.login_rate_limit.max_attempts', 2);
+        $decaySeconds = config('auth.login_rate_limit.decay_seconds', 3600);
+
         // Rate limiting for login attempts
         $key = 'login.' . $request->ip();
 
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
             $seconds = RateLimiter::availableIn($key);
+            $minutes = ceil($seconds / 60);
+
             return ApiResponse::throw(
                 [],
-                'Too many login attempts. Please try again in ' . $seconds . ' seconds.',
+                'Too many login attempts. Your IP has been blocked. Please try again in ' . $minutes . ' minute(s).',
                 429
             );
         }
@@ -74,8 +80,19 @@ class AuthController extends Controller
                 'password' => 'required|string|min:6'
             ]);
         } catch (ValidationException $e) {
-            RateLimiter::hit($key);
-            return ApiResponse::failValidation($e->errors(), 'Login validation failed');
+            RateLimiter::hit($key, $decaySeconds);
+
+            // Get current attempts and calculate remaining
+            $attempts = RateLimiter::attempts($key);
+            $remainingAttempts = $maxAttempts - $attempts;
+
+            // Build error message with warning
+            $errorMessage = 'Login validation failed';
+            if ($remainingAttempts > 0) {
+                $errorMessage .= '. Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
+            }
+
+            return ApiResponse::failValidation($e->errors(), $errorMessage);
         }
 
         // Find user (excluding soft deleted users automatically)
@@ -83,7 +100,7 @@ class AuthController extends Controller
 
         // Verify credentials
         if (!$user || !Hash::check($validated['password'], $user->password)) {
-            RateLimiter::hit($key);
+            RateLimiter::hit($key, $decaySeconds);
 
             // Log failed login attempt
             LoginLog::logFailedLogin(
@@ -93,16 +110,26 @@ class AuthController extends Controller
                 $request->userAgent() ?? 'Unknown'
             );
 
+            // Get current attempts and calculate remaining
+            $attempts = RateLimiter::attempts($key);
+            $remainingAttempts = $maxAttempts - $attempts;
+
+            // Build error message with warning
+            $errorMessage = 'Invalid credentials';
+            if ($remainingAttempts > 0) {
+                $errorMessage .= '. Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
+            }
+
             return ApiResponse::throw(
                 ['email' => ['The provided credentials are incorrect.']],
-                'Invalid credentials',
+                $errorMessage,
                 401
             );
         }
 
         // Check if user account is active
         if (!$user->is_active) {
-            RateLimiter::hit($key);
+            RateLimiter::hit($key, $decaySeconds);
 
             // Log failed login attempt due to inactive account
             LoginLog::logFailedLogin(
@@ -112,9 +139,19 @@ class AuthController extends Controller
                 $request->userAgent() ?? 'Unknown'
             );
 
+            // Get current attempts and calculate remaining
+            $attempts = RateLimiter::attempts($key);
+            $remainingAttempts = $maxAttempts - $attempts;
+
+            // Build error message with warning
+            $errorMessage = 'Account deactivated';
+            if ($remainingAttempts > 0) {
+                $errorMessage .= '. Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
+            }
+
             return ApiResponse::throw(
                 ['email' => ['Your account has been deactivated. Please contact administrator.']],
-                'Account deactivated',
+                $errorMessage,
                 401
             );
         }
@@ -290,5 +327,30 @@ class AuthController extends Controller
             'tokens_deleted' => $tokensDeleted,
             'logged_out_at' => now()->toDateTimeString()
         ];
+    }
+
+    /**
+     * Unlock a blocked IP address
+     *
+     * Manually clear the rate limiter for a specific IP address to unblock it.
+     *
+     * @authenticated
+     *
+     * @bodyParam ip_address string required The IP address to unlock. Example: 192.168.1.100
+     *
+     * @response 200 {
+     *   "message": "IP address 192.168.1.100 has been unlocked successfully"
+     * }
+     */
+    public function unlockIp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ip_address' => 'required|ip'
+        ]);
+
+        $key = 'login.' . $validated['ip_address'];
+        RateLimiter::clear($key);
+
+        return ApiResponse::send('IP address ' . $validated['ip_address'] . ' has been unlocked successfully', 200);
     }
 }

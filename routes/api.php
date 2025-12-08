@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/unlock-ip', [AuthController::class, 'unlockIp']);
 
     // Login Logs
     Route::get('/login-logs', [LoginLogsController::class, 'index'])->name('login-logs.index');

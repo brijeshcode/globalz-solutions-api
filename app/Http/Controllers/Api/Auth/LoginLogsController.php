@@ -8,6 +8,8 @@ use App\Http\Resources\LoginLogResource;
 use App\Models\Advance\LoginLog;
 use App\Traits\HasPagination;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 
 class LoginLogsController extends Controller
 {
@@ -56,10 +58,61 @@ class LoginLogsController extends Controller
 
         $log = $this->applyPagination($query, $request);
 
-        return ApiResponse::paginated(
+        // Get blocked IPs
+        $blockedIps = $this->getBlockedIps();
+
+        // Get paginated response
+        $response = ApiResponse::paginated(
             'Login logs retrieved successfully',
             $log,
             LoginLogResource::class
         );
+
+        // Add blocked IPs to response data
+        $responseData = $response->getData(true);
+        $responseData['data']['blocked_ips'] = $blockedIps;
+        $responseData['data']['total_blocked_ips'] = count($blockedIps);
+
+        return response()->json($responseData, $response->status());
+    }
+
+    /**
+     * Get all currently blocked IP addresses
+     *
+     * @return array
+     */
+    private function getBlockedIps(): array
+    {
+        $maxAttempts = config('auth.login_rate_limit.max_attempts', 2);
+        $blockedIps = [];
+
+        // Query cache table for login rate limit keys
+        $cacheKeys = DB::table('cache')
+            ->where('key', 'like', '%login.%')
+            ->get();
+
+        foreach ($cacheKeys as $cacheEntry) {
+            // Extract IP from cache key (format: laravel_cache:login.192.168.1.1)
+            if (preg_match('/login\.(.+)$/', $cacheEntry->key, $matches)) {
+                $ipAddress = $matches[1];
+                $key = 'login.' . $ipAddress;
+
+                // Check if this IP is currently blocked
+                if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+                    $remainingSeconds = RateLimiter::availableIn($key);
+                    $remainingMinutes = ceil($remainingSeconds / 60);
+                    $blockedUntil = now()->addSeconds($remainingSeconds);
+
+                    $blockedIps[] = [
+                        'ip_address' => $ipAddress,
+                        'remaining_seconds' => $remainingSeconds,
+                        'remaining_minutes' => $remainingMinutes,
+                        'blocked_until' => $blockedUntil->format('Y-m-d H:i:s')
+                    ];
+                }
+            }
+        }
+
+        return $blockedIps;
     }
 }
