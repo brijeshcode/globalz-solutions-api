@@ -300,7 +300,7 @@ class Sale extends Model
             $sale->local_curreny_rate = $localCurrency && $localCurrency->activeRate ? $localCurrency->activeRate->rate : 1;
             $sale->invoice_tax_label = 'TVA 11%';
             $sale->invoice_nb1 = 'Payment in USD or Market Price.';
-            $sale->invoice_nb2 = 'ملحظة : ألضريبة على ألقيمة المضافة ل تسترد بعد ثلثة أشهر من تاريخ إصدار ألفاتورة';
+            $sale->invoice_nb2 = 'ملاحظة : ألضريبة على ألقيمة المضافة لا تسترد بعد ثلاثة أشهر من تاريخ إصدار ألفاتورة';
         });
 
         static::created(function ($sale) {
