@@ -54,8 +54,8 @@ class CategorySalesReportController extends Controller
                 SUM(sale_items.total_profit) as total_profit,
                 SUM(
                     CASE
-                        WHEN sales.total_price_usd > 0
-                        THEN (sale_items.total_price_usd / sales.total_price_usd) * sales.discount_amount_usd
+                        WHEN sales.sub_total_usd > 0
+                        THEN (sale_items.total_price_usd / sales.sub_total_usd) * sales.discount_amount_usd
                         ELSE 0
                     END
                 ) as total_sale_discount
