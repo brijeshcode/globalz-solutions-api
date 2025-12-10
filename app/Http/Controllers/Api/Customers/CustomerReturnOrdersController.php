@@ -509,7 +509,7 @@ class CustomerReturnOrdersController extends Controller
                 'sale.currency:id,name,code,symbol,symbol_position',
                 'sale.warehouse:id,name',
                 'sale.salesperson:id,name',
-                'item:id,code,short_name,item_unit_id',
+                'item:id,code,description,short_name,item_unit_id',
                 'item.itemUnit:id,name,short_name'
             ])
             ->orderBy('created_at', 'desc')

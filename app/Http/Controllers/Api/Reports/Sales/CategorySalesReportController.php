@@ -52,7 +52,13 @@ class CategorySalesReportController extends Controller
                 YEAR(sales.date) as year,
                 SUM(sale_items.total_price_usd) as total_sales,
                 SUM(sale_items.total_profit) as total_profit,
-                SUM(sales.discount_amount_usd) as total_sale_discount
+                SUM(
+                    CASE
+                        WHEN sales.total_price_usd > 0
+                        THEN (sale_items.total_price_usd / sales.total_price_usd) * sales.discount_amount_usd
+                        ELSE 0
+                    END
+                ) as total_sale_discount
             ')
             ->whereYear('sales.date', $year)
             ->whereNull('sales.deleted_at')
@@ -155,7 +161,7 @@ class CategorySalesReportController extends Controller
             $totalReturnProfit = $returns ? $returns->total_return_profit : 0;
 
             // Calculate metrics
-            $netSales = $sale->total_sales - $totalReturns;
+            $netSales = $sale->total_sales - $sale->total_sale_discount - $totalReturns;
             // Deduct invoice-level discount and return profit from sales profit
             $netProfit = $sale->total_profit - $sale->total_sale_discount - $totalReturnProfit;
             $profitPercentage = $this->calculateProfitPercentage($netSales, $netProfit);
