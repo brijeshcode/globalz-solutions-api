@@ -94,7 +94,8 @@ class CategorySalesReportController extends Controller
                     COALESCE(item_categories.name, "Uncategorized") as category_name,
                     MONTH(customer_returns.date) as month,
                     YEAR(customer_returns.date) as year,
-                    SUM(customer_return_items.total_price_usd) as total_returns
+                    SUM(customer_return_items.total_price_usd) as total_returns,
+                    SUM(customer_return_items.total_profit) as total_return_profit
                 ')
                 ->whereYear('customer_returns.date', $year)
                 ->whereNull('customer_returns.deleted_at')
@@ -151,11 +152,13 @@ class CategorySalesReportController extends Controller
             // Get returns data for this category and month
             $returns = $returnsData->get($monthKey);
             $totalReturns = $returns ? $returns->total_returns : 0;
+            $totalReturnProfit = $returns ? $returns->total_return_profit : 0;
 
             // Calculate metrics
             $netSales = $sale->total_sales - $totalReturns;
-            $grossProfit = $sale->total_profit; // Use pre-calculated profit
-            $profitPercentage = $this->calculateProfitPercentage($netSales, $grossProfit);
+            // Deduct invoice-level discount and return profit from sales profit
+            $netProfit = $sale->total_profit - $sale->total_sale_discount - $totalReturnProfit;
+            $profitPercentage = $this->calculateProfitPercentage($netSales, $netProfit);
 
             // Store month data
             $categorizedData[$categoryKey]['months_data'][$sale->month] = [
@@ -165,7 +168,9 @@ class CategorySalesReportController extends Controller
                 'total_sales' => round($sale->total_sales, 2),
                 'total_returns' => round($totalReturns, 2),
                 'net_sales' => round($netSales, 2),
-                'gross_profit' => round($grossProfit, 2),
+                'sales_profit' => round($sale->total_profit, 2),
+                'return_profit' => round($totalReturnProfit, 2),
+                'net_profit' => round($netProfit, 2),
                 'total_sale_discount' => round($sale->total_sale_discount, 2),
                 'profit_percentage' => $profitPercentage
             ];
@@ -176,7 +181,9 @@ class CategorySalesReportController extends Controller
             'total_sales' => 0,
             'total_returns' => 0,
             'net_sales' => 0,
-            'gross_profit' => 0,
+            'sales_profit' => 0,
+            'return_profit' => 0,
+            'net_profit' => 0,
             'total_sale_discount' => 0,
         ];
 
@@ -186,7 +193,9 @@ class CategorySalesReportController extends Controller
                 'total_sales' => 0,
                 'total_returns' => 0,
                 'net_sales' => 0,
-                'gross_profit' => 0,
+                'sales_profit' => 0,
+                'return_profit' => 0,
+                'net_profit' => 0,
                 'total_sale_discount' => 0,
             ];
 
@@ -200,7 +209,9 @@ class CategorySalesReportController extends Controller
                     $categoryTotals['total_sales'] += $monthData['total_sales'];
                     $categoryTotals['total_returns'] += $monthData['total_returns'];
                     $categoryTotals['net_sales'] += $monthData['net_sales'];
-                    $categoryTotals['gross_profit'] += $monthData['gross_profit'];
+                    $categoryTotals['sales_profit'] += $monthData['sales_profit'];
+                    $categoryTotals['return_profit'] += $monthData['return_profit'];
+                    $categoryTotals['net_profit'] += $monthData['net_profit'];
                     $categoryTotals['total_sale_discount'] += $monthData['total_sale_discount'];
                 } else {
                     // Fill with zeros
@@ -211,7 +222,9 @@ class CategorySalesReportController extends Controller
                         'total_sales' => 0.00,
                         'total_returns' => 0.00,
                         'net_sales' => 0.00,
-                        'gross_profit' => 0.00,
+                        'sales_profit' => 0.00,
+                        'return_profit' => 0.00,
+                        'net_profit' => 0.00,
                         'total_sale_discount' => 0.00,
                         'profit_percentage' => 0.00
                     ];
@@ -221,7 +234,7 @@ class CategorySalesReportController extends Controller
             // Calculate category profit percentage
             $categoryTotals['profit_percentage'] = $this->calculateProfitPercentage(
                 $categoryTotals['net_sales'],
-                $categoryTotals['gross_profit']
+                $categoryTotals['net_profit']
             );
 
             // Round category totals
@@ -237,14 +250,16 @@ class CategorySalesReportController extends Controller
             $yearTotals['total_sales'] += $categoryTotals['total_sales'];
             $yearTotals['total_returns'] += $categoryTotals['total_returns'];
             $yearTotals['net_sales'] += $categoryTotals['net_sales'];
-            $yearTotals['gross_profit'] += $categoryTotals['gross_profit'];
+            $yearTotals['sales_profit'] += $categoryTotals['sales_profit'];
+            $yearTotals['return_profit'] += $categoryTotals['return_profit'];
+            $yearTotals['net_profit'] += $categoryTotals['net_profit'];
             $yearTotals['total_sale_discount'] += $categoryTotals['total_sale_discount'];
         }
 
         // Calculate year profit percentage
         $yearTotals['profit_percentage'] = $this->calculateProfitPercentage(
             $yearTotals['net_sales'],
-            $yearTotals['gross_profit']
+            $yearTotals['net_profit']
         );
 
         // Round year totals

@@ -20,15 +20,25 @@ class CustomerReturnItem extends Model
         'item_code',
         'customer_return_id',
         'item_id',
+        'sale_id',
+        'sale_item_id',
         'quantity',
         'price',
+        'price_usd',
         'discount_percent',
         'unit_discount_amount',
+        'unit_discount_amount_usd',
         'discount_amount',
+        'discount_amount_usd',
         'tax_percent',
+        'tax_label',
+        'tax_amount',
+        'tax_amount_usd',
         'ttc_price',
+        'ttc_price_usd',
         'total_price',
         'total_price_usd',
+        'total_profit',
         'total_volume_cbm',
         'total_weight_kg',
         'note',
@@ -37,13 +47,20 @@ class CustomerReturnItem extends Model
     protected $casts = [
         'quantity' => 'decimal:0',
         'price' => 'decimal:2',
+        'price_usd' => 'decimal:2',
         'discount_percent' => 'decimal:2',
         'unit_discount_amount' => 'decimal:2',
+        'unit_discount_amount_usd' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'discount_amount_usd' => 'decimal:2',
         'tax_percent' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'tax_amount_usd' => 'decimal:2',
         'ttc_price' => 'decimal:2',
+        'ttc_price_usd' => 'decimal:2',
         'total_price' => 'decimal:2',
         'total_price_usd' => 'decimal:2',
+        'total_profit' => 'decimal:2',
         'total_volume_cbm' => 'decimal:4',
         'total_weight_kg' => 'decimal:4',
     ];
@@ -78,6 +95,16 @@ class CustomerReturnItem extends Model
         return $this->belongsTo(Item::class);
     }
 
+    public function sale(): BelongsTo
+    {
+        return $this->belongsTo(Sale::class, 'sale_id');
+    }
+
+    public function saleItem(): BelongsTo
+    {
+        return $this->belongsTo(SaleItems::class, 'sale_item_id');
+    }
+
     // Scopes
     public function scopeByCustomerReturn($query, $customerReturnId)
     {
@@ -92,6 +119,11 @@ class CustomerReturnItem extends Model
     public function scopeByItemCode($query, $itemCode)
     {
         return $query->where('item_code', $itemCode);
+    }
+
+    public function scopeBySale($query, $saleId)
+    {
+        return $query->where('sale_id', $saleId);
     }
 
     // Helper Methods

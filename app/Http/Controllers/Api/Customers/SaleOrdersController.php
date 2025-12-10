@@ -120,7 +120,7 @@ class SaleOrdersController extends Controller
                 }
             }
 
-            $additionalDiscount = $data['discount_amount_usd '] || 0;
+            $additionalDiscount = $data['discount_amount_usd'] || 0;
             // Add total profit to sale data
             $data['total_profit'] = $totalProfit - $additionalDiscount;
 

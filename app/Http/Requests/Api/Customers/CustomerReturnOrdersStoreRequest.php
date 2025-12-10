@@ -5,6 +5,8 @@ namespace App\Http\Requests\Api\Customers;
 use App\Helpers\ApiHelper;
 use App\Helpers\RoleHelper;
 use App\Models\Customers\Customer;
+use App\Models\Customers\CustomerReturnItem;
+use App\Models\Customers\SaleItems;
 use App\Models\Setups\Warehouse;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -34,19 +36,8 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
 
             // Return items
             'items' => 'required|array|min:1',
-            'items.*.item_code' => 'required|string|max:255',
-            'items.*.item_id' => 'nullable|exists:items,id',
-            'items.*.quantity' => 'required|numeric|min:0.001',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
-            'items.*.unit_discount_amount' => 'nullable|numeric|min:0',
-            'items.*.discount_amount' => 'nullable|numeric|min:0',
-            'items.*.tax_percent' => 'nullable|numeric|min:0|max:100',
-            'items.*.ttc_price' => 'required|numeric|min:0',
-            'items.*.total_price' => 'required|numeric|min:0',
-            'items.*.total_price_usd' => 'required|numeric|min:0',
-            'items.*.total_volume_cbm' => 'nullable|numeric|min:0',
-            'items.*.total_weight_kg' => 'nullable|numeric|min:0',
+            'items.*.sale_item_id' => 'required|exists:sale_items,id',
+            'items.*.quantity' => 'required|numeric|min:1',
             'items.*.note' => 'nullable|string',
         ];
     }
@@ -69,21 +60,10 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
             'total_usd.min' => 'Total amount in USD must be 0 or greater',
             'items.required' => 'At least one return item is required',
             'items.min' => 'At least one return item is required',
-            'items.*.item_code.required' => 'Item code is required for all items',
+            'items.*.sale_item_id.required' => 'Sale item is required for all items',
+            'items.*.sale_item_id.exists' => 'Selected sale item does not exist',
             'items.*.quantity.required' => 'Quantity is required for all items',
             'items.*.quantity.min' => 'Quantity must be greater than 0',
-            'items.*.price.required' => 'Price is required for all items',
-            'items.*.price.min' => 'Price must be 0 or greater',
-            'items.*.discount_percent.max' => 'Discount percentage cannot exceed 100%',
-            'items.*.unit_discount_amount.min' => 'Unit discount amount must be 0 or greater',
-            'items.*.discount_amount.min' => 'Discount amount must be 0 or greater',
-            'items.*.tax_percent.max' => 'Tax percentage cannot exceed 100%',
-            'items.*.ttc_price.required' => 'TTC price is required for all items',
-            'items.*.ttc_price.min' => 'TTC price must be 0 or greater',
-            'items.*.total_price.required' => 'Total price is required for all items',
-            'items.*.total_price.min' => 'Total price must be 0 or greater',
-            'items.*.total_price_usd.required' => 'Total price in USD is required for all items',
-            'items.*.total_price_usd.min' => 'Total price in USD must be 0 or greater',
         ];
     }
 
@@ -130,25 +110,39 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
                 }
             }
 
-            // Validate warehouse is active
-            if ($this->input('warehouse_id')) {
-                $warehouse = Warehouse::find($this->input('warehouse_id'));
-                if ($warehouse && !$warehouse->is_active) {
-                    $validator->errors()->add('warehouse_id', 'Selected warehouse is inactive');
-                }
-            }
-
-            // Validate items exist and are active
+            // Validate sale items exist and belong to valid sales
             if ($this->input('items')) {
                 foreach ($this->input('items') as $index => $item) {
-                    if (isset($item['item_id']) && $item['item_id']) {
-                        $itemModel = \App\Models\Items\Item::find($item['item_id']);
-                        if (!$itemModel) {
-                            $validator->errors()->add("items.{$index}.item_id", 'Selected item does not exist');
-                        } elseif (!$itemModel->is_active) {
-                            $validator->errors()->add("items.{$index}.item_id", 'Selected item is inactive');
+                    
+                        $saleItem = SaleItems::with('sale')->find($item['sale_item_id']);
+                        if (!$saleItem) {
+                            $validator->errors()->add("items.{$index}.sale_item_id", 'Selected sale item does not exist');
+                        } else {
+                            // Validate sale item belongs to the selected customer
+                            if ( $saleItem->sale && $saleItem->sale->customer_id !== (int) $this->input('customer_id')) {
+                                $validator->errors()->add("items.{$index}.sale_item_id", 'Sale item does not belong to the selected customer');
+                            }
+
+                            // Check existing returns for this sale item (both pending and approved)
+                            $existingReturns = CustomerReturnItem::where('sale_item_id', $item['sale_item_id'])
+                                ->whereHas('customerReturn', function ($query) {
+                                    // Include both pending (approved_by is null) and approved (approved_by is not null) returns
+                                    $query->whereNull('deleted_at');
+                                })
+                                ->sum('quantity');
+
+                            $requestedQuantity = $item['quantity'] ?? 0;
+                            $totalReturnQuantity = $existingReturns + $requestedQuantity; 
+                            // Validate total return quantity doesn't exceed original sale quantity
+                            if ($totalReturnQuantity > $saleItem->quantity) {
+                                $availableQuantity = $saleItem->quantity - $existingReturns;
+                                $validator->errors()->add(
+                                    "items.{$index}.quantity",
+                                    "Return quantity cannot exceed available quantity. Original: {$saleItem->quantity}, Already returned/pending: {$existingReturns}, Available: {$availableQuantity}"
+                                );
+                            }
                         }
-                    }
+                     
                 }
             }
         });

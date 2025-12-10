@@ -233,6 +233,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::controller(CustomerReturnOrdersController::class)->prefix('return-orders')->name('return-orders.')->group(function () {
             Route::get('stats', 'stats')->name('stats');
             Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('sale-items-for-return', 'getSaleItemsForReturn')->name('sale-items-for-return');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerReturn}', 'show')->name('show');

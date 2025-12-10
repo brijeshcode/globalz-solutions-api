@@ -130,6 +130,8 @@ class CustomerReturnOrderResource extends JsonResource
                         'id' => $item->id,
                         'item_code' => $item->item_code,
                         'item_id' => $item->item_id,
+                        'sale_id' => $item->sale_id,
+                        'sale_item_id' => $item->sale_item_id,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
                         'discount_percent' => $item->discount_percent,
@@ -155,6 +157,21 @@ class CustomerReturnOrderResource extends JsonResource
                                 'short_name' => $item->item?->itemUnit?->short_name
                             ]
 
+                        ] : null,
+
+                        // Sale details
+                        'sale' => $item->relationLoaded('sale') ? [
+                            'id' => $item->sale->id,
+                            'code' => $item->sale->code,
+                            'sale_code' => $item->sale->prefix . $item->sale->code,
+                            'prefix' => $item->sale->prefix,
+                            'date' => $item->sale->date,
+                        ] : null,
+
+                        // Sale item details
+                        'sale_item' => $item->relationLoaded('saleItem') ? [
+                            'id' => $item->saleItem->id,
+                            'quantity' => $item->saleItem->quantity,
                         ] : null,
                     ];
                 });

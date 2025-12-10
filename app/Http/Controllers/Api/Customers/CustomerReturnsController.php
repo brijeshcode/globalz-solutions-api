@@ -7,11 +7,13 @@ use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerReturnsStoreRequest;
+use App\Http\Requests\Api\Customers\CustomerReturnsUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerReturnResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\CustomerReturnItem;
+use App\Models\Sales\SaleItem;
 use App\Services\Customers\CustomerReturnService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +30,61 @@ class CustomerReturnsController extends Controller
     public function __construct(CustomerReturnService $customerReturnService)
     {
         $this->customerReturnService = $customerReturnService;
+    }
+
+    /**
+     * Prepare return item data from sale item
+     */
+    private function prepareReturnItemData(array $itemInput, float $currencyRate): array
+    {
+        $saleItem = SaleItem::with(['sale', 'item'])->findOrFail($itemInput['sale_item_id']);
+        $returnQuantity = $itemInput['quantity'];
+
+        // Copy all data from sale item and recalculate based on return quantity
+        return [
+            'item_code' => $saleItem->item_code,
+            'item_id' => $saleItem->item_id,
+            'sale_id' => $saleItem->sale_id,
+            'sale_item_id' => $saleItem->id,
+            'quantity' => $returnQuantity,
+
+            // Prices (per unit from sale)
+            'price' => $saleItem->price,
+            'price_usd' => $saleItem->price_usd,
+
+            // Tax details
+            'tax_percent' => $saleItem->tax_percent,
+            'tax_label' => $saleItem->tax_label ?? 'TVA',
+            'tax_amount' => $saleItem->tax_amount,
+            'tax_amount_usd' => $saleItem->tax_amount_usd,
+
+            // TTC price (per unit)
+            'ttc_price' => $saleItem->ttc_price,
+            'ttc_price_usd' => $saleItem->ttc_price_usd,
+
+            // Discount details
+            'discount_percent' => $saleItem->discount_percent,
+            'unit_discount_amount' => $saleItem->unit_discount_amount,
+            'unit_discount_amount_usd' => $saleItem->unit_discount_amount_usd,
+
+            // Calculate total discount amount for return quantity
+            'discount_amount' => $saleItem->unit_discount_amount * $returnQuantity,
+            'discount_amount_usd' => $saleItem->unit_discount_amount_usd * $returnQuantity,
+
+            // Calculate total prices for return quantity
+            'total_price' => $saleItem->price * $returnQuantity - ($saleItem->unit_discount_amount * $returnQuantity),
+            'total_price_usd' => $saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity),
+
+            // Calculate return profit (negative because it's a return)
+            'total_profit' => ($saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity)) - ($saleItem->cost_price * $returnQuantity),
+
+            // Volume and weight
+            'total_volume_cbm' => ($saleItem->item->volume_cbm ?? 0) * $returnQuantity,
+            'total_weight_kg' => ($saleItem->item->weight_kg ?? 0) * $returnQuantity,
+
+            // Note
+            'note' => $itemInput['note'] ?? null,
+        ];
     }
 
     public function index(Request $request): JsonResponse
@@ -107,72 +164,56 @@ class CustomerReturnsController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
         if(!$user->isAdmin()){
-            return ApiResponse::show(
-                'only admin users can create direct payment order'
+            return ApiResponse::customError(
+                'Only admin users can create direct approved returns',
+                403
             );
         }
 
-        DB::beginTransaction();
-        try {
-            $customerReturn = CustomerReturn::create([
-                'date' => $request->date,
-                'prefix' => $request->prefix,
-                'customer_id' => $request->customer_id,
-                'salesperson_id' => $request->salesperson_id,
-                'currency_id' => $request->currency_id,
-                'warehouse_id' => $request->warehouse_id,
-                'total' => $request->total,
-                'total_usd' => $request->total_usd,
-                'total_volume_cbm' => $request->total_volume_cbm ?? 0,
-                'total_weight_kg' => $request->total_weight_kg ?? 0,
-                'note' => $request->note,
-                'approved_by' => $user->id,
-                'approved_at' => now(),
-                'approve_note' => $request->approve_note,
-                'created_by' => $user->id,
-                'updated_by' => $user->id,
-            ]);
+        $data = $request->validated();
 
-            foreach ($request->items as $itemData) {
-                CustomerReturnItem::create([
-                    'customer_return_id' => $customerReturn->id,
-                    'item_code' => $itemData['item_code'],
-                    'item_id' => $itemData['item_id'] ?? null,
-                    'quantity' => $itemData['quantity'],
-                    'price' => $itemData['price'],
-                    'discount_percent' => $itemData['discount_percent'] ?? 0,
-                    'unit_discount_amount' => $itemData['unit_discount_amount'] ?? 0,
-                    'tax_percent' => $itemData['tax_percent'] ?? 0,
-                    'total_volume_cbm' => $itemData['total_volume_cbm'] ?? 0,
-                    'total_weight_kg' => $itemData['total_weight_kg'] ?? 0,
-                    'note' => $itemData['note'] ?? null,
-                    'created_by' => $user->id,
-                    'updated_by' => $user->id,
-                ]);
+        DB::transaction(function () use ($data, $user, &$customerReturn) {
+            // Extract items data
+            $itemsInput = $data['items'];
+            unset($data['items']);
+
+            // Add approval data
+            $data['approved_by'] = $user->id;
+            $data['approved_at'] = now();
+
+            // Create the return order (auto-approved)
+            $customerReturn = CustomerReturn::create($data);
+
+            // Prepare and create return items from sale items
+            foreach ($itemsInput as $itemInput) {
+                $itemData = $this->prepareReturnItemData($itemInput, $data['currency_rate']);
+                $customerReturn->items()->create($itemData);
             }
 
-            DB::commit();
+            // Recalculate return totals
+            $customerReturn->total = $customerReturn->items->sum('total_price');
+            $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
+            $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
+            $customerReturn->save();
+        });
 
-            $customerReturn->load([
-                'customer:id,name,code,address,city,mobile,mof_tax_number',
-                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'warehouse:id,name,address_line_1',
-                'salesperson:id,name',
-                'approvedBy:id,name',
-                'createdBy:id,name',
-                'updatedBy:id,name',
-                'items'
-            ]);
+        $customerReturn->load([
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'warehouse:id,name,address_line_1',
+            'salesperson:id,name',
+            'approvedBy:id,name',
+            'items.item:id,short_name,code',
+            'items.saleItem',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
 
-            return ApiResponse::store(
-                'Customer return created and approved successfully',
-                new CustomerReturnResource($customerReturn)
-            );
-        } catch (\Exception $e) {
-            DB::rollback();
-            info('Failed to create customer return: ' . $e->getMessage());
-            return ApiResponse::customError('Failed to create customer return: ' . $e->getMessage(), 500);
-        }
+        return ApiResponse::store(
+            'Customer return created and approved successfully',
+            new CustomerReturnResource($customerReturn)
+        );
     }
 
     public function show(CustomerReturn $customerReturn): JsonResponse
@@ -213,7 +254,7 @@ class CustomerReturnsController extends Controller
         );
     }
 
-    public function update(Request $request, CustomerReturn $customerReturn): JsonResponse
+    public function update(CustomerReturnsUpdateRequest $request, CustomerReturn $customerReturn): JsonResponse
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -222,62 +263,66 @@ class CustomerReturnsController extends Controller
             return ApiResponse::customError('Only admins can update customer returns', 403);
         }
 
-        $request->validate([
-            'date' => 'sometimes|required|date',
-            'prefix' => 'sometimes|required|string|max:50',
-            'customer_id' => 'sometimes|required|exists:customers,id',
-            'salesperson_id' => 'sometimes|nullable|exists:employees,id',
-            'currency_id' => 'sometimes|required|exists:currencies,id',
-            'warehouse_id' => 'sometimes|required|exists:warehouses,id',
-            'total' => 'sometimes|required|numeric|min:0',
-            'total_usd' => 'sometimes|required|numeric|min:0',
-            'total_volume_cbm' => 'sometimes|nullable|numeric|min:0',
-            'total_weight_kg' => 'sometimes|nullable|numeric|min:0',
-            'note' => 'sometimes|nullable|string',
-            'items' => 'sometimes|required|array|min:1',
-            'items.*.id' => 'sometimes|nullable|exists:customer_return_items,id',
-            'items.*.item_code' => 'required_with:items|string',
-            'items.*.item_id' => 'nullable|exists:items,id',
-            'items.*.quantity' => 'required_with:items|numeric|min:0.01',
-            'items.*.price' => 'required_with:items|numeric|min:0',
+        if ($customerReturn->isReceived()) {
+            return ApiResponse::customError('Cannot update returns that have been received', 422);
+        }
+
+        $data = $request->validated();
+
+        DB::transaction(function () use ($data, $customerReturn) {
+            // Extract items data
+            $itemsInput = $data['items'];
+            $currencyRate = $data['currency_rate'] ?? $customerReturn->currency_rate;
+            unset($data['items']);
+
+            // Update the return order
+            $customerReturn->update($data);
+
+            // Get IDs of items in the request
+            $requestItemIds = collect($itemsInput)->pluck('id')->filter()->toArray();
+
+            // Delete items that are not in the request
+            $customerReturn->items()->whereNotIn('id', $requestItemIds)->delete();
+
+            // Update or create items
+            foreach ($itemsInput as $itemInput) {
+                $itemData = $this->prepareReturnItemData($itemInput, $currencyRate);
+
+                if (isset($itemInput['id']) && $itemInput['id']) {
+                    // Update existing item
+                    $customerReturn->items()->where('id', $itemInput['id'])->update($itemData);
+                } else {
+                    // Create new item
+                    $customerReturn->items()->create($itemData);
+                }
+            }
+
+            // Recalculate return totals
+            $customerReturn->refresh();
+            $customerReturn->total = $customerReturn->items->sum('total_price');
+            $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
+            $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
+            $customerReturn->save();
+        });
+
+        $customerReturn->load([
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'warehouse:id,name,address_line_1',
+            'salesperson:id,name',
+            'approvedBy:id,name',
+            'returnReceivedBy:id,name',
+            'items.item:id,short_name,description,code',
+            'items.saleItem',
+            'createdBy:id,name',
+            'updatedBy:id,name'
         ]);
 
-        try {
-            $data = $request->only([
-                'date', 'prefix', 'customer_id', 'salesperson_id', 'currency_id',
-                'warehouse_id', 'total', 'total_usd', 'total_volume_cbm',
-                'total_weight_kg', 'note'
-            ]);
-
-            $items = $request->input('items', []);
-
-            $customerReturn = $this->customerReturnService->updateCustomerReturnWithItems(
-                $customerReturn,
-                $data,
-                $items
-            );
-
-            $customerReturn->load([
-                'customer:id,name,code,address,city,mobile,mof_tax_number',
-                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'warehouse:id,name,address_line_1',
-                'salesperson:id,name',
-                'approvedBy:id,name',
-                'returnReceivedBy:id,name',
-                'createdBy:id,name',
-                'updatedBy:id,name',
-                'items'
-            ]);
-
-            return ApiResponse::update(
-                'Customer return updated successfully',
-                new CustomerReturnResource($customerReturn)
-            );
-        } catch (\InvalidArgumentException $e) {
-            return ApiResponse::customError($e->getMessage(), 422);
-        } catch (\Exception $e) {
-            return ApiResponse::customError('Failed to update customer return: ' . $e->getMessage(), 500);
-        }
+        return ApiResponse::update(
+            'Customer return updated successfully',
+            new CustomerReturnResource($customerReturn)
+        );
     }
 
     public function markReceived(Request $request, CustomerReturn $customerReturn): JsonResponse

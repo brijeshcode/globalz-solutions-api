@@ -10,7 +10,7 @@ use App\Http\Requests\Api\Customers\CustomerReturnOrdersUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerReturnOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerReturn;
-use App\Models\Employees\Employee;
+use App\Models\Customers\SaleItems;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +22,66 @@ use function PHPUnit\Framework\isNull;
 class CustomerReturnOrdersController extends Controller
 {
     use HasPagination;
+
+    /**
+     * Prepare return item data from sale item
+     */
+    private function prepareReturnItemData(array $itemInput, float $currencyRate): array
+    {
+        $saleItem =  SaleItems::with(['sale', 'item'])->findOrFail($itemInput['sale_item_id']);
+        $returnQuantity = $itemInput['quantity'];
+
+        // Copy all data from sale item and recalculate based on return quantity
+        return [
+            'item_code' => $saleItem->item_code,
+            'item_id' => $saleItem->item_id,
+            'sale_id' => $saleItem->sale_id,
+            'sale_item_id' => $saleItem->id,
+            'quantity' => $returnQuantity,
+
+            // Prices (per unit from sale)
+            'price' => $saleItem->price,
+            'price_usd' => $saleItem->price_usd,
+
+            // Tax details
+            'tax_percent' => $saleItem->tax_percent,
+            'tax_label' => $saleItem->tax_label ?? 'TVA',
+            'tax_amount' => $saleItem->tax_amount,
+            'tax_amount_usd' => $saleItem->tax_amount_usd,
+
+            // TTC price (per unit)
+            'ttc_price' => $saleItem->ttc_price,
+            'ttc_price_usd' => $saleItem->ttc_price_usd,
+
+            // Discount details
+            'discount_percent' => $saleItem->discount_percent,
+            'unit_discount_amount' => $saleItem->unit_discount_amount,
+            'unit_discount_amount_usd' => $saleItem->unit_discount_amount_usd,
+
+            // Calculate total discount amount for return quantity
+            'discount_amount' => $saleItem->unit_discount_amount * $returnQuantity,
+            'discount_amount_usd' => $saleItem->unit_discount_amount_usd * $returnQuantity,
+
+            // Calculate total prices for return quantity
+            // 'total_price' => $saleItem->price * $returnQuantity - ($saleItem->unit_discount_amount * $returnQuantity),
+            // 'total_price_usd' => $saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity),
+
+            'total_price' => $saleItem->ttc_price * $returnQuantity,
+            'total_price_usd' => $saleItem->ttc_price_usd * $returnQuantity,
+
+            // Calculate return profit (negative because it's a return)
+            // total_price_usd - (cost_price * quantity) - we use the cost from sale item
+            // 'total_profit' => ($saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity)) - ($saleItem->cost_price * $returnQuantity),
+            'total_profit' => $saleItem->unit_profit * $returnQuantity,
+
+            // Volume and weight
+            'total_volume_cbm' => ($saleItem->item->volume_cbm ?? 0) * $returnQuantity,
+            'total_weight_kg' => ($saleItem->item->weight_kg ?? 0) * $returnQuantity,
+
+            // Note
+            'note' => $itemInput['note'] ?? null,
+        ];
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -86,16 +146,24 @@ class CustomerReturnOrdersController extends Controller
 
         DB::transaction(function () use ($data, &$return) {
             // Extract items data
-            $items = $data['items'];
+            $itemsInput = $data['items'];
             unset($data['items']);
 
             // Create the return order
             $return = CustomerReturn::create($data);
 
-            // Create return items
-            foreach ($items as $itemData) {
+            // Prepare and create return items from sale items
+            foreach ($itemsInput as $itemInput) {
+                $itemData = $this->prepareReturnItemData($itemInput, $data['currency_rate']);
                 $return->items()->create($itemData);
             }
+
+            // Recalculate return totals
+            $return->total = $return->items->sum('total_price');
+            $return->total_usd = $return->items->sum('total_price_usd');
+            $return->total_volume_cbm = $return->items->sum('total_volume_cbm');
+            $return->total_weight_kg = $return->items->sum('total_weight_kg');
+            $return->save();
         });
 
         $return->load([
@@ -104,6 +172,7 @@ class CustomerReturnOrdersController extends Controller
             'warehouse:id,name',
             'salesperson:id,name',
             'items.item:id,short_name,code',
+            'items.saleItem',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -134,6 +203,8 @@ class CustomerReturnOrdersController extends Controller
             'approvedBy',
             'items.item:id,short_name,code,item_unit_id',
             'items.item.itemUnit',
+            'items.sale:id,code,date,prefix',
+            'items.saleItem:id,quantity',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -167,28 +238,39 @@ class CustomerReturnOrdersController extends Controller
 
         DB::transaction(function () use ($data, $customerReturn) {
             // Extract items data
-            $items = $data['items'];
+            $itemsInput = $data['items'];
+            $currencyRate = $data['currency_rate'] ?? $customerReturn->currency_rate;
             unset($data['items']);
 
             // Update the return order
             $customerReturn->update($data);
 
             // Get IDs of items in the request
-            $requestItemIds = collect($items)->pluck('id')->filter()->toArray();
+            $requestItemIds = collect($itemsInput)->pluck('id')->filter()->toArray();
 
             // Delete items that are not in the request
             $customerReturn->items()->whereNotIn('id', $requestItemIds)->delete();
 
             // Update or create items
-            foreach ($items as $itemData) {
-                if (isset($itemData['id']) && $itemData['id']) {
+            foreach ($itemsInput as $itemInput) {
+                $itemData = $this->prepareReturnItemData($itemInput, $currencyRate);
+
+                if (isset($itemInput['id']) && $itemInput['id']) {
                     // Update existing item
-                    $customerReturn->items()->where('id', $itemData['id'])->update($itemData);
+                    $customerReturn->items()->where('id', $itemInput['id'])->update($itemData);
                 } else {
                     // Create new item
                     $customerReturn->items()->create($itemData);
                 }
             }
+
+            // Recalculate return totals
+            $customerReturn->refresh();
+            $customerReturn->total = $customerReturn->items->sum('total_price');
+            $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
+            $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
+            $customerReturn->save();
         });
 
         $customerReturn->load([
@@ -403,5 +485,133 @@ class CustomerReturnOrdersController extends Controller
         ];
 
         return ApiResponse::show('Customer return statistics retrieved successfully', $stats);
+    }
+
+    /**
+     * Get sale items available for return grouped by item with return history
+     */
+    public function getSaleItemsForReturn(Request $request): JsonResponse
+    {
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+        ]);
+
+        $customerId = $request->customer_id;
+
+        // Fetch all sale items for this customer's approved sales
+        $saleItems = SaleItems::whereHas('sale', function ($query) use ($customerId) {
+                $query->where('customer_id', $customerId)
+                    ->whereNotNull('approved_by') // Only approved sales
+                    ->whereNull('deleted_at');
+            })
+            ->with([
+                'sale:id,code,date,customer_id,currency_id,warehouse_id,salesperson_id,prefix',
+                'sale.currency:id,name,code,symbol,symbol_position',
+                'sale.warehouse:id,name',
+                'sale.salesperson:id,name',
+                'item:id,code,short_name,item_unit_id',
+                'item.itemUnit:id,name,short_name'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Group sale items by item_id
+        $groupedByItem = $saleItems->groupBy('item_id')->map(function ($itemSales, $itemId) {
+            $firstItem = $itemSales->first();
+
+            // Process each sale transaction for this item
+            $salesTransactions = $itemSales->map(function ($saleItem) {
+                // Calculate returned quantity for this specific sale item
+                $returnedQuantity = \App\Models\Customers\CustomerReturnItem::where('sale_item_id', $saleItem->id)
+                    ->whereHas('customerReturn', function ($query) {
+                        $query->whereNull('deleted_at');
+                    })
+                    ->sum('quantity');
+
+                $availableQuantity = $saleItem->quantity - $returnedQuantity;
+
+                return [
+                    // Sale transaction information
+                    'sale_id' => $saleItem->sale_id,
+                    'sale_code' => $saleItem->sale->code ?? null,
+                    'sale_prefix' => $saleItem->sale->prefix ?? null,
+                    'sale_date' => $saleItem->sale->date ?? null,
+                    'warehouse' => $saleItem->sale->warehouse ?? null,
+                    'salesperson' => $saleItem->sale->salesperson ?? null,
+                    'currency' => $saleItem->sale->currency ?? null,
+
+                    // Sale item reference
+                    'sale_item_id' => $saleItem->id,
+
+                    // Quantity information for this transaction
+                    'quantity' => (float) $saleItem->quantity,
+                    'returned_quantity' => (float) $returnedQuantity,
+                    'available_quantity' => (float) $availableQuantity,
+                    'can_return' => $availableQuantity > 0,
+
+                    // Pricing information (per unit)
+                    'price' => (float) $saleItem->price,
+                    'price_usd' => (float) $saleItem->price_usd,
+
+                    // Discount information
+                    'discount_percent' => (float) $saleItem->discount_percent,
+                    'unit_discount_amount' => (float) $saleItem->unit_discount_amount,
+                    'unit_discount_amount_usd' => (float) $saleItem->unit_discount_amount_usd,
+
+                    // Tax information
+                    'tax_percent' => (float) $saleItem->tax_percent,
+                    'tax_label' => $saleItem->tax_label,
+                    'tax_amount' => (float) $saleItem->tax_amount,
+                    'tax_amount_usd' => (float) $saleItem->tax_amount_usd,
+
+                    // TTC price (per unit)
+                    'ttc_price' => (float) $saleItem->ttc_price,
+                    'ttc_price_usd' => (float) $saleItem->ttc_price_usd,
+
+                    // Total prices (for this transaction)
+                    'total_price' => (float) $saleItem->total_price,
+                    'total_price_usd' => (float) $saleItem->total_price_usd,
+
+                    // Note
+                    'note' => $saleItem->note,
+                ];
+            });
+
+            // Calculate totals for this item across all sales
+            $totalSold = $salesTransactions->sum('quantity');
+            $totalReturned = $salesTransactions->sum('returned_quantity');
+            $totalAvailable = $salesTransactions->sum('available_quantity');
+
+            return [
+                // Item information
+                'item_id' => $itemId,
+                'item_code' => $firstItem->item_code,
+                'item' => $firstItem->item,
+
+                // Aggregate quantities across all sales
+                'total_sold' => (float) $totalSold,
+                'total_returned' => (float) $totalReturned,
+                'total_available' => (float) $totalAvailable,
+                'can_return' => $totalAvailable > 0,
+
+                // All sale transactions for this item
+                'sales' => $salesTransactions->values(),
+            ];
+        });
+
+        // Filter to only show items that can be returned
+        $returnableItems = $groupedByItem->filter(function ($item) {
+            return $item['can_return'];
+        })->values();
+
+        return ApiResponse::show(
+            'Sale items grouped by product with return information retrieved successfully',
+            [
+                'customer_id' => $customerId,
+                'total_products' => $groupedByItem->count(),
+                'returnable_products' => $returnableItems->count(),
+                'items' => $returnableItems
+            ]
+        );
     }
 }
