@@ -30,6 +30,7 @@ class CommissionTargetResource extends JsonResource
                         'id' => $rule->id,
                         'commission_target_id' => $rule->commission_target_id,
                         'type' => $rule->type,
+                        'include_type' => $rule->include_type,
                         'percent_type' => $rule->percent_type,
                         'minimum_amount' => $rule->minimum_amount,
                         'maximum_amount' => $rule->maximum_amount,

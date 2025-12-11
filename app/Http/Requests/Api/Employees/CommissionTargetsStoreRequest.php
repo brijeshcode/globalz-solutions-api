@@ -31,6 +31,7 @@ class CommissionTargetsStoreRequest extends FormRequest
             'rules' => 'required|array|min:1',
             'rules.*.type' => 'required|in:fuel,payment,sale',
             'rules.*.percent_type' => 'required|in:fixed,dynamic',
+            'rules.*.include_type' => 'required|in:Own,All,All except own',
             'rules.*.minimum_amount' => 'required|numeric|min:0|max:9999999999.9999',
             'rules.*.maximum_amount' => 'required|numeric|min:0|max:9999999999.9999|gte:rules.*.minimum_amount',
             'rules.*.percent' => 'required|numeric|min:0|max:100',

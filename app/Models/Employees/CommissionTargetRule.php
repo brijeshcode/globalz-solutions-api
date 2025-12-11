@@ -12,10 +12,12 @@ class CommissionTargetRule extends Model
     use HasFactory;
     public const TYPES= ['fuel', 'payment', 'sale'];
     public const PERCENTAGE_TYPE = ['fixed', 'dynamic'];
+    public const INCLUDE_TYPE = ['Own', 'All', 'All except own'];
 
     protected $fillable = [
         'commission_target_id',
         'type',
+        'include_type',
         'percent_type',
         'minimum_amount',
         'maximum_amount',
