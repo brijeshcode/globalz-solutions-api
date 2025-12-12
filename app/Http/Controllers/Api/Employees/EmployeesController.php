@@ -142,8 +142,12 @@ class EmployeesController extends Controller
           'warehouses.*.is_primary' => 'boolean',
         ]);
 
-        $employee->warehouses()->sync($validated['warehouses']);
+        // Transform the data into the format expected by sync()
+        $syncData = collect($validated['warehouses'])->mapWithKeys(function ($warehouse) {
+            return [$warehouse['warehouse_id'] => ['is_primary' => $warehouse['is_primary'] ?? false]];
+        })->toArray();
 
+        $employee->warehouses()->sync($syncData);
 
         return ApiResponse::update(
             'Employee warehouses assigned successfully',
