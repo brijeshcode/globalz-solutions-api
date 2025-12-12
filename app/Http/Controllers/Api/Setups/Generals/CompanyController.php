@@ -77,7 +77,13 @@ class CompanyController extends Controller
             'phone' => 'string',
             'email' => 'string',
             'website' => 'string',
-            'tax_number' => 'string'
+            'tax_number' => 'string',
+            'show_logo' => 'boolean',
+            'show_stamp' => 'boolean',
+            'logo_width' => 'string',
+            'logo_height' => 'string',
+            'stamp_width' => 'string',
+            'stamp_height' => 'string',
         ];
 
         foreach ($companyFields as $field => $dataType) {
