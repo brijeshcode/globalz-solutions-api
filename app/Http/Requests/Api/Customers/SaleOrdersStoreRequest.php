@@ -103,7 +103,7 @@ class SaleOrdersStoreRequest extends FormRequest
             $user = Auth::user();
 
             // If salesperson_id is not provided, set it to current user if they are a salesman
-            if (!$this->input('salesperson_id') && RoleHelper::isSalesman()) {
+            if (RoleHelper::isSalesman()) {
                 $employee = RoleHelper::getSalesmanEmployee();
                 if ($employee) {
                     $this->merge(['salesperson_id' => $employee->id]);

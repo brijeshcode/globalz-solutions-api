@@ -85,17 +85,12 @@ class CustomerReturnOrdersStoreRequest extends FormRequest
         $validator->after(function ($validator) {
             /** @var \App\Models\User $user */
             $user = Auth::user();
-
-            // If salesperson_id is not provided, set it to current user if they are a salesman
-            if (!$this->input('salesperson_id') && $user->isSalesman()) {
-                $this->merge(['salesperson_id' => $user->id]);
+    
+            if(RoleHelper::isSalesman()){
+                $salePersonEmployee = RoleHelper::getSalesmanEmployee();
+                $this->merge(['salesperson_id' => $salePersonEmployee->id]);
             }
 
-            // Salesmen can only create returns for themselves
-            $employee = RoleHelper::getSalesmanEmployee();
-            if ($user->isSalesman() && $this->input('salesperson_id') && $this->input('salesperson_id') != $employee->id) {
-                $validator->errors()->add('salesperson_id', 'You can only create returns for yourself');
-            }
 
             // Validate customer is active and belongs to salesperson
             if ($this->input('customer_id')) {
