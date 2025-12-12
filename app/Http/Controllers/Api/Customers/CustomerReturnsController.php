@@ -13,7 +13,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\CustomerReturnItem;
-use App\Models\Sales\SaleItem;
+use App\Models\Customers\SaleItems;
 use App\Services\Customers\CustomerReturnService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -37,7 +37,7 @@ class CustomerReturnsController extends Controller
      */
     private function prepareReturnItemData(array $itemInput, float $currencyRate): array
     {
-        $saleItem = SaleItem::with(['sale', 'item'])->findOrFail($itemInput['sale_item_id']);
+        $saleItem = SaleItems::with(['sale', 'item'])->findOrFail($itemInput['sale_item_id']);
         $returnQuantity = $itemInput['quantity'];
 
         // Copy all data from sale item and recalculate based on return quantity
