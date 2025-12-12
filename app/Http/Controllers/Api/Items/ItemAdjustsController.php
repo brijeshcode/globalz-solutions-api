@@ -22,9 +22,8 @@ class ItemAdjustsController extends Controller
 
     public function __construct(ItemAdjustService $itemAdjustService)
     {
-        // Ensure only admin can access this entire controller
-        if (!RoleHelper::isAdmin()) {
-            abort(403, 'Unauthorized. Admin access required.');
+        if (!RoleHelper::canWarehouseManager()) {
+            abort(403, 'Unauthorized. warehouse access required.');
         }
 
         $this->itemAdjustService = $itemAdjustService;
@@ -120,6 +119,9 @@ class ItemAdjustsController extends Controller
      */
     public function destroy(ItemAdjust $itemAdjust): JsonResponse
     {
+        if (!RoleHelper::canAdmin()) {
+            abort(403, 'Unauthorized. Admin access required.');
+        }
         $this->itemAdjustService->deleteItemAdjust($itemAdjust);
 
         return ApiResponse::delete('Item adjustment deleted successfully');
@@ -130,6 +132,10 @@ class ItemAdjustsController extends Controller
      */
     public function trashed(Request $request): JsonResponse
     {
+        if (!RoleHelper::canAdmin()) {
+            abort(403, 'Unauthorized. Admin access required.');
+        }
+
         $query = ItemAdjust::onlyTrashed()
             ->with([
                 'createdBy:id,name',
@@ -153,6 +159,10 @@ class ItemAdjustsController extends Controller
      */
     public function restore(int $id): JsonResponse
     {
+        if (!RoleHelper::canSuperAdmin()) {
+            abort(403, 'Unauthorized. Admin access required.');
+        }
+
         $itemAdjust = ItemAdjust::onlyTrashed()->findOrFail($id);
         $this->itemAdjustService->restoreItemAdjust($itemAdjust);
 
@@ -164,6 +174,10 @@ class ItemAdjustsController extends Controller
      */
     public function forceDelete(int $id): JsonResponse
     {
+        if (!RoleHelper::canSuperAdmin()) {
+            abort(403, 'Unauthorized. Admin access required.');
+        }
+
         $itemAdjust = ItemAdjust::onlyTrashed()->findOrFail($id);
         $itemAdjust->forceDelete();
 

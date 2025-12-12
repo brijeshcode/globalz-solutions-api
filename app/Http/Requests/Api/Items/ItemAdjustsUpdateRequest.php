@@ -9,7 +9,7 @@ class ItemAdjustsUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return RoleHelper::isAdmin();
+        return RoleHelper::canAdmin();
     }
 
     public function rules(): array
