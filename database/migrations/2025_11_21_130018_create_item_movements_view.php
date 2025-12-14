@@ -39,7 +39,7 @@ return new class extends Migration
             INNER JOIN sales s ON si.sale_id = s.id
             WHERE s.deleted_at IS NULL
                 AND si.deleted_at IS NULL
-                AND s.approved_at IS NOT NULL
+               -- AND s.approved_at IS NOT NULL
 
             UNION ALL
 
