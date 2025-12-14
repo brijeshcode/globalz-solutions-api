@@ -350,7 +350,8 @@ class Sale extends Model
 
             // When sale is deleted, restore inventory by manually processing each sale item
             // since the relationship might not work correctly after soft delete
-            $saleItems = \App\Models\Customers\SaleItems::where('sale_id', $sale->id)->get();
+            // Use withTrashed() to include already soft-deleted items
+            $saleItems = \App\Models\Customers\SaleItems::withTrashed()->where('sale_id', $sale->id)->get();
 
             foreach ($saleItems as $saleItem) {
                 // Restore inventory

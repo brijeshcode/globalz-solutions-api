@@ -289,11 +289,9 @@ class SaleOrdersController extends Controller
         }
 
         DB::transaction(function () use ($sale) {
-            // Soft delete all sale items first
-            $sale->items()->delete();
 
-            // Then soft delete the sale order
-            $sale->delete();
+            // Then soft delete the sale order (sale model will hand item delete)
+            $sale->delete(); 
         });
 
         return ApiResponse::delete('Sale order deleted successfully');
