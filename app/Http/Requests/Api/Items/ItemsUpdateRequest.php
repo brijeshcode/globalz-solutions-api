@@ -169,12 +169,6 @@ class ItemsUpdateRequest extends FormRequest
                 $lowAlert = $this->route('item')->low_quantity_alert;
             }
 
-            if ($startingQty && $lowAlert && $lowAlert > $startingQty) {
-                $validator->errors()->add(
-                    'low_quantity_alert',
-                    'The low quantity alert cannot be greater than the starting quantity.'
-                );
-            }
         });
     }
 }
