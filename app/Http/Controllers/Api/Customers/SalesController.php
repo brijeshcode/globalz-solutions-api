@@ -57,7 +57,7 @@ class SalesController extends Controller
 
             // Calculate total profit from sale items
             $currencyRate = $data['currency_rate'] ?? 1;
-            $currencyId = $data['currency_rate'];
+            $currencyId = $data['currency_id'];
             foreach ($saleItems as $index => $itemData) {
                 if (isset($itemData['item_id'])) {
                     $item = Item::with('itemPrice')->find($itemData['item_id']);
