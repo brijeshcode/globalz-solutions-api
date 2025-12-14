@@ -7,7 +7,6 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Items\Item;
 use App\Models\Items\ItemMovement;
 use App\Traits\HasPagination;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -181,27 +180,10 @@ class ItemMovementsController extends Controller
             $query->byTransactionType($transactionType);
         }
 
-        // $query->byDateRange(
-        //     $request->get('from_date'),
-        //     $request->get('to_date')
-        // );
-
-        
-        
-        if ($request->has('from_date')) {
-            // from_date should start at the beginning of the day (00:00:00)
-            $from_date = Carbon::parse($request->from_date)->startOfDay();
-            $query->where('date', '>=', $from_date);
-        }
-
-        if ($request->has('to_date')) {
-            // 1. Parse the date string (e.g., '2025-12-08')
-            // 2. Add one day (e.g., becomes '2025-12-09 00:00:00')
-            // 3. Use the '<' (less than) operator
-
-            $to_date_midnight = $request->to_date . ' 23:59:59';
-            $query->where('date', '<=', $to_date_midnight);
-        }
+        $query->byDateRange(
+            $request->get('from_date'),
+            $request->get('to_date')
+        );
 
         return [
             'total_credit' => $query->sum('credit'),

@@ -93,7 +93,8 @@ class ItemMovement extends Model
         }
 
         if ($toDate) {
-            $query->where('transaction_date', '<=', $toDate);
+             $to_date_midnight = $toDate . ' 23:59:59';
+            $query->where('transaction_date', '<=', $to_date_midnight);
         }
 
         return $query;
