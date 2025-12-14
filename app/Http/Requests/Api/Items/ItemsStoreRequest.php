@@ -147,17 +147,7 @@ class ItemsStoreRequest extends FormRequest
                 // This could be logged or handled as needed
                 // For now, we'll allow it but could add a warning system later
             }
-
-            // Validate that low quantity alert makes sense
-            $startingQty = $this->input('starting_quantity');
-            $lowAlert = $this->input('low_quantity_alert');
-
-            if ($startingQty && $lowAlert && $lowAlert > $startingQty) {
-                $validator->errors()->add(
-                    'low_quantity_alert',
-                    'The low quantity alert cannot be greater than the starting quantity.'
-                );
-            }
+ 
         });
     }
 
