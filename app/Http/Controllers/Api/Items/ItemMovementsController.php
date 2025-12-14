@@ -195,12 +195,13 @@ class ItemMovementsController extends Controller
         }
 
         if ($request->has('to_date')) {
-            // to_date needs to be advanced by one day, and we use '<'
-            // This ensures all transactions up to 23:59:59 on the selected date are included.
-            $to_date_inclusive = Carbon::parse($request->to_date)->addDay()->startOfDay();
-            $query->where('date', '<', $to_date_inclusive);
+            // 1. Parse the date string (e.g., '2025-12-08')
+            // 2. Add one day (e.g., becomes '2025-12-09 00:00:00')
+            // 3. Use the '<' (less than) operator
+
+            $to_date_midnight = $request->to_date . ' 23:59:59';
+            $query->where('date', '<=', $to_date_midnight);
         }
-        
 
         return [
             'total_credit' => $query->sum('credit'),
