@@ -87,13 +87,18 @@ class SaleOrdersController extends Controller
     {
         $data = $request->validated();
 
+        if(Sale::TAXFREEPREFIX == $data['prefix']){
+            $data['total_tax_amount'] = 0;
+            $data['total_tax_amount_usd'] = 0;
+            $data['invoice_tax_label'] = '';
+        }
+
         DB::transaction(function () use ($data, &$sale) {
             // Extract items data
             $items = $data['items'];
             unset($data['items']);
 
             $totalProfit = 0;
-
             $currencyRate = $data['currency_rate'] ?? 1;
             $currencyId = $data['currency_id'];
             // Calculate total profit from sale items
@@ -101,6 +106,14 @@ class SaleOrdersController extends Controller
                 if (isset($itemData['item_id'])) {
                     $item = Item::with('itemPrice')->find($itemData['item_id']);
                     $items[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null; 
+
+                    if(Sale::TAXFREEPREFIX == $data['prefix']){
+
+                        $items[$index]['tax_percent'] = 0;
+                        $items[$index]['tax_amount'] = 0;
+                        $items[$index]['tax_amount_usd'] = 0;
+                        $items[$index]['tax_label'] = '';
+                    }
 
                     // Get cost price from item's price (cost price always in usd)
                     $costPrice = $item?->itemPrice?->price_usd ?? 0;

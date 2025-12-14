@@ -48,6 +48,11 @@ class SalesController extends Controller
 
         $data['approved_by'] = $user->id;
         $data['approved_at'] = now();
+        if(Sale::TAXFREEPREFIX == $data['prefix']){
+            $data['total_tax_amount'] = 0;
+            $data['total_tax_amount_usd'] = 0;
+            $data['invoice_tax_label'] = '';
+        }
 
         $sale = DB::transaction(function () use ($data) {
             $saleItems = $data['items'];
@@ -65,6 +70,13 @@ class SalesController extends Controller
 
                     // Get cost price from item's price (already in USD)
                     $costPrice = $item?->itemPrice?->price_usd ?? 0;
+                    if(Sale::TAXFREEPREFIX == $data['prefix']){
+
+                        $saleItems[$index]['tax_percent'] = 0;
+                        $saleItems[$index]['tax_amount'] = 0;
+                        $saleItems[$index]['tax_amount_usd'] = 0;
+                        $saleItems[$index]['tax_label'] = '';
+                    }
 
                     // Prices from request (in selected currency)
                     $sellingPrice = $itemData['price'] ?? 0;
