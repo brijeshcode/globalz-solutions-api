@@ -180,10 +180,18 @@ class ItemMovementsController extends Controller
             $query->byTransactionType($transactionType);
         }
 
-        $query->byDateRange(
-            $request->get('from_date'),
-            $request->get('to_date')
-        );
+        // $query->byDateRange(
+        //     $request->get('from_date'),
+        //     $request->get('to_date')
+        // );
+
+        if ($request->has('from_date')) {
+            $query->where('date', '>=', $request->from_date);
+        }
+
+        if ($request->has('to_date')) {
+            $query->where('date', '<=', $request->to_date);
+        }
 
         return [
             'total_credit' => $query->sum('credit'),
