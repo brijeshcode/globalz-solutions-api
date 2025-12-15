@@ -61,10 +61,10 @@ class ItemsUpdateRequest extends FormRequest
             // Pricing Information
             'base_cost' => 'sometimes|nullable|numeric|min:0|max:999999999.999999',
             'base_sell' => 'sometimes|nullable|numeric|min:0|max:999999999.999999',
-            'starting_price' => 'sometimes|nullable|numeric|min:0|max:999999999.999999',
+            // 'starting_price' => 'sometimes|nullable|numeric|min:0|max:999999999.999999',
 
             // Inventory Management
-            'starting_quantity' => 'sometimes|nullable|numeric|min:0|max:999999999.999999',
+            // 'starting_quantity' => 'sometimes|nullable|numeric|min:0|max:999999999.999999',
             'low_quantity_alert' => 'sometimes|nullable|numeric|min:0|max:999999999.999999',
 
             // Cost Calculation Method
