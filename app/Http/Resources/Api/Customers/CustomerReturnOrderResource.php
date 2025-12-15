@@ -150,7 +150,7 @@ class CustomerReturnOrderResource extends JsonResource
                         // Item details
                         'item' => $item->relationLoaded('item') ? [
                             'id' => $item->item->id,
-                            'name' => $item->item->description,
+                            'name' => $item->item,
                             'code' => $item->item->code,
                             'unit' => [
                                 'name' => $item->item?->itemUnit?->name,
