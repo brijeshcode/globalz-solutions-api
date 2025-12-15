@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Setups;
 
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Setups\WarehousesStoreRequest;
 use App\Http\Requests\Api\Setups\WarehousesUpdateRequest;
@@ -23,6 +24,24 @@ class WarehousesController extends Controller
             ->searchable($request)
             ->sortable($request)
             ;
+
+        // Role-based filtering: warehouse manager can only see their assigned warehouses
+        if (RoleHelper::isWarehouseManager() && !RoleHelper::isAdmin()) {
+            $employee = RoleHelper::getWarehouseEmployee();
+            if (!$employee) {
+                // No employee found for warehouse manager, return empty query
+                $query->whereRaw('1 = 0');
+            } else {
+                $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
+
+                if ($warehouseIds->isEmpty()) {
+                    // No warehouses assigned to warehouse manager, return empty query
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn('id', $warehouseIds);
+                }
+            }
+        }
 
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
@@ -107,6 +126,24 @@ class WarehousesController extends Controller
             ->searchable($request)
             ->sortable($request)
             ;
+
+        // Role-based filtering: warehouse manager can only see their assigned warehouses
+        if (RoleHelper::isWarehouseManager() && !RoleHelper::isAdmin()) {
+            $employee = RoleHelper::getWarehouseEmployee();
+            if (!$employee) {
+                // No employee found for warehouse manager, return empty query
+                $query->whereRaw('1 = 0');
+            } else {
+                $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
+
+                if ($warehouseIds->isEmpty()) {
+                    // No warehouses assigned to warehouse manager, return empty query
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn('id', $warehouseIds);
+                }
+            }
+        }
 
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));

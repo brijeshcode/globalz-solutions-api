@@ -58,7 +58,36 @@ class SaleOrdersController extends Controller
         if ($request->has('currency_id')) {
             $query->byCurrency($request->currency_id);
         }
+        
+        // Role-based filtering: warehouse manager can only see their assigned warehouses' sales
+        if (RoleHelper::isWarehouseManager()  && !RoleHelper::isAdmin()) {
+            $employee = RoleHelper::getWarehouseEmployee();
+            if (!$employee) {
+                // No employee found for warehouse manager, return empty query
+                return $query->whereRaw('1 = 0');
+            }
 
+            $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
+
+            if ($warehouseIds->isEmpty()) {
+                // No warehouses assigned to warehouse manager, return empty query
+                return $query->whereRaw('1 = 0');
+            }
+
+            if ($request->has('warehouse_id')) {
+                // Only allow filtering by warehouse_id if it's in their assigned warehouses
+                if ($warehouseIds->contains($request->warehouse_id)) {
+                    $query->byWarehouse($request->warehouse_id);
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                }
+            } else {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            }
+        } elseif ($request->has('warehouse_id')) {
+            $query->byWarehouse($request->warehouse_id);
+        }
+        
         if ($request->has('warehouse_id')) {
             $query->byWarehouse($request->warehouse_id);
         }

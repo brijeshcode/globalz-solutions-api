@@ -103,8 +103,8 @@ class ListDataController extends Controller
     {
         $query = Warehouse::active()->orderby('name');
 
-        if (\App\Helpers\RoleHelper::isWarehouseManager()) {
-            $employee = Employee::where('user_id', \App\Helpers\RoleHelper::authUser()->id)->first();
+        if (RoleHelper::isWarehouseManager()) {
+            $employee = RoleHelper::getWarehouseEmployee();
             if ($employee) {
                 $query->whereHas('employees', function ($q) use ($employee) {
                     $q->where('employee_id', $employee->id);
