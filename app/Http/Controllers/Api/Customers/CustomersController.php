@@ -636,7 +636,7 @@ class CustomersController extends Controller
     public function recalculateBalances(Request $request): JsonResponse
     {
         // Only allow admin to recalculate balances
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admins can recalculate customer balances', 403);
         }
 

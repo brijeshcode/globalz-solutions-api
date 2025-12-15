@@ -47,7 +47,7 @@ class PriceListsController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admin users can create price lists', 403);
         }
 
@@ -121,7 +121,7 @@ class PriceListsController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admin users can update price lists', 403);
         }
 
@@ -200,7 +200,7 @@ class PriceListsController extends Controller
 
     public function destroy(PriceList $priceList): JsonResponse
     {
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admin users can delete price lists', 403);
         }
 
@@ -231,7 +231,7 @@ class PriceListsController extends Controller
 
     public function restore(int $id): JsonResponse
     {
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canSuperAdmin()) {
             return ApiResponse::customError('Only admin users can restore price lists', 403);
         }
 
@@ -250,7 +250,7 @@ class PriceListsController extends Controller
 
     public function forceDelete(int $id): JsonResponse
     {
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canSuperAdmin()) {
             return ApiResponse::customError('Only admin users can permanently delete price lists', 403);
         }
 
@@ -286,7 +286,7 @@ class PriceListsController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canSuperAdmin()) {
             return ApiResponse::customError('Only admin users can duplicate price lists', 403);
         }
 
@@ -348,7 +348,7 @@ class PriceListsController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admin users can add items to price lists', 403);
         }
    
@@ -403,7 +403,7 @@ class PriceListsController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admin users can update price list items', 403);
         }
 
@@ -466,7 +466,7 @@ class PriceListsController extends Controller
      */
     public function deleteItem(PriceListItem $priceListItem): JsonResponse
     {
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admin users can delete price list items', 403);
         }
 

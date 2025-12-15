@@ -147,7 +147,7 @@ class SalesController extends Controller
     public function update(SalesUpdateRequest $request, Sale $sale): JsonResponse
     {
         // Cannot update unapproved sales (they should be in sale orders)
-        if(!RoleHelper::isAdmin()){
+        if(!RoleHelper::canAdmin()){
             return ApiResponse::customError('Cannot update an approved sales', 422);
 
         }
@@ -248,7 +248,7 @@ class SalesController extends Controller
 
     public function destroy(Sale $sale): JsonResponse
     {
-        if(!RoleHelper::isAdmin()){
+        if(!RoleHelper::canAdmin()){
             return ApiResponse::customError('Cannot delete an approved sales', 422);
         }
 

@@ -12,7 +12,7 @@ class SupplierCreditDebitNotesUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return RoleHelper::isAdmin();
+        return RoleHelper::canAdmin();
     }
 
     public function rules(): array
@@ -65,10 +65,9 @@ class SupplierCreditDebitNotesUpdateRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            $isAdmin = RoleHelper::isAdmin();
             $note = $this->route('supplierCreditDebitNote');
 
-            if (!$isAdmin) {
+            if (!RoleHelper::canAdmin()) {
                 $validator->errors()->add('authorization', 'Only administrators can update credit/debit notes');
                 return;
             }

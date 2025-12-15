@@ -20,7 +20,7 @@ class AccountAdjustsController extends Controller
     public function __construct()
     {
         // Ensure only admin can access this entire controller
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             abort(403, 'Unauthorized. Admin access required.');
         }
     }

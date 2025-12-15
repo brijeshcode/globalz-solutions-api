@@ -58,7 +58,7 @@ class SupplierStatmentController extends Controller
     public function recalculateAllBalances(Request $request): JsonResponse
     {
         // Only allow admin to recalculate all balances
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admins can recalculate all supplier balances', 403);
         }
 

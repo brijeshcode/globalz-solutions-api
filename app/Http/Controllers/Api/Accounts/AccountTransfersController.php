@@ -99,7 +99,7 @@ class AccountTransfersController extends Controller
 
     public function destroy(AccountTransfer $accountTransfer): JsonResponse
     {
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only administrators can delete account transfers', 403);
         }
 
@@ -155,7 +155,7 @@ class AccountTransfersController extends Controller
 
     public function restore(int $id): JsonResponse
     {
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canSuperAdmin()) {
             return ApiResponse::customError('Only administrators can restore account transfers', 403);
         }
 
@@ -179,7 +179,7 @@ class AccountTransfersController extends Controller
 
     public function forceDelete(int $id): JsonResponse
     {
-        if (!RoleHelper::isAdmin()) {
+        if (!RoleHelper::canSuperAdmin()) {
             return ApiResponse::customError('Only administrators can permanently delete account transfers', 403);
         }
 

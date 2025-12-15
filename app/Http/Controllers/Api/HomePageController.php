@@ -17,7 +17,7 @@ class HomePageController extends Controller
     {
         $data = [];
 
-        if (RoleHelper::isSuperAdmin() || RoleHelper::isAdmin()) {
+        if (RoleHelper::canAdmin()) {
             $data = [
                 'sales' => $this->saleToReview(),
                 'returns' => $this->returnToReview(),

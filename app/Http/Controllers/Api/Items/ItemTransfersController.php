@@ -118,7 +118,7 @@ class ItemTransfersController extends Controller
      */
     public function destroy(ItemTransfer $itemTransfer): JsonResponse
     {
-        if(! RoleHelper::isAdmin()){
+        if(! RoleHelper::canAdmin()){
             return ApiResponse::forbidden('you are not authorize');
         }
         

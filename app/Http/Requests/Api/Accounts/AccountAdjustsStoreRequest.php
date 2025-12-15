@@ -12,7 +12,7 @@ class AccountAdjustsStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return RoleHelper::isAdmin();
+        return RoleHelper::canAdmin();
     }
 
     /**
