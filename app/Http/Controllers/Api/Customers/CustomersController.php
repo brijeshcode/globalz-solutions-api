@@ -532,6 +532,9 @@ class CustomersController extends Controller
      */
     public function downloadTemplate(Request $request)
     {
+        if(!RoleHelper::canAdmin()){
+            return ApiResponse::customError('Only admins can perform this action', 403);
+        }
         $format = $request->query('format', 'xlsx'); // Default to xlsx
 
         $headers = [
