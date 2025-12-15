@@ -209,7 +209,6 @@ class SaleOrdersController extends Controller
 
     public function show(Sale $sale): JsonResponse
     {
-        info('here not come');
         /** @var \App\Models\User $user */
         $user = Auth::user();
 

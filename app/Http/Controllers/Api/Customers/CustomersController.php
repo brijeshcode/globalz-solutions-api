@@ -181,6 +181,10 @@ class CustomersController extends Controller
 
     public function destroy(Customer $customer): JsonResponse
     {
+        if(!RoleHelper::canAdmin()){
+            return ApiResponse::customError('Only admins can delete customer', 403);
+        }
+        
         // Check if customer has children
         if ($customer->hasChildren()) {
             return ApiResponse::customError('Cannot delete customer with child customers. Please handle child customers first.', 422);
@@ -446,6 +450,10 @@ class CustomersController extends Controller
      */
     public function import(CustomersImportRequest $request): JsonResponse
     {
+        if(! RoleHelper::canAdmin()){
+            return ApiResponse::customError('Only admins can import', 403); 
+        }
+
         try {
             $file = $request->file('file');
             $skipDuplicates = $request->boolean('skip_duplicates', true);

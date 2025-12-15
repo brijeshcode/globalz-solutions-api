@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Customers;
 
+use App\Helpers\RoleHelper;
 use App\Models\Customers\Customer;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -12,7 +13,7 @@ class CustomersStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::canAdmin();
     }
 
     /**
