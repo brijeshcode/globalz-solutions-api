@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Purchase extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, HasDocuments, Searchable, Sortable;
+    public const STATUS_WAITING = 'Waiting';
 
     protected $fillable = [
         'code',
@@ -164,6 +165,11 @@ class Purchase extends Model
     public function scopeByDateRange($query, $startDate, $endDate)
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
+    }
+
+    public function scopeByWaiting($query)
+    {
+        return $query->where('status', self::STATUS_WAITING);
     }
 
     public function scopeByCode($query, $code)

@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class PurchaseReturn extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, HasDocuments, Searchable, Sortable;
+    public const STATUS_WAITING = 'Waiting';
 
     protected $fillable = [
         'code',
@@ -152,6 +153,11 @@ class PurchaseReturn extends Model
     public function scopeByCode($query, $code)
     {
         return $query->where('code', $code);
+    }
+
+    public function scopeByWaiting($query)
+    {
+        return $query->where('shipping_status', self::STATUS_WAITING);
     }
 
     public function scopeBySupplierPurchaseReturnNumber($query, $supplierPurchaseReturnNumber)

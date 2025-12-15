@@ -29,6 +29,8 @@ class Sale extends Model
     public const TAXPREFIX = 'INV';
     public const TAXFREEPREFIX = 'INX';
 
+    public const STATUS_WAITING = 'Waiting';
+
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
 
     protected $fillable = [
@@ -182,6 +184,11 @@ class Sale extends Model
     public function scopeBySalesperson($query, $salepersonId)
     {
         return $query->where('salesperson_id', $salepersonId);
+    }
+
+    public function scopeByWaiting($query)
+    {
+        return $query->where('status', self::STATUS_WAITING);
     }
 
     public function scopeByDateRange($query, $startDate, $endDate)

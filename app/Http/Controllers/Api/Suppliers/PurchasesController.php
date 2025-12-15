@@ -49,17 +49,17 @@ class PurchasesController extends Controller
         $data = $request->validated();
         $items = $data['items'] ?? [];
         unset($data['items']); // Remove items from purchase data
-        
+
         // Create purchase with items using service
         $purchase = $this->purchaseService->createPurchaseWithItems($data, $items);
-        
+
         // Handle document uploads
         if ($request->hasFile('documents')) {
             $files = $request->file('documents');
             if (!is_array($files)) {
                 $files = [$files];
             }
-            
+
             // Validate each document file
             foreach ($files as $file) {
                 $validationErrors = $purchase->validateDocumentFile($file);
@@ -67,7 +67,7 @@ class PurchasesController extends Controller
                     return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
                 }
             }
-            
+
             // Upload documents
             $purchase->createDocuments($files, [
                 'type' => 'purchase_document'
@@ -75,9 +75,9 @@ class PurchasesController extends Controller
         }
 
         $purchase->load([
-            'createdBy:id,name', 
-            'updatedBy:id,name', 
-            'supplier:id,code,name', 
+            'createdBy:id,name',
+            'updatedBy:id,name',
+            'supplier:id,code,name',
             'warehouse:id,name',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             // 'account:id,name',
@@ -97,9 +97,9 @@ class PurchasesController extends Controller
     public function show(Purchase $purchase): JsonResponse
     {
         $purchase->load([
-            'createdBy:id,name', 
-            'updatedBy:id,name', 
-            'supplier:id,code,name', 
+            'createdBy:id,name',
+            'updatedBy:id,name',
+            'supplier:id,code,name',
             'warehouse:id,name',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             // 'account:id,name',
@@ -131,7 +131,7 @@ class PurchasesController extends Controller
             if (!is_array($files)) {
                 $files = [$files];
             }
-            
+
             // Validate each document file
             foreach ($files as $file) {
                 $validationErrors = $purchase->validateDocumentFile($file);
@@ -139,16 +139,16 @@ class PurchasesController extends Controller
                     return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
                 }
             }
-            
+
             $purchase->updateDocuments($files, [
                 'type' => 'purchase_document'
             ]);
         }
 
         $purchase->load([
-            'createdBy:id,name', 
-            'updatedBy:id,name', 
-            'supplier:id,code,name', 
+            'createdBy:id,name',
+            'updatedBy:id,name',
+            'supplier:id,code,name',
             'warehouse:id,name',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             // 'account:id,name',
@@ -179,9 +179,9 @@ class PurchasesController extends Controller
     {
         $query = Purchase::onlyTrashed()
             ->with([
-                'createdBy:id,name', 
-                'updatedBy:id,name', 
-                'supplier:id,code,name', 
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'supplier:id,code,name',
                 'warehouse:id,name',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 // 'account:id,name'
@@ -240,7 +240,7 @@ class PurchasesController extends Controller
     public function getNextCode(): JsonResponse
     {
         $nextCode = Purchase::getNextSuggestedCode();
-        
+
         return ApiResponse::show('Next purchase code retrieved successfully', [
             'code' => $nextCode,
             'is_available' => true,
@@ -259,7 +259,7 @@ class PurchasesController extends Controller
         ]);
 
         $files = $request->file('documents');
-        
+
         // Validate each document file using the model's validation
         foreach ($files as $file) {
             $validationErrors = $purchase->validateDocumentFile($file);
@@ -267,7 +267,7 @@ class PurchasesController extends Controller
                 return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
             }
         }
-        
+
         // Upload documents
         $uploadedDocuments = $purchase->createDocuments($files, [
             'type' => 'purchase_document'
@@ -353,7 +353,7 @@ class PurchasesController extends Controller
                 ->mapWithKeys(function ($item) {
                     return [$item->status => $item->count];
                 }),
-            
+
         ];
 
         return ApiResponse::show('Sale statistics retrieved successfully', $stats);
@@ -363,9 +363,9 @@ class PurchasesController extends Controller
     {
         $query = Purchase::query()
             ->with([
-                'createdBy:id,name', 
-                'updatedBy:id,name', 
-                'supplier:id,code,name', 
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'supplier:id,code,name',
                 'warehouse:id,name',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 // 'account:id,name'
@@ -375,10 +375,6 @@ class PurchasesController extends Controller
 
         if ($request->has('supplier_id')) {
             $query->where('supplier_id', $request->input('supplier_id'));
-        }
-
-        if ($request->has('warehouse_id')) {
-            $query->where('warehouse_id', $request->input('warehouse_id'));
         }
 
         if ($request->has('currency_id')) {
@@ -398,7 +394,7 @@ class PurchasesController extends Controller
         }
 
         if ($request->has('status')) {
-            $query->where('status' , $request->status);
+            $query->where('status', $request->status);
         }
 
         if ($request->has('from_date')) {
@@ -407,6 +403,30 @@ class PurchasesController extends Controller
 
         if ($request->has('to_date')) {
             $query->where('date', '<=', $request->to_date);
+        }
+
+        if (RoleHelper::isWarehouseManager()) {
+            $employee = RoleHelper::getWarehouseEmployee();
+            if (! $employee) {
+                return $query->whereRaw('1 = 0');
+            }
+            $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
+            if ($warehouseIds->isEmpty()) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            if ($request->has('warehouse_id')) {
+                // Only allow filtering by warehouse_id if it's in their assigned warehouses
+                if ($warehouseIds->contains($request->warehouse_id)) {
+                    $query->byWarehouse($request->warehouse_id);
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                }
+            } else {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            }
+        }elseif ($request->has('warehouse_id')) {
+            $query->byWarehouse($request->warehouse_id);
         }
 
         return $query;

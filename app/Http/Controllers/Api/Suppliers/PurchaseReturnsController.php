@@ -363,11 +363,7 @@ class PurchaseReturnsController extends Controller
 
         if ($request->has('supplier_id')) {
             $query->where('supplier_id', $request->input('supplier_id'));
-        }
-
-        if ($request->has('warehouse_id')) {
-            $query->where('warehouse_id', $request->input('warehouse_id'));
-        }
+        } 
 
         if ($request->has('currency_id')) {
             $query->where('currency_id', $request->input('currency_id'));
@@ -391,6 +387,30 @@ class PurchaseReturnsController extends Controller
 
         if ($request->has('to_date')) {
             $query->where('date', '<=', $request->to_date);
+        }
+
+        if (RoleHelper::isWarehouseManager()) {
+            $employee = RoleHelper::getWarehouseEmployee();
+            if (! $employee) {
+                return $query->whereRaw('1 = 0');
+            }
+            $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
+            if ($warehouseIds->isEmpty()) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            if ($request->has('warehouse_id')) {
+                // Only allow filtering by warehouse_id if it's in their assigned warehouses
+                if ($warehouseIds->contains($request->warehouse_id)) {
+                    $query->byWarehouse($request->warehouse_id);
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                }
+            } else {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            }
+        }elseif ($request->has('warehouse_id')) {
+            $query->byWarehouse($request->warehouse_id);
         }
 
         return $query;

@@ -119,7 +119,27 @@ class CustomerReturnOrdersController extends Controller
             $query->byCurrency($request->currency_id);
         }
 
-        if ($request->has('warehouse_id')) {
+        if (RoleHelper::isWarehouseManager()) {
+            $employee = RoleHelper::getWarehouseEmployee();
+            if (! $employee) {
+                return $query->whereRaw('1 = 0');
+            }
+            $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
+            if ($warehouseIds->isEmpty()) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            if ($request->has('warehouse_id')) {
+                // Only allow filtering by warehouse_id if it's in their assigned warehouses
+                if ($warehouseIds->contains($request->warehouse_id)) {
+                    $query->byWarehouse($request->warehouse_id);
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                }
+            } else {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            }
+        }elseif ($request->has('warehouse_id')) {
             $query->byWarehouse($request->warehouse_id);
         }
 
