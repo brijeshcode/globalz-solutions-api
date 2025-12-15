@@ -171,7 +171,7 @@ class CustomerReturnOrdersController extends Controller
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name',
             'salesperson:id,name',
-            'items.item:id,short_name,code',
+            'items.item:id,short_name,description,code',
             'items.saleItem',
             'createdBy:id,name',
             'updatedBy:id,name'
@@ -201,7 +201,7 @@ class CustomerReturnOrdersController extends Controller
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'approvedBy',
-            'items.item:id,short_name,code,item_unit_id',
+            'items.item:id,short_name,code,item_unit_id,description',
             'items.item.itemUnit',
             'items.sale:id,code,date,prefix',
             'items.saleItem:id,quantity',
@@ -322,7 +322,7 @@ class CustomerReturnOrdersController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (!$user->isAdmin() ) {
+        if (RoleHelper::canAdmin() ) {
             return ApiResponse::customError('You do not have permission to approve returns', 403);
         }
 
