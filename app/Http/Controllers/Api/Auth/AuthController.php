@@ -159,6 +159,17 @@ class AuthController extends Controller
         // Clear rate limiter on successful login
         RateLimiter::clear($key);
 
+        // Single login enforcement: revoke all existing sessions if enabled
+        if (config('app.single_login_per_user', false)) {
+            // Mark all active login sessions as logged out
+            LoginLog::where('user_id', $user->id)
+                ->whereNull('logout_at')
+                ->update(['logout_at' => now()]);
+
+            // Revoke all existing tokens
+            $user->tokens()->delete();
+        }
+
         // Generate token for web app
         $token = $user->createToken('web-app-token');
 

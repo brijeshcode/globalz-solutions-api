@@ -171,8 +171,24 @@ return [
 
     'base_currency' => 'USD', // Default
     'local_currency' => 'LBP', // local currency of country
-    
+
     // 'base_currency' => 'EUR', // European operations
     // 'base_currency' => 'GBP', // UK operations
+
+    /*
+    |--------------------------------------------------------------------------
+    | Single Login Per User
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, this option ensures that only one active session exists
+    | per user at any given time. When a user logs in, all their previous
+    | sessions/tokens will be automatically revoked.
+    |
+    | Set to true to enable single login enforcement, or false to allow
+    | multiple concurrent sessions per user.
+    |
+    */
+
+    'single_login_per_user' => env('SINGLE_LOGIN_PER_USER', false),
 
 ];
