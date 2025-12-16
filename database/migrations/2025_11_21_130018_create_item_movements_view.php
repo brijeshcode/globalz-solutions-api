@@ -232,7 +232,7 @@ return new class extends Migration
             FROM items i
             CROSS JOIN warehouses w
             WHERE i.deleted_at IS NULL
-                AND i.starting_quantity > 0
+                AND w.is_default = 1
         ");
     }
 
