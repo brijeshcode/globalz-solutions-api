@@ -342,7 +342,7 @@ class CustomerReturnOrdersController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if (RoleHelper::canAdmin() ) {
+        if (! RoleHelper::canAdmin() ) {
             return ApiResponse::customError('You do not have permission to approve returns', 403);
         }
 
