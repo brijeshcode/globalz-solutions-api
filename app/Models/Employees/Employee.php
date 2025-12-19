@@ -123,7 +123,7 @@ class Employee extends Model
 
     public static function reserveNextCode(): int
     {
-        $defaultValue = config('app.employee_code_start', 100);
+        $defaultValue = config('app.employee_code_start', 117);
         return Setting::incrementValue('employees', 'code_counter', 1, $defaultValue);
     }
     
