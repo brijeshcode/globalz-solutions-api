@@ -341,7 +341,7 @@ class Customer extends Model
             // Only increment counter if user used the suggested code
             $suggestedCode = self::generateNextCustomerCode();
             if ($userCode === $suggestedCode) {
-                $defaultValue = config('app.customer_code_start', 50000000);
+                $defaultValue = config('app.customer_code_start', 41101364);
                 Setting::incrementValue('customers', 'code_counter', 1, $defaultValue);
             }
         } else {
