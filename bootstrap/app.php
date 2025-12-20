@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            Route::prefix('api/landlord')
+                ->middleware(['api', 'auth:sanctum'])
+                ->name('landlord.')
+                ->group(base_path('routes/landlord.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Add CORS and session middleware for API (needed for CSRF and tenant session validation)
