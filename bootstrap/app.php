@@ -15,7 +15,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Add CORS and session middleware for API (needed for CSRF and tenant session validation)
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+        ]);
+
+        // Add tenant middleware to all API routes
+        $middleware->api(append: [
+            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+        ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
         // Auto logout all users daily at 1:00 AM
