@@ -330,7 +330,7 @@ class CustomersController extends Controller
             // 'customers_with_balance' =>  (clone $query)->where('current_balance', '!=', 0)->count(),
             // 'customers_over_credit_limit' =>  (clone $query)->whereColumn('current_balance', '>', 'credit_limit')
             //     ->whereNotNull('credit_limit')->count(),
-            // 'total_customer_balance' =>  (clone $query)->sum('current_balance'),
+            'total_customer_balance' =>  (clone $query)->sum('current_balance'),
             // 'customers_by_type' =>  (clone $query)->with('customerType:id,name')
             //     ->selectRaw('customer_type_id, count(*) as count')
             //     ->groupBy('customer_type_id')
@@ -696,6 +696,10 @@ class CustomersController extends Controller
         // Filter by customer type
         if ($request->has('customer_type_id')) {
             $query->where('customer_type_id', $request->customer_type_id);
+        }
+
+        if ($request->boolean('hide_zero_balance')) {
+            $query->where('current_balance', '!=', 0);
         }
 
         // Filter by customer group
