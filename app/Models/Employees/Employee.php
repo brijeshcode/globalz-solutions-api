@@ -121,17 +121,25 @@ class Employee extends Model
         return $this->hasMany(EmployeeCommissionTarget::class);
     }
 
-    public static function getCode(): int
+    public static function reserveNextCode(): int
     {
-        $defaultValue = config('app.employee_code_start', 100);
-        return Setting::get('employees', 'code_counter', $defaultValue, true, Setting::TYPE_NUMBER);
+        $defaultValue = config('app.employee_code_start', 117);
+        return Setting::incrementValue('employees', 'code_counter', 1, $defaultValue);
     }
-    /**
-     * Reserve the next code number (increment counter)
-     */
-    public static function reserveNextCode(): void
+    
+    public function setCode(): string
     {
-        // increment the counter
-        Setting::incrementValue('employees', 'code_counter');
+        return $this->code = self::reserveNextCode();
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($employee) {
+            if (!$employee->code) {
+                $employee->setCode();
+            }
+        });
     }
 }

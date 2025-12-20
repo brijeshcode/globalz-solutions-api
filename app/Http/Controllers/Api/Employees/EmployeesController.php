@@ -43,11 +43,9 @@ class EmployeesController extends Controller
 
     public function store(EmployeesStoreRequest $request): JsonResponse
     {
-        $data = $request->validated();
-        $data['code'] = Employee::getCode();
+        $data = $request->validated(); 
 
         $employee = Employee::create($data);
-        Employee::reserveNextCode();
 
         $employee->load(['department:id,name', 'user:id,name,email', 'createdBy:id,name', 'updatedBy:id,name']);
         

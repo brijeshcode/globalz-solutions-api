@@ -163,8 +163,6 @@ class EmployeeSeeder extends Seeder
                     $employee->is_active = true;
 
                     // Set employee code
-                    $employee->code = Employee::getCode();
-                    Employee::reserveNextCode();
 
                     // Set created by user
                     if ($users->count() > 0) {
