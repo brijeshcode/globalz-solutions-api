@@ -12,6 +12,7 @@ use App\Services\Currency\CurrencyService;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\CustomersHelper;
 use App\Traits\Authorable;
+use App\Traits\HasApprovalBasedActivityLog;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Sale extends Model
 {
@@ -31,7 +33,7 @@ class Sale extends Model
 
     public const STATUS_WAITING = 'Waiting';
 
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasApprovalBasedActivityLog;
 
     protected $fillable = [
         'code',
@@ -153,6 +155,46 @@ class Sale extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    /**
+     * Define which attributes to log for activity tracking
+     */
+    protected function getActivityLogAttributes(): array
+    {
+        return [
+            'status',
+            'customer_id',
+            'salesperson_id',
+            'warehouse_id',
+            'total',
+            'total_usd',
+            'sub_total',
+            'sub_total_usd',
+            'discount_amount',
+            'discount_amount_usd',
+            'total_profit',
+            'approved_by',
+            'approved_at',
+            'approve_note',
+            'client_po_number',
+            'note',
+        ];
+    }
+
+    /**
+     * Customize the activity log name
+     */
+    protected function getActivityLogName(): string
+    {
+        return 'sale';
+    }
+
+    /**
+     * Customize the activity log description
+     */
+    protected function getActivityLogDescription(): string
+    {
+        return 'Sale';
+    }
 
     // local scopes 
 

@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\Items\ItemMovementsController;
 use App\Http\Controllers\Api\Items\ItemCostHistoryController;
 use App\Http\Controllers\Api\Items\PriceListsController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerGroupsController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerPaymentTermsController;
 use App\Http\Controllers\Api\Setups\Customers\CustomerProvincesController;
@@ -858,6 +859,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{document}', 'show')->name('show');
         Route::put('{document}', 'update')->name('update');
         Route::delete('{document}', 'destroy')->name('destroy');
+    });
+
+    // Activity Log Controller - Audit trail management
+    Route::controller(ActivityLogController::class)->prefix('activity-logs')->name('activity-logs.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('{id}', 'show')->name('show');
+        Route::post('model-activity', 'getModelActivity')->name('model-activity');
+        Route::get('sales/{saleId}', 'getSaleActivity')->name('sales.activity');
     });
 
     // Clear Data Controller - System data management

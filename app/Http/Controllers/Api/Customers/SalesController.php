@@ -113,10 +113,17 @@ class SalesController extends Controller
 
             $sale = Sale::create($data);
 
+            // Disable activity logging for initial sale items
+            // We don't want to log items created with the sale
+            SaleItems::disableLogging();
+
             foreach ($saleItems as $itemData) {
                 $itemData['sale_id'] = $sale->id;
                 SaleItems::create($itemData);
             }
+
+            // Re-enable activity logging
+            SaleItems::enableLogging();
 
             return $sale;
         });

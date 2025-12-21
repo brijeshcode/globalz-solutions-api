@@ -204,11 +204,18 @@ class CustomerReturnsController extends Controller
             // Create the return order (auto-approved)
             $customerReturn = CustomerReturn::create($data);
 
+            // Disable activity logging for initial return items
+            // We don't want to log items created with the return
+            CustomerReturnItem::disableLogging();
+
             // Prepare and create return items from sale items
             foreach ($itemsInput as $itemInput) {
                 $itemData = $this->prepareReturnItemData($itemInput, $data['currency_rate']);
                 $customerReturn->items()->create($itemData);
             }
+
+            // Re-enable activity logging
+            CustomerReturnItem::enableLogging();
 
             // Recalculate return totals
             $customerReturn->total = $customerReturn->items->sum('total_price');

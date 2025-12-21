@@ -8,6 +8,7 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
 use App\Traits\Authorable;
+use App\Traits\HasApprovalBasedActivityLog;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -16,10 +17,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class CustomerReturn extends Model
 {
-    use HasFactory, SoftDeletes, Authorable,HasDateWithTime, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasApprovalBasedActivityLog;
 
     public const TAXPREFIX = 'RTN';
     public const TAXFREEPREFIX = 'RTX';
@@ -113,6 +115,43 @@ class CustomerReturn extends Model
     public function items(): HasMany
     {
         return $this->hasMany(CustomerReturnItem::class);
+    }
+
+    /**
+     * Define which attributes to log for activity tracking
+     */
+    protected function getActivityLogAttributes(): array
+    {
+        return [
+            'customer_id',
+            'salesperson_id',
+            'warehouse_id',
+            'total',
+            'total_usd',
+            'approved_by',
+            'approved_at',
+            'approve_note',
+            'return_received_by',
+            'return_received_at',
+            'return_received_note',
+            'note',
+        ];
+    }
+
+    /**
+     * Customize the activity log name
+     */
+    protected function getActivityLogName(): string
+    {
+        return 'customer_return';
+    }
+
+    /**
+     * Customize the activity log description
+     */
+    protected function getActivityLogDescription(): string
+    {
+        return 'Customer return';
     }
 
     // Scopes

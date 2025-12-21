@@ -10,6 +10,7 @@ use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use App\Traits\Authorable;
+use App\Traits\HasApprovalBasedActivityLog;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -17,10 +18,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class CustomerPayment extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasApprovalBasedActivityLog;
 
     public const TAXPREFIX = 'RCT';
     public const TAXFREEPREFIX = 'RCX';
@@ -102,6 +104,41 @@ class CustomerPayment extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * Define which attributes to log for activity tracking
+     */
+    protected function getActivityLogAttributes(): array
+    {
+        return [
+            'customer_id',
+            'account_id',
+            'currency_id',
+            'amount',
+            'amount_usd',
+            'rtc_book_number',
+            'approved_by',
+            'approved_at',
+            'approve_note',
+            'note',
+        ];
+    }
+
+    /**
+     * Customize the activity log name
+     */
+    protected function getActivityLogName(): string
+    {
+        return 'customer_payment';
+    }
+
+    /**
+     * Customize the activity log description
+     */
+    protected function getActivityLogDescription(): string
+    {
+        return 'Customer payment';
     }
 
     // Scopes
