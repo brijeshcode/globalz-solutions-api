@@ -15,6 +15,7 @@ class TenantSeeder extends Seeder
     {
         Tenant::create([
             'name' => 'Staging',
+            'tenant_key' => 'staging',
             'domain' => 'staging.globalzsolutions.local',
             'database' => 'nick_globalz_tenants_staging',
             'database_username' => 'root',
@@ -24,6 +25,7 @@ class TenantSeeder extends Seeder
 
         Tenant::create([
             'name' => 'Live',
+            'tenant_key' => 'live',
             'domain' => 'live.globalzsolutions.local',
             'database' => 'nick_globalz_tenants_live',
             'database_username' => 'root',
@@ -33,6 +35,7 @@ class TenantSeeder extends Seeder
 
         // Tenant::create([
         //     'name' => 'david',
+            // 'tenant_key' => 'david',
         //     'domain' => 'david.globalzsolutions.local',
         //     'database' => 'nick_globalz_tenants_live',
         //     'database_username' => 'root',

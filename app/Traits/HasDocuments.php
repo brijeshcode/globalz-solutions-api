@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\Document;
+use App\Models\Tenant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -293,10 +294,10 @@ trait HasDocuments
             
             // Get plural module name for folder organization
             $moduleName = $this->getModuleFolderName();
-            
-            // Determine storage path: documents/YYYY/MM/module-name
-            $basePath = 'documents/' . date('Y/m') . '/' . $moduleName;
-            
+
+            // Determine storage path with tenant awareness: documents/[tenant]/YYYY/MM/module-name
+            $basePath = $this->getTenantAwareBasePath($moduleName);
+
             // Store file
             $filePath = $file->storeAs($basePath, $filename, 'public');
 
@@ -346,20 +347,38 @@ trait HasDocuments
     protected function getModuleFolderName(): string
     {
         $className = class_basename($this);
-        
+
         // Convert class name to plural form for folder
         $folderName = strtolower($className);
-        
+
         // Handle common plural forms
         if (substr($folderName, -1) === 'y') {
             $folderName = substr($folderName, 0, -1) . 'ies';
-        } elseif (in_array(substr($folderName, -1), ['s', 'x', 'z']) || 
+        } elseif (in_array(substr($folderName, -1), ['s', 'x', 'z']) ||
                   in_array(substr($folderName, -2), ['ch', 'sh'])) {
             $folderName .= 'es';
         } else {
             $folderName .= 's';
         }
-        
+
         return $folderName;
+    }
+
+    /**
+     * Get tenant-aware base path for document storage
+     */
+    protected function getTenantAwareBasePath(string $moduleName): string
+    {
+        $currentTenant = Tenant::current();
+
+        // If we have a current tenant, include tenant folder in path
+        if ($currentTenant) {
+            // Use tenant_key as folder identifier
+            $tenantIdentifier = $currentTenant->tenant_key;
+            return 'documents/' . $tenantIdentifier . '/' . date('Y/m') . '/' . $moduleName;
+        }
+
+        // Fallback to non-tenant path (landlord context)
+        return 'documents/' . date('Y/m') . '/' . $moduleName;
     }
 }

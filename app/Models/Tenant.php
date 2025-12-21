@@ -13,6 +13,7 @@ class Tenant extends BaseTenant
     protected $fillable = [
         'name',
         'domain',
+        'tenant_key',
         'database',
         'database_username',
         'database_password',

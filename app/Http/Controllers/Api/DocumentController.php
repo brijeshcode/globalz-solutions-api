@@ -8,6 +8,7 @@ use App\Http\Requests\Api\DocumentUpdateRequest;
 use App\Http\Resources\Api\DocumentResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Document;
+use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -82,10 +83,10 @@ class DocumentController extends Controller
             
             // Get plural module name for folder organization
             $moduleName = $this->getModuleFolderName($modelName);
-            
-            // Determine storage path: documents/YYYY/MM/module-name
-            $basePath = 'documents/' . date('Y/m') . '/' . $moduleName;
-            
+
+            // Determine storage path with tenant awareness: documents/[tenant]/YYYY/MM/module-name
+            $basePath = $this->getTenantAwareBasePath($moduleName);
+
             // Store the file
             $filePath = $file->storeAs($basePath, $fileName, 'public');
             
@@ -162,10 +163,10 @@ class DocumentController extends Controller
             
             // Get plural module name for folder organization
             $moduleName = $this->getModuleFolderName($modelName);
-            
-            // Use new file structure: documents/YYYY/MM/module-name
-            $basePath = 'documents/' . date('Y/m') . '/' . $moduleName;
-            
+
+            // Use new file structure with tenant awareness: documents/[tenant]/YYYY/MM/module-name
+            $basePath = $this->getTenantAwareBasePath($moduleName);
+
             $filePath = $file->storeAs($basePath, $fileName, 'public');
             
             // Update file-related fields
@@ -534,17 +535,35 @@ class DocumentController extends Controller
     {
         // Convert class name to plural form for folder
         $folderName = strtolower($modelName);
-        
+
         // Handle common plural forms
         if (substr($folderName, -1) === 'y') {
             $folderName = substr($folderName, 0, -1) . 'ies';
-        } elseif (in_array(substr($folderName, -1), ['s', 'x', 'z']) || 
+        } elseif (in_array(substr($folderName, -1), ['s', 'x', 'z']) ||
                   in_array(substr($folderName, -2), ['ch', 'sh'])) {
             $folderName .= 'es';
         } else {
             $folderName .= 's';
         }
-        
+
         return $folderName;
+    }
+
+    /**
+     * Get tenant-aware base path for document storage
+     */
+    protected function getTenantAwareBasePath(string $moduleName): string
+    {
+        $currentTenant = Tenant::current();
+
+        // If we have a current tenant, include tenant folder in path
+        if ($currentTenant) {
+            // Use tenant_key as folder identifier
+            $tenantIdentifier = $currentTenant->tenant_key;
+            return 'documents/' . $tenantIdentifier . '/' . date('Y/m') . '/' . $moduleName;
+        }
+
+        // Fallback to non-tenant path (landlord context)
+        return 'documents/' . date('Y/m') . '/' . $moduleName;
     }
 }

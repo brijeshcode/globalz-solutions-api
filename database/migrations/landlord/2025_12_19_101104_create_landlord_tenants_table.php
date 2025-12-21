@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
             $table->string('name'); // staging, live, abc
+            $table->string('tenant_key'); // staging, live, abc
             $table->string('domain')->unique(); // staging.globalzsolutions.com
             $table->string('database'); // staging_db
 

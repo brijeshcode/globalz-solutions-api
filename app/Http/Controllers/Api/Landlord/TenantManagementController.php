@@ -23,11 +23,12 @@ class TenantManagementController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        // Search by name or domain
+        // Search by name, tenant_key or domain
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('tenant_key', 'like', "%{$search}%")
                   ->orWhere('domain', 'like', "%{$search}%");
             });
         }
@@ -47,6 +48,7 @@ class TenantManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'tenant_key' => 'required|string|max:255|unique:tenants,tenant_key',
             'domain' => 'required|string|max:255|unique:tenants,domain',
             'database' => 'required|string|max:255',
             'database_username' => 'nullable|string|max:255',
@@ -61,6 +63,7 @@ class TenantManagementController extends Controller
             // Create tenant record
             $tenant = Tenant::create([
                 'name' => $validated['name'],
+                'tenant_key' => $validated['tenant_key'],
                 'domain' => $validated['domain'],
                 'database' => $validated['database'],
                 'database_username' => $validated['database_username'] ?? null,
@@ -119,6 +122,13 @@ class TenantManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
+            'tenant_key' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('tenants', 'tenant_key')->ignore($tenant->id),
+            ],
             'domain' => [
                 'sometimes',
                 'required',
