@@ -67,14 +67,14 @@ class Customer extends Model
     protected $searchable = [
         'code',
         'name',
-        'address',
-        'city',
-        'telephone',
-        'mobile',
-        'email',
-        'contact_name',
-        'mof_tax_number',
-        'notes',
+        // 'email',
+        // 'address',
+        // 'city',
+        // 'telephone',
+        // 'mobile',
+        // 'contact_name',
+        // 'mof_tax_number',
+        // 'notes',
     ];
 
     protected $sortable = [
