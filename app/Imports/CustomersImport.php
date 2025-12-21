@@ -126,11 +126,7 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
     {
         // Extract starting balance (if provided)
         $startingBalance = $row['starting_balance'] ?? $row['opening_balance'] ?? null;
-        if ($startingBalance !== null && $startingBalance !== '') {
-            $startingBalance = (float) $startingBalance;
-        } else {
-            $startingBalance = null;
-        }
+        $startingBalance = $this->cleanNumeric($startingBalance);
 
         // Map column headers to expected fields
         $data = [
@@ -154,12 +150,12 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             'customer_payment_term_id' => null,
             'price_list_id_INV' => null,
             'price_list_id_INX' => null,
-            'discount_percentage' => $row['discount_percentage'] ?? $row['discount'] ?? 0,
-            'credit_limit' => $row['credit_limit'] ?? null,
+            'discount_percentage' => $this->cleanNumeric($row['discount_percentage'] ?? $row['discount'] ?? 0),
+            'credit_limit' => $this->cleanNumeric($row['credit_limit'] ?? null),
             'notes' => $row['notes'] ?? $row['remarks'] ?? null,
             'is_active' => isset($row['is_active']) ? filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN) : true,
             'created_at' => $this->parseDate($row['created_at'] ?? null),
-            'total_old_sales' => $row['total_old_sales'] ?? 0,
+            'total_old_sales' => $this->cleanNumeric($row['total_old_sales'] ?? 0),
         ];
 
         // Required field validation
@@ -283,6 +279,24 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
                 return Carbon::createFromTimestamp($unix_date)->format('Y-m-d H:i:s');
             }
 
+            // Handle short year format (d-m-y or d/m/y) - e.g., "27-03-25"
+            // Assumes 2-digit year: 00-49 = 2000-2049, 50-99 = 1950-1999
+            if (preg_match('/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2})$/', $dateValue, $matches)) {
+                $day = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                $month = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+                $year = $matches[3];
+
+                // Convert 2-digit year to 4-digit (00-49 -> 2000-2049, 50-99 -> 1950-1999)
+                $fullYear = ($year < 50) ? "20{$year}" : "19{$year}";
+
+                // Parse as d-m-Y
+                $dateString = "{$day}-{$month}-{$fullYear}";
+                $date = Carbon::createFromFormat('d-m-Y', $dateString);
+                if ($date !== false) {
+                    return $date->format('Y-m-d H:i:s');
+                }
+            }
+
             // Try parsing common date formats
             $formats = [
                 'Y-m-d H:i:s',  // 2025-12-22 10:30:00
@@ -293,6 +307,7 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
                 'm/d/Y',        // 12/22/2025
                 'd-m-Y H:i:s',  // 22-12-2025 10:30:00
                 'd/m/Y H:i:s',  // 22/12/2025 10:30:00
+                'Y/m/d',        // 2025/12/22
             ];
 
             foreach ($formats as $format) {
@@ -356,6 +371,26 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
                 'error' => "Customer imported but starting balance note failed: " . $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Clean numeric value by removing commas and converting to number
+     */
+    protected function cleanNumeric($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        // Remove commas, spaces, and other non-numeric characters (except decimal point and minus sign)
+        $cleaned = preg_replace('/[^\d.\-]/', '', (string)$value);
+
+        // Convert to float if it has decimal point, otherwise to int
+        if (strpos($cleaned, '.') !== false) {
+            return (float)$cleaned;
+        }
+
+        return $cleaned === '' ? 0 : (int)$cleaned;
     }
 
     /**
