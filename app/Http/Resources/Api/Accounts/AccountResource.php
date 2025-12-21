@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\Accounts;
 
+use App\Helpers\CurrencyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,6 +21,7 @@ class AccountResource extends JsonResource
             'description' => $this->description,
             'is_active' => $this->is_active,
             'opening_balance' => $this->opening_balance,
+            'usd_current_balance' => CurrencyHelper::toUsd($this->currency_id, $this->current_balance),
             'current_balance' => $this->current_balance,
             'currency' => $this->whenLoaded('currency', function () {
                 return [
