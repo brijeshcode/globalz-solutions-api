@@ -213,8 +213,10 @@ class Item extends Model
 
     public function scopeLowStock($query)
     {
-        return $query->whereRaw('starting_quantity <= low_quantity_alert')
-            ->whereNotNull('low_quantity_alert');
+        return $query->whereHas('inventories', function ($inventoryQuery) {
+            $inventoryQuery->whereColumn('inventories.quantity', '<=', 'items.low_quantity_alert')
+                          ->where('inventories.quantity', '>', 0);
+        })->whereNotNull('low_quantity_alert');
     }
 
     public function scopeByBarcode($query, $barcode)
