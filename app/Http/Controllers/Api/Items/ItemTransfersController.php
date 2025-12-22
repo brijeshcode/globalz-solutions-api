@@ -77,7 +77,7 @@ class ItemTransfersController extends Controller
             'updatedBy:id,name',
             'fromWarehouse:id,name',
             'toWarehouse:id,name',
-            'itemTransferItems.item:id,code,short_name',
+            'itemTransferItems.item:id,code,short_name,description',
         ]);
 
         return ApiResponse::show(
