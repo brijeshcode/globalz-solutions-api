@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx\Rels;
 
 class ItemsController extends Controller
 {
@@ -25,8 +26,10 @@ class ItemsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Item::query()
-            ->with([
+        
+        $query = $this->itemQuery($request);
+
+        $query->with([
                 'itemType:id,name',
                 'itemFamily:id,name',
                 'itemGroup:id,name',
@@ -41,93 +44,8 @@ class ItemsController extends Controller
                 'documents',
                 'inventories',
                 'itemPrice'
-            ])
-            ->searchable($request)
-            ->sortable($request);
-
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        // Filter by item type
-        if ($request->has('item_type_id')) {
-            $query->where('item_type_id', $request->item_type_id);
-        }
-
-        // Filter by item family
-        if ($request->has('item_family_id')) {
-            $query->where('item_family_id', $request->item_family_id);
-        }
-
-        // Filter by item group
-        if ($request->has('item_group_id')) {
-            $query->where('item_group_id', $request->item_group_id);
-        }
-
-        // Filter by item category
-        if ($request->has('item_category_id')) {
-            $query->where('item_category_id', $request->item_category_id);
-        }
-
-        // Filter by item brand
-        if ($request->has('item_brand_id')) {
-            $query->where('item_brand_id', $request->item_brand_id);
-        }
-
-        // Filter by supplier
-        if ($request->has('supplier_id')) {
-            $query->where('supplier_id', $request->supplier_id);
-        }
-
-        // Filter by tax code
-        if ($request->has('tax_code_id')) {
-            $query->where('tax_code_id', $request->tax_code_id);
-        }
-
-        // Price range filters
-        if ($request->has('min_price')) {
-            $query->where('base_sell', '>=', $request->min_price);
-        }
-
-        if ($request->has('max_price')) {
-            $query->where('base_sell', '<=', $request->max_price);
-        }
-
-        // Cost range filters
-        if ($request->has('min_cost')) {
-            $query->where('base_cost', '>=', $request->min_cost);
-        }
-
-        if ($request->has('max_cost')) {
-            $query->where('base_cost', '<=', $request->max_cost);
-        }
-
-        // Low stock filter
-        if ($request->boolean('low_stock')) {
-            $query->lowStock();
-        }
-
-        // Filter by cost calculation method
-        if ($request->has('cost_calculation')) {
-            $query->where('cost_calculation', $request->cost_calculation);
-        }
-
-        // Filter by warehouse - show only items that have inventory in selected warehouse
-        if ($request->has('warehouse_id')) {
-            $warehouseId = $request->warehouse_id;
-            $query->whereHas('inventories', function ($inventoryQuery) use ($warehouseId) {
-                $inventoryQuery->where('warehouse_id', $warehouseId);
-            });
-            
-            // Add warehouse-specific inventory quantity
-            $query->addSelect([
-                'warehouse_inventory_quantity' => \App\Models\Inventory\Inventory::selectRaw('COALESCE(quantity, 0)')
-                    ->whereColumn('item_id', 'items.id')
-                    ->where('warehouse_id', $warehouseId)
-                    ->limit(1)
-            ]);
-        }
+        ])
+        ->sortable($request);
 
         $items = $this->applyPagination($query, $request);
 
@@ -530,20 +448,24 @@ class ItemsController extends Controller
     /**
      * Get item statistics for dashboard
      */
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
+        $query = $this->itemQuery($request);
+
         $stats = [
             'total_items' => Item::count(),
             'active_items' => Item::where('is_active', true)->count(),
             'inactive_items' => Item::where('is_active', false)->count(),
             'trashed_items' => Item::onlyTrashed()->count(),
-            'low_stock_items' => Item::whereRaw('starting_quantity <= low_quantity_alert')
-                ->whereNotNull('low_quantity_alert')
-                ->count(),
+            'low_stock_items' => Item::whereHas('inventories', function ($query) {
+                $query->whereColumn('inventories.quantity', '<=', 'items.low_quantity_alert')
+                      ->where('inventories.quantity', '>', 0);
+            })
+            ->whereNotNull('low_quantity_alert')
+            ->count(),
             'items_with_stock' => Item::whereHas('inventories', function ($query) {
                 $query->where('quantity', '>', 0);
             })->count(),
-            // 'total_starting_quantity' => Item::sum('starting_quantity'),
             // 'total_inventory_quantity' => DB::table('inventories')->sum('quantity'),
             // 'total_net_quantity' => Item::sum('starting_quantity') + DB::table('inventories')->sum('quantity'),
             // 'total_inventory_value' => Item::selectRaw('SUM(starting_quantity * base_cost) as total')->value('total') ?? 0,
@@ -1164,5 +1086,98 @@ class ItemsController extends Controller
         }
 
         return 'Item base cost (no purchase history)';
+    }
+
+    private function itemQuery(Request $request)
+    {
+        $query = Item::query()
+            ->searchable($request)
+            ;
+
+        // Filter by active status
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        // Filter by item type
+        if ($request->has('item_type_id')) {
+            $query->where('item_type_id', $request->item_type_id);
+        }
+
+        // Filter by item family
+        if ($request->has('item_family_id')) {
+            $query->where('item_family_id', $request->item_family_id);
+        }
+
+        // Filter by item group
+        if ($request->has('item_group_id')) {
+            $query->where('item_group_id', $request->item_group_id);
+        }
+
+        // Filter by item category
+        if ($request->has('item_category_id')) {
+            $query->where('item_category_id', $request->item_category_id);
+        }
+
+        // Filter by item brand
+        if ($request->has('item_brand_id')) {
+            $query->where('item_brand_id', $request->item_brand_id);
+        }
+
+        // Filter by supplier
+        if ($request->has('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Filter by tax code
+        if ($request->has('tax_code_id')) {
+            $query->where('tax_code_id', $request->tax_code_id);
+        }
+
+        // Price range filters
+        if ($request->has('min_price')) {
+            $query->where('base_sell', '>=', $request->min_price);
+        }
+
+        if ($request->has('max_price')) {
+            $query->where('base_sell', '<=', $request->max_price);
+        }
+
+        // Cost range filters
+        if ($request->has('min_cost')) {
+            $query->where('base_cost', '>=', $request->min_cost);
+        }
+
+        if ($request->has('max_cost')) {
+            $query->where('base_cost', '<=', $request->max_cost);
+        }
+
+        // Low stock filter
+        if ($request->boolean('low_stock')) {
+            $query->lowStock();
+        }
+
+        // Filter by cost calculation method
+        if ($request->has('cost_calculation')) {
+            $query->where('cost_calculation', $request->cost_calculation);
+        }
+
+        // Filter by warehouse - show only items that have inventory in selected warehouse
+        if ($request->has('warehouse_id')) {
+            $warehouseId = $request->warehouse_id;
+            $query->whereHas('inventories', function ($inventoryQuery) use ($warehouseId) {
+                $inventoryQuery->where('warehouse_id', $warehouseId);
+            });
+            
+            // Add warehouse-specific inventory quantity
+            $query->addSelect([
+                'warehouse_inventory_quantity' => \App\Models\Inventory\Inventory::selectRaw('COALESCE(quantity, 0)')
+                    ->whereColumn('item_id', 'items.id')
+                    ->where('warehouse_id', $warehouseId)
+                    ->limit(1)
+            ]);
+        }
+
+        return $query;
     }
 }
