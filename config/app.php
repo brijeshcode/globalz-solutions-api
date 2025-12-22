@@ -134,7 +134,7 @@ return [
     |
     */
 
-    'customer_code_start' => (int) env('CUSTOMER_CODE_START', 50000000),
+    'customer_code_start' => (int) env('CUSTOMER_CODE_START', 41101364),
 
     /*
     |--------------------------------------------------------------------------

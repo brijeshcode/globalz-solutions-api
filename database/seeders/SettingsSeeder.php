@@ -84,9 +84,9 @@ class SettingsSeeder extends Seeder
             [
                 'group_name' => 'customers',
                 'key_name' => 'code_counter',
-                'value' => config('app.customer_code_start', 50000000),
+                'value' => config('app.customer_code_start', 41101364),
                 'data_type' => Setting::TYPE_NUMBER,
-                'description' => 'Next customer code counter starting from ' . config('app.customer_code_start', 50000000),
+                'description' => 'Next customer code counter starting from ' . config('app.customer_code_start', 41101364),
             ],
             [
                 'group_name' => 'customers',

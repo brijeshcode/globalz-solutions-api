@@ -17,13 +17,13 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $this->actingAs($this->user, 'sanctum');
     
-    // Create customer code counter setting (starting from 50000000)
+    // Create customer code counter setting (starting from 41101364)
     Setting::create([
         'group_name' => 'customers',
         'key_name' => 'code_counter', 
-        'value' => '50000000',
+        'value' => '41101364',
         'data_type' => 'number',
-        'description' => 'Customer code counter starting from 50000000'
+        'description' => 'Customer code counter starting from 41101364'
     ]);
     
     // Create related models for testing
@@ -108,9 +108,9 @@ describe('Customers API', function () {
             'is_active' => true,
         ]);
 
-        // Check if code was auto-generated starting from 50000000
+        // Check if code was auto-generated starting from 41101364
         $customer = Customer::where('name', 'Test Customer')->first();
-        expect((int)$customer->code)->toBeGreaterThanOrEqual(50000000);
+        expect((int)$customer->code)->toBeGreaterThanOrEqual(41101364);
     });
 
     it('can create a customer with all fields', function () {
@@ -154,7 +154,7 @@ describe('Customers API', function () {
         // Verify code was auto-generated
         $customer = Customer::where('name', 'Complete Customer')->first();
         expect($customer->code)->not()->toBeNull();
-        expect((int)$customer->code)->toBeGreaterThanOrEqual(50000000);
+        expect((int)$customer->code)->toBeGreaterThanOrEqual(41101364);
 
         $this->assertDatabaseHas('customers', [
             'name' => 'Complete Customer',
@@ -174,7 +174,7 @@ describe('Customers API', function () {
         
         $customer = Customer::where('name', 'Auto Code Customer')->first();
         expect($customer->code)->not()->toBeNull();
-        expect((int)$customer->code)->toBeGreaterThanOrEqual(50000000);
+        expect((int)$customer->code)->toBeGreaterThanOrEqual(41101364);
     });
 
     it('ignores provided code and always generates new one', function () {
@@ -190,7 +190,7 @@ describe('Customers API', function () {
         
         $customer = Customer::where('name', 'Custom Code Customer')->first();
         expect($customer->code)->not()->toBe('99999999'); // Should not use provided code
-        expect((int)$customer->code)->toBeGreaterThanOrEqual(50000000); // Should be auto-generated
+        expect((int)$customer->code)->toBeGreaterThanOrEqual(41101364); // Should be auto-generated
     });
 
     it('can show a customer', function () {
@@ -404,7 +404,7 @@ describe('Customers API', function () {
             ]);
 
         $code = $response->json('data.code');
-        expect((int)$code)->toBeGreaterThanOrEqual(50000000);
+        expect((int)$code)->toBeGreaterThanOrEqual(41101364);
         expect($response->json('data.is_available'))->toBe(true);
     });
 
@@ -679,7 +679,7 @@ describe('Customers API', function () {
         $response2->assertCreated();
         $code2 = (int) $response2->json('data.code');
 
-        expect($code1)->toBeGreaterThanOrEqual(50000000);
+        expect($code1)->toBeGreaterThanOrEqual(41101364);
         expect($code2)->toBe($code1 + 1); // strictly sequential
     });
 
@@ -854,7 +854,7 @@ describe('Customer Code Generation Tests', function () {
         $response->assertOk();
         $nextCode = $response->json('data.code');
         
-        expect((int) $nextCode)->toBe(50000000);
+        expect((int) $nextCode)->toBe(41101364);
         
         // Verify setting was created
         $setting = Setting::where('group_name', 'customers')
@@ -863,12 +863,12 @@ describe('Customer Code Generation Tests', function () {
             
         expect($setting)->not()->toBeNull();
         expect($setting->data_type)->toBe('number');
-        expect($setting->value)->toBe('50000000');
+        expect($setting->value)->toBe('41101364');
     });
 
     it('handles counter progression correctly', function () {
-        // Set counter to 50000000
-        Setting::set('customers', 'code_counter', 50000000, 'number');
+        // Set counter to 41101364
+        Setting::set('customers', 'code_counter', 41101364, 'number');
         
         // Create first customer
         $response1 = $this->postJson(route('customers.store'), [
@@ -876,7 +876,7 @@ describe('Customer Code Generation Tests', function () {
         ]);
         
         $response1->assertCreated();
-        expect((int) $response1->json('data.code'))->toBe(50000000);
+        expect((int) $response1->json('data.code'))->toBe(41101364);
         
         // Create second customer
         $response2 = $this->postJson(route('customers.store'), [
@@ -918,7 +918,7 @@ describe('Customer Code Generation Tests', function () {
         
         $response1->assertCreated();
         $firstCode = (int) $response1->json('data.code');
-        expect($firstCode)->toBe(50000000); // Should start from default
+        expect($firstCode)->toBe(41101364); // Should start from default
         
         // Verify setting was auto-created
         $setting = Setting::where('group_name', 'customers')

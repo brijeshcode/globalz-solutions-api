@@ -16,7 +16,7 @@ return new class extends Migration
             
             // Main Info Tab
             $table->unsignedBigInteger('parent_id')->nullable()->index();
-            $table->string('code', 20)->unique()->index(); // Auto-generated starting from 50000000
+            $table->string('code', 20)->unique()->index(); // Auto-generated starting from 41101364
             $table->string('name')->index();
 
             $table->unsignedBigInteger('customer_type_id')->nullable()->index();
