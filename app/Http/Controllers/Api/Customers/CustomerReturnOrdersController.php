@@ -26,10 +26,21 @@ class CustomerReturnOrdersController extends Controller
     /**
      * Prepare return item data from sale item
      */
-    private function prepareReturnItemData(array $itemInput, float $currencyRate): array
+    private function prepareReturnItemData(array $itemInput, string $prefix, float $currencyRate): array
     {
         $saleItem =  SaleItems::with(['sale', 'item'])->findOrFail($itemInput['sale_item_id']);
         $returnQuantity = $itemInput['quantity'];
+
+
+        $discountFactor = 1 - ($saleItem->discount_percent / 100);
+
+        $price = $prefix === CustomerReturn::TAXFREEPREFIX
+            ? $saleItem->price * $discountFactor
+            : $saleItem->ttc_price;
+
+        $priceUsd = $prefix === CustomerReturn::TAXFREEPREFIX
+            ? $saleItem->price_usd * $discountFactor
+            : $saleItem->ttc_price_usd;
 
         // Copy all data from sale item and recalculate based on return quantity
         return [
@@ -66,8 +77,8 @@ class CustomerReturnOrdersController extends Controller
             // 'total_price' => $saleItem->price * $returnQuantity - ($saleItem->unit_discount_amount * $returnQuantity),
             // 'total_price_usd' => $saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity),
 
-            'total_price' => $saleItem->ttc_price * $returnQuantity,
-            'total_price_usd' => $saleItem->ttc_price_usd * $returnQuantity,
+            'total_price' => $price * $returnQuantity ,
+            'total_price_usd' => $priceUsd * $returnQuantity,
 
             // Calculate return profit (negative because it's a return)
             // total_price_usd - (cost_price * quantity) - we use the cost from sale item
@@ -174,7 +185,7 @@ class CustomerReturnOrdersController extends Controller
 
             // Prepare and create return items from sale items
             foreach ($itemsInput as $itemInput) {
-                $itemData = $this->prepareReturnItemData($itemInput, $data['currency_rate']);
+                $itemData = $this->prepareReturnItemData($itemInput, $data['prefix'],  $data['currency_rate']);
                 $return->items()->create($itemData);
             }
 
@@ -273,7 +284,7 @@ class CustomerReturnOrdersController extends Controller
 
             // Update or create items
             foreach ($itemsInput as $itemInput) {
-                $itemData = $this->prepareReturnItemData($itemInput, $currencyRate);
+                $itemData = $this->prepareReturnItemData($itemInput, $customerReturn->prefix, $currencyRate);
 
                 if (isset($itemInput['id']) && $itemInput['id']) {
                     // Update existing item
