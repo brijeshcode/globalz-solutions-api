@@ -884,5 +884,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::get('category-sales', [\App\Http\Controllers\Api\Reports\Sales\CategorySalesReportController::class, 'index'])->name('category-sales');
         });
+
+        // Employee Reports
+        Route::prefix('employee')->name('employee.')->group(function () {
+            Route::get('business', [\App\Http\Controllers\Api\Reports\Employee\EmployeeBusinessController::class, 'index'])->name('business');
+        });
     });
 });
