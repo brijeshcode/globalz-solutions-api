@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,9 +11,7 @@ class CustomerPaymentsStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        return $user->isAdmin();
+         return RoleHelper::canAdmin();
     }
 
     public function rules(): array
