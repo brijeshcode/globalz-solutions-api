@@ -26,7 +26,7 @@ class ItemsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        
+
         $query = $this->itemQuery($request);
 
         $query->with([
@@ -46,6 +46,16 @@ class ItemsController extends Controller
                 'itemPrice'
         ])
         ->sortable($request);
+
+        // Add sell_price from default price list
+        $query->addSelect([
+            'sell_price' => \App\Models\Items\PriceListItem::select('sell_price')
+                ->whereColumn('item_id', 'items.id')
+                ->whereHas('priceList', function($q) {
+                    $q->where('is_default', true);
+                })
+                ->limit(1)
+        ]);
 
         $items = $this->applyPagination($query, $request);
 
@@ -466,6 +476,12 @@ class ItemsController extends Controller
             'items_with_stock' => Item::whereHas('inventories', function ($query) {
                 $query->where('quantity', '>', 0);
             })->count(),
+            'total_stock_value' => DB::table('items')
+                ->leftJoin('inventories', 'items.id', '=', 'inventories.item_id')
+                ->leftJoin('item_prices', 'items.id', '=', 'item_prices.item_id')
+                ->selectRaw('SUM(COALESCE(item_prices.price_usd, items.base_cost, 0) * COALESCE(inventories.quantity, 0)) as total')
+                ->whereNull('items.deleted_at')
+                ->value('total') ?? 0,
             // 'total_inventory_quantity' => DB::table('inventories')->sum('quantity'),
             // 'total_net_quantity' => Item::sum('starting_quantity') + DB::table('inventories')->sum('quantity'),
             // 'total_inventory_value' => Item::selectRaw('SUM(starting_quantity * base_cost) as total')->value('total') ?? 0,

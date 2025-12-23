@@ -56,6 +56,10 @@ class ItemResource extends JsonResource
             $data['base_sell'] = $this->base_sell !== null ? (float) $this->base_sell : null;
         }
 
+        if ($this->fieldWasSelected('sell_price', $selectedFields)) {
+            $data['sell_price'] = $this->sell_price !== null ? (float) $this->sell_price : 0;
+        }
+
         if ($this->fieldWasSelected('starting_price', $selectedFields)) {
             $data['starting_price'] = $this->starting_price !== null ? (float) $this->starting_price : null;
         }
