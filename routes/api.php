@@ -889,5 +889,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('employee')->name('employee.')->group(function () {
             Route::get('business', [\App\Http\Controllers\Api\Reports\Employee\EmployeeBusinessController::class, 'index'])->name('business');
         });
+
+        // Finance Reports
+        Route::prefix('finance')->name('finance.')->group(function () {
+            Route::get('monthly-profit', [\App\Http\Controllers\Api\Reports\Finance\MontlyProfitReportController::class, 'index'])->name('monthly-profit');
+        });
     });
 });
