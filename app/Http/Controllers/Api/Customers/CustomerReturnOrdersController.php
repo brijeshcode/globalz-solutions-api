@@ -603,6 +603,8 @@ class CustomerReturnOrdersController extends Controller
                     'total_price' => (float) $saleItem->total_price,
                     'total_price_usd' => (float) $saleItem->total_price_usd,
 
+                    'unit_volume_cbm' => $saleItem->unit_volume_cbm,
+                    'unit_weight_kg' => $saleItem->unit_weight_kg,
                     // Note
                     'note' => $saleItem->note,
                 ];
