@@ -98,14 +98,35 @@ class AuthController extends Controller
         // Find user (excluding soft deleted users automatically)
         $user = User::where('email', $validated['email'])->first();
 
-        // Verify credentials
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        // Check if user exists
+        if (!$user) {
             RateLimiter::hit($key, $decaySeconds);
 
-            // Log failed login attempt
+            // Get current attempts and calculate remaining
+            $attempts = RateLimiter::attempts($key);
+            $remainingAttempts = $maxAttempts - $attempts;
+
+            // Build error message with warning
+            $errorMessage = '';
+            if ($remainingAttempts > 0) {
+                $errorMessage .= ' <br> Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
+            }
+
+            return ApiResponse::throw(
+                ['email' => ['The provided credentials are incorrect.']],
+                $errorMessage,
+                401
+            );
+        }
+
+        // Verify password
+        if (!Hash::check($validated['password'], $user->password)) {
+            RateLimiter::hit($key, $decaySeconds);
+
+            // Log failed login attempt (only when user exists but password is wrong)
             LoginLog::logFailedLogin(
-                $user?->id,
-                $user?->role,
+                $user->id,
+                $user->role,
                 $request->ip(),
                 $request->userAgent() ?? 'Unknown'
             );
@@ -115,9 +136,9 @@ class AuthController extends Controller
             $remainingAttempts = $maxAttempts - $attempts;
 
             // Build error message with warning
-            $errorMessage = 'Invalid credentials';
+            $errorMessage = '';
             if ($remainingAttempts > 0) {
-                $errorMessage .= '. Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
+                $errorMessage .= ' <br> Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
             }
 
             return ApiResponse::throw(
@@ -146,7 +167,7 @@ class AuthController extends Controller
             // Build error message with warning
             $errorMessage = 'Account deactivated';
             if ($remainingAttempts > 0) {
-                $errorMessage .= '. Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
+                $errorMessage .= '. <br> Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
             }
 
             return ApiResponse::throw(
