@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Items;
 
-use App\Facades\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Items\ItemsStoreRequest;
 use App\Http\Requests\Api\Items\ItemsUpdateRequest;
@@ -69,18 +68,12 @@ class ItemsController extends Controller
     public function store(ItemsStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
-        
-        // Handle code generation
-        if (!isset($data['code']) || empty($data['code'])) {
-            // Auto-generate code if not provided
-            $data['code'] = $this->generateItemCode();
-        }
 
         // Create item in a transaction to handle all related operations
         $item = DB::transaction(function () use ($data, $request) {
             // Create the item
             $item = Item::create($data);
-            
+
             // Initialize inventory if starting_quantity is provided
             if (isset($data['starting_quantity']) && $data['starting_quantity'] > 0) {
                 $this->initializeInventory($item, $data['starting_quantity']);
@@ -89,22 +82,9 @@ class ItemsController extends Controller
             if (isset($data['base_cost']) && $data['base_cost'] > 0 && isset($data['supplier_id'])) {
                 $this->initializeSupplierItemPrice($item, $data['supplier_id']);
             }
-            
+
             return $item;
         });
-        
-        // Increment counter only after successful creation
-        if (!$request->has('code') || empty($request->input('code'))) {
-            // Auto-generated code - increment counter
-            Settings::incrementItemCode();
-        } else {
-            // Custom code using current counter - increment if matches
-            $numericPart = $this->extractNumericPart($data['code']);
-            $currentCounter = (int) Settings::get('items', 'code_counter', 5000, true, 'number');
-            if ($numericPart && (int) $numericPart === $currentCounter) {
-                Settings::incrementItemCode();
-            }
-        }
 
         // Handle image uploads
         if ($request->hasFile('images')) {
@@ -321,20 +301,6 @@ class ItemsController extends Controller
     }
 
     /**
-     * Get the next suggested item code
-     */
-    public function getNextCode(): JsonResponse
-    {
-        $nextCode = $this->getLatestItemCode();
-        
-        return ApiResponse::show('Next item code retrieved successfully', [
-            'code' => $nextCode,
-            'is_available' => true,
-            'message' => 'You can use this code as-is or customize it with prefix/suffix (e.g., ' . $nextCode . 'A, PREFIX-' . $nextCode . ')'
-        ]);
-    }
-
-    /**
      * Check if a specific code is available
      */
     public function checkCodeAvailability(Request $request): JsonResponse
@@ -344,80 +310,21 @@ class ItemsController extends Controller
         ]);
 
         $code = $request->input('code');
-        $isAvailable = $this->isCodeAvailable($code);
-        $numericPart = $this->extractNumericPart($code);
+        $isAvailable = !Item::withTrashed()->where('code', $code)->exists();
 
         if ($isAvailable) {
             return ApiResponse::show('Code is available', [
                 'code' => $code,
                 'is_available' => true,
-                'numeric_part' => $numericPart,
                 'message' => 'This code is available for use'
             ]);
         } else {
-            $suggestedCode = $this->getLatestItemCode();
             return ApiResponse::show('Code is not available', [
                 'code' => $code,
                 'is_available' => false,
-                'numeric_part' => $numericPart,
-                'suggested_code' => $suggestedCode,
-                'message' => 'This code is already taken. Try: ' . $suggestedCode
+                'message' => 'This code is already taken. Please choose a different code.'
             ]);
         }
-    }
-
-    /**
-     * Generate unique item code starting from settings
-    */
-    private function generateItemCode(): string
-    {
-        return Settings::getCurrentItemCode();
-    }
-
-    /**
-     * Get the latest available item code (for real-time updates)
-     */
-    private function getLatestItemCode(): string
-    {
-        // Get current counter (don't increment yet)
-        $currentCounter = (int) Settings::get('items', 'code_counter', 5000, true, 'number');
-        
-        return (string) $currentCounter;
-    }
-
-    /**
-     * Check if code is available
-     */
-    private function isCodeAvailable(string $code): bool
-    {
-        // First check for exact duplicate
-        $exactMatch = Item::withTrashed()->where('code', $code)->exists();
-        if ($exactMatch) {
-            return false; // Code already exists
-        }
-
-        // For codes with numeric parts, apply counter validation
-        $numericPart = $this->extractNumericPart($code);
-        if ($numericPart) {
-            $currentCounter = (int) Settings::get('items', 'code_counter', 5000, true, 'number');
-            return (int) $numericPart >= $currentCounter;
-        }
-
-        // Non-numeric codes are available if not duplicates
-        return true;
-    }
-
-    /**
-     * Extract numeric part from code (handles prefix/suffix)
-     */
-    private function extractNumericPart(string $code): ?string
-    {
-        // Extract all numeric sequences and concatenate them
-        if (preg_match_all('/(\d+)/', $code, $matches)) {
-            // Concatenate all numeric parts to form one number
-            return implode('', $matches[1]);
-        }
-        return null;
     }
 
     /**

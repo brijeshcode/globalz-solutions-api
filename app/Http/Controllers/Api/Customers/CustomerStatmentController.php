@@ -280,7 +280,7 @@ class CustomerStatmentController extends Controller
         }
 
         // Sort by date
-        $sortedTransactions = $allTransactions->sortBy('date')->values();
+        $sortedTransactions = $allTransactions->sortByDesc('date')->values();
 
         // Calculate running balance
         $balance = 0;

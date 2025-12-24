@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Api\Items;
 
 use App\Models\Items\Item;
-use App\Facades\Settings;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,7 +25,7 @@ class ItemsStoreRequest extends FormRequest
     {
         return [
             // Main Information
-            'code' => 'sometimes|string|max:255|unique:items,code',
+            'code' => 'required|string|max:255|unique:items,code',
             'short_name' => 'nullable|string|max:255',
             'description' => 'required|string',
             'item_type_id' => 'nullable|exists:item_types,id',
@@ -126,76 +125,4 @@ class ItemsStoreRequest extends FormRequest
         ];
     }
 
-    /**
-     * Configure the validator instance.
-     */
-    public function withValidator($validator)
-    {
-        $validator->after(function ($validator) {
-            // Custom code validation
-            if ($this->has('code') && !empty($this->input('code'))) {
-                $this->validateItemCode($validator, $this->input('code'));
-            }
-
-            // Custom validation for pricing relationships
-            $baseCall = $this->input('base_cost');
-            $baseSell = $this->input('base_sell');
-            $startingPrice = $this->input('starting_price');
-
-            // Warn if sell price is less than cost (not an error, just a warning)
-            if ($baseCall && $baseSell && $baseSell < $baseCall) {
-                // This could be logged or handled as needed
-                // For now, we'll allow it but could add a warning system later
-            }
- 
-        });
-    }
-
-    /**
-     * Validate item code against business rules
-     */
-    private function validateItemCode($validator, string $code): void
-    {
-        $numericPart = $this->extractNumericPart($code);
-        $currentCounter = (int) Settings::get('items', 'code_counter', 5000, true, 'number');
-        
-        // Don't allow codes without numeric parts
-        if (!$numericPart) {
-            $validator->errors()->add('code', 
-                "Code must contain numeric part. Use current counter ({$currentCounter}) with optional prefix/suffix (e.g., 'A{$currentCounter}', '{$currentCounter}B')."
-            );
-            return;
-        }
-        
-        $numericValue = (int) $numericPart;
-        
-        // Don't allow codes with numeric parts less than current counter (already used)
-        if ($numericValue < $currentCounter) {
-            $validator->errors()->add('code', 
-                "Code contains numeric part '{$numericPart}' which has already been used. Current counter is at {$currentCounter}."
-            );
-            return;
-        }
-        
-        // Don't allow codes with numeric parts greater than current counter (creates gaps)
-        if ($numericValue > $currentCounter) {
-            $validator->errors()->add('code', 
-                "Code contains numeric part '{$numericPart}' which is greater than the current counter ({$currentCounter}). Only current counter value or prefixes/suffixes around it are allowed (e.g., 'A{$currentCounter}', '{$currentCounter}B')."
-            );
-            return;
-        }
-    }
-
-    /**
-     * Extract numeric part from code (handles prefix/suffix)
-     */
-    private function extractNumericPart(string $code): ?string
-    {
-        // Extract all numeric sequences and concatenate them
-        if (preg_match_all('/(\d+)/', $code, $matches)) {
-            // Concatenate all numeric parts to form one number
-            return implode('', $matches[1]);
-        }
-        return null;
-    }
 }
