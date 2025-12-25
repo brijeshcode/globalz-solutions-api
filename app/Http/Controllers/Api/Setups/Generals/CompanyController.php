@@ -226,19 +226,18 @@ class CompanyController extends Controller
             'contact_email' => 'nullable|email|max:255',
             'contact_phone' => 'nullable|string|max:50',
             'logo' => 'nullable|file|image|max:2048',
-            'favicon' => 'nullable|file|image|max:2048',
+            'favicon' => 'nullable|file|mimes:ico,png,jpg,jpeg,webp|max:2048',
         ]);
-
         // Handle file uploads for logo and favicon
         if ($request->hasFile('logo')) {
-            $uploadResult = $this->handleSettingFileUpload(self::TENANT_DETAILS_GROUP, $request->file('logo'), 'logo', 'Tenant Logo');
+            $uploadResult = $this->handleSettingFileUpload(self::TENANT_DETAILS_GROUP, $request->file('logo'), 'logo', 'System Logo');
             if ($uploadResult instanceof JsonResponse) {
                 return $uploadResult; // Return error response
             }
         }
 
         if ($request->hasFile('favicon')) {
-            $uploadResult = $this->handleSettingFileUpload(self::TENANT_DETAILS_GROUP, $request->file('favicon'), 'favicon', 'Tenant Favicon');
+            $uploadResult = $this->handleSettingFileUpload(self::TENANT_DETAILS_GROUP, $request->file('favicon'), 'favicon', 'System Favicon');
             if ($uploadResult instanceof JsonResponse) {
                 return $uploadResult; // Return error response
             }

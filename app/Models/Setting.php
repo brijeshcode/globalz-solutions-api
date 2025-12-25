@@ -284,11 +284,11 @@ class Setting extends Model
     {
         // For company logo/stamp, only allow image files
         if ($this->group_name === 'company' && in_array($this->key_name, ['logo', 'stamp'])) {
-            return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+            return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'ico', 'webp'];
         }
 
         // Default allowed extensions for other settings
-        return ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'gif'];
+        return ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'ico', 'png', 'gif'];
     }
 
     /**

@@ -204,7 +204,7 @@ trait HasDocuments
     public function getAllowedDocumentExtensions(): array
     {
         return [
-            'pdf', 'doc', 'docx', 'xls', 'xlsx',
+            'pdf', 'ico', 'doc', 'docx', 'xls', 'xlsx',
             'jpg', 'jpeg', 'png', 'gif', 'bmp',
             'txt', 'csv', 'zip', 'rar'
         ];
