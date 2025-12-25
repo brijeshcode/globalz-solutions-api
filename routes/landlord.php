@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Landlord\TenantManagementController;
+use App\Http\Controllers\Api\Landlord\FeatureController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Route;
  * NO tenant middleware should be applied here
  * These routes use the landlord database connection
  */
+
 
 // Landlord routes (authentication required, NO tenant required)
 Route::middleware('auth:sanctum')->group(function () {
@@ -40,5 +42,30 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Run migrations for tenant
         Route::post('{tenant}/migrations', [TenantManagementController::class, 'runMigrations'])->name('runMigrations');
+
+        // Get tenant features
+        Route::get('{tenant}/features', [FeatureController::class, 'getTenantFeatures'])->name('features.index');
+
+        // Assign/update feature to tenant
+        Route::post('{tenant}/features/{feature}', [FeatureController::class, 'assignFeatureToTenant'])->name('features.assign');
+
+        // Bulk update tenant features
+        Route::post('{tenant}/features', [FeatureController::class, 'bulkUpdateTenantFeatures'])->name('features.bulk-update');
+    });
+
+    // Feature Management
+    Route::prefix('features')->name('features.')->group(function () {
+
+        // List all features
+        Route::get('/', [FeatureController::class, 'index'])->name('index');
+
+        // Create new feature
+        Route::post('/', [FeatureController::class, 'store'])->name('store');
+
+        // Update feature
+        Route::put('{feature}', [FeatureController::class, 'update'])->name('update');
+
+        // Delete feature
+        Route::delete('{feature}', [FeatureController::class, 'destroy'])->name('destroy');
     });
 });

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\Multitenancy\Models\Tenant as BaseTenant;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use App\Models\Landlord\Feature;
+use App\Models\Landlord\TenantFeature;
 
 class Tenant extends BaseTenant
 {
@@ -98,5 +100,52 @@ class Tenant extends BaseTenant
     public function getSetting(string $key, $default = null)
     {
         return data_get($this->settings, $key, $default);
+    }
+
+    /**
+     * Relationships
+     */
+
+    /**
+     * Get all features for this tenant
+     */
+    public function features()
+    {
+        return $this->belongsToMany(Feature::class, 'tenant_features')
+            ->withPivot('is_enabled', 'settings')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get tenant features pivot records
+     */
+    public function tenantFeatures()
+    {
+        return $this->hasMany(TenantFeature::class);
+    }
+
+    /**
+     * Check if tenant has a feature enabled (using new features table)
+     * @param string $featureKey - The feature key (e.g., 'advanced_reporting')
+     */
+    public function hasFeatureEnabled(string $featureKey): bool
+    {
+        return $this->features()
+            ->where('key', $featureKey)
+            ->where('features.is_active', true)
+            ->wherePivot('is_enabled', true)
+            ->exists();
+    }
+
+    /**
+     * Get enabled features list (returns array of feature keys)
+     */
+    public function getEnabledFeatures(): array
+    {
+        return $this->features()
+            ->where('features.is_active', true)
+            ->wherePivot('is_enabled', true)
+            ->pluck('key')
+            ->toArray();
     }
 }
