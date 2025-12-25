@@ -73,6 +73,10 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/documents/{document}/preview-signed', [DocumentController::class, 'previewSigned'])
     ->name('documents.preview-signed');
 
+// Tenant Details - Public endpoint for login page branding
+Route::get('/tenant-details', [CompanyController::class, 'getTenantDetails'])
+    ->name('tenant-details.public');
+
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -445,6 +449,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'get')->name('get');
             Route::post('/getSelected', 'getSelected')->name('getSelected');
             Route::post('/', 'set')->name('set');
+
+            // Tenant Details (branding for login page)
+            Route::post('/tenant-details', 'setTenantDetails')->name('tenant-details.set');
         });
 
         // Warehouses Controller
