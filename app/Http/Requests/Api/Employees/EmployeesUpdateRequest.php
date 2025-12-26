@@ -12,7 +12,7 @@ class EmployeesUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return RoleHelper::canSuperAdmin();
+        return RoleHelper::canAdmin();
     }
 
     /**
