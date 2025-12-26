@@ -90,16 +90,32 @@ class CommissionTargetsUpdateRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             // Validate that rules don't have overlapping amount ranges for the same type
+            // and that all rules of the same type have the same include_type
             if ($this->has('rules') && is_array($this->rules)) {
                 $rulesByType = [];
+                $includeTypeByType = [];
+
                 foreach ($this->rules as $index => $rule) {
                     if (!isset($rule['type']) || !isset($rule['minimum_amount']) || !isset($rule['maximum_amount'])) {
                         continue;
                     }
 
                     $type = $rule['type'];
+                    $includeType = $rule['include_type'] ?? null;
+
                     if (!isset($rulesByType[$type])) {
                         $rulesByType[$type] = [];
+                        $includeTypeByType[$type] = $includeType;
+                    }
+
+                    // Validate that include_type is consistent for the same type
+                    if ($includeType !== null && $includeTypeByType[$type] !== null) {
+                        if ($includeTypeByType[$type] !== $includeType) {
+                            $validator->errors()->add(
+                                "rules.{$index}.include_type",
+                                "All rules with type '{$type}' must have the same include_type. Expected '{$includeTypeByType[$type]}' but got '{$includeType}'."
+                            );
+                        }
                     }
 
                     // Check for overlaps with existing rules of the same type

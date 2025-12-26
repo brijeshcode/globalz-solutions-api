@@ -14,6 +14,10 @@ class CommissionTargetRule extends Model
     public const INCLUDE_TYPE = ['Own', 'All', 'All except own'];
     public const PERCENTAGE_TYPE = ['fixed', 'dynamic'];
 
+    public const INCLUDE_TYPE_OWN = 'Own';
+    public const INCLUDE_TYPE_ALL = 'All';
+    public const INCLUDE_TYPE_ALL_EXCEPT_OWN = 'All except own';
+
     public const PERCENTAGE_TYPE_FIXED = 'fixed';
     public const PERCENTAGE_TYPE_DYNAMIC = 'dynamic';
 
