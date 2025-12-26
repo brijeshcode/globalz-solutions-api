@@ -14,7 +14,7 @@ class AccountTransfersStoreRequest extends FormRequest
     public function authorize(): bool
     {
         // Only super admins can create 
-        return RoleHelper::isSuperAdmin();
+        return RoleHelper::canAdmin();
     }
 
     /**

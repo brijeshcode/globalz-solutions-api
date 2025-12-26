@@ -12,7 +12,7 @@ class AccountTransfersUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return RoleHelper::isSuperAdmin();
+        return RoleHelper::canAdmin();
     }
 
     /**
