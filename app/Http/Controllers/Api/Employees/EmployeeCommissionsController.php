@@ -8,6 +8,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\Sale;
+use App\Models\Employees\CommissionTargetRule;
 use App\Models\Employees\Employee;
 use App\Models\Employees\EmployeeCommissionTarget;
 use Illuminate\Http\JsonResponse;
@@ -467,8 +468,14 @@ class EmployeeCommissionsController extends Controller
         // Cap achievement percent at 100%
         $achievementPercent = min($achievementPercent, 100);
 
-        // Calculate percent commission based on achievement
-        $percentCommission = ($achievementPercent / 100) * $rule->percent;
+        // Calculate percent commission based on achievement and percent_type
+        if ($rule->percent_type === CommissionTargetRule::PERCENTAGE_TYPE_FIXED) {
+            // Fixed: Use the percent as-is
+            $percentCommission = $rule->percent;
+        } else {
+            // Dynamic: Scale percent based on achievement
+            $percentCommission = ($achievementPercent / 100) * $rule->percent;
+        }
 
         return [
             'rule_id' => $rule->id,
@@ -487,15 +494,24 @@ class EmployeeCommissionsController extends Controller
     /**
      * Calculate fuel type commission
      * Formula:
-     * - Case 1: If (payment - returns + sales) / 2 < max_amount
-     *           then: (((payment - returns + sales) / 2) / max_amount) x comm%
-     * - Case 2: If (payment - returns + sales) / 2 >= max_amount
-     *           then: max_amount x comm%
+     * - Fixed percent_type: min(fuelAmount, max_amount) x percent%
+     * - Dynamic percent_type:
+     *   - Case 1: If (payment - returns + sales) / 2 < max_amount
+     *             then: (((payment - returns + sales) / 2) / max_amount) x comm%
+     *   - Case 2: If (payment - returns + sales) / 2 >= max_amount
+     *             then: max_amount x comm%
      */
     private function calculateFuelCommission($rule, float $totalSales, float $totalPayments, float $totalReturns): float
     {
         $fuelAmount = ($totalPayments - $totalReturns + $totalSales) / 2;
 
+        // If percent_type is 'fixed', use simple calculation with max_amount cap
+        if ($rule->percent_type === CommissionTargetRule::PERCENTAGE_TYPE_FIXED) {
+            $cappedAmount = min($fuelAmount, $rule->maximum_amount);
+            return $cappedAmount * ($rule->percent / 100);
+        }
+
+        // Dynamic calculation (existing logic)
         if ($fuelAmount < $rule->maximum_amount) {
             // Case 1
             $dynamicPercent = ($fuelAmount / $rule->maximum_amount) * ($rule->percent);
@@ -509,11 +525,20 @@ class EmployeeCommissionsController extends Controller
     /**
      * Calculate sale type commission
      * Formula:
-     * - Case 1: If sales < min_amount then: 0
-     * - Case 2: If sales >= min_amount then: min_amount x comm%
+     * - Fixed percent_type: min(totalSales, max_amount) x percent%
+     * - Dynamic percent_type:
+     *   - Case 1: If sales < min_amount then: 0
+     *   - Case 2: If sales >= min_amount then: min_amount x comm%
      */
     private function calculateSaleCommission($rule, float $totalSales): float
     {
+        // If percent_type is 'fixed', use simple calculation with max_amount cap
+        if ($rule->percent_type === CommissionTargetRule::PERCENTAGE_TYPE_FIXED) {
+            $cappedAmount = min($totalSales, $rule->maximum_amount);
+            return $cappedAmount * ($rule->percent / 100);
+        }
+
+        // Dynamic calculation (existing logic)
         if ($totalSales < $rule->minimum_amount) {
             // Case 1
             return 0;
@@ -526,11 +551,20 @@ class EmployeeCommissionsController extends Controller
     /**
      * Calculate payment type commission
      * Formula:
-     * - Case 1: If payment < max_amount then: (payment / max_amount) x comm%
-     * - Case 2: If payment >= max_amount then: max_amount x comm%
+     * - Fixed percent_type: min(totalPayments, max_amount) x percent%
+     * - Dynamic percent_type:
+     *   - Case 1: If payment < max_amount then: (payment / max_amount) x comm%
+     *   - Case 2: If payment >= max_amount then: max_amount x comm%
      */
     private function calculatePaymentCommission($rule, float $totalPayments): float
     {
+        // If percent_type is 'fixed', use simple calculation with max_amount cap
+        if ($rule->percent_type === CommissionTargetRule::PERCENTAGE_TYPE_FIXED) {
+            $cappedAmount = min($totalPayments, $rule->maximum_amount);
+            return $cappedAmount * ($rule->percent / 100);
+        }
+
+        // Dynamic calculation (existing logic)
         if ($totalPayments < $rule->maximum_amount) {
             // Case 1
             $dynamicPercent = ($totalPayments / $rule->maximum_amount) * $rule->percent;

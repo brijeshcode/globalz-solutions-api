@@ -11,8 +11,11 @@ class CommissionTargetRule extends Model
     /** @use HasFactory<\Database\Factories\Employees\CommissionTargetRuleFactory> */
     use HasFactory;
     public const TYPES= ['fuel', 'payment', 'sale'];
-    public const PERCENTAGE_TYPE = ['fixed', 'dynamic'];
     public const INCLUDE_TYPE = ['Own', 'All', 'All except own'];
+    public const PERCENTAGE_TYPE = ['fixed', 'dynamic'];
+
+    public const PERCENTAGE_TYPE_FIXED = 'fixed';
+    public const PERCENTAGE_TYPE_DYNAMIC = 'dynamic';
 
     protected $fillable = [
         'commission_target_id',
