@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Employees;
 
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class EmployeesStoreRequest extends FormRequest
@@ -11,7 +12,7 @@ class EmployeesStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::canSuperAdmin();
     }
 
     /**

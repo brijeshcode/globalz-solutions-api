@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Employees;
 
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Employees\EmployeesStoreRequest;
 use App\Http\Requests\Api\Employees\EmployeesUpdateRequest;
@@ -79,6 +80,10 @@ class EmployeesController extends Controller
 
     public function destroy(Employee $employee): JsonResponse
     {
+        if(!RoleHelper::canSuperAdmin()){
+            return ApiResponse::unauthorized('You cannot delete employee.');
+        }
+        
         $employee->delete();
 
         return ApiResponse::delete('Employee deleted successfully');
