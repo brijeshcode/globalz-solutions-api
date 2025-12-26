@@ -38,104 +38,10 @@ class EmployeeCommissionsController extends Controller
         $month = $request->input('month', date('m'));
         $year = $request->input('year', date('Y'));
 
-        // Get commission target for this employee
-        $currentCommissionTarget = EmployeeCommissionTarget::with('commissionTarget.rules')
-            ->byEmployee($employeeId)
-            ->byMonth($month)
-            ->byYear($year)
-            ->first();
+        // Calculate commission data (optimized - uses shared method)
+        $data = $this->calculateEmployeeCommissionData($employeeId, $month, $year);
 
-        // Determine include_type for sale and payment rules
-        // Note: Fuel rules don't need their own data fetching - they use sale and payment data
-        $saleIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
-        $paymentIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
-
-        if ($currentCommissionTarget && $currentCommissionTarget->commissionTarget) {
-            foreach ($currentCommissionTarget->commissionTarget->rules as $rule) {
-                if ($rule->type === 'sale') {
-                    $saleIncludeType = $rule->include_type ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
-                } elseif ($rule->type === 'payment') {
-                    $paymentIncludeType = $rule->include_type ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
-                }
-                // Fuel rules are ignored - they use the sale and payment data
-            }
-        }
-
-        // Fetch business data based on determined include_types
-        $totalSales = 0;
-        $totalReturns = 0;
-        $totalPayments = 0;
-
-        // If both are 'Own', use existing method (no change needed)
-        if ($saleIncludeType === CommissionTargetRule::INCLUDE_TYPE_OWN &&
-            $paymentIncludeType === CommissionTargetRule::INCLUDE_TYPE_OWN) {
-            $businessStats = $this->getBusinessStats($employeeId, $month, $year);
-            $totalSales = $businessStats['total_sales'];
-            $totalReturns = $businessStats['total_returns'];
-            $totalPayments = $businessStats['total_payments'];
-        } else {
-            // Fetch sales and returns based on sale include_type
-            $salesStats = $this->getBusinessStatsByIncludeType($employeeId, $month, $year, $saleIncludeType);
-            $totalSales = $salesStats['total_sales'];
-            $totalReturns = $salesStats['total_returns'];
-
-            // Fetch payments based on payment include_type
-            $paymentsStats = $this->getBusinessStatsByIncludeType($employeeId, $month, $year, $paymentIncludeType);
-            $totalPayments = $paymentsStats['total_payments'];
-
-            // Build business stats for display
-            $employee = Employee::find($employeeId);
-            $businessStats = [
-                'employee_id' => $employee->id,
-                'employee_name' => $employee->name ?? 'N/A',
-                'base_salary' => $employee->base_salary,
-                'month' => (int) $month,
-                'year' => (int) $year,
-                'VAT' => self::TAX_RATE,
-                'total_sales' => $totalSales,
-                'total_returns' => $totalReturns,
-                'total_payments' => $totalPayments,
-                'net_sales' => (float) ($totalSales - $totalReturns),
-            ];
-        }
-
-        // Get daily business data based on include_types
-        $dailyBusinessData = $this->getDailyBusinessData($employeeId, $month, $year, $saleIncludeType, $paymentIncludeType);
-
-        // Calculate commissions using the fetched data
-        $commissions = [];
-        $totalCommission = 0;
-
-        if ($currentCommissionTarget && $currentCommissionTarget->commissionTarget) {
-            $rules = $currentCommissionTarget->commissionTarget->rules;
-
-            foreach ($rules as $rule) {
-                $commissionData = $this->calculateCommissionForRule(
-                    $rule,
-                    $totalSales,
-                    $totalPayments,
-                    $totalReturns
-                );
-
-                $commissions[] = $commissionData;
-                $totalCommission += $commissionData['commission_amount'];
-            }
-        }
-
-        return ApiResponse::show(
-            'Monthly commission calculated successfully',
-            [
-                'business_summary' => $businessStats,
-                'daily_business' => $dailyBusinessData,
-                'commission_target' => $currentCommissionTarget ? [
-                    'id' => $currentCommissionTarget->commissionTarget->id,
-                    'code' => $currentCommissionTarget->commissionTarget->prefix . $currentCommissionTarget->commissionTarget->code,
-                    'name' => $currentCommissionTarget->commissionTarget->name,
-                ] : null,
-                'commissions' => $commissions,
-                'total_commission' => $totalCommission,
-            ]
-        );
+        return ApiResponse::show('Monthly commission calculated successfully', $data);
     }
 
     /**
@@ -164,109 +70,16 @@ class EmployeeCommissionsController extends Controller
         $month = $request->input('month', date('m'));
         $year = $request->input('year', date('Y'));
 
-        // Get commission target for this employee
-        $currentCommissionTarget = EmployeeCommissionTarget::with('commissionTarget.rules')
-            ->byEmployee($employee->id)
-            ->byMonth($month)
-            ->byYear($year)
-            ->first();
+        // Calculate commission data (optimized - uses shared method)
+        $data = $this->calculateEmployeeCommissionData($employee->id, $month, $year);
 
-        // Determine include_type for sale and payment rules
-        // Note: Fuel rules don't need their own data fetching - they use sale and payment data
-        $saleIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
-        $paymentIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
-
-        if ($currentCommissionTarget && $currentCommissionTarget->commissionTarget) {
-            foreach ($currentCommissionTarget->commissionTarget->rules as $rule) {
-                if ($rule->type === 'sale') {
-                    $saleIncludeType = $rule->include_type ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
-                } elseif ($rule->type === 'payment') {
-                    $paymentIncludeType = $rule->include_type ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
-                }
-                // Fuel rules are ignored - they use the sale and payment data
-            }
-        }
-
-        // Fetch business data based on determined include_types
-        $totalSales = 0;
-        $totalReturns = 0;
-        $totalPayments = 0;
-
-        // If both are 'Own', use existing method (no change needed)
-        if ($saleIncludeType === CommissionTargetRule::INCLUDE_TYPE_OWN &&
-            $paymentIncludeType === CommissionTargetRule::INCLUDE_TYPE_OWN) {
-            $businessStats = $this->getBusinessStats($employee->id, $month, $year);
-            $totalSales = $businessStats['total_sales'];
-            $totalReturns = $businessStats['total_returns'];
-            $totalPayments = $businessStats['total_payments'];
-        } else {
-            // Fetch sales and returns based on sale include_type
-            $salesStats = $this->getBusinessStatsByIncludeType($employee->id, $month, $year, $saleIncludeType);
-            $totalSales = $salesStats['total_sales'];
-            $totalReturns = $salesStats['total_returns'];
-
-            // Fetch payments based on payment include_type
-            $paymentsStats = $this->getBusinessStatsByIncludeType($employee->id, $month, $year, $paymentIncludeType);
-            $totalPayments = $paymentsStats['total_payments'];
-
-            // Build business stats for display
-            $businessStats = [
-                'employee_id' => $employee->id,
-                'employee_name' => $employee->name ?? 'N/A',
-                'base_salary' => $employee->base_salary,
-                'month' => (int) $month,
-                'year' => (int) $year,
-                'VAT' => self::TAX_RATE,
-                'total_sales' => $totalSales,
-                'total_returns' => $totalReturns,
-                'total_payments' => $totalPayments,
-                'net_sales' => (float) ($totalSales - $totalReturns),
-            ];
-        }
-
-        // Get daily business data based on include_types
-        $dailyBusinessData = $this->getDailyBusinessData($employee->id, $month, $year, $saleIncludeType, $paymentIncludeType);
-
-        // Calculate commissions using the fetched data
-        $commissions = [];
-        $totalCommission = 0;
-
-        if ($currentCommissionTarget && $currentCommissionTarget->commissionTarget) {
-            $rules = $currentCommissionTarget->commissionTarget->rules;
-
-            foreach ($rules as $rule) {
-                $commissionData = $this->calculateCommissionForRule(
-                    $rule,
-                    $totalSales,
-                    $totalPayments,
-                    $totalReturns
-                );
-
-                $commissions[] = $commissionData;
-                $totalCommission += $commissionData['commission_amount'];
-            }
-        }
-
-        return ApiResponse::show(
-            'Monthly commission calculated successfully',
-            [
-                'business_summary' => $businessStats,
-                'daily_business' => $dailyBusinessData,
-                'commission_target' => $currentCommissionTarget ? [
-                    'id' => $currentCommissionTarget->commissionTarget->id,
-                    'code' => $currentCommissionTarget->commissionTarget->prefix . $currentCommissionTarget->commissionTarget->code,
-                    'name' => $currentCommissionTarget->commissionTarget->name,
-                ] : null,
-                'commissions' => $commissions,
-                'total_commission' => $totalCommission,
-            ]
-        );
+        return ApiResponse::show('Monthly commission calculated successfully', $data);
     }
 
     /**
      * Get daily business data for an employee
      */
-    private function getDailyBusinessData(int $employeeId, int $month, int $year, string $saleIncludeType = null, string $paymentIncludeType = null): array
+    private function getDailyBusinessData(int $employeeId, int $month, int $year, ?string $saleIncludeType = null, ?string $paymentIncludeType = null): array
     {
         // Default to 'Own' if not specified
         $saleIncludeType = $saleIncludeType ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
@@ -710,6 +523,243 @@ class EmployeeCommissionsController extends Controller
             'total_sales' => (float) $totalSales,
             'total_returns' => (float) $totalReturns,
             'total_payments' => (float) $totalPayments,
+        ];
+    }
+
+    /**
+     * Get sales and returns data based on include_type (optimized)
+     */
+    private function getSalesAndReturnsStats(int $employeeId, int $month, int $year, string $includeType): array
+    {
+        $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
+        $lastDay = date('Y-m-t', strtotime($firstDay));
+
+        // Get sales based on include_type
+        $salesQuery = Sale::query()
+            ->approved()
+            ->byDateRange($firstDay, $lastDay);
+
+        if ($includeType === CommissionTargetRule::INCLUDE_TYPE_OWN) {
+            $salesQuery->bySalesperson($employeeId);
+        } elseif ($includeType === CommissionTargetRule::INCLUDE_TYPE_ALL_EXCEPT_OWN) {
+            $salesQuery->whereHas('salesperson', function ($q) use ($employeeId) {
+                $q->where('id', '!=', $employeeId);
+            });
+        }
+
+        $salesByPrefix = $salesQuery
+            ->selectRaw('prefix, COUNT(*) as count, SUM(total_usd) as total')
+            ->groupBy('prefix')
+            ->get()
+            ->keyBy('prefix');
+
+        // Get returns based on include_type (returns follow sales)
+        $returnsQuery = CustomerReturn::query()
+            ->approved()
+            ->received()
+            ->whereBetween('date', [$firstDay, $lastDay]);
+
+        if ($includeType === CommissionTargetRule::INCLUDE_TYPE_OWN) {
+            $returnsQuery->whereHas('salesperson', function ($q) use ($employeeId) {
+                $q->where('id', $employeeId);
+            });
+        } elseif ($includeType === CommissionTargetRule::INCLUDE_TYPE_ALL_EXCEPT_OWN) {
+            $returnsQuery->whereHas('salesperson', function ($q) use ($employeeId) {
+                $q->where('id', '!=', $employeeId);
+            });
+        }
+
+        $returnsByPrefix = $returnsQuery
+            ->selectRaw('prefix, COUNT(*) as count, SUM(total_usd) as total')
+            ->groupBy('prefix')
+            ->get()
+            ->keyBy('prefix');
+
+        // Process sales data
+        $salesData = [];
+        foreach ([Sale::TAXPREFIX, Sale::TAXFREEPREFIX] as $prefix) {
+            $salesData[$prefix] = ['count' => 0, 'total' => 0, 'after_tax_total' => 0];
+        }
+        foreach ($salesByPrefix as $prefix => $data) {
+            $total = (float) $data->total;
+            $afterTaxTotal = $prefix === Sale::TAXPREFIX ? $total / self::TAX_RATE : $total;
+            $salesData[$prefix] = [
+                'count' => (int) $data->count,
+                'total' => $total,
+                'after_tax_total' => $afterTaxTotal,
+            ];
+        }
+
+        // Process returns data
+        $returnsData = [];
+        foreach ([CustomerReturn::TAXPREFIX, CustomerReturn::TAXFREEPREFIX] as $prefix) {
+            $returnsData[$prefix] = ['count' => 0, 'total' => 0, 'after_tax_total' => 0];
+        }
+        foreach ($returnsByPrefix as $prefix => $data) {
+            $total = (float) $data->total;
+            $afterTaxTotal = $prefix === CustomerReturn::TAXPREFIX ? $total / self::TAX_RATE : $total;
+            $returnsData[$prefix] = [
+                'count' => (int) $data->count,
+                'total' => $total,
+                'after_tax_total' => $afterTaxTotal,
+            ];
+        }
+
+        return [
+            'total_sales' => (float) array_sum(array_column($salesData, 'after_tax_total')),
+            'total_returns' => (float) array_sum(array_column($returnsData, 'after_tax_total')),
+        ];
+    }
+
+    /**
+     * Get payments data based on include_type (optimized)
+     */
+    private function getPaymentsStats(int $employeeId, int $month, int $year, string $includeType): array
+    {
+        $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
+        $lastDay = date('Y-m-t', strtotime($firstDay));
+
+        // Get payments based on include_type
+        $paymentsQuery = CustomerPayment::query()
+            ->approved()
+            ->whereBetween('date', [$firstDay, $lastDay]);
+
+        if ($includeType === CommissionTargetRule::INCLUDE_TYPE_OWN) {
+            $paymentsQuery->whereHas('customer', function ($q) use ($employeeId) {
+                $q->where('salesperson_id', $employeeId);
+            });
+        } elseif ($includeType === CommissionTargetRule::INCLUDE_TYPE_ALL_EXCEPT_OWN) {
+            $paymentsQuery->whereHas('customer', function ($q) use ($employeeId) {
+                $q->where('salesperson_id', '!=', $employeeId);
+            });
+        }
+
+        $paymentsByPrefix = $paymentsQuery
+            ->selectRaw('prefix, COUNT(*) as count, SUM(amount_usd) as total')
+            ->groupBy('prefix')
+            ->get()
+            ->keyBy('prefix');
+
+        // Process payments data
+        $paymentsData = [];
+        foreach ([CustomerPayment::TAXPREFIX, CustomerPayment::TAXFREEPREFIX] as $prefix) {
+            $paymentsData[$prefix] = ['count' => 0, 'total' => 0, 'after_tax_total' => 0];
+        }
+        foreach ($paymentsByPrefix as $prefix => $data) {
+            $total = (float) $data->total;
+            $afterTaxTotal = $prefix === CustomerPayment::TAXPREFIX ? $total / self::TAX_RATE : $total;
+            $paymentsData[$prefix] = [
+                'count' => (int) $data->count,
+                'total' => $total,
+                'after_tax_total' => $afterTaxTotal,
+            ];
+        }
+
+        return [
+            'total_payments' => (float) array_sum(array_column($paymentsData, 'after_tax_total')),
+        ];
+    }
+
+    /**
+     * Shared method to calculate commission data for an employee (optimized)
+     * This method is used by both getMonthlyCommission and getEmployeeMonthlyCommission
+     */
+    private function calculateEmployeeCommissionData(int $employeeId, int $month, int $year): array
+    {
+        // Get commission target for this employee
+        $currentCommissionTarget = EmployeeCommissionTarget::with('commissionTarget.rules')
+            ->byEmployee($employeeId)
+            ->byMonth($month)
+            ->byYear($year)
+            ->first();
+
+        // Determine include_type for sale and payment rules
+        // Note: Fuel rules don't need their own data fetching - they use sale and payment data
+        $saleIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
+        $paymentIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
+
+        if ($currentCommissionTarget && $currentCommissionTarget->commissionTarget) {
+            foreach ($currentCommissionTarget->commissionTarget->rules as $rule) {
+                if ($rule->type === 'sale') {
+                    $saleIncludeType = $rule->include_type ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
+                } elseif ($rule->type === 'payment') {
+                    $paymentIncludeType = $rule->include_type ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
+                }
+                // Fuel rules are ignored - they use the sale and payment data
+            }
+        }
+
+        // Fetch business data based on determined include_types (optimized)
+        $totalSales = 0;
+        $totalReturns = 0;
+        $totalPayments = 0;
+
+        // If both are 'Own', use existing method (no change needed)
+        if ($saleIncludeType === CommissionTargetRule::INCLUDE_TYPE_OWN &&
+            $paymentIncludeType === CommissionTargetRule::INCLUDE_TYPE_OWN) {
+            $businessStats = $this->getBusinessStats($employeeId, $month, $year);
+            $totalSales = $businessStats['total_sales'];
+            $totalReturns = $businessStats['total_returns'];
+            $totalPayments = $businessStats['total_payments'];
+        } else {
+            // Fetch sales and returns based on sale include_type (optimized - only one query)
+            $salesStats = $this->getSalesAndReturnsStats($employeeId, $month, $year, $saleIncludeType);
+            $totalSales = $salesStats['total_sales'];
+            $totalReturns = $salesStats['total_returns'];
+
+            // Fetch payments based on payment include_type (optimized - only one query)
+            $paymentsStats = $this->getPaymentsStats($employeeId, $month, $year, $paymentIncludeType);
+            $totalPayments = $paymentsStats['total_payments'];
+
+            // Build business stats for display
+            $employee = Employee::find($employeeId);
+            $businessStats = [
+                'employee_id' => $employee->id,
+                'employee_name' => $employee->name ?? 'N/A',
+                'base_salary' => $employee->base_salary,
+                'month' => (int) $month,
+                'year' => (int) $year,
+                'VAT' => self::TAX_RATE,
+                'total_sales' => $totalSales,
+                'total_returns' => $totalReturns,
+                'total_payments' => $totalPayments,
+                'net_sales' => (float) ($totalSales - $totalReturns),
+            ];
+        }
+
+        // Get daily business data based on include_types
+        $dailyBusinessData = $this->getDailyBusinessData($employeeId, $month, $year, $saleIncludeType, $paymentIncludeType);
+
+        // Calculate commissions using the fetched data
+        $commissions = [];
+        $totalCommission = 0;
+
+        if ($currentCommissionTarget && $currentCommissionTarget->commissionTarget) {
+            $rules = $currentCommissionTarget->commissionTarget->rules;
+
+            foreach ($rules as $rule) {
+                $commissionData = $this->calculateCommissionForRule(
+                    $rule,
+                    $totalSales,
+                    $totalPayments,
+                    $totalReturns
+                );
+
+                $commissions[] = $commissionData;
+                $totalCommission += $commissionData['commission_amount'];
+            }
+        }
+
+        return [
+            'business_summary' => $businessStats,
+            'daily_business' => $dailyBusinessData,
+            'commission_target' => $currentCommissionTarget ? [
+                'id' => $currentCommissionTarget->commissionTarget->id,
+                'code' => $currentCommissionTarget->commissionTarget->prefix . $currentCommissionTarget->commissionTarget->code,
+                'name' => $currentCommissionTarget->commissionTarget->name,
+            ] : null,
+            'commissions' => $commissions,
+            'total_commission' => $totalCommission,
         ];
     }
 
