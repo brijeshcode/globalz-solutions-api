@@ -36,17 +36,17 @@ class PurchaseItem extends Model
     ];
 
     protected $casts = [
-        'price' => 'decimal:4',
-        'quantity' => 'decimal:4',
+        'price' => 'decimal:6',
+        'quantity' => 'decimal:6',
         'discount_percent' => 'decimal:2',
-        'discount_amount' => 'decimal:4',
-        'total_price' => 'decimal:4',
-        'total_price_usd' => 'decimal:4',
-        'total_shipping_usd' => 'decimal:4',
-        'total_customs_usd' => 'decimal:4',
-        'total_other_usd' => 'decimal:4',
-        'final_total_cost_usd' => 'decimal:4',
-        'cost_per_item_usd' => 'decimal:4',
+        'discount_amount' => 'decimal:6',
+        'total_price' => 'decimal:6',
+        'total_price_usd' => 'decimal:6',
+        'total_shipping_usd' => 'decimal:6',
+        'total_customs_usd' => 'decimal:6',
+        'total_other_usd' => 'decimal:6',
+        'final_total_cost_usd' => 'decimal:6',
+        'cost_per_item_usd' => 'decimal:6',
     ];
 
     protected $searchable = [
