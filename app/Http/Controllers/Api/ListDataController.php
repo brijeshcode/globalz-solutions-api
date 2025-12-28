@@ -130,7 +130,12 @@ class ListDataController extends Controller
     //customers
     private function customers()
     {
-        $query = Customer::with('priceListINV:id,code,description,is_default', 'priceListINX:id,code,description,is_default')->active()->orderby('name');
+        // Load price lists but NOT their items (would be 300k+ records!)
+        // Price list items should be loaded separately when viewing a specific customer
+        $query = Customer::with([
+            'priceListINV:id,code,description,is_default',
+            'priceListINX:id,code,description,is_default',
+        ])->active()->orderby('name');
 
         if (RoleHelper::isSalesman()) {
             $employee = Employee::where('user_id', RoleHelper::authUser()->id )->first();
@@ -145,29 +150,30 @@ class ListDataController extends Controller
         return $query->get(['id', 'parent_id',
         'code',
         'name',
-        'customer_type_id',
-        'customer_group_id',
-        'customer_province_id',
-        'customer_zone_id',
+        // 'customer_type_id',
+        // 'customer_group_id',
+        // 'customer_province_id',
+        // 'customer_zone_id',
         'price_list_id_INV',
         'price_list_id_INX',
         // 'opening_balance',
         'current_balance',
-        'address',
+        // 'address',
         'city',
-        'telephone',
-        'mobile',
-        'url',
-        'email',
-        'contact_name',
-        'gps_coordinates',
-        'mof_tax_number',
+        // 'telephone',
+        // 'mobile',
+        // 'url',
+        // 'email',
+        // 'contact_name',
+        // 'gps_coordinates',
+        // 'mof_tax_number',
         'salesperson_id',
         'customer_payment_term_id',
         'discount_percentage',
         'credit_limit',
-        'notes',
-        'is_active' ]);
+        // 'notes',
+        // 'is_active'
+     ]);
     }
 
     private function customerPaymentTerms()
@@ -234,12 +240,12 @@ class ListDataController extends Controller
 
     private function itemPriceLists()
     {
-        return PriceList::orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default']);
+        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default']);
     }
 
     private function itemDefaultPriceList()
     {
-        return PriceList::with('priceListItems')->select('id', 'code', 'description', 'item_count', 'is_default')->default()->first();
+        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->select('id', 'code', 'description', 'item_count', 'is_default')->default()->first();
     }
 
     public function itemWithParameter(array $files = [] , array $relations = ['tax_code']): JsonResponse

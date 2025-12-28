@@ -11,6 +11,11 @@ use App\Models\Landlord\TenantFeature;
 
 class Tenant extends BaseTenant
 {
+    /**
+     * The connection name for the model.
+     * Tenants table lives in the landlord database
+     */
+    protected $connection = 'mysql';
 
     protected $fillable = [
         'name',

@@ -32,66 +32,8 @@ class CustomerReturnsController extends Controller
         $this->customerReturnService = $customerReturnService;
     }
 
-    /**
-     * Prepare return item data from sale item
-     */
-    private function prepareReturnItemData(array $itemInput, float $currencyRate): array
-    {
-        $saleItem = SaleItems::with(['sale', 'item'])->findOrFail($itemInput['sale_item_id']);
-        $returnQuantity = $itemInput['quantity'];
-
-        // Copy all data from sale item and recalculate based on return quantity
-        return [
-            'item_code' => $saleItem->item_code,
-            'item_id' => $saleItem->item_id,
-            'sale_id' => $saleItem->sale_id,
-            'sale_item_id' => $saleItem->id,
-            'quantity' => $returnQuantity,
-
-            // Prices (per unit from sale)
-            'price' => $saleItem->price,
-            'price_usd' => $saleItem->price_usd,
-
-            // Tax details
-            'tax_percent' => $saleItem->tax_percent,
-            'tax_label' => $saleItem->tax_label ?? 'TVA',
-            'tax_amount' => $saleItem->tax_amount,
-            'tax_amount_usd' => $saleItem->tax_amount_usd,
-
-            // TTC price (per unit)
-            'ttc_price' => $saleItem->ttc_price,
-            'ttc_price_usd' => $saleItem->ttc_price_usd,
-
-            // Discount details
-            'discount_percent' => $saleItem->discount_percent,
-            'unit_discount_amount' => $saleItem->unit_discount_amount,
-            'unit_discount_amount_usd' => $saleItem->unit_discount_amount_usd,
-
-            // Calculate total discount amount for return quantity
-            'discount_amount' => $saleItem->unit_discount_amount * $returnQuantity,
-            'discount_amount_usd' => $saleItem->unit_discount_amount_usd * $returnQuantity,
-
-            // Calculate total prices for return quantity
-            'total_price' => $saleItem->price * $returnQuantity - ($saleItem->unit_discount_amount * $returnQuantity),
-            'total_price_usd' => $saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity),
-
-            // Calculate return profit (negative because it's a return)
-            'total_profit' => ($saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity)) - ($saleItem->cost_price * $returnQuantity),
-
-            // Volume and weight
-            'total_volume_cbm' => ($saleItem->item->volume_cbm ?? 0) * $returnQuantity,
-            'total_weight_kg' => ($saleItem->item->weight_kg ?? 0) * $returnQuantity,
-
-            // Note
-            'note' => $itemInput['note'] ?? null,
-        ];
-    }
-
     public function index(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
         $query = CustomerReturn::query()
             ->with([
                 'customer:id,name,code,address,city,mobile,mof_tax_number',
@@ -183,12 +125,7 @@ class CustomerReturnsController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        if(!$user->isAdmin()){
-            return ApiResponse::customError(
-                'Only admin users can create direct approved returns',
-                403
-            );
-        }
+         
 
         $data = $request->validated();
 
@@ -210,7 +147,7 @@ class CustomerReturnsController extends Controller
 
             // Prepare and create return items from sale items
             foreach ($itemsInput as $itemInput) {
-                $itemData = $this->prepareReturnItemData($itemInput, $data['currency_rate']);
+                $itemData = $this->customerReturnService->prepareReturnItemData($itemInput, $data['prefix'], $data['currency_rate']);
                 $customerReturn->items()->create($itemData);
             }
 
@@ -231,7 +168,7 @@ class CustomerReturnsController extends Controller
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'approvedBy:id,name',
-            'items.item:id,short_name,code',
+            'items.item:id,short_name,description,code',
             'items.saleItem',
             'createdBy:id,name',
             'updatedBy:id,name'
@@ -271,6 +208,8 @@ class CustomerReturnsController extends Controller
             'items.item:id,short_name,code,description',
             'items.item.itemUnit:id,name,symbol',
             'items.item.taxCode:id,name,code,description,tax_percent',
+            'items.sale:id,code,date,prefix',
+            'items.saleItem:id,quantity',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -285,10 +224,6 @@ class CustomerReturnsController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-
-        if (!$user->isAdmin()) {
-            return ApiResponse::customError('Only admins can update customer returns', 403);
-        }
 
         if ($customerReturn->isReceived()) {
             return ApiResponse::customError('Cannot update returns that have been received', 422);
@@ -313,7 +248,7 @@ class CustomerReturnsController extends Controller
 
             // Update or create items
             foreach ($itemsInput as $itemInput) {
-                $itemData = $this->prepareReturnItemData($itemInput, $currencyRate);
+                $itemData = $this->customerReturnService->prepareReturnItemData($itemInput, $customerReturn->prefix, $currencyRate);
 
                 if (isset($itemInput['id']) && $itemInput['id']) {
                     // Update existing item
@@ -340,7 +275,7 @@ class CustomerReturnsController extends Controller
             'salesperson:id,name',
             'approvedBy:id,name',
             'returnReceivedBy:id,name',
-            'items.item:id,short_name,description,code',
+            'items.item:id,short_name,code,description',
             'items.saleItem',
             'createdBy:id,name',
             'updatedBy:id,name'

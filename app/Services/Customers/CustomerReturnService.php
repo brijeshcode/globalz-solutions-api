@@ -5,6 +5,7 @@ namespace App\Services\Customers;
 use App\Helpers\CurrencyHelper;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\CustomerReturnItem;
+use App\Models\Customers\SaleItems;
 use App\Models\Items\Item;
 use App\Services\Inventory\InventoryService;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,77 @@ use Illuminate\Support\Facades\Log;
 
 class CustomerReturnService
 {
+    /**
+     * Prepare return item data from sale item
+     */
+    public function prepareReturnItemData(array $itemInput, string $prefix, float $currencyRate): array
+    {
+        $saleItem =  SaleItems::with(['sale', 'item'])->findOrFail($itemInput['sale_item_id']);
+        $returnQuantity = $itemInput['quantity'];
+
+
+        $discountFactor = 1 - ($saleItem->discount_percent / 100);
+
+        $price = $prefix === CustomerReturn::TAXFREEPREFIX
+            ? $saleItem->price * $discountFactor
+            : $saleItem->ttc_price;
+
+        $priceUsd = $prefix === CustomerReturn::TAXFREEPREFIX
+            ? $saleItem->price_usd * $discountFactor
+            : $saleItem->ttc_price_usd;
+
+        // Copy all data from sale item and recalculate based on return quantity
+        return [
+            'item_code' => $saleItem->item_code,
+            'item_id' => $saleItem->item_id,
+            'sale_id' => $saleItem->sale_id,
+            'sale_item_id' => $saleItem->id,
+            'quantity' => $returnQuantity,
+
+            // Prices (per unit from sale)
+            'price' => $saleItem->price,
+            'price_usd' => $saleItem->price_usd,
+
+            // Tax details
+            'tax_percent' => $saleItem->tax_percent,
+            'tax_label' => $saleItem->tax_label ?? 'TVA',
+            'tax_amount' => $saleItem->tax_amount,
+            'tax_amount_usd' => $saleItem->tax_amount_usd,
+
+            // TTC price (per unit)
+            'ttc_price' => $saleItem->ttc_price,
+            'ttc_price_usd' => $saleItem->ttc_price_usd,
+
+            // Discount details
+            'discount_percent' => $saleItem->discount_percent,
+            'unit_discount_amount' => $saleItem->unit_discount_amount,
+            'unit_discount_amount_usd' => $saleItem->unit_discount_amount_usd,
+
+            // Calculate total discount amount for return quantity
+            'discount_amount' => $saleItem->unit_discount_amount * $returnQuantity,
+            'discount_amount_usd' => $saleItem->unit_discount_amount_usd * $returnQuantity,
+
+            // Calculate total prices for return quantity
+            // 'total_price' => $saleItem->price * $returnQuantity - ($saleItem->unit_discount_amount * $returnQuantity),
+            // 'total_price_usd' => $saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity),
+
+            'total_price' => $price * $returnQuantity ,
+            'total_price_usd' => $priceUsd * $returnQuantity,
+
+            // Calculate return profit (negative because it's a return)
+            // total_price_usd - (cost_price * quantity) - we use the cost from sale item
+            // 'total_profit' => ($saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity)) - ($saleItem->cost_price * $returnQuantity),
+            'total_profit' => $saleItem->unit_profit * $returnQuantity,
+
+            // Volume and weight
+            'total_volume_cbm' => ($saleItem->item->volume_cbm ?? 0) * $returnQuantity,
+            'total_weight_kg' => ($saleItem->item->weight_kg ?? 0) * $returnQuantity,
+
+            // Note
+            'note' => $itemInput['note'] ?? null,
+        ];
+    }
+
     /**
      * Create a new customer return with items
      */

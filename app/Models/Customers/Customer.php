@@ -143,12 +143,12 @@ class Customer extends Model
 
     public function priceListINV(): BelongsTo
     {
-        return $this->belongsTo(PriceList::class, 'price_list_id_INV')->with('priceListItems:id,item_code,item_id,price_list_id,sell_price');
+        return $this->belongsTo(PriceList::class, 'price_list_id_INV');
     }
 
     public function priceListINX(): BelongsTo
     {
-        return $this->belongsTo(PriceList::class, 'price_list_id_INX')->with('priceListItems:id,item_code,item_id,price_list_id,sell_price');
+        return $this->belongsTo(PriceList::class, 'price_list_id_INX');
     }
 
     public function monthlyBalances(): HasMany

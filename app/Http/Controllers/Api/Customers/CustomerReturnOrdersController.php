@@ -11,6 +11,7 @@ use App\Http\Resources\Api\Customers\CustomerReturnOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\SaleItems;
+use App\Services\Customers\CustomerReturnService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,75 +24,11 @@ class CustomerReturnOrdersController extends Controller
 {
     use HasPagination;
 
-    /**
-     * Prepare return item data from sale item
-     */
-    private function prepareReturnItemData(array $itemInput, string $prefix, float $currencyRate): array
+    protected $customerReturnService;
+
+    public function __construct(CustomerReturnService $customerReturnService)
     {
-        $saleItem =  SaleItems::with(['sale', 'item'])->findOrFail($itemInput['sale_item_id']);
-        $returnQuantity = $itemInput['quantity'];
-
-
-        $discountFactor = 1 - ($saleItem->discount_percent / 100);
-
-        $price = $prefix === CustomerReturn::TAXFREEPREFIX
-            ? $saleItem->price * $discountFactor
-            : $saleItem->ttc_price;
-
-        $priceUsd = $prefix === CustomerReturn::TAXFREEPREFIX
-            ? $saleItem->price_usd * $discountFactor
-            : $saleItem->ttc_price_usd;
-
-        // Copy all data from sale item and recalculate based on return quantity
-        return [
-            'item_code' => $saleItem->item_code,
-            'item_id' => $saleItem->item_id,
-            'sale_id' => $saleItem->sale_id,
-            'sale_item_id' => $saleItem->id,
-            'quantity' => $returnQuantity,
-
-            // Prices (per unit from sale)
-            'price' => $saleItem->price,
-            'price_usd' => $saleItem->price_usd,
-
-            // Tax details
-            'tax_percent' => $saleItem->tax_percent,
-            'tax_label' => $saleItem->tax_label ?? 'TVA',
-            'tax_amount' => $saleItem->tax_amount,
-            'tax_amount_usd' => $saleItem->tax_amount_usd,
-
-            // TTC price (per unit)
-            'ttc_price' => $saleItem->ttc_price,
-            'ttc_price_usd' => $saleItem->ttc_price_usd,
-
-            // Discount details
-            'discount_percent' => $saleItem->discount_percent,
-            'unit_discount_amount' => $saleItem->unit_discount_amount,
-            'unit_discount_amount_usd' => $saleItem->unit_discount_amount_usd,
-
-            // Calculate total discount amount for return quantity
-            'discount_amount' => $saleItem->unit_discount_amount * $returnQuantity,
-            'discount_amount_usd' => $saleItem->unit_discount_amount_usd * $returnQuantity,
-
-            // Calculate total prices for return quantity
-            // 'total_price' => $saleItem->price * $returnQuantity - ($saleItem->unit_discount_amount * $returnQuantity),
-            // 'total_price_usd' => $saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity),
-
-            'total_price' => $price * $returnQuantity ,
-            'total_price_usd' => $priceUsd * $returnQuantity,
-
-            // Calculate return profit (negative because it's a return)
-            // total_price_usd - (cost_price * quantity) - we use the cost from sale item
-            // 'total_profit' => ($saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity)) - ($saleItem->cost_price * $returnQuantity),
-            'total_profit' => $saleItem->unit_profit * $returnQuantity,
-
-            // Volume and weight
-            'total_volume_cbm' => ($saleItem->item->volume_cbm ?? 0) * $returnQuantity,
-            'total_weight_kg' => ($saleItem->item->weight_kg ?? 0) * $returnQuantity,
-
-            // Note
-            'note' => $itemInput['note'] ?? null,
-        ];
+        $this->customerReturnService = $customerReturnService;
     }
 
     public function index(Request $request): JsonResponse
@@ -99,9 +36,9 @@ class CustomerReturnOrdersController extends Controller
 
         $query = CustomerReturn::query()
             ->with([
-                'customer:id,name,code',
+                'customer:id,name,code,address,city,mobile,mof_tax_number',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'warehouse:id,name',
+                'warehouse:id,name,address_line_1',
                 'salesperson:id,name',
                 'approvedBy:id,name',
                 'createdBy:id,name',
@@ -185,7 +122,7 @@ class CustomerReturnOrdersController extends Controller
 
             // Prepare and create return items from sale items
             foreach ($itemsInput as $itemInput) {
-                $itemData = $this->prepareReturnItemData($itemInput, $data['prefix'],  $data['currency_rate']);
+                $itemData = $this->customerReturnService->prepareReturnItemData($itemInput, $data['prefix'],  $data['currency_rate']);
                 $return->items()->create($itemData);
             }
 
@@ -198,9 +135,9 @@ class CustomerReturnOrdersController extends Controller
         });
 
         $return->load([
-            'customer:id,name,code',
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'warehouse:id,name',
+            'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'items.item:id,short_name,description,code',
             'items.saleItem',
@@ -227,13 +164,14 @@ class CustomerReturnOrdersController extends Controller
         }
 
         $customerReturn->load([
-            'customer:id,name,code,address,city,mobile',
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
-            'approvedBy',
-            'items.item:id,short_name,code,item_unit_id,description',
-            'items.item.itemUnit',
+            'approvedBy:id,name',
+            'items.item:id,short_name,code,description',
+            'items.item.itemUnit:id,name,symbol',
+            'items.item.taxCode:id,name,code,description,tax_percent',
             'items.sale:id,code,date,prefix',
             'items.saleItem:id,quantity',
             'createdBy:id,name',
@@ -284,7 +222,7 @@ class CustomerReturnOrdersController extends Controller
 
             // Update or create items
             foreach ($itemsInput as $itemInput) {
-                $itemData = $this->prepareReturnItemData($itemInput, $customerReturn->prefix, $currencyRate);
+                $itemData = $this->customerReturnService->prepareReturnItemData($itemInput, $customerReturn->prefix, $currencyRate);
 
                 if (isset($itemInput['id']) && $itemInput['id']) {
                     // Update existing item
@@ -305,11 +243,12 @@ class CustomerReturnOrdersController extends Controller
         });
 
         $customerReturn->load([
-            'customer:id,name,code',
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'warehouse:id,name',
+            'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'items.item:id,short_name,description,code',
+            'items.saleItem',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -372,9 +311,9 @@ class CustomerReturnOrdersController extends Controller
         ]);
         // we do not update customer balance on approve, in case of return we update balance when it is received
         $customerReturn->load([
-            'customer:id,name,code',
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'warehouse:id,name',
+            'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'approvedBy:id,name',
             'createdBy:id,name',
@@ -395,9 +334,9 @@ class CustomerReturnOrdersController extends Controller
 
         $query = CustomerReturn::onlyTrashed()
             ->with([
-                'customer:id,name,code',
+                'customer:id,name,code,address,city,mobile,mof_tax_number',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'warehouse:id,name',
+                'warehouse:id,name,address_line_1',
                 'salesperson:id,name',
                 'approvedBy:id,name',
                 'createdBy:id,name',
@@ -443,9 +382,9 @@ class CustomerReturnOrdersController extends Controller
         $return->restore();
 
         $return->load([
-            'customer:id,name,code',
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            'warehouse:id,name',
+            'warehouse:id,name,address_line_1',
             'salesperson:id,name',
             'approvedBy:id,name',
             'createdBy:id,name',

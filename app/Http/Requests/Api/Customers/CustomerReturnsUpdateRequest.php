@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Customers;
 
+use App\Helpers\RoleHelper;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\SaleItems;
@@ -13,9 +14,7 @@ class CustomerReturnsUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        return $user->isAdmin();
+        return RoleHelper::canAdmin();
     }
 
     public function rules(): array

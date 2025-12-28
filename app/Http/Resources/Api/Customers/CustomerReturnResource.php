@@ -133,6 +133,7 @@ class CustomerReturnResource extends JsonResource
                         'item_id' => $item->item_id,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
+                        'sale_item_id' => $item->sale_item_id,
                         'discount_percent' => $item->discount_percent,
                         'unit_discount_amount' => $item->unit_discount_amount,
                         'discount_amount' => $item->discount_amount,
@@ -147,12 +148,32 @@ class CustomerReturnResource extends JsonResource
                         'updated_at' => $item->updated_at,
 
                         // Item details - using available data to avoid database query issues
-                        'item' => [
-                            'id' => $item->item_id,
-                            'code' => $item->item_code,
-                            'description' => $item->item?->description,
-                            // 'unit' => $item->itemUnit->name
-                        ],
+                        'item' => $item->relationLoaded('item') ? [
+                            'id' => $item->item->id,
+                            'name' => $item->item->short_name,
+                            'description' => $item->item->description,
+                            'code' => $item->item->code,
+                            'unit' => [
+                                'name' => $item->item?->itemUnit?->name,
+                                'short_name' => $item->item?->itemUnit?->short_name
+                            ]
+
+                        ] : null,
+
+                        // Sale details
+                        'sale' => $item->relationLoaded('sale') ? [
+                            'id' => $item->sale->id,
+                            'code' => $item->sale->code,
+                            'sale_code' => $item->sale->prefix . $item->sale->code,
+                            'prefix' => $item->sale->prefix,
+                            'date' => $item->sale->date,
+                        ] : null,
+
+                        // Sale item details
+                        'sale_item' => $item->relationLoaded('saleItem') ? [
+                            'id' => $item->saleItem->id,
+                            'quantity' => $item->saleItem->quantity,
+                        ] : null,
                     ];
                 });
             }),

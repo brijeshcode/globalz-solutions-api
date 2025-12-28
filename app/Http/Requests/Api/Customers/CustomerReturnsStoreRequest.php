@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Customers;
 
+use App\Helpers\RoleHelper;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturnItem;
 use App\Models\Customers\SaleItems;
@@ -13,9 +14,7 @@ class CustomerReturnsStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        return $user->isAdmin();
+        return RoleHelper::canAdmin();
     }
 
     public function rules(): array
@@ -30,8 +29,8 @@ class CustomerReturnsStoreRequest extends FormRequest
             'currency_rate' => 'required|numeric',
             'total' => 'required|numeric|min:0',
             'total_usd' => 'required|numeric|min:0',
-            'total_volume_cbm' => 'nullable|numeric|min:0|default:0',
-            'total_weight_kg' => 'nullable|numeric|min:0|default:0',
+            'total_volume_cbm' => 'nullable|numeric|min:0',
+            'total_weight_kg' => 'nullable|numeric|min:0',
             'note' => 'nullable|string',
             'approve_note' => 'nullable|string',
 
