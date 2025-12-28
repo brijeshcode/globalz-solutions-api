@@ -37,7 +37,7 @@ class PurchaseItem extends Model
 
     protected $casts = [
         'price' => 'decimal:6',
-        'quantity' => 'decimal:6',
+        'quantity' => 'integer',
         'discount_percent' => 'decimal:2',
         'discount_amount' => 'decimal:6',
         'total_price' => 'decimal:6',
