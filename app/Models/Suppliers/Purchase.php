@@ -27,7 +27,8 @@ class Purchase extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, HasDocuments, Searchable, Sortable;
     public const STATUS_WAITING = 'Waiting';
-
+    public const DELIVERY_STATUS = ['Waiting', 'Shipped', 'Delivered'];
+    
     protected $fillable = [
         'code',
         'date',
@@ -308,29 +309,33 @@ class Purchase extends Model
             }
         });
 
-        static::created(function ($purchase) {
-            // Add to supplier balance when purchase is created
-            SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
-        });
-
         static::updated(function ($purchase) {
             $original = $purchase->getOriginal();
 
-            // Case 1: Supplier changed
-            if ($original['supplier_id'] != $purchase->supplier_id) {
-                SuppliersHelper::removeBalance(Supplier::find($original['supplier_id']), $original['final_total_usd']);
-                SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
-            }
-            // Case 2: Amount changed on same supplier
-            elseif ($original['final_total_usd'] != $purchase->final_total_usd) {
-                $difference = $purchase->final_total_usd - $original['final_total_usd'];
-                SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $difference);
+            // Only update supplier balance if purchase is delivered
+            if ($purchase->status === 'Delivered') {
+                // Case 1: Status just changed to Delivered (add full amount)
+                if ($original['status'] !== 'Delivered') {
+                    SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+                }
+                // Case 2: Already delivered and supplier changed
+                elseif ($original['supplier_id'] != $purchase->supplier_id) {
+                    SuppliersHelper::removeBalance(Supplier::find($original['supplier_id']), $original['final_total_usd']);
+                    SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+                }
+                // Case 3: Already delivered and amount changed on same supplier
+                elseif ($original['final_total_usd'] != $purchase->final_total_usd) {
+                    $difference = $purchase->final_total_usd - $original['final_total_usd'];
+                    SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $difference);
+                }
             }
         });
 
         static::deleted(function ($purchase) {
-            // Remove from supplier balance when purchase is deleted
-            SuppliersHelper::removeBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+            // Only remove from supplier balance if purchase was delivered
+            if ($purchase->status === 'Delivered') {
+                SuppliersHelper::removeBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+            }
         });
 
     }

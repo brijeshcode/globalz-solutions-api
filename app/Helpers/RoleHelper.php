@@ -82,7 +82,7 @@ class RoleHelper {
 
     public static function canWarehouseManager(): bool
     {
-        return self::canAdmin() || self::isWarehouseManager();
+        return self::canSuperAdmin() || self::isWarehouseManager();
     }
 
     public static function canSalesman(): bool

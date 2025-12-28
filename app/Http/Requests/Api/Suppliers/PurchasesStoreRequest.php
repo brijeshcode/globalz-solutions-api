@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests\Api\Suppliers;
 
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PurchasesStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::canAdmin();
     }
 
     public function rules(): array

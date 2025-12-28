@@ -112,7 +112,7 @@ class ListDataController extends Controller
             }
         }
 
-        return $query->get(['id', 'name', 'is_default', 'address_line_1', 'address_line_2', 'city', 'state', 'postal_code', 'country']);
+        return $query->get(['id', 'name', 'is_default', 'address_line_1']);
     }
 
     private function currencies()
@@ -124,7 +124,7 @@ class ListDataController extends Controller
     // suppliers
     private function suppliers()
     {
-        return Supplier::active()->orderby('name')->get(['id', 'code', 'name', 'email', 'phone']);
+        return Supplier::active()->orderby('name')->get(['id', 'code', 'name']);
     }
 
     //customers

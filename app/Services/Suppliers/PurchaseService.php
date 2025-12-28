@@ -288,17 +288,21 @@ class PurchaseService
 
     /**
      * Process all related data for a purchase item
+     * Only processes if purchase status is 'Delivered'
      */
     private function processPurchaseItemRelatedData(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0, ?float $oldCostPerItemUsd = null): void
     {
-        // 1. Update item price and price history (BEFORE updating inventory)
-        PriceService::updateFromPurchase($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
+        // Only update prices, supplier prices, and inventory if purchase is Delivered
+        if ($purchase->status === 'Delivered') {
+            // 1. Update item price and price history (BEFORE updating inventory)
+            PriceService::updateFromPurchase($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
 
-        // 2. Update supplier item prices
-        SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
+            // 2. Update supplier item prices
+            SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
 
-        // 3. Update inventory (AFTER price calculation)
-        $this->updateInventory($purchase, $purchaseItem, $isUpdate, $oldQuantity);
+            // 3. Update inventory (AFTER price calculation)
+            $this->updateInventory($purchase, $purchaseItem, $isUpdate, $oldQuantity);
+        }
     }
 
     /**
@@ -398,19 +402,22 @@ class PurchaseService
      */
     private function handlePurchaseItemDeletion(Purchase $purchase, PurchaseItem $purchaseItem): void
     {
-        // Validate: Removing item shouldn't cause negative inventory
-        $this->validateInventoryBeforeDeletion(
-            $purchaseItem->item_id,
-            $purchase->warehouse_id,
-            $purchaseItem->quantity
-        );
+        // Only adjust inventory if purchase is already delivered
+        if ($purchase->status === 'Delivered') {
+            // Validate: Removing item shouldn't cause negative inventory
+            $this->validateInventoryBeforeDeletion(
+                $purchaseItem->item_id,
+                $purchase->warehouse_id,
+                $purchaseItem->quantity
+            );
 
-        // Adjust inventory (remove quantity)
-        InventoryService::subtract(
-            $purchaseItem->item_id,
-            $purchase->warehouse_id,
-            $purchaseItem->quantity
-        );
+            // Adjust inventory (remove quantity)
+            InventoryService::subtract(
+                $purchaseItem->item_id,
+                $purchase->warehouse_id,
+                $purchaseItem->quantity
+            );
+        }
 
         // Note: We don't remove supplier prices or item price history as they are historical records
     }
@@ -451,26 +458,29 @@ class PurchaseService
                 // Load purchase items before deletion
                 $purchaseItems = $purchase->purchaseItems;
 
-                // Validate that all items can be removed from inventory
-                foreach ($purchaseItems as $purchaseItem) {
-                    $this->validateInventoryBeforeDeletion(
-                        $purchaseItem->item_id,
-                        $purchase->warehouse_id,
-                        $purchaseItem->quantity
-                    );
-                }
+                // Only adjust inventory if purchase is delivered
+                if ($purchase->status === 'Delivered') {
+                    // Validate that all items can be removed from inventory
+                    foreach ($purchaseItems as $purchaseItem) {
+                        $this->validateInventoryBeforeDeletion(
+                            $purchaseItem->item_id,
+                            $purchase->warehouse_id,
+                            $purchaseItem->quantity
+                        );
+                    }
 
-                // Subtract inventory and clean up price history for all items
-                foreach ($purchaseItems as $purchaseItem) {
-                    // Subtract inventory
-                    InventoryService::subtract(
-                        $purchaseItem->item_id,
-                        $purchase->warehouse_id,
-                        $purchaseItem->quantity
-                    );
+                    // Subtract inventory and clean up price history for all items
+                    foreach ($purchaseItems as $purchaseItem) {
+                        // Subtract inventory
+                        InventoryService::subtract(
+                            $purchaseItem->item_id,
+                            $purchase->warehouse_id,
+                            $purchaseItem->quantity
+                        );
 
-                    // Clean up price history and restore previous price
-                    PriceService::deleteFromPurchase($purchase, $purchaseItem);
+                        // Clean up price history and restore previous price
+                        PriceService::deleteFromPurchase($purchase, $purchaseItem);
+                    }
                 }
 
                 // Delete all purchase items
@@ -509,35 +519,60 @@ class PurchaseService
     }
 
     /**
-     * Restore a deleted purchase and add inventory back
+     * Deliver a purchase and add inventory
+     * Called when purchase status changes to 'Delivered'
      */
-    public function restorePurchase(Purchase $purchase): void
+    public function deliverPurchase(Purchase $purchase): void
     {
         try {
             DB::transaction(function () use ($purchase) {
-                // Restore the purchase first (this will trigger model events for supplier balance)
-                $purchase->restore();
+                // Validate that purchase is not already delivered
+                if ($purchase->status === 'Delivered') {
+                    throw new \InvalidArgumentException(
+                        "Purchase #{$purchase->id} is already delivered. Inventory has already been added."
+                    );
+                }
 
-                // Restore all soft-deleted purchase items
-                $purchase->purchaseItems()->onlyTrashed()->restore();
+                // Update status to Delivered
+                $purchase->update(['status' => 'Delivered']);
 
-                // Load purchase items and add inventory back, restore price history
+                // Load purchase items
                 $purchaseItems = $purchase->purchaseItems;
+
+                if ($purchaseItems->isEmpty()) {
+                    throw new \InvalidArgumentException(
+                        "Cannot deliver purchase #{$purchase->id}. No items found in this purchase."
+                    );
+                }
+
                 foreach ($purchaseItems as $purchaseItem) {
-                    // Add inventory back
+                    // 1. Update item price and price history
+                    PriceService::updateFromPurchase($purchase, $purchaseItem, false, null, 0);
+
+                    // 2. Update supplier item prices
+                    SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
+
+                    // 3. Add inventory
                     InventoryService::add(
                         $purchaseItem->item_id,
                         $purchase->warehouse_id,
                         $purchaseItem->quantity
                     );
-
-                    // Restore price history and update current price
-                    PriceService::restoreFromPurchase($purchase, $purchaseItem);
                 }
             });
+        } catch (\InvalidArgumentException $e) {
+            // Validation errors are already user-friendly, just log and re-throw
+            Log::warning('Purchase delivery validation failed', [
+                'error' => $e->getMessage(),
+                'purchase_id' => $purchase->id,
+                'purchase_code' => $purchase->code ?? 'N/A',
+            ]);
+
+            // Re-throw validation errors as-is (already have clear messages)
+            throw $e;
         } catch (\Exception $e) {
             // System/unexpected errors need context and user-friendly wrapping
-            Log::error('Failed to restore purchase', [
+            Log::error('Failed to deliver purchase', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'purchase_id' => $purchase->id,
@@ -546,7 +581,7 @@ class PurchaseService
 
             // Re-throw with user-friendly message
             throw new \RuntimeException(
-                "Failed to restore purchase #{$purchase->id}: " . $e->getMessage() .
+                "Failed to deliver purchase #{$purchase->id}: " . $e->getMessage() .
                 ". All changes have been rolled back.",
                 0,
                 $e

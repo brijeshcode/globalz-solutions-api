@@ -200,40 +200,67 @@ class PurchasesController extends Controller
 
     public function changeStatus(Request $request, Purchase $purchase): JsonResponse
     {
-        if (! RoleHelper::isWarehouseManager()) {
+        if (! RoleHelper::canWarehouseManager()) {
             return ApiResponse::customError('Only warehouse manager can change the status.', 422);
         }
 
+        // Validate status
+        $request->validate([
+            'status' => 'required|string|in:Waiting,Shipped,Delivered'
+        ]);
+
+        // Prevent status change if already delivered
+        if ($purchase->status === 'Delivered') {
+            return ApiResponse::customError('Cannot change status. Purchase is already delivered and inventory has been added.', 422);
+        }
+
+        // If changing to Delivered, use the deliverPurchase service method
+        if ($request->status === 'Delivered') {
+            try {
+                $this->purchaseService->deliverPurchase($purchase);
+
+                $purchase->load([
+                    'createdBy:id,name',
+                    'updatedBy:id,name',
+                    'supplier:id,code,name',
+                    'warehouse:id,name',
+                    'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                    'purchaseItems.item:id,code,short_name',
+                    'documents'
+                ]);
+
+                return ApiResponse::update(
+                    'Purchase delivered successfully. Inventory has been updated.',
+                    new PurchaseResource($purchase)
+                );
+            } catch (\InvalidArgumentException $e) {
+                return ApiResponse::customError($e->getMessage(), 422);
+            } catch (\Exception $e) {
+                return ApiResponse::customError('Failed to deliver purchase: ' . $e->getMessage(), 500);
+            }
+        }
+
+        // For other status changes (Waiting -> Shipped, etc.)
         $purchase->update(['status' => $request->status]);
+
+        $purchase->load([
+            'createdBy:id,name',
+            'updatedBy:id,name',
+            'supplier:id,code,name',
+            'warehouse:id,name',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'purchaseItems.item:id,code,short_name',
+            'documents'
+        ]);
+
         return ApiResponse::update(
             'Purchase status updated successfully',
             new PurchaseResource($purchase)
         );
-        $purchase->load(['purchaseItems.item', 'warehouse', 'currency']);
     }
 
-    /**
-     * Restore the specified resource from trash.
-     */
-    public function restore(int $id): JsonResponse
-    {
-        $purchase = Purchase::onlyTrashed()->findOrFail($id);
-        $this->purchaseService->restorePurchase($purchase);
 
-        return ApiResponse::update('Purchase restored successfully');
-    }
-
-    /**
-     * Permanently delete the specified resource.
-     */
-    public function forceDelete(int $id): JsonResponse
-    {
-        $purchase = Purchase::onlyTrashed()->findOrFail($id);
-        $purchase->forceDelete();
-
-        return ApiResponse::delete('Purchase permanently deleted successfully');
-    }
-
+  
     /**
      * Get the next suggested purchase code
      */

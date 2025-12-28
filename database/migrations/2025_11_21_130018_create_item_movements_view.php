@@ -67,7 +67,7 @@ return new class extends Migration
             INNER JOIN purchases p ON pi.purchase_id = p.id
             WHERE p.deleted_at IS NULL
                 AND pi.deleted_at IS NULL
-                -- AND p.status = 'Delivered'
+                AND p.status = 'Delivered'
 
             UNION ALL
 
