@@ -77,15 +77,15 @@ class Sale extends Model
         'currency_rate' => 'decimal:4',
         'credit_limit' => 'decimal:2',
         'outStanding_balance' => 'decimal:2',
-        'sub_total' => 'decimal:2',
-        'sub_total_usd' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'discount_amount_usd' => 'decimal:2',
-        'total' => 'decimal:2',
-        'total_usd' => 'decimal:2',
-        'total_profit' => 'decimal:2',
-        'total_tax_amount' => 'decimal:2',
-        'total_tax_amount_usd' => 'decimal:2',
+        'sub_total' => 'decimal:4',
+        'sub_total_usd' => 'decimal:4',
+        'discount_amount' => 'decimal:4',
+        'discount_amount_usd' => 'decimal:4',
+        'total' => 'decimal:4',
+        'total_usd' => 'decimal:4',
+        'total_profit' => 'decimal:4',
+        'total_tax_amount' => 'decimal:4',
+        'total_tax_amount_usd' => 'decimal:4',
         'local_curreny_rate' => 'decimal:4',
     ];
 
@@ -193,7 +193,7 @@ class Sale extends Model
      */
     protected function getActivityLogDescription(): string
     {
-        return 'Sale';
+        return 'Sale ' . $this->prefix . $this->code . ' ';
     }
 
     // local scopes 
