@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class ActivityHistoryResource extends JsonResource
 {
@@ -20,7 +21,12 @@ class ActivityHistoryResource extends JsonResource
             'timestamp_human' => $this->created_at->diffForHumans(),
             'date' => $this->created_at->format('M d, Y'),
             'time' => $this->created_at->format('h:i A'),
-
+            'log_name' => Str::title(str_replace('_', ' ', $this->log_name)),
+            
+            'description' => $this->description,
+            'event' => $this->event,
+            'status' => $this->status,
+            'is_read' => $this->is_read,
             'changed_by' => [
                 'id' => $this->causer?->id,
                 'name' => $this->causer?->name ?? 'System',
