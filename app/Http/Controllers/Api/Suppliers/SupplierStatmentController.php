@@ -257,8 +257,11 @@ class SupplierStatmentController extends Controller
             );
         }
 
-        // Sort by date
-        $sortedTransactions = $allTransactions->sortBy('date')->values();
+        // Sort by date - default to desc
+        $sortDirection = $request->get('sort_direction', 'desc');
+        $sortedTransactions = $sortDirection === 'asc'
+            ? $allTransactions->sortBy('date')->values()
+            : $allTransactions->sortByDesc('date')->values(); 
 
         // Calculate running balance
         $balance = 0;

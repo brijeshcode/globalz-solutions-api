@@ -233,7 +233,7 @@ class AccountStatementController extends Controller
     {
         $query = CustomerPayment::query()
             ->approved()
-            ->select('id', 'code', 'prefix', 'date', 'amount_usd', 'note', 'customer_id', 'account_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'customer_id', 'account_id', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
@@ -244,9 +244,9 @@ class AccountStatementController extends Controller
                 'type' => 'Customer Payment',
                 'name' => $item->customer->name,
                 'date' => $item->date->format('Y-m-d'),
-                'amount' => $item->amount_usd,
+                'amount' => $item->amount,
                 'debit' => 0,
-                'credit' => $item->amount_usd,
+                'credit' => $item->amount,
                 'note' => $item->note,
                 'customer' => [
                     'id' => $item->customer->id,
@@ -267,7 +267,7 @@ class AccountStatementController extends Controller
     private function getSupplierPayments(Request $request, Account $account, ?string $noteSearch = null)
     {
         $query = SupplierPayment::query()
-            ->select('id', 'code', 'prefix', 'date', 'amount_usd', 'note', 'supplier_id', 'account_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'supplier_id', 'account_id', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
@@ -278,8 +278,8 @@ class AccountStatementController extends Controller
                 'type' => 'Supplier Payment',
                 'name' => $item->supplier->name,
                 'date' => $item->date->format('Y-m-d'),
-                'amount' => -$item->amount_usd,
-                'debit' => $item->amount_usd,
+                'amount' => -$item->amount,
+                'debit' => $item->amount,
                 'credit' => 0,
                 'note' => $item->note,
                 'supplier' => [
@@ -367,7 +367,7 @@ class AccountStatementController extends Controller
     private function getAdvanceLoanTransactions(Request $request, Account $account, ?string $noteSearch = null)
     {
         $query = AdvanceLoan::query()
-            ->select('id', 'code', 'prefix', 'date', 'amount_usd', 'note', 'employee_id', 'account_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'employee_id', 'account_id', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
@@ -378,8 +378,8 @@ class AccountStatementController extends Controller
                 'type' => 'AdvanceLoan',
                 'name' => $item->employee->name,
                 'date' => $item->date->format('Y-m-d'),
-                'amount' => $item->amount_usd,
-                'debit' => $item->amount_usd,
+                'amount' => $item->amount,
+                'debit' => $item->amount,
                 'credit' => 0,
                 'note' => $item->note,
                 'employee' => [
