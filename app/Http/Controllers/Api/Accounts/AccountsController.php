@@ -157,10 +157,14 @@ class AccountsController extends Controller
         $query = $this->query($request);
         $accounts =  (clone $query)->with('currency:id,code')->get();
 
-        // Calculate total current balance in USD
+        // Separate private and non-private accounts
+        $privateAccounts = $accounts->where('is_private', true);
+        $nonPrivateAccounts = $accounts->where('is_private', false);
+
+        // Calculate total current balance in USD for non-private accounts
         $totalCurrentBalanceUsd = 0;
 
-        foreach ($accounts as $account) {
+        foreach ($nonPrivateAccounts as $account) {
             $balance = $account->current_balance ?? 0;
 
             // Skip conversion if currency is already USD
@@ -175,9 +179,29 @@ class AccountsController extends Controller
             }
         }
 
+        // Calculate total current balance in USD for private accounts
+        $totalPrivateBalanceUsd = 0;
+
+        foreach ($privateAccounts as $account) {
+            $balance = $account->current_balance ?? 0;
+
+            // Skip conversion if currency is already USD
+            if ($account->currency && strtoupper($account->currency->code) === 'USD') {
+                $totalPrivateBalanceUsd += $balance;
+            } else {
+                $balanceUsd = CurrencyHelper::toUsd(
+                    $account->currency_id,
+                    $balance
+                );
+                $totalPrivateBalanceUsd += $balanceUsd;
+            }
+        }
+
         $stats = [
-            'total_accounts' => $accounts->count(),
+            'total_accounts' => $nonPrivateAccounts->count(),
             'total_current_balance_usd' => round($totalCurrentBalanceUsd, 2),
+            'total_private_accounts' => $privateAccounts->count(),
+            'total_private_balance_usd' => round($totalPrivateBalanceUsd, 2),
         ];
 
         return ApiResponse::show('Account statistics retrieved successfully', $stats);

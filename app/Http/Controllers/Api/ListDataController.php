@@ -204,7 +204,14 @@ class ListDataController extends Controller
     // accounts
     private function accounts()
     {
-        return Account::with('currency:id,symbol,code,decimal_places,decimal_separator,calculation_type')->active()->orderBy('name')->get(['id', 'name', 'currency_id']);
+        $query = Account::with('currency:id,symbol,code,decimal_places,decimal_separator,calculation_type')->active();
+
+        // Only include private accounts if user is super admin or developer
+        if (!RoleHelper::canSuperAdmin()) {
+            $query->where('is_private', false);
+        }
+
+        return $query->orderBy('name')->get(['id', 'name', 'currency_id']);
     }
 
     private function accountTypes()

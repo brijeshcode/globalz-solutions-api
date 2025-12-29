@@ -38,6 +38,7 @@ class AccountsUpdateRequest extends FormRequest
             'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
             'description' => 'nullable|string|max:65535',
             'is_active' => 'boolean',
+            'is_private' => 'boolean',
         ];
     }
 

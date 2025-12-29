@@ -30,6 +30,7 @@ class AccountsStoreRequest extends FormRequest
             // Balance Information
             'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
             'is_active' => 'boolean',
+            'is_private' => 'boolean',
         ];
     }
 

@@ -25,10 +25,12 @@ class Account extends Model
         'current_balance',
         'description',
         'is_active',
+        'is_private',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_private' => 'boolean',
     ];
 
     protected $searchable = [
