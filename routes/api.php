@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Customers\CustomerReturnsController;
 use App\Http\Controllers\Api\Customers\CustomerReturnOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use App\Http\Controllers\Api\Customers\SalesController;
+use App\Http\Controllers\Api\Customers\SalePdfController;
 use App\Http\Controllers\Api\Customers\SaleOrdersController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
 use App\Http\Controllers\Api\Setups\ItemCategoriesController;
@@ -175,6 +176,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('{sale}/changeStatus', 'changeStatus')->name('changeStatus');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Sales PDF Routes
+        Route::controller(SalePdfController::class)->prefix('sales')->name('sales.')->group(function () {
+            Route::get('{sale}/pdf/download', 'generateInvoice')->defaults('action', 'download')->name('pdf.download');
+            Route::get('{sale}/pdf/stream', 'generateInvoice')->defaults('action', 'stream')->name('pdf.stream');
         });
 
         // Sale Orders Controller (for pending sale orders) - Must be defined BEFORE {customer} routes to avoid conflicts
