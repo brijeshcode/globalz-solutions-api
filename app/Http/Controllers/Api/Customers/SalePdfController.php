@@ -62,6 +62,18 @@ class SalePdfController extends Controller
                 'margin_footer' => 10,
             ]);
 
+            // Set footer with invoice code and page numbers
+            $invoiceCode = $sale->prefix . '-' . $sale->code;
+            $mpdf->SetFooter('
+                <table width="100%" style="font-size: 9pt; border-top: 1px solid #000000; padding-top: 5px;">
+                    <tr>
+                        <td width="33%" style="text-align: left;">' . $invoiceCode . '</td>
+                        <td width="33%" style="text-align: center;">Page {PAGENO} of {nbpg}</td>
+                        <td width="33%" style="text-align: right;">' . date('Y-m-d') . '</td>
+                    </tr>
+                </table>
+            ');
+
             // Write HTML to PDF
             $mpdf->WriteHTML($html);
 
