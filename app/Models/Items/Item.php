@@ -215,8 +215,7 @@ class Item extends Model
     {
         return $query->whereNotNull('low_quantity_alert')
                      ->whereHas('inventories')
-                     ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) <= items.low_quantity_alert')
-                     ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) > 0');
+                     ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) <= items.low_quantity_alert');
     }
 
     public function scopeByBarcode($query, $barcode)

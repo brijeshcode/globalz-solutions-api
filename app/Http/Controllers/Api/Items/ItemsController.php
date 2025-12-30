@@ -377,7 +377,6 @@ class ItemsController extends Controller
             'low_stock_items' => Item::whereNotNull('low_quantity_alert')
                 ->whereHas('inventories')
                 ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) <= items.low_quantity_alert')
-                ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) > 0')
                 ->count(),
             'items_with_stock' => Item::whereHas('inventories', function ($query) {
                 $query->where('quantity', '>', 0);
