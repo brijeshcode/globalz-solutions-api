@@ -380,7 +380,7 @@ class PurchasesController extends Controller
                 ->mapWithKeys(function ($item) {
                     return [$item->status => $item->count];
                 }),
-
+            'total_purchase' => (clone $query)->sum('final_total_usd'),
         ];
 
         return ApiResponse::show('Sale statistics retrieved successfully', $stats);
