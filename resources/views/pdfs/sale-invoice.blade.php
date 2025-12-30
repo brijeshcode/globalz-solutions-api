@@ -324,7 +324,7 @@
                 <!-- Empty Rows -->
                 @php
                     $itemsCount = count($sale->items);
-                    $minRows = 20;
+                    $minRows = 15;
                     $emptyRows = $itemsCount < $minRows ? $minRows - $itemsCount : 0;
                 @endphp
 
