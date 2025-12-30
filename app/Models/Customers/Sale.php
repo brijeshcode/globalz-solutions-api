@@ -57,6 +57,8 @@ class Sale extends Model
         'total',
         'total_usd',
         'total_profit',
+        'total_volume_cbm',
+        'total_weight_kg',
         'approved_by',
         'approved_at',
         'approve_note',
@@ -84,6 +86,8 @@ class Sale extends Model
         'total' => 'decimal:8',
         'total_usd' => 'decimal:8',
         'total_profit' => 'decimal:8',
+        'total_volume_cbm' => 'decimal:4',
+        'total_weight_kg' => 'decimal:4',
         'total_tax_amount' => 'decimal:8',
         'total_tax_amount_usd' => 'decimal:8',
         'local_curreny_rate' => 'decimal:8',
@@ -324,6 +328,166 @@ class Sale extends Model
             'total_tax_amount' => $totalTaxAmount,
             'total_tax_amount_usd' => $totalTaxAmountUsd,
         ]);
+    }
+
+    /**
+     * Recalculate all sale items and sale totals based on the new calculation formula
+     * This method recalculates all derived fields from base inputs: price, quantity, discount_percent, tax_percent
+     */
+    public function recalculateAllFields(): void
+    {
+        $currencyRate = $this->currency_rate ?? 1;
+        $currencyId = $this->currency_id;
+
+        $totalProfit = 0;
+        $subTotal = 0;
+        $subTotalUsd = 0;
+        $saleTotalTax = 0;
+        $saleTotalTaxUsd = 0;
+        $totalVolumeCbm = 0;
+        $totalWeightKg = 0;
+
+        // Reload sale items to ensure fresh data
+        $this->load('saleItems.item.itemPrice');
+
+        foreach ($this->saleItems as $saleItem) {
+            // Get cost price from item
+            $costPrice = $saleItem->item?->itemPrice?->price_usd ?? $saleItem->cost_price ?? 0;
+
+            // Base values from sale item
+            $sellingPrice = $saleItem->price ?? 0;
+            $quantity = $saleItem->quantity ?? 0;
+            $discountPercent = $saleItem->discount_percent ?? 0;
+            $taxPercent = $saleItem->tax_percent ?? 0;
+
+            // Convert base price to USD
+            $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice, $currencyRate);
+
+            // Step 1: Calculate unit discount amount from discount percent
+            $unitDiscountAmount = $sellingPrice * ($discountPercent / 100);
+            $unitDiscountAmountUsd = $sellingPriceUsd * ($discountPercent / 100);
+
+            // Step 2: Calculate total discount amount
+            $discountAmount = $unitDiscountAmount * $quantity;
+            $discountAmountUsd = $unitDiscountAmountUsd * $quantity;
+
+            // Step 3: Calculate net sell price
+            $netSellPrice = $sellingPrice - $unitDiscountAmount;
+            $netSellPriceUsd = $sellingPriceUsd - $unitDiscountAmountUsd;
+
+            // Step 4: Calculate tax amount based on net sell price
+            $taxAmount = $taxPercent > 0 ? $netSellPrice * ($taxPercent / 100) : 0;
+            $taxAmountUsd = $taxPercent > 0 ? $netSellPriceUsd * ($taxPercent / 100) : 0;
+
+            // Step 5: Calculate TTC price
+            $ttcPrice = $netSellPrice + $taxAmount;
+            $ttcPriceUsd = $netSellPriceUsd + $taxAmountUsd;
+
+            // Step 6: Calculate total net sell prices
+            $totalNetSellPrice = $netSellPrice * $quantity;
+            $totalNetSellPriceUsd = $netSellPriceUsd * $quantity;
+
+            // Step 7: Calculate total tax amounts
+            $totalTaxAmount = $taxAmount * $quantity;
+            $totalTaxAmountUsd = $taxAmountUsd * $quantity;
+
+            // Step 8: Calculate total price
+            $totalPrice = $ttcPrice * $quantity;
+            $totalPriceUsd = $ttcPriceUsd * $quantity;
+
+            // Step 9: Calculate profit
+            $unitProfit = $ttcPriceUsd - $costPrice;
+            $itemTotalProfit = $unitProfit * $quantity;
+
+            // Update sale item without firing events
+            $saleItem->updateQuietly([
+                'cost_price' => $costPrice,
+                'price_usd' => $sellingPriceUsd,
+                'unit_discount_amount' => $unitDiscountAmount,
+                'unit_discount_amount_usd' => $unitDiscountAmountUsd,
+                'discount_amount' => $discountAmount,
+                'discount_amount_usd' => $discountAmountUsd,
+                'net_sell_price' => $netSellPrice,
+                'net_sell_price_usd' => $netSellPriceUsd,
+                'tax_amount' => $taxAmount,
+                'tax_amount_usd' => $taxAmountUsd,
+                'ttc_price' => $ttcPrice,
+                'ttc_price_usd' => $ttcPriceUsd,
+                'total_net_sell_price' => $totalNetSellPrice,
+                'total_net_sell_price_usd' => $totalNetSellPriceUsd,
+                'total_tax_amount' => $totalTaxAmount,
+                'total_tax_amount_usd' => $totalTaxAmountUsd,
+                'total_price' => $totalPrice,
+                'total_price_usd' => $totalPriceUsd,
+                'unit_profit' => $unitProfit,
+                'total_profit' => $itemTotalProfit,
+            ]);
+
+            // Aggregate totals for the sale
+            $totalProfit += $itemTotalProfit;
+            $subTotal += $totalNetSellPrice;
+            $subTotalUsd += $totalNetSellPriceUsd;
+            $saleTotalTax += $totalTaxAmount;
+            $saleTotalTaxUsd += $totalTaxAmountUsd;
+            $totalVolumeCbm += $saleItem->total_volume_cbm ?? 0;
+            $totalWeightKg += $saleItem->total_weight_kg ?? 0;
+        }
+
+        // Sale-level discount
+        $additionalDiscount = $this->discount_amount ?? 0;
+        $additionalDiscountUsd = $this->discount_amount_usd ?? 0;
+
+        // Update sale totals without firing events
+        $this->updateQuietly([
+            'sub_total' => $subTotal,
+            'sub_total_usd' => $subTotalUsd,
+            'total_tax_amount' => $saleTotalTax,
+            'total_tax_amount_usd' => $saleTotalTaxUsd,
+            'total' => $subTotal + $saleTotalTax - $additionalDiscount,
+            'total_usd' => $subTotalUsd + $saleTotalTaxUsd - $additionalDiscountUsd,
+            'total_profit' => $totalProfit - $additionalDiscountUsd,
+            'total_volume_cbm' => $totalVolumeCbm,
+            'total_weight_kg' => $totalWeightKg,
+        ]);
+    }
+
+    /**
+     * Recalculate all sales in the database
+     * Use with caution - this will update all sales
+     *
+     * @param int|null $limit Limit the number of sales to process
+     * @return array Statistics about the recalculation
+     */
+    public static function recalculateAllSales(?int $limit = null): array
+    {
+        $query = self::with(['saleItems.item.itemPrice']);
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        $sales = $query->get();
+        $total = $sales->count();
+        $success = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($sales as $sale) {
+            try {
+                $sale->recalculateAllFields();
+                $success++;
+            } catch (\Exception $e) {
+                $failed++;
+                $errors[] = "Sale #{$sale->id}: " . $e->getMessage();
+            }
+        }
+
+        return [
+            'total' => $total,
+            'success' => $success,
+            'failed' => $failed,
+            'errors' => $errors,
+        ];
     }
 
     // Model Events

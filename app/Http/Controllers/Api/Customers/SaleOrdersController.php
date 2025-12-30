@@ -128,60 +128,126 @@ class SaleOrdersController extends Controller
             unset($data['items']);
 
             $totalProfit = 0;
+            $subTotal = 0;
+            $subTotalUsd = 0;
+            $saleTotalTax = 0;
+            $saleTotalTaxUsd = 0;
+            $totalVolumeCbm = 0;
+            $totalWeightKg = 0;
+
             $currencyRate = $data['currency_rate'] ?? 1;
             $currencyId = $data['currency_id'];
+
             // Calculate total profit from sale items
             foreach ($items as $index => $itemData) {
                 if (isset($itemData['item_id'])) {
                     $item = Item::with('itemPrice')->find($itemData['item_id']);
-                    $items[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null; 
+                    $items[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
+
+                    // Get cost price from item's price (cost price always in usd)
+                    $costPrice = $item?->itemPrice?->price_usd ?? 0;
 
                     if(Sale::TAXFREEPREFIX == $data['prefix']){
-
                         $items[$index]['tax_percent'] = 0;
                         $items[$index]['tax_amount'] = 0;
                         $items[$index]['tax_amount_usd'] = 0;
                         $items[$index]['tax_label'] = '';
                     }
 
-                    // Get cost price from item's price (cost price always in usd)
-                    $costPrice = $item?->itemPrice?->price_usd ?? 0;
-
+                    // Base inputs from request
                     $sellingPrice = $itemData['price'] ?? 0;
-                    $ttcPrice = $itemData['ttc_price'] ?? 0;
                     $quantity = $itemData['quantity'] ?? 0;
-                    $unitDiscountAmount = $itemData['unit_discount_amount'] ?? 0;
-                    $discountAmount = $itemData['discount_amount'] ?? 0;
-                     
-                    // Convert prices to USD (currency * rate = USD)
-                    $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice,  $currencyRate);
-                    $ttcPriceUsd = CurrencyHelper::toUsd($currencyId, $ttcPrice , $currencyRate);
-                    $unitDiscountAmountUsd = CurrencyHelper::toUsd($currencyId, $unitDiscountAmount, $currencyRate);
-                    $discountAmountUsd = CurrencyHelper::toUsd($currencyId,$discountAmount , $currencyRate);
-                    
-                    
-                    // Calculate profit using USD values: (sale_price - discount) - cost_price
-                    $unitProfit = ($sellingPriceUsd - $unitDiscountAmountUsd) - $costPrice;
+                    $discountPercent = $itemData['discount_percent'] ?? 0;
+                    $taxPercent = $itemData['tax_percent'] ?? 0;
+
+                    // Convert base price to USD
+                    $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice, $currencyRate);
+
+                    // Step 1: Calculate unit discount amount from discount percent
+                    $unitDiscountAmount = $sellingPrice * ($discountPercent / 100);
+                    $unitDiscountAmountUsd = $sellingPriceUsd * ($discountPercent / 100);
+
+                    // Step 2: Calculate total discount amount (unit_discount_amount * quantity)
+                    $discountAmount = $unitDiscountAmount * $quantity;
+                    $discountAmountUsd = $unitDiscountAmountUsd * $quantity;
+
+                    // Step 3: Calculate net sell price (price after discount)
+                    $netSellPrice = $sellingPrice - $unitDiscountAmount;
+                    $netSellPriceUsd = $sellingPriceUsd - $unitDiscountAmountUsd;
+
+                    // Step 4: Calculate tax amount based on net sell price (per unit)
+                    $taxAmount = $taxPercent > 0 ? $netSellPrice * ($taxPercent / 100) : 0;
+                    $taxAmountUsd = $taxPercent > 0 ? $netSellPriceUsd * ($taxPercent / 100) : 0;
+
+                    // Step 5: Calculate TTC price (price including tax, per unit)
+                    $ttcPrice = $netSellPrice + $taxAmount;
+                    $ttcPriceUsd = $netSellPriceUsd + $taxAmountUsd;
+
+                    // Step 6: Calculate total net sell prices
+                    $totalNetSellPrice = $netSellPrice * $quantity;
+                    $totalNetSellPriceUsd = $netSellPriceUsd * $quantity;
+
+                    // Step 7: Calculate total tax amounts
+                    $totalTaxAmount = $taxAmount * $quantity;
+                    $totalTaxAmountUsd = $taxAmountUsd * $quantity;
+
+                    // Step 8: Calculate total price
+                    $totalPrice = $ttcPrice * $quantity;
+                    $totalPriceUsd = $ttcPriceUsd * $quantity;
+
+                    // Step 9: Calculate profit
+                    $unitProfit = $ttcPriceUsd - $costPrice;
                     $itemTotalProfit = $unitProfit * $quantity;
 
+                    // Assign all calculated values to sale item
                     $items[$index]['cost_price'] = $costPrice;
-
-                    // update usd values
                     $items[$index]['price_usd'] = $sellingPriceUsd;
-                    $items[$index]['ttc_price_usd'] = $ttcPriceUsd;
+                    $items[$index]['discount_percent'] = $discountPercent;
+                    $items[$index]['unit_discount_amount'] = $unitDiscountAmount;
                     $items[$index]['unit_discount_amount_usd'] = $unitDiscountAmountUsd;
+                    $items[$index]['discount_amount'] = $discountAmount;
                     $items[$index]['discount_amount_usd'] = $discountAmountUsd;
-
+                    $items[$index]['net_sell_price'] = $netSellPrice;
+                    $items[$index]['net_sell_price_usd'] = $netSellPriceUsd;
+                    $items[$index]['tax_percent'] = $taxPercent;
+                    $items[$index]['tax_amount'] = $taxAmount;
+                    $items[$index]['tax_amount_usd'] = $taxAmountUsd;
+                    $items[$index]['ttc_price'] = $ttcPrice;
+                    $items[$index]['ttc_price_usd'] = $ttcPriceUsd;
+                    $items[$index]['total_net_sell_price'] = $totalNetSellPrice;
+                    $items[$index]['total_net_sell_price_usd'] = $totalNetSellPriceUsd;
+                    $items[$index]['total_tax_amount'] = $totalTaxAmount;
+                    $items[$index]['total_tax_amount_usd'] = $totalTaxAmountUsd;
+                    $items[$index]['total_price'] = $totalPrice;
+                    $items[$index]['total_price_usd'] = $totalPriceUsd;
                     $items[$index]['unit_profit'] = $unitProfit;
                     $items[$index]['total_profit'] = $itemTotalProfit;
 
+                    // Aggregate totals for the sale
                     $totalProfit += $itemTotalProfit;
+                    $subTotal += $totalNetSellPrice;
+                    $subTotalUsd += $totalNetSellPriceUsd;
+                    $saleTotalTax += $totalTaxAmount;
+                    $saleTotalTaxUsd += $totalTaxAmountUsd;
+                    $totalVolumeCbm += $itemData['total_volume_cbm'] ?? 0;
+                    $totalWeightKg += $itemData['total_weight_kg'] ?? 0;
                 }
             }
 
-            $additionalDiscount = $data['discount_amount_usd'] || 0;
-            // Add total profit to sale data
-            $data['total_profit'] = $totalProfit - $additionalDiscount;
+            // Sale-level discount
+            $additionalDiscount = $data['discount_amount'] ?? 0;
+            $additionalDiscountUsd = $data['discount_amount_usd'] ?? 0;
+
+            // Calculate sale totals
+            $data['sub_total'] = $subTotal;
+            $data['sub_total_usd'] = $subTotalUsd;
+            $data['total_tax_amount'] = $saleTotalTax;
+            $data['total_tax_amount_usd'] = $saleTotalTaxUsd;
+            $data['total'] = $subTotal + $saleTotalTax - $additionalDiscount;
+            $data['total_usd'] = $subTotalUsd + $saleTotalTaxUsd - $additionalDiscountUsd;
+            $data['total_profit'] = $totalProfit - $additionalDiscountUsd;
+            $data['total_volume_cbm'] = $totalVolumeCbm;
+            $data['total_weight_kg'] = $totalWeightKg;
 
             // Create the sale order
             $sale = Sale::create($data);
@@ -263,7 +329,15 @@ class SaleOrdersController extends Controller
                 unset($data['items']);
 
                 $totalProfit = 0;
+                $subTotal = 0;
+                $subTotalUsd = 0;
+                $saleTotalTax = 0;
+                $saleTotalTaxUsd = 0;
+                $totalVolumeCbm = 0;
+                $totalWeightKg = 0;
+
                 $currencyRate = $data['currency_rate'] ?? $sale->currency_rate ?? 1;
+
                 // Calculate total profit from sale items
                 foreach ($items as $index => $itemData) {
                     if (isset($itemData['item_id'])) {
@@ -273,37 +347,100 @@ class SaleOrdersController extends Controller
                         // Get cost price from item's price (already in USD)
                         $costPrice = $item?->itemPrice?->price_usd ?? 0;
 
-                        // Prices from request (in selected currency)
+                        // Base inputs from request
                         $sellingPrice = $itemData['price'] ?? 0;
-                        $ttcPrice = $itemData['ttc_price'] ?? 0;
                         $quantity = $itemData['quantity'] ?? 0;
-                        $unitDiscountAmount = $itemData['unit_discount_amount'] ?? 0;
-                        $discountAmount = $itemData['discount_amount'] ?? 0;
+                        $discountPercent = $itemData['discount_percent'] ?? 0;
+                        $taxPercent = $itemData['tax_percent'] ?? 0;
 
-                        // Convert prices to USD (currency * rate = USD)
-                        $sellingPriceUsd = CurrencyHelper::toUsd($sale->currency_id, $sellingPrice , $currencyRate);
-                        $ttcPriceUsd = CurrencyHelper::toUsd($sale->currency_id,$ttcPrice , $currencyRate);
-                        $unitDiscountAmountUsd = CurrencyHelper::toUsd($sale->currency_id, $unitDiscountAmount , $currencyRate);
-                        $discountAmountUsd = CurrencyHelper::toUsd($sale->currency_id, $discountAmount, $currencyRate);
+                        // Convert base price to USD
+                        $sellingPriceUsd = CurrencyHelper::toUsd($sale->currency_id, $sellingPrice, $currencyRate);
 
-                        // Calculate profit using USD values: (sale_price - discount) - cost_price
-                        $unitProfit = ($sellingPriceUsd - $unitDiscountAmountUsd) - $costPrice;
+                        // Step 1: Calculate unit discount amount from discount percent
+                        $unitDiscountAmount = $sellingPrice * ($discountPercent / 100);
+                        $unitDiscountAmountUsd = $sellingPriceUsd * ($discountPercent / 100);
+
+                        // Step 2: Calculate total discount amount (unit_discount_amount * quantity)
+                        $discountAmount = $unitDiscountAmount * $quantity;
+                        $discountAmountUsd = $unitDiscountAmountUsd * $quantity;
+
+                        // Step 3: Calculate net sell price (price after discount)
+                        $netSellPrice = $sellingPrice - $unitDiscountAmount;
+                        $netSellPriceUsd = $sellingPriceUsd - $unitDiscountAmountUsd;
+
+                        // Step 4: Calculate tax amount based on net sell price (per unit)
+                        $taxAmount = $taxPercent > 0 ? $netSellPrice * ($taxPercent / 100) : 0;
+                        $taxAmountUsd = $taxPercent > 0 ? $netSellPriceUsd * ($taxPercent / 100) : 0;
+
+                        // Step 5: Calculate TTC price (price including tax, per unit)
+                        $ttcPrice = $netSellPrice + $taxAmount;
+                        $ttcPriceUsd = $netSellPriceUsd + $taxAmountUsd;
+
+                        // Step 6: Calculate total net sell prices
+                        $totalNetSellPrice = $netSellPrice * $quantity;
+                        $totalNetSellPriceUsd = $netSellPriceUsd * $quantity;
+
+                        // Step 7: Calculate total tax amounts
+                        $totalTaxAmount = $taxAmount * $quantity;
+                        $totalTaxAmountUsd = $taxAmountUsd * $quantity;
+
+                        // Step 8: Calculate total price
+                        $totalPrice = $ttcPrice * $quantity;
+                        $totalPriceUsd = $ttcPriceUsd * $quantity;
+
+                        // Step 9: Calculate profit
+                        $unitProfit = $ttcPriceUsd - $costPrice;
                         $itemTotalProfit = $unitProfit * $quantity;
 
+                        // Assign all calculated values to sale item
                         $items[$index]['cost_price'] = $costPrice;
                         $items[$index]['price_usd'] = $sellingPriceUsd;
-                        $items[$index]['ttc_price_usd'] = $ttcPriceUsd;
+                        $items[$index]['discount_percent'] = $discountPercent;
+                        $items[$index]['unit_discount_amount'] = $unitDiscountAmount;
                         $items[$index]['unit_discount_amount_usd'] = $unitDiscountAmountUsd;
+                        $items[$index]['discount_amount'] = $discountAmount;
                         $items[$index]['discount_amount_usd'] = $discountAmountUsd;
+                        $items[$index]['net_sell_price'] = $netSellPrice;
+                        $items[$index]['net_sell_price_usd'] = $netSellPriceUsd;
+                        $items[$index]['tax_percent'] = $taxPercent;
+                        $items[$index]['tax_amount'] = $taxAmount;
+                        $items[$index]['tax_amount_usd'] = $taxAmountUsd;
+                        $items[$index]['ttc_price'] = $ttcPrice;
+                        $items[$index]['ttc_price_usd'] = $ttcPriceUsd;
+                        $items[$index]['total_net_sell_price'] = $totalNetSellPrice;
+                        $items[$index]['total_net_sell_price_usd'] = $totalNetSellPriceUsd;
+                        $items[$index]['total_tax_amount'] = $totalTaxAmount;
+                        $items[$index]['total_tax_amount_usd'] = $totalTaxAmountUsd;
+                        $items[$index]['total_price'] = $totalPrice;
+                        $items[$index]['total_price_usd'] = $totalPriceUsd;
                         $items[$index]['unit_profit'] = $unitProfit;
                         $items[$index]['total_profit'] = $itemTotalProfit;
 
+                        // Aggregate totals for the sale
                         $totalProfit += $itemTotalProfit;
+                        $subTotal += $totalNetSellPrice;
+                        $subTotalUsd += $totalNetSellPriceUsd;
+                        $saleTotalTax += $totalTaxAmount;
+                        $saleTotalTaxUsd += $totalTaxAmountUsd;
+                        $totalVolumeCbm += $itemData['total_volume_cbm'] ?? 0;
+                        $totalWeightKg += $itemData['total_weight_kg'] ?? 0;
                     }
                 }
 
-                // Add total profit to sale data
-                $data['total_profit'] = $totalProfit;
+                // Sale-level discount
+                $additionalDiscount = $data['discount_amount'] ?? 0;
+                $additionalDiscountUsd = $data['discount_amount_usd'] ?? 0;
+
+                // Calculate sale totals
+                $data['sub_total'] = $subTotal;
+                $data['sub_total_usd'] = $subTotalUsd;
+                $data['total_tax_amount'] = $saleTotalTax;
+                $data['total_tax_amount_usd'] = $saleTotalTaxUsd;
+                $data['total'] = $subTotal + $saleTotalTax - $additionalDiscount;
+                $data['total_usd'] = $subTotalUsd + $saleTotalTaxUsd - $additionalDiscountUsd;
+                $data['total_profit'] = $totalProfit - $additionalDiscountUsd;
+                $data['total_volume_cbm'] = $totalVolumeCbm;
+                $data['total_weight_kg'] = $totalWeightKg;
 
                 // Get IDs of items in the request
                 $requestItemIds = collect($items)->pluck('id')->filter()->toArray();
