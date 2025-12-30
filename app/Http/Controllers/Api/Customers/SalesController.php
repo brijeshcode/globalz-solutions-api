@@ -27,7 +27,7 @@ class SalesController extends Controller
 
         $sales = $this->applyPagination($query, $request);
         
-        $this->recalculateSales();
+        // $this->recalculateSales();
 
         return ApiResponse::paginated(
             'Sales retrieved successfully',
