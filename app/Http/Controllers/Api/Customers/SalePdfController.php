@@ -50,16 +50,16 @@ class SalePdfController extends Controller
             // Render the Blade view to HTML
             $html = view('pdfs.sale-invoice', $data)->render();
 
-            // Create mPDF instance
+            // Create mPDF instance with optimized margins
             $mpdf = new Mpdf([
                 'mode' => 'utf-8',
                 'format' => 'A4',
-                'margin_left' => 15,
-                'margin_right' => 15,
-                'margin_top' => 15,
-                'margin_bottom' => 25,
-                'margin_header' => 10,
-                'margin_footer' => 10,
+                'margin_left' => 10,        // Reduced from 15
+                'margin_right' => 10,       // Reduced from 15
+                'margin_top' => 10,         // Reduced from 15
+                'margin_bottom' => 15,      // Reduced from 25
+                'margin_header' => 8,       // Reduced from 10
+                'margin_footer' => 8,       // Reduced from 10
             ]);
 
             // Set footer with invoice code and page numbers
