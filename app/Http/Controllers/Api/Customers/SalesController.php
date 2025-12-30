@@ -27,8 +27,6 @@ class SalesController extends Controller
 
         $sales = $this->applyPagination($query, $request);
         
-        // $this->recalculateSales();
-
         return ApiResponse::paginated(
             'Sales retrieved successfully',
             $sales,
@@ -513,10 +511,51 @@ class SalesController extends Controller
         $sale->load(['saleItems.item', 'warehouse', 'currency']);
     }
 
-    public function recalculateSales(): JsonResponse
+    /**
+     * Recalculate a specific sale by ID
+     */
+    public function recalculateSale(Sale $sale): JsonResponse
     {
-        // Validate input
-        $sales = Sale::get();
+        try {
+            $sale->recalculateAllFields();
+            $sale->load(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson']);
+
+            return ApiResponse::update(
+                'Sale recalculated successfully',
+                new SaleResource($sale)
+            );
+        } catch (\Exception $e) {
+            return ApiResponse::customError(
+                'Failed to recalculate sale: ' . $e->getMessage(),
+                422
+            );
+        }
+    }
+
+    /**
+     * Recalculate sales within a date range
+     */
+    public function recalculateSalesByDateRange(Request $request): JsonResponse
+    {
+        $request->validate([
+            'from_date' => 'required|date',
+            'to_date' => 'required|date|after_or_equal:from_date',
+        ]);
+
+        $query = Sale::query()
+            ->whereBetween('date', [$request->from_date, $request->to_date]);
+
+        // Optional: Filter by warehouse
+        if ($request->has('warehouse_id')) {
+            $query->where('warehouse_id', $request->warehouse_id);
+        }
+
+        // Optional: Filter by customer
+        if ($request->has('customer_id')) {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        $sales = $query->get();
         $total = $sales->count();
         $success = 0;
         $failed = 0;
@@ -528,9 +567,49 @@ class SalesController extends Controller
                 $success++;
             } catch (\Exception $e) {
                 $failed++;
-                $errors[] = "Sale #{$sale->id}: " . $e->getMessage();
+                $errors[] = "Sale #{$sale->id} ({$sale->prefix}-{$sale->code}): " . $e->getMessage();
             }
         }
+
+        $result = [
+            'total' => $total,
+            'success' => $success,
+            'failed' => $failed,
+            'date_range' => [
+                'from_date' => $request->from_date,
+                'to_date' => $request->to_date,
+            ],
+            'errors' => $errors,
+        ];
+
+        if ($failed > 0) {
+            return ApiResponse::customError('Some sales failed to recalculate', 422, $result);
+        }
+
+        return ApiResponse::show('Sales recalculated successfully', $result);
+    }
+
+    /**
+     * Recalculate ALL sales (use with caution)
+     */
+    public function recalculateAllSales(): JsonResponse
+    {
+        $total = Sale::count();
+        $success = 0;
+        $failed = 0;
+        $errors = [];
+
+        Sale::chunk(10, function ($sales) use (&$success, &$failed, &$errors) {
+            foreach ($sales as $sale) {
+                try {
+                    $sale->recalculateAllFields();
+                    $success++;
+                } catch (\Exception $e) {
+                    $failed++;
+                    $errors[] = "Sale #{$sale->id}: " . $e->getMessage();
+                }
+            }
+        });
 
         $result = [
             'total' => $total,

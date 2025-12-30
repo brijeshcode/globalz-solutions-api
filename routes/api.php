@@ -176,6 +176,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('{sale}/changeStatus', 'changeStatus')->name('changeStatus');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+
+            // Recalculate routes
+            Route::post('{sale}/recalculate', 'recalculateSale')->name('recalculate');
+            Route::post('recalculate-by-date-range', 'recalculateSalesByDateRange')->name('recalculate-by-date-range');
+            Route::post('recalculate-all', 'recalculateAllSales')->name('recalculate-all');
         });
 
         // Sales PDF Routes
