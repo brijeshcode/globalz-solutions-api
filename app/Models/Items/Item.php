@@ -213,12 +213,10 @@ class Item extends Model
 
     public function scopeLowStock($query)
     {
-        return $query->join('inventories', 'items.id', '=', 'inventories.item_id')
-                     ->whereColumn('inventories.quantity', '<=', 'items.low_quantity_alert')
-                     ->where('inventories.quantity', '>', 0)
-                     ->whereNotNull('items.low_quantity_alert')
-                     ->select('items.*')
-                     ->distinct();
+        return $query->whereNotNull('low_quantity_alert')
+                     ->whereHas('inventories')
+                     ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) <= items.low_quantity_alert')
+                     ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) > 0');
     }
 
     public function scopeByBarcode($query, $barcode)

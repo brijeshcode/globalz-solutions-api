@@ -374,12 +374,11 @@ class ItemsController extends Controller
             'active_items' => Item::where('is_active', true)->count(),
             'inactive_items' => Item::where('is_active', false)->count(),
             'trashed_items' => Item::onlyTrashed()->count(),
-            'low_stock_items' => Item::whereHas('inventories', function ($query) {
-                $query->whereColumn('inventories.quantity', '<=', 'items.low_quantity_alert')
-                      ->where('inventories.quantity', '>', 0);
-            })
-            ->whereNotNull('low_quantity_alert')
-            ->count(),
+            'low_stock_items' => Item::whereNotNull('low_quantity_alert')
+                ->whereHas('inventories')
+                ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) <= items.low_quantity_alert')
+                ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) > 0')
+                ->count(),
             'items_with_stock' => Item::whereHas('inventories', function ($query) {
                 $query->where('quantity', '>', 0);
             })->count(),
