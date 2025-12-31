@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Setups\Users;
 
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Setups\Users\UsersStoreRequest;
 use App\Http\Requests\Api\Setups\Users\UsersUpdateRequest;
@@ -24,6 +25,11 @@ class UsersController extends Controller
             ->with(['employee.department:id,name', 'createdBy:id,name', 'updatedBy:id,name'])
             ->searchable($request)
             ->sortable($request);
+
+        // Only show developer role users if logged-in user is a developer
+        if (!RoleHelper::isDeveloper()) {
+            $query->where('role', '!=', User::ROLE_DEVELOPER);
+        }
 
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
@@ -138,6 +144,11 @@ class UsersController extends Controller
             ->with(['employee.department:id,name', 'createdBy:id,name', 'updatedBy:id,name'])
             ->searchable($request)
             ->sortable($request);
+
+        // Only show developer role users if logged-in user is a developer
+        if (!RoleHelper::isDeveloper()) {
+            $query->where('role', '!=', User::ROLE_DEVELOPER);
+        }
 
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
