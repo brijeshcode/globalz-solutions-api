@@ -11,19 +11,38 @@ class OriginTenantFinder extends TenantFinder
 {
     public function findForRequest(Request $request): ?IsTenant
     {
-        // Get origin from header (sent by frontend)
-        $origin = $request->header('Origin') ?: $request->header('Referer');
+        $domain = null;
 
-        if (!$origin) {
-            Log::warning('No Origin header in request');
+        // Priority 1: X-Company-Domain header (most reliable, sent by frontend)
+        if ($request->header('X-Company-Domain')) {
+            $domain = $request->header('X-Company-Domain');
+        }
+        // Priority 2: Origin header (for CORS requests from browser)
+        elseif ($request->header('Origin')) {
+            $domain = parse_url($request->header('Origin'), PHP_URL_HOST);
+        }
+        // Priority 3: Referer header (fallback)
+        elseif ($request->header('Referer')) {
+            $domain = parse_url($request->header('Referer'), PHP_URL_HOST);
+        }
+
+        // If no domain found, log and return null
+        if (!$domain) {
+            Log::warning('Could not determine company domain', [
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'x_company_domain' => $request->header('X-Company-Domain'),
+                'origin' => $request->header('Origin'),
+                'referer' => $request->header('Referer'),
+                'host' => $request->header('Host'),
+                'user_agent' => $request->header('User-Agent'),
+            ]);
             return null;
         }
 
-        // Extract domain from origin
-        $domain = parse_url($origin, PHP_URL_HOST);
-
-        if (!$domain) {
-            Log::warning('Could not extract domain from origin', ['origin' => $origin]);
+        // Validate domain format (prevent injection attacks)
+        if (!filter_var('http://' . $domain, FILTER_VALIDATE_URL)) {
+            Log::warning('Invalid domain format', ['domain' => $domain]);
             return null;
         }
 

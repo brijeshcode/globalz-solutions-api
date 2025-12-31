@@ -11,7 +11,10 @@ return [
 
     'allowed_origins_patterns' => array_filter(explode(',', env('CORS_ALLOWED_ORIGINS_PATTERNS', ''))),
 
-    'allowed_headers' => explode(',', env('CORS_ALLOWED_HEADERS', '*')),
+    'allowed_headers' => array_merge(
+        explode(',', env('CORS_ALLOWED_HEADERS', '*')),
+        ['X-Company-Domain'] // Ensure custom header is always allowed
+    ),
 
     'exposed_headers' => [],
 
