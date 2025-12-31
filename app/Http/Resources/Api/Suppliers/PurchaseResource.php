@@ -136,16 +136,29 @@ class PurchaseResource extends JsonResource
             'status' => $this->status,
             
             'documents' => $this->whenLoaded('documents', function () {
-                return $this->documents->map(function ($doc) {
+                return $this->documents->map(function ($document) {
                     return [
-                        'id' => $doc->id,
-                        'original_name' => $doc->original_name,
-                        'file_name' => $doc->file_name,
-                        'file_size' => $doc->file_size,
-                        'file_size_human' => $doc->file_size_human ?? null,
-                        'thumbnail_url' => $doc->thumbnail_url ?? null,
-                        'download_url' => $doc->download_url ?? null,
-                        'uploaded_at' => $doc->created_at?->format('Y-m-d H:i:s'),
+                        'id' => $document->id,
+                        'documentable_type' => $document->documentable_type,
+                        'documentable_id' => $document->documentable_id,
+                        'file_name' => $document->file_name,
+                        'file_size' => $document->file_size,
+                        'mime_type' => $document->mime_type,
+                        'file_extension' => $document->file_extension,
+                        'title' => $document->title,
+                        'description' => $document->description,
+                        'document_type' => $document->document_type,
+                        'sort_order' => $document->sort_order,
+                        // 'is_public' => $document->is_public,
+                        'is_featured' => $document->is_featured,
+                        'metadata' => $document->metadata,
+                        'uploaded_by' => $document->uploaded_by,
+                        'file_size_human' => $document->file_size_human,
+                        'thumbnail_url' => $document->thumbnail_url,
+                        'download_url' => $document->download_url,
+                        'preview_url' => $document->preview_url,
+                        'created_at' => $document->created_at?->format('Y-m-d H:i:s'),
+                        'updated_at' => $document->updated_at?->format('Y-m-d H:i:s'),
                     ];
                 });
             }),
