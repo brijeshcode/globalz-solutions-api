@@ -31,11 +31,20 @@ class OriginTenantFinder extends TenantFinder
             Log::warning('Could not determine company domain', [
                 'method' => $request->method(),
                 'url' => $request->fullUrl(),
-                'x_company_domain' => $request->header('X-Company-Domain'),
-                'origin' => $request->header('Origin'),
-                'referer' => $request->header('Referer'),
-                'host' => $request->header('Host'),
-                'user_agent' => $request->header('User-Agent'),
+                'path' => $request->path(),
+                'ip_address' => $request->ip(),
+                'device' => [
+                    'user_agent' => $request->header('User-Agent'),
+                    'platform' => $request->header('Sec-CH-UA-Platform'),
+                    'mobile' => $request->header('Sec-CH-UA-Mobile'),
+                    'accept_language' => $request->header('Accept-Language'),
+                ],
+                'headers' => [
+                    'x_company_domain' => $request->header('X-Company-Domain'),
+                    'origin' => $request->header('Origin'),
+                    'referer' => $request->header('Referer'),
+                    'host' => $request->header('Host'),
+                ],
             ]);
             return null;
         }

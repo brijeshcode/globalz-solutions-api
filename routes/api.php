@@ -68,6 +68,17 @@ use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use Illuminate\Support\Facades\Route;
 
+// API Root - Health check / API info (no tenant required)
+Route::get('/', function () {
+    return response()->json([
+        'name' => 'GlobalZ Solutions Brijesh Kumar Chaturvedi',
+    ]);
+})->withoutMiddleware([
+    \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+    \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+    \Illuminate\Session\Middleware\StartSession::class
+]);
+
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public routes (no authentication required)
