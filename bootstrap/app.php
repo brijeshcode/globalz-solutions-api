@@ -75,6 +75,16 @@ return Application::configure(basePath: dirname(__DIR__))
         //     ->withoutOverlapping()
         //     ->runInBackground();
 
+        // Cleanup old activity logs daily at 2:00 AM (only if auto_cleanup is enabled)
+        if (config('activitylog.auto_cleanup')) {
+            $schedule->command('activitylog:cleanup --force')
+                ->daily()
+                ->at('02:00')
+                ->name('cleanup-old-activity-logs')
+                ->withoutOverlapping()
+                ->onOneServer();
+        }
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

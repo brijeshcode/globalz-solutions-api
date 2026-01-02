@@ -897,6 +897,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{id}', 'show')->name('show');
         Route::post('model-activity', 'getModelActivity')->name('model-activity');
         Route::get('sales/{saleId}', 'getSaleActivity')->name('sales.activity');
+        Route::post('{id}/mark-seen', 'markAsSeen')->name('markSeen');
+        Route::post('{id}/mark-unseen', 'markAsUnseen')->name('markUnSeen');
     });
 
     // Clear Data Controller - System data management

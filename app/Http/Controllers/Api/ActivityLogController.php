@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ActivityHistoryResource;
+use App\Http\Responses\ApiResponse;
+use App\Http\Resources\ActivityLogResource;
+use App\Http\Resources\ActivityLogDetailResource;
+use App\Http\Resources\ActivityLogBatchResource;
+use App\Models\ActivityLog\ActivityLog;
+use App\Models\ActivityLog\ActivityLogDetail;
 use Illuminate\Http\Request;
-use Spatie\Activitylog\Models\Activity;
 
 class ActivityLogController extends Controller
 {
@@ -14,58 +18,65 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Activity::with(['causer', 'subject'])
-            ->latest();
+        $query = ActivityLog::with(['lastChangedBy'])
+            ->recent();
 
         // Filter by model type
         if ($request->filled('model_type')) {
-            $query->where('subject_type', $request->model_type);
+            $query->where('model', $request->model_type);
         }
 
         // Filter by user
         if ($request->filled('user_id')) {
-            $query->where('causer_id', $request->user_id);
+            $query->where('last_changed_by', $request->user_id);
         }
 
         // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->filled('from_date')) {
+            $query->whereDate('timestamp', '>=', $request->from_date);
         }
 
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+        if ($request->filled('to_date')) {
+            $query->whereDate('timestamp', '<=', $request->to_date);
         }
 
-        // Search in description
+        // Filter by event type
+        if ($request->filled('event')) {
+            $query->where('last_event_type', $request->event);
+        }
+
+        // Filter by seen status
+        if ($request->filled('seen')) {
+            $seen = filter_var($request->seen, FILTER_VALIDATE_BOOLEAN);
+            $query->where('seen_all', $seen);
+        }
+
+        // Search in model_display
         if ($request->filled('search')) {
-            $query->where('description', 'like', "%{$request->search}%");
+            $query->where('model_display', 'like', "%{$request->search}%");
         }
 
         $activities = $query->paginate(20);
 
-        return response()->json([
-            'success' => true,
-            'data' => ActivityHistoryResource::collection($activities),
-            'meta' => [
-                'current_page' => $activities->currentPage(),
-                'last_page' => $activities->lastPage(),
-                'per_page' => $activities->perPage(),
-                'total' => $activities->total(),
-            ],
-        ]);
+        return ApiResponse::paginated(
+            'Activity logs retrieved successfully',
+            $activities,
+            ActivityLogResource::class
+        );
     }
 
     /**
-     * Get activity log by ID
+     * Get activity log by ID with all details
      */
     public function show($id)
     {
-        $activity = Activity::with(['causer', 'subject'])->findOrFail($id);
+        $activityLog = ActivityLog::with(['lastChangedBy', 'details.changedBy'])
+            ->findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'data' => new ActivityHistoryResource($activity),
-        ]);
+        return ApiResponse::show(
+            'Activity log retrieved successfully',
+            new ActivityLogResource($activityLog)
+        );
     }
 
     /**
@@ -78,22 +89,58 @@ class ActivityLogController extends Controller
             'model_id' => 'required|integer',
         ]);
 
-        $activities = Activity::where('subject_type', $request->model_type)
-            ->where('subject_id', $request->model_id)
-            ->with('causer')
-            ->latest()
-            ->paginate(20);
+        $activityLog = ActivityLog::where('model', $request->model_type)
+            ->where('model_id', $request->model_id)
+            ->with(['lastChangedBy', 'details.changedBy'])
+            ->first();
 
-        return response()->json([
-            'success' => true,
-            'data' => ActivityHistoryResource::collection($activities),
-            'meta' => [
-                'current_page' => $activities->currentPage(),
-                'last_page' => $activities->lastPage(),
-                'per_page' => $activities->perPage(),
-                'total' => $activities->total(),
-            ],
+        if (!$activityLog) {
+            return ApiResponse::show(
+                'No activity log found for this model',
+                null
+            );
+        }
+
+        return ApiResponse::show(
+            'Activity log retrieved successfully',
+            new ActivityLogResource($activityLog)
+        );
+    }
+
+    /**
+     * Get activity details grouped by batch for a specific model
+     */
+    public function getModelActivityByBatch(Request $request)
+    {
+        $request->validate([
+            'model_type' => 'required|string',
+            'model_id' => 'required|integer',
         ]);
+
+        $activityLog = ActivityLog::where('model', $request->model_type)
+            ->where('model_id', $request->model_id)
+            ->first();
+
+        if (!$activityLog) {
+            return ApiResponse::show(
+                'No activity log found for this model',
+                []
+            );
+        }
+
+        // Group details by batch with relations loaded
+        $detailsByBatch = $activityLog->detailsByBatch();
+
+        // Format the response using the new batch resource
+        $formatted = [];
+        foreach ($detailsByBatch as $batchNo => $details) {
+            $formatted[] = new ActivityLogBatchResource($details);
+        }
+
+        return ApiResponse::show(
+            'Activity log batches retrieved successfully',
+            $formatted
+        );
     }
 
     /**
@@ -101,15 +148,43 @@ class ActivityLogController extends Controller
      */
     public function getSaleActivity($saleId)
     {
-        $activities = Activity::where('subject_type', 'App\\Models\\Customers\\Sale')
-            ->where('subject_id', $saleId)
-            ->with('causer')
-            ->latest()
-            ->get();
+        $activityLog = ActivityLog::where('model', 'App\\Models\\Customers\\Sale')
+            ->where('model_id', $saleId)
+            ->with(['lastChangedBy', 'details.changedBy'])
+            ->first();
 
-        return response()->json([
-            'success' => true,
-            'data' => ActivityHistoryResource::collection($activities),
-        ]);
+        if (!$activityLog) {
+            return ApiResponse::show(
+                'No activity log found for this sale',
+                null
+            );
+        }
+
+        return ApiResponse::show(
+            'Sale activity log retrieved successfully',
+            new ActivityLogResource($activityLog)
+        );
+    }
+
+    /**
+     * Mark an activity log as seen
+     */
+    public function markAsSeen($id)
+    {
+        $activityLog = ActivityLog::findOrFail($id);
+        $activityLog->markAsSeen();
+
+        return ApiResponse::successMessage('Activity log marked as seen');
+    }
+
+    /**
+     * Mark an activity log as unseen
+     */
+    public function markAsUnseen($id)
+    {
+        $activityLog = ActivityLog::findOrFail($id);
+        $activityLog->markAsUnseen();
+
+        return ApiResponse::successMessage('Activity log marked as unseen');
     }
 }
