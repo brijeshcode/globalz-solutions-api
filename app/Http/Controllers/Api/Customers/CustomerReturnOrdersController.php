@@ -112,7 +112,7 @@ class CustomerReturnOrdersController extends Controller
     {
         $data = $request->validated();
 
-        DB::transaction(function () use ($data, &$return) {
+        $return = DB::transaction(function () use ($data, &$return) {
             // Extract items data
             $itemsInput = $data['items'];
             unset($data['items']);
@@ -132,6 +132,8 @@ class CustomerReturnOrdersController extends Controller
             $return->total_volume_cbm = $return->items->sum('total_volume_cbm');
             $return->total_weight_kg = $return->items->sum('total_weight_kg');
             $return->save();
+
+            return $return;
         });
 
         $return->load([

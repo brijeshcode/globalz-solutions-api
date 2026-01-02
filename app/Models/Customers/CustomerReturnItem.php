@@ -5,9 +5,9 @@ namespace App\Models\Customers;
 use App\Models\Items\Item;
 use App\Models\User;
 use App\Traits\Authorable;
-use App\Traits\LogsToParentModel;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use App\Traits\TracksActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
 
 class CustomerReturnItem extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, LogsToParentModel;
+    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, TracksActivity;
 
     protected $fillable = [
         'item_code',
@@ -107,56 +107,38 @@ class CustomerReturnItem extends Model
         return $this->belongsTo(SaleItems::class, 'sale_item_id');
     }
 
-    /**
-     * Define which attributes to log for activity tracking
-     */
-    protected function getActivityLogAttributes(): array
+    // Activity tracking 
+
+     protected function getActivityLogAttributes(): array
     {
         return [
             'item_id',
-            'item_code',
+            'sale_id',
+            'sale_item_id',
             'quantity',
             'price',
             'price_usd',
+            'discount_percent',
+            'unit_discount_amount',
+            'unit_discount_amount_usd',
             'discount_amount',
             'discount_amount_usd',
             'tax_percent',
+            'tax_label',
+            'tax_amount',
+            'tax_amount_usd',
+            'ttc_price',
+            'ttc_price_usd',
             'total_price',
             'total_price_usd',
+            'total_profit',
             'note',
         ];
     }
 
-    /**
-     * Get the parent relationship name
-     */
-    protected function getParentRelationshipName(): string
+    protected function getActivityLogParent()
     {
-        return 'customerReturn';
-    }
-
-    /**
-     * Get item identifier for log description
-     */
-    protected function getItemIdentifier(): string
-    {
-        return $this->item_code ?? $this->item?->code ?? 'Unknown';
-    }
-
-    /**
-     * Customize the activity log name (same as parent)
-     */
-    protected function getActivityLogName(): string
-    {
-        return 'customer_return';
-    }
-
-    /**
-     * Customize the item type description
-     */
-    protected function getItemTypeDescription(): string
-    {
-        return 'Return item';
+        return $this->customerReturn; // Relationship to parent
     }
 
     // Scopes

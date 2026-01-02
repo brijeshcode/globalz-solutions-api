@@ -5,9 +5,9 @@ namespace App\Models\Customers;
 use App\Models\Items\Item;
 use App\Services\Inventory\InventoryService;
 use App\Traits\Authorable;
-use App\Traits\LogsToParentModel;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use App\Traits\TracksActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
 
 class SaleItems extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, LogsToParentModel;
+    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, TracksActivity;
 
     protected $fillable = [
         'item_code',
@@ -116,56 +116,9 @@ class SaleItems extends Model
         return $this->belongsTo(Item::class);
     }
 
-    /**
-     * Define which attributes to log for activity tracking
-     */
-    protected function getActivityLogAttributes(): array
+    protected function getActivityLogParent()
     {
-        return [
-            'item_id',
-            'item_code',
-            'quantity',
-            'price',
-            'price_usd',
-            'discount_amount',
-            'discount_amount_usd',
-            'tax_percent',
-            'total_price',
-            'total_price_usd',
-            'note',
-        ];
-    }
-
-    /**
-     * Get the parent relationship name
-     */
-    protected function getParentRelationshipName(): string
-    {
-        return 'sale';
-    }
-
-    /**
-     * Get item identifier for log description
-     */
-    protected function getItemIdentifier(): string
-    {
-        return $this->item_code ?? $this->item?->code ?? 'Unknown';
-    }
-
-    /**
-     * Customize the activity log name (same as parent)
-     */
-    protected function getActivityLogName(): string
-    {
-        return 'sale';
-    }
-
-    /**
-     * Customize the item type description
-     */
-    protected function getItemTypeDescription(): string
-    {
-        return 'Sale item';
+        return $this->sale; // Relationship to parent
     }
 
     protected static function boot()

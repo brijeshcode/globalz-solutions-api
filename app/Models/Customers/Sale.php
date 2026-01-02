@@ -12,7 +12,7 @@ use App\Services\Currency\CurrencyService;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\CustomersHelper;
 use App\Traits\Authorable;
-use App\Traits\HasApprovalBasedActivityLog;
+use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -33,7 +33,7 @@ class Sale extends Model
 
     public const STATUS_WAITING = 'Waiting';
 
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasApprovalBasedActivityLog;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity;
 
     protected $fillable = [
         'code',
@@ -159,13 +159,12 @@ class Sale extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    /**
-     * Define which attributes to log for activity tracking
-     */
+    // activity tracking
     protected function getActivityLogAttributes(): array
     {
         return [
             'status',
+            'date',
             'customer_id',
             'salesperson_id',
             'warehouse_id',
@@ -184,20 +183,10 @@ class Sale extends Model
         ];
     }
 
-    /**
-     * Customize the activity log name
-     */
-    protected function getActivityLogName(): string
+    // we will not log un-approved sales 
+    protected function shouldSkipActivityLog(): bool
     {
-        return 'sale';
-    }
-
-    /**
-     * Customize the activity log description
-     */
-    protected function getActivityLogDescription(): string
-    {
-        return 'Sale ' . $this->prefix . $this->code . ' ';
+        return is_null($this->approved_at);
     }
 
     // local scopes 

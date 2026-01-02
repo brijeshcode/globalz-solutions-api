@@ -10,7 +10,7 @@ use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use App\Traits\Authorable;
-use App\Traits\HasApprovalBasedActivityLog;
+use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -22,7 +22,7 @@ use Illuminate\Support\Collection;
 
 class CustomerPayment extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasApprovalBasedActivityLog;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity;
 
     public const TAXPREFIX = 'RCT';
     public const TAXFREEPREFIX = 'RCX';
@@ -115,30 +115,18 @@ class CustomerPayment extends Model
             'customer_id',
             'account_id',
             'currency_id',
+            'currency_rate',
             'amount',
             'amount_usd',
             'rtc_book_number',
-            'approved_by',
-            'approved_at',
-            'approve_note',
             'note',
         ];
     }
 
-    /**
-     * Customize the activity log name
-     */
-    protected function getActivityLogName(): string
+    // we will not log un-approved payments 
+    protected function shouldSkipActivityLog(): bool
     {
-        return 'customer_payment';
-    }
-
-    /**
-     * Customize the activity log description
-     */
-    protected function getActivityLogDescription(): string
-    {
-        return 'Customer payment';
+        return is_null($this->approved_at);
     }
 
     // Scopes

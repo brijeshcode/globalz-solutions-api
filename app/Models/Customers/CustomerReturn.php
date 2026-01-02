@@ -8,7 +8,7 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
 use App\Traits\Authorable;
-use App\Traits\HasApprovalBasedActivityLog;
+use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -21,7 +21,7 @@ use Illuminate\Support\Collection;
 
 class CustomerReturn extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasApprovalBasedActivityLog;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity;
 
     public const TAXPREFIX = 'RTN';
     public const TAXFREEPREFIX = 'RTX';
@@ -123,35 +123,22 @@ class CustomerReturn extends Model
     protected function getActivityLogAttributes(): array
     {
         return [
-            'customer_id',
-            'salesperson_id',
+            'date',
+            'currency_id',
             'warehouse_id',
+            'currency_rate',
             'total',
             'total_usd',
-            'approved_by',
-            'approved_at',
-            'approve_note',
-            'return_received_by',
-            'return_received_at',
-            'return_received_note',
+            'total_volume_cbm',
+            'total_weight_kg',
             'note',
         ];
     }
 
-    /**
-     * Customize the activity log name
-     */
-    protected function getActivityLogName(): string
+    // we will not log un-approved customer returns 
+    protected function shouldSkipActivityLog(): bool
     {
-        return 'customer_return';
-    }
-
-    /**
-     * Customize the activity log description
-     */
-    protected function getActivityLogDescription(): string
-    {
-        return 'Customer return';
+        return is_null($this->approved_at);
     }
 
     // Scopes

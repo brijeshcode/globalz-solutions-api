@@ -10,6 +10,7 @@ use App\Traits\Authorable;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use App\Traits\TracksActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CustomerCreditDebitNote extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity;
 
     protected $fillable = [
         'code',
@@ -68,6 +69,21 @@ class CustomerCreditDebitNote extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
+    }
+
+    // Activity logging 
+    protected function getActivityLogAttributes(): array
+    {
+        return [
+            'date',
+            'type',
+            'customer_id',
+            'currency_id',
+            'currency_rate',
+            'amount',
+            'amount_usd',
+            'note',
+        ];
     }
 
     // Scopes
