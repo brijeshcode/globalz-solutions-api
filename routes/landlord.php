@@ -49,6 +49,12 @@ Route::middleware('auth:sanctum')->group(function () {
         // Run migrations for all tenants
         Route::post('migrations/run-all', [TenantManagementController::class, 'runAllTenantsMigrations'])->name('migrations.runAll');
 
+        // Get all users for tenant
+        Route::get('{tenant}/users', [TenantManagementController::class, 'getUsers'])->name('users.index');
+
+        // Create user for tenant
+        Route::post('{tenant}/users', [TenantManagementController::class, 'createUser'])->name('users.create');
+
         // Get tenant features
         Route::get('{tenant}/features', [FeatureController::class, 'getTenantFeatures'])->name('features.index');
 

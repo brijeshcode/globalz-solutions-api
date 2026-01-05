@@ -163,7 +163,6 @@ class Sale extends Model
     protected function getActivityLogAttributes(): array
     {
         return [
-            'status',
             'date',
             'currency_id',
             'warehouse_id',
