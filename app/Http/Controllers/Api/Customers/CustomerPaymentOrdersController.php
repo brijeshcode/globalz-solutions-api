@@ -237,7 +237,8 @@ class CustomerPaymentOrdersController extends Controller
     {
         $query = CustomerPayment::query()
             ->with([
-                'customer:id,name,code',
+                'customer:id,name,code,salesperson_id',
+                'customer.salesperson',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'customerPaymentTerm:id,name,days',
                 'approvedBy:id,name',
@@ -263,6 +264,12 @@ class CustomerPaymentOrdersController extends Controller
 
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->byDateRange($request->start_date, $request->end_date);
+        }
+
+        if ($request->has('salesperson_id')) {
+            $query->whereHas('customer', function ($q) use ($request) {
+                $q->where('salesperson_id', $request->salesperson_id);
+            });
         }
 
         // Filter by salesman if user has salesman role

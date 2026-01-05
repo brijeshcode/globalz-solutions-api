@@ -219,24 +219,7 @@ class CustomerPaymentsController extends Controller
         $query = $this->paymentQuery($request);
         $stats = [
             'total_payments' => (clone $query)->approved()->count(),
-            // 'pending_payments' => (clone $query)->pending()->count(),
-            // 'approved_payments' => (clone $query)->approved()->count(),
-            // 'trashed_payments' => (clone $query)->onlyTrashed()->count(),
-            // 'total_amount' => (clone $query)->approved()->sum('amount'),
             'total_amount_usd' => (clone $query)->approved()->sum('amount_usd'),
-            // 'payments_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(amount) as total_amount')
-            //     ->groupBy('prefix')
-            //     ->get(),
-            // 'payments_by_currency' => (clone $query)->with('currency:id,name,code')
-            //     ->selectRaw('currency_id, count(*) as count, sum(amount) as total_amount')
-            //     ->groupBy('currency_id')
-            //     ->having('count', '>', 0)
-            //     ->get(),
-            // 'recent_approved' => (clone $query)->approved()
-            //     ->with(['customer:id,name,code', 'approvedBy:id,name'])
-            //     ->orderBy('approved_at', 'desc')
-            //     ->limit(5)
-            //     ->get(),
         ];
 
         return ApiResponse::show('Customer payment statistics retrieved successfully', $stats);
@@ -265,6 +248,12 @@ class CustomerPaymentsController extends Controller
 
         if ($request->has('currency_id')) {
             $query->byCurrency($request->currency_id);
+        }
+
+        if ($request->has('salesperson_id')) {
+            $query->whereHas('customer', function ($q) use ($request) {
+                $q->where('salesperson_id', $request->salesperson_id);
+            });
         }
 
         if ($request->has('prefix')) {

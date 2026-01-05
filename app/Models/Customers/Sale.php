@@ -165,8 +165,7 @@ class Sale extends Model
         return [
             'status',
             'date',
-            'customer_id',
-            'salesperson_id',
+            'currency_id',
             'warehouse_id',
             'total',
             'total_usd',
@@ -175,11 +174,14 @@ class Sale extends Model
             'discount_amount',
             'discount_amount_usd',
             'total_profit',
-            'approved_by',
-            'approved_at',
-            'approve_note',
-            'client_po_number',
+            'total_volume_cbm',
+            'total_weight_kg',
             'note',
+            'value_date',
+            'total_tax_amount',
+            'total_tax_amount_usd',
+            'local_curreny_rate',
+            'invoice_tax_label',
         ];
     }
 
