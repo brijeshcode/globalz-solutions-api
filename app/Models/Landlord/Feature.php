@@ -7,6 +7,8 @@ use App\Models\Tenant;
 
 class Feature extends Model
 {
+    protected $connection = 'mysql';
+
     protected $fillable = [
         'name',
         'key',

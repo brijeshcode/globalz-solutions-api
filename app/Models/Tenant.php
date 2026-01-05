@@ -92,6 +92,14 @@ class Tenant extends BaseTenant
     }
 
     /**
+     * Override route model binding to use landlord connection
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return static::on('mysql')->where($field ?? $this->getRouteKeyName(), $value)->first();
+    }
+
+    /**
      * Check if tenant has a feature
      */
     public function hasFeature(string $feature): bool

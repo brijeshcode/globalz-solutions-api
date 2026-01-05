@@ -46,8 +46,8 @@ class TenantManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'tenant_key' => 'required|string|max:255|unique:tenants,tenant_key',
-            'domain' => 'required|string|max:255|unique:tenants,domain',
+            'tenant_key' => 'required|string|max:255|unique:mysql.tenants,tenant_key',
+            'domain' => 'required|string|max:255|unique:mysql.tenants,domain',
             'database' => 'required|string|max:255',
             'database_username' => 'nullable|string|max:255',
             'database_password' => 'nullable|string|max:255',
@@ -114,14 +114,14 @@ class TenantManagementController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('tenants', 'tenant_key')->ignore($tenant->id),
+                Rule::unique('mysql.tenants', 'tenant_key')->ignore($tenant->id),
             ],
             'domain' => [
                 'sometimes',
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('tenants', 'domain')->ignore($tenant->id),
+                Rule::unique('mysql.tenants', 'domain')->ignore($tenant->id),
             ],
             'database' => 'sometimes|required|string|max:255',
             'database_username' => 'nullable|string|max:255',
@@ -168,6 +168,69 @@ class TenantManagementController extends Controller
 
         } catch (\Exception $e) {
             return ApiResponse::serverError('Failed to activate tenant: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Run migrations for the landlord database
+     */
+    public function runLandlordMigrations()
+    {
+        try {
+            Artisan::call('migrate', [
+                '--force' => true,
+            ]);
+
+            $output = Artisan::output();
+
+            return ApiResponse::send('Landlord migrations executed successfully', 200, [
+                'output' => $output,
+            ]);
+
+        } catch (\Exception $e) {
+            return ApiResponse::serverError('Failed to run landlord migrations: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Run migrations for all tenants
+     */
+    public function runAllTenantsMigrations()
+    {
+        try {
+            $tenants = Tenant::where('is_active', true)->get();
+            $results = [];
+
+            foreach ($tenants as $tenant) {
+                try {
+                    Artisan::call('tenants:artisan', [
+                        'artisanCommand' => 'migrate --force',
+                        '--tenant' => $tenant->id,
+                    ]);
+
+                    $results[] = [
+                        'tenant_id' => $tenant->id,
+                        'tenant_name' => $tenant->name,
+                        'status' => 'success',
+                        'output' => Artisan::output(),
+                    ];
+                } catch (\Exception $e) {
+                    $results[] = [
+                        'tenant_id' => $tenant->id,
+                        'tenant_name' => $tenant->name,
+                        'status' => 'failed',
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            return ApiResponse::send('Migrations executed for all tenants', 200, [
+                'total_tenants' => count($tenants),
+                'results' => $results,
+            ]);
+
+        } catch (\Exception $e) {
+            return ApiResponse::serverError('Failed to run migrations for all tenants: ' . $e->getMessage());
         }
     }
 

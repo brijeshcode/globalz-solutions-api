@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Route;
 // Landlord routes (authentication required, NO tenant required)
 Route::middleware('auth:sanctum')->group(function () {
 
+    // Landlord Migrations
+    Route::post('/migrations', [TenantManagementController::class, 'runLandlordMigrations'])->name('landlord.migrations.run');
+
     // Tenant Management
     Route::prefix('tenants')->name('tenants.')->group(function () {
 
@@ -40,8 +43,11 @@ Route::middleware('auth:sanctum')->group(function () {
         // Activate tenant
         Route::patch('{tenant}/activate', [TenantManagementController::class, 'activate'])->name('activate');
 
-        // Run migrations for tenant
+        // Run migrations for specific tenant
         Route::post('{tenant}/migrations', [TenantManagementController::class, 'runMigrations'])->name('runMigrations');
+
+        // Run migrations for all tenants
+        Route::post('migrations/run-all', [TenantManagementController::class, 'runAllTenantsMigrations'])->name('migrations.runAll');
 
         // Get tenant features
         Route::get('{tenant}/features', [FeatureController::class, 'getTenantFeatures'])->name('features.index');

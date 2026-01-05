@@ -7,6 +7,7 @@ use App\Models\Tenant;
 
 class TenantFeature extends Model
 {
+    protected $connection = 'mysql';
     protected $fillable = [
         'tenant_id',
         'feature_id',
