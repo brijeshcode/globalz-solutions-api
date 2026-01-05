@@ -178,6 +178,7 @@ class TenantManagementController extends Controller
     {
         try {
             Artisan::call('migrate', [
+                '--path' => 'database/migrations/landlord',
                 '--force' => true,
             ]);
 
