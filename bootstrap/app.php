@@ -15,8 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
+            // Landlord routes - NO tenant middleware
             Route::prefix('api/landlord')
-                ->middleware(['api', 'auth:sanctum'])
+                ->middleware([
+                    'api',
+                    'auth:sanctum',
+                ])
+                ->withoutMiddleware([
+                    \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+                    \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+                ])
                 ->name('landlord.')
                 ->group(base_path('routes/landlord.php'));
         },

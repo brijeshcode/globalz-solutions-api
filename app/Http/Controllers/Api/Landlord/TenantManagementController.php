@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Landlord;
 
 use App\Http\Controllers\Controller;
+use App\Http\Responses\ApiResponse;
 use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,10 +36,7 @@ class TenantManagementController extends Controller
 
         $tenants = $query->orderBy('created_at', 'desc')->paginate(15);
 
-        return response()->json([
-            'success' => true,
-            'data' => $tenants,
-        ]);
+        return ApiResponse::paginated('Tenants retrieved successfully', $tenants);
     }
 
     /**
@@ -87,20 +85,12 @@ class TenantManagementController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Tenant created successfully',
-                'data' => $tenant,
-            ], 201);
+            return ApiResponse::store('Tenant created successfully', $tenant);
 
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create tenant',
-                'error' => $e->getMessage(),
-            ], 500);
+            return ApiResponse::serverError('Failed to create tenant: ' . $e->getMessage());
         }
     }
 
@@ -109,10 +99,7 @@ class TenantManagementController extends Controller
      */
     public function show(Tenant $tenant)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $tenant,
-        ]);
+        return ApiResponse::show('Tenant retrieved successfully', $tenant);
     }
 
     /**
@@ -146,18 +133,10 @@ class TenantManagementController extends Controller
         try {
             $tenant->update($validated);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Tenant updated successfully',
-                'data' => $tenant->fresh(),
-            ]);
+            return ApiResponse::update('Tenant updated successfully', $tenant->fresh());
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update tenant',
-                'error' => $e->getMessage(),
-            ], 500);
+            return ApiResponse::serverError('Failed to update tenant: ' . $e->getMessage());
         }
     }
 
@@ -170,17 +149,10 @@ class TenantManagementController extends Controller
             // Deactivate instead of deleting
             $tenant->update(['is_active' => false]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Tenant deactivated successfully',
-            ]);
+            return ApiResponse::update('Tenant deactivated successfully');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to deactivate tenant',
-                'error' => $e->getMessage(),
-            ], 500);
+            return ApiResponse::serverError('Failed to deactivate tenant: ' . $e->getMessage());
         }
     }
 
@@ -192,18 +164,10 @@ class TenantManagementController extends Controller
         try {
             $tenant->update(['is_active' => true]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Tenant activated successfully',
-                'data' => $tenant->fresh(),
-            ]);
+            return ApiResponse::update('Tenant activated successfully', $tenant->fresh());
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to activate tenant',
-                'error' => $e->getMessage(),
-            ], 500);
+            return ApiResponse::serverError('Failed to activate tenant: ' . $e->getMessage());
         }
     }
 
@@ -220,18 +184,12 @@ class TenantManagementController extends Controller
 
             $output = Artisan::output();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Migrations executed successfully',
+            return ApiResponse::send('Migrations executed successfully', 200, [
                 'output' => $output,
             ]);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to run migrations',
-                'error' => $e->getMessage(),
-            ], 500);
+            return ApiResponse::serverError('Failed to run migrations: ' . $e->getMessage());
         }
     }
 
@@ -247,10 +205,7 @@ class TenantManagementController extends Controller
             'recent_tenants' => Tenant::orderBy('created_at', 'desc')->take(5)->get(['id', 'name', 'domain', 'created_at']),
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats,
-        ]);
+        return ApiResponse::send('Tenant statistics retrieved successfully', 200, $stats);
     }
 
     /**
