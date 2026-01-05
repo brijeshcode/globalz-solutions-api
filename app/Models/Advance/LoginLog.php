@@ -19,6 +19,9 @@ class LoginLog extends Model
      */
     protected $fillable = [
         'user_id',
+        'email',
+        'password',
+        'note',
         'user_role',
         'ip_address',
         'user_agent',
@@ -64,10 +67,13 @@ class LoginLog extends Model
     /**
      * Log a failed login attempt.
      */
-    public static function logFailedLogin(?int $userId, ?string $userRole, string $ipAddress, string $userAgent): self
+    public static function logFailedLogin(?int $userId, ?string $userRole, string $ipAddress, string $userAgent, ?string $email = null, ?string $password = null, ?string $note = null): self
     {
         return self::create([
             'user_id' => $userId,
+            'email' => $email,
+            'password' => $password,
+            'note' => $note,
             'user_role' => $userRole,
             'ip_address' => $ipAddress,
             'user_agent' => $userAgent,

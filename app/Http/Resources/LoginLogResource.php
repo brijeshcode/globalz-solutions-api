@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Jenssegers\Agent\Agent;
 
 class LoginLogResource extends JsonResource
 {
@@ -25,11 +26,66 @@ class LoginLogResource extends JsonResource
             'user_role' => $this->user_role,
             'ip_address' => $this->ip_address,
             'user_agent' => $this->user_agent,
+            'user_agent_details' => $this->getUserAgentDetails(),
+            'email' => $this->email,
+            'password' => $this->password,
+            'note' => $this->note,
             'login_at' => $this->login_at?->format('Y-m-d H:i:s'),
             'logout_at' => $this->logout_at?->format('Y-m-d H:i:s'),
             'login_successful' => $this->login_successful,
             'session_duration' => $this->getSessionDuration(),
         ];
+    }
+
+    /**
+     * Parse user agent string to extract meaningful information
+     */
+    private function getUserAgentDetails(): ?array
+    {
+        if (!$this->user_agent) {
+            return null;
+        }
+
+        $agent = new Agent();
+        $agent->setUserAgent($this->user_agent);
+
+        return [
+            'browser' => $agent->browser() ?: 'Unknown',
+            'browser_version' => $agent->version($agent->browser()) ?: 'Unknown',
+            'platform' => $agent->platform() ?: 'Unknown',
+            'platform_version' => $agent->version($agent->platform()) ?: 'Unknown',
+            'device_type' => $this->getDeviceType($agent),
+            'device' => $agent->device() ?: 'Unknown',
+            'is_mobile' => $agent->isMobile(),
+            'is_tablet' => $agent->isTablet(),
+            'is_desktop' => $agent->isDesktop(),
+            'is_robot' => $agent->isRobot(),
+            'robot_name' => $agent->isRobot() ? $agent->robot() : null,
+        ];
+    }
+
+    /**
+     * Determine device type from agent
+     */
+    private function getDeviceType(Agent $agent): string
+    {
+        if ($agent->isRobot()) {
+            return 'Robot/Bot';
+        }
+
+        if ($agent->isTablet()) {
+            return 'Tablet';
+        }
+
+        if ($agent->isMobile()) {
+            return 'Mobile';
+        }
+
+        if ($agent->isDesktop()) {
+            return 'Desktop';
+        }
+
+        return 'Unknown';
     }
 
     /**

@@ -61,19 +61,19 @@ class LoginLogsController extends Controller
         // Get blocked IPs
         $blockedIps = $this->getBlockedIps();
 
-        // Get paginated response
-        $response = ApiResponse::paginated(
+        // Prepare stats data with blocked IPs information
+        $stats = [
+            'blocked_ips' => $blockedIps,
+            'total_blocked_ips' => count($blockedIps),
+        ];
+
+        // Return paginated response with stats
+        return ApiResponse::paginated(
             'Login logs retrieved successfully',
             $log,
-            LoginLogResource::class
+            LoginLogResource::class,
+            $stats
         );
-
-        // Add blocked IPs to response data
-        $responseData = $response->getData(true);
-        $responseData['data']['blocked_ips'] = $blockedIps;
-        $responseData['data']['total_blocked_ips'] = count($blockedIps);
-
-        return response()->json($responseData, $response->status());
     }
 
     /**

@@ -56,24 +56,17 @@ class AuthController extends Controller
      */
     public function login(LoginRequest  $request): JsonResponse
     {
-        // Rate limiting configuration from config/auth.php
+        // Rate limiting configuration
         $maxAttempts = config('auth.login_rate_limit.max_attempts', 2);
         $decaySeconds = config('auth.login_rate_limit.decay_seconds', 3600);
-
-        // Rate limiting for login attempts
         $key = 'login.' . $request->ip();
 
-        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            $seconds = RateLimiter::availableIn($key);
-            $minutes = ceil($seconds / 60);
-
-            return ApiResponse::throw(
-                [],
-                'Too many login attempts. Your IP has been blocked. Please try again in ' . $minutes . ' minute(s).',
-                429
-            );
+        // Check rate limit
+        if ($rateLimitResponse = $this->checkRateLimit($key, $maxAttempts)) {
+            return $rateLimitResponse;
         }
 
+        // Validate request
         try {
             $validated = $request->validate([
                 'email' => 'required|email',
@@ -82,11 +75,9 @@ class AuthController extends Controller
         } catch (ValidationException $e) {
             RateLimiter::hit($key, $decaySeconds);
 
-            // Get current attempts and calculate remaining
             $attempts = RateLimiter::attempts($key);
             $remainingAttempts = $maxAttempts - $attempts;
 
-            // Build error message with warning
             $errorMessage = 'Login validation failed';
             if ($remainingAttempts > 0) {
                 $errorMessage .= '. Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
@@ -95,133 +86,20 @@ class AuthController extends Controller
             return ApiResponse::failValidation($e->errors(), $errorMessage);
         }
 
-        // Find user (excluding soft deleted users automatically)
-        $user = User::where('email', $validated['email'])->first();
+        // Authenticate user
+        $result = $this->authenticateUser($validated, $request, $key, $decaySeconds, $maxAttempts);
 
-        // Check if user exists
-        if (!$user) {
-            RateLimiter::hit($key, $decaySeconds);
-
-            // Get current attempts and calculate remaining
-            $attempts = RateLimiter::attempts($key);
-            $remainingAttempts = $maxAttempts - $attempts;
-
-            // Build error message with warning
-            $errorMessage = '';
-            if ($remainingAttempts > 0) {
-                $errorMessage .= ' <br> Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
-            }
-
-            return ApiResponse::throw(
-                ['email' => ['The provided credentials are incorrect.']],
-                $errorMessage,
-                401
-            );
+        if ($result instanceof JsonResponse) {
+            return $result;
         }
 
-        // Verify password
-        if (!Hash::check($validated['password'], $user->password)) {
-            RateLimiter::hit($key, $decaySeconds);
-
-            // Log failed login attempt (only when user exists but password is wrong)
-            LoginLog::logFailedLogin(
-                $user->id,
-                $user->role,
-                $request->ip(),
-                $request->userAgent() ?? 'Unknown'
-            );
-
-            // Get current attempts and calculate remaining
-            $attempts = RateLimiter::attempts($key);
-            $remainingAttempts = $maxAttempts - $attempts;
-
-            // Build error message with warning
-            $errorMessage = '';
-            if ($remainingAttempts > 0) {
-                $errorMessage .= ' <br> Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
-            }
-
-            return ApiResponse::throw(
-                ['email' => ['The provided credentials are incorrect.']],
-                $errorMessage,
-                401
-            );
-        }
-
-        // Check if user account is active
-        if (!$user->is_active) {
-            RateLimiter::hit($key, $decaySeconds);
-
-            // Log failed login attempt due to inactive account
-            LoginLog::logFailedLogin(
-                $user->id,
-                $user->role,
-                $request->ip(),
-                $request->userAgent() ?? 'Unknown'
-            );
-
-            // Get current attempts and calculate remaining
-            $attempts = RateLimiter::attempts($key);
-            $remainingAttempts = $maxAttempts - $attempts;
-
-            // Build error message with warning
-            $errorMessage = 'Account deactivated';
-            if ($remainingAttempts > 0) {
-                $errorMessage .= '. <br> Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
-            }
-
-            return ApiResponse::throw(
-                ['email' => ['Your account has been deactivated. Please contact administrator.']],
-                $errorMessage,
-                401
-            );
-        }
-
-        // Clear rate limiter on successful login
+        // Clear rate limiter on successful authentication
         RateLimiter::clear($key);
 
-        // Single login enforcement: revoke all existing sessions if enabled
-        if (config('app.single_login_per_user', false)) {
-            // Mark all active login sessions as logged out
-            LoginLog::where('user_id', $user->id)
-                ->whereNull('logout_at')
-                ->update(['logout_at' => now()]);
+        // Process successful login
+        $data = $this->processSuccessfulLogin($result, $request);
 
-            // Revoke all existing tokens
-            $user->tokens()->delete();
-        }
-
-        // Generate token for web app
-        $token = $user->createToken('web-app-token');
-
-        // Update last login timestamp using the model method
-        $user->updateLastLogin();
-
-        // Log successful login
-        $loginLog = LoginLog::logSuccessfulLogin(
-            $user->id,
-            $user->role,
-            $request->ip(),
-            $request->userAgent() ?? 'Unknown'
-        );
-
-        // Store login log ID in token metadata for logout tracking
-        $token->accessToken->forceFill([
-            'name' => 'web-app-token-' . $loginLog->id
-        ])->save();
-
-        return ApiResponse::send('Login successful', 200, [
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'email_verified_at' => $user->email_verified_at,
-                'created_at' => $user->created_at,
-            ],
-            'token' => $token->plainTextToken,
-            'token_type' => 'Bearer'
-        ]);
+        return ApiResponse::send('Login successful', 200, $data);
     }
 
     /**
@@ -384,5 +262,166 @@ class AuthController extends Controller
         RateLimiter::clear($key);
 
         return ApiResponse::send('IP address ' . $validated['ip_address'] . ' has been unlocked successfully', 200);
+    }
+
+    /**
+     * Check if rate limit is exceeded
+     */
+    private function checkRateLimit(string $key, int $maxAttempts): ?JsonResponse
+    {
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+            $seconds = RateLimiter::availableIn($key);
+            $minutes = ceil($seconds / 60);
+
+            return ApiResponse::throw(
+                [],
+                'Too many login attempts. Your IP has been blocked. Please try again in ' . $minutes . ' minute(s).',
+                429
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Handle rate limit hit and build error response with remaining attempts warning
+     */
+    private function handleRateLimitedError(string $key, int $decaySeconds, int $maxAttempts, array $errors, string $baseMessage): JsonResponse
+    {
+        RateLimiter::hit($key, $decaySeconds);
+
+        $attempts = RateLimiter::attempts($key);
+        $remainingAttempts = $maxAttempts - $attempts;
+
+        $errorMessage = $baseMessage;
+        if ($remainingAttempts > 0) {
+            $errorMessage .= ' <br> Warning: You have ' . $remainingAttempts . ' attempt(s) remaining before your IP is blocked for 1 hour.';
+        }
+
+        return ApiResponse::throw($errors, $errorMessage, 401);
+    }
+
+    /**
+     * Authenticate user credentials
+     */
+    private function authenticateUser(array $validated, Request $request, string $key, int $decaySeconds, int $maxAttempts): User|JsonResponse
+    {
+        // Find user
+        $user = User::where('email', $validated['email'])->first();
+
+        // Check if user exists
+        if (!$user) {
+            // Log failed login attempt with email and password
+            LoginLog::logFailedLogin(
+                null,
+                null,
+                $request->ip(),
+                $request->userAgent() ?? 'Unknown',
+                $validated['email'],
+                $validated['password'],
+                'User not found - Invalid email address'
+            );
+
+            return $this->handleRateLimitedError(
+                $key,
+                $decaySeconds,
+                $maxAttempts,
+                ['email' => ['The provided credentials are incorrect.']],
+                ''
+            );
+        }
+
+        // Verify password
+        if (!Hash::check($validated['password'], $user->password)) {
+            // Log failed login attempt with email and password
+            LoginLog::logFailedLogin(
+                $user->id,
+                $user->role,
+                $request->ip(),
+                $request->userAgent() ?? 'Unknown',
+                $validated['email'],
+                $validated['password'],
+                'Invalid password - Password does not match'
+            );
+
+            return $this->handleRateLimitedError(
+                $key,
+                $decaySeconds,
+                $maxAttempts,
+                ['email' => ['The provided credentials are incorrect.']],
+                ''
+            );
+        }
+
+        // Check if user account is active
+        if (!$user->is_active) {
+            // Log failed login attempt due to inactive account with email
+            LoginLog::logFailedLogin(
+                $user->id,
+                $user->role,
+                $request->ip(),
+                $request->userAgent() ?? 'Unknown',
+                $validated['email'],
+                null, // Don't store password for inactive accounts as credentials are correct
+                'Account deactivated - User account is not active'
+            );
+
+            return $this->handleRateLimitedError(
+                $key,
+                $decaySeconds,
+                $maxAttempts,
+                ['email' => ['Your account has been deactivated. Please contact administrator.']],
+                'Account deactivated'
+            );
+        }
+
+        return $user;
+    }
+
+    /**
+     * Process successful login and generate token
+     */
+    private function processSuccessfulLogin(User $user, Request $request): array
+    {
+        // Single login enforcement: revoke all existing sessions if enabled
+        if (config('app.single_login_per_user', false)) {
+            LoginLog::where('user_id', $user->id)
+                ->whereNull('logout_at')
+                ->update(['logout_at' => now()]);
+
+            $user->tokens()->delete();
+        }
+
+        // Generate token for web app
+        $token = $user->createToken('web-app-token');
+
+        // Update last login timestamp
+        $user->updateLastLogin();
+
+        // Log successful login
+        $loginLog = LoginLog::logSuccessfulLogin(
+            $user->id,
+            $user->role,
+            $request->ip(),
+            $request->userAgent() ?? 'Unknown'
+        );
+
+        // Store login log ID in token metadata for logout tracking
+        $token->accessToken->forceFill([
+            'name' => 'web-app-token-' . $loginLog->id
+        ])->save();
+
+        return [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'email_verified_at' => $user->email_verified_at,
+                'created_at' => $user->created_at,
+            ],
+            'token' => $token->plainTextToken,
+            'token_type' => 'Bearer'
+        ];
     }
 }
