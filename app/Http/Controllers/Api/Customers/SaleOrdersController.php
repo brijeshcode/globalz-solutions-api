@@ -28,7 +28,7 @@ class SaleOrdersController extends Controller
     {
         $query = Sale::query()
             ->with([
-                'customer:id,name,code',
+                'customer:id,name,code,city',
                 'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
                 'warehouse:id,name',
                 'salesperson:id,name',
@@ -646,6 +646,7 @@ class SaleOrdersController extends Controller
 
     public function forceDelete(int $id): JsonResponse
     {
+        abort(401);
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
