@@ -298,10 +298,10 @@
                 <tr>
                     <th style="width: 5%;">#</th>
                     <th style="width: 11%;">Item Code</th>
-                    <th style="width: 25%;">Description</th>
+                    <th style="width: 32%;">Description</th>
                     <th style="width: 9%;">Price</th>
                     <th style="width: 7%;">Dis. %</th>
-                    <th style="width: 14%;">QTY</th>
+                    <th style="width: 9%;">QTY</th>
                     @if($sale->prefix === 'INV')
                     <th style="width: 8%;">Tax</th>
                     @endif
