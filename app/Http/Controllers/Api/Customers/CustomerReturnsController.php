@@ -143,7 +143,6 @@ class CustomerReturnsController extends Controller
 
             // Disable activity logging for initial return items
             // We don't want to log items created with the return
-            CustomerReturnItem::disableLogging();
 
             // Prepare and create return items from sale items
             foreach ($itemsInput as $itemInput) {
