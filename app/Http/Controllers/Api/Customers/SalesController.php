@@ -186,9 +186,6 @@ class SalesController extends Controller
                 SaleItems::create($itemData);
             }
 
-            // Re-enable activity logging
-            SaleItems::enableLogging();
-
             return $sale;
         });
 

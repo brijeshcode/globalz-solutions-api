@@ -150,8 +150,6 @@ class CustomerReturnsController extends Controller
                 $customerReturn->items()->create($itemData);
             }
 
-            // Re-enable activity logging
-            CustomerReturnItem::enableLogging();
 
             // Recalculate return totals
             $customerReturn->total = $customerReturn->items->sum('total_price');
