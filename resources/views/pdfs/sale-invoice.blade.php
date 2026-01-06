@@ -124,6 +124,10 @@
             background-color: #F5F5F5;
         }
 
+        .items-table thead {
+            display: table-row-group;
+        }
+
         .text-center {
             text-align: center;
         }
@@ -342,21 +346,25 @@
                     <td>&nbsp;</td>
                 </tr>
                 @endfor
+            </tbody>
+        </table>
 
-                <!-- Totals Section -->
+        <!-- Totals Section (outside table to prevent header repetition) -->
+        <table class="items-table" style="margin-top: -1px;">
+            <tbody>
                 <tr class="totals-row first-total">
-                    <td colspan="{{ $sale->prefix === 'INV' ? 4 : 3 }}" style="border: none;">
+                    <td colspan="{{ $sale->prefix === 'INV' ? 4 : 3 }}" style="width: {{ $sale->prefix === 'INV' ? 45 : 38 }}%; border: none;">
                         <div style="font-size: 8pt;">
                             <strong>Volume CBM:</strong> {{ number_format($totalVolume, 2) }}
                         </div>
                     </td>
-                    <td colspan="2" style="border: none;"></td>
-                    <td class="font-bold">Sub Total</td>
-                    <td class="text-right font-bold">{{ number_format($calculatedSubTotal, 2) }}</td>
+                    <td colspan="2" style="width: {{ $sale->prefix === 'INV' ? 20 : 24 }}%; border: none;"></td>
+                    <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Sub Total</td>
+                    <td class="text-right font-bold" style="width: 15%;">{{ number_format($calculatedSubTotal, 2) }}</td>
                 </tr>
 
                 <tr class="totals-row">
-                    <td colspan="{{ $sale->prefix === 'INV' ? 6 : 5 }}" style="position: relative; border: none;">
+                    <td colspan="{{ $sale->prefix === 'INV' ? 6 : 5 }}" style="width: {{ $sale->prefix === 'INV' ? 73 : 80 }}%; position: relative; border: none;">
                         <div style="font-size: 8pt;">
                             <strong>Weight KG:</strong> {{ number_format($totalWeight, 2) }}
                         </div>
@@ -368,26 +376,26 @@
                                  style="height: {{ $company['stamp_height'] ?? '150' }}px; width: {{ $company['stamp_width'] ?? '150' }}px; position: absolute; left: 35%; top: -50%;">
                         @endif
                     </td>
-                    <td class="font-bold">Add. Discount</td>
-                    <td class="text-right font-bold">{{ number_format($sale->discount_amount, 2) }}</td>
+                    <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Add. Discount</td>
+                    <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->discount_amount, 2) }}</td>
                 </tr>
 
                 @if($sale->prefix === 'INV')
                 <tr class="totals-row">
-                    <td colspan="3" style="border: none;"></td>
-                    <td colspan="2" class="font-bold">TVA 11% LL</td>
-                    <td class="text-right font-bold">{{ number_format($sale->total_tax_amount_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
-                    <td class="font-bold">{{ $sale->invoice_tax_label }}</td>
-                    <td class="text-right font-bold">{{ number_format($sale->total_tax_amount, 2) }}</td>
+                    <td colspan="3" style="width: 35%; border: none;"></td>
+                    <td colspan="2" class="font-bold" style="width: 20%; white-space: nowrap;">TVA 11% LL</td>
+                    <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_tax_amount_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
+                    <td class="font-bold" style="width: 13%; white-space: nowrap;">{{ $sale->invoice_tax_label }}</td>
+                    <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_tax_amount, 2) }}</td>
                 </tr>
                 @endif
 
                 <tr class="totals-row">
-                    <td colspan="3" style="border: none;"></td>
-                    <td colspan="{{ $sale->prefix === 'INV' ? 2 : 1 }}" class="font-bold">Net Total LL</td>
-                    <td class="text-right font-bold">{{ number_format($sale->total_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
-                    <td class="font-bold">Net Total</td>
-                    <td class="text-right font-bold" style="font-size: 10pt;">{{ number_format($sale->total, 2) }}</td>
+                    <td colspan="3" style="width: 35%; border: none;"></td>
+                    <td colspan="{{ $sale->prefix === 'INV' ? 2 : 1 }}" class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 20 : 25 }}%; white-space: nowrap;">Net Total LL</td>
+                    <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
+                    <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Net Total</td>
+                    <td class="text-right font-bold" style="width: 15%; font-size: 10pt;">{{ number_format($sale->total, 2) }}</td>
                 </tr>
             </tbody>
         </table>
