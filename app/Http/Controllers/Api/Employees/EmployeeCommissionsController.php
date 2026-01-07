@@ -858,10 +858,10 @@ class EmployeeCommissionsController extends Controller
     /**
      * Calculate sale type commission
      * Formula:
-     * - Fixed percent_type: min(totalSales, max_amount) x percent%
+     * - Fixed percent_type: min amount x percent%
      * - Dynamic percent_type:
      *   - Case 1: If sales < min_amount then: 0
-     *   - Case 2: If sales >= min_amount then: min_amount x comm%
+     *   - Case 2: If sales >= min_amount then: min(totalSales, max_amount) x comm%
      */
     private function calculateSaleCommission($rule, float $totalSales): float
     {
@@ -871,7 +871,6 @@ class EmployeeCommissionsController extends Controller
         }
         // If percent_type is 'fixed', use simple calculation with max_amount cap
         if ($rule->percent_type === CommissionTargetRule::PERCENTAGE_TYPE_FIXED) {
-            // $cappedAmount = min($totalSales, $rule->maximum_amount);
             $cappedAmount =  $rule->minimum_amount;
             return $cappedAmount * ($rule->percent / 100);
         }
@@ -879,7 +878,7 @@ class EmployeeCommissionsController extends Controller
         // Dynamic calculation (existing logic)
         // Case 2
         $cappedAmount = min($totalSales, $rule->maximum_amount);
-        return $rule->minimum_amount * ($rule->percent / 100);
+        return $cappedAmount * ($rule->percent / 100);
     }
 
     /**
@@ -894,12 +893,13 @@ class EmployeeCommissionsController extends Controller
     {
         // If percent_type is 'fixed', use simple calculation with max_amount cap
         if ($rule->percent_type === CommissionTargetRule::PERCENTAGE_TYPE_FIXED) {
-            $cappedAmount = min($totalPayments, $rule->maximum_amount);
+            // $cappedAmount = min($totalPayments, $rule->maximum_amount);
+            $cappedAmount =  $rule->minimum_amount;
             return $cappedAmount * ($rule->percent / 100);
         }
 
         // Dynamic calculation (existing logic)
-        if ($totalPayments < $rule->maximum_amount) {
+        if ($totalPayments <= $rule->maximum_amount) {
             // Case 1
             $dynamicPercent = ($totalPayments / $rule->maximum_amount) * $rule->percent;
             return ($dynamicPercent / 100) * $totalPayments;
