@@ -61,9 +61,10 @@ class ListDataController extends Controller
 
             // expenses
             'expenseCategories' => $this->expenseCategories(),
-
+            'parentExpense' => $this->parentExpense(),
             // expenses
             'incomeCategories' => $this->incomeCategories(),
+            'parentIncome' => $this->parentIncome(),
 
             // items
             'items' => $this->items(),
@@ -222,13 +223,23 @@ class ListDataController extends Controller
     // expenses
     private function expenseCategories()
     {
-        return ExpenseCategory::active()->orderBy('name')->get(['id', 'name']);
+        return ExpenseCategory::active()->orderBy('name')->get(['id', 'name', 'parent_id']);
+    }
+
+    private function parentExpense()
+    {
+        return ExpenseCategory::active()->orderBy('name')->get(['id', 'name'])->isRoot();
     }
 
     // incomes
     private function incomeCategories()
     {
-        return IncomeCategory::active()->orderBy('name')->get(['id', 'name']);
+        return IncomeCategory::active()->orderBy('name')->get(['id', 'name', 'parent_id']);
+    }
+
+    private function parentIncome()
+    {
+        return IncomeCategory::active()->orderBy('name')->get(['id', 'name'])->isRoot();
     }
 
     // users
