@@ -865,6 +865,10 @@ class EmployeeCommissionsController extends Controller
      */
     private function calculateSaleCommission($rule, float $totalSales): float
     {
+        if ($totalSales < $rule->minimum_amount) {
+            // Case 1
+            return 0;
+        }
         // If percent_type is 'fixed', use simple calculation with max_amount cap
         if ($rule->percent_type === CommissionTargetRule::PERCENTAGE_TYPE_FIXED) {
             $cappedAmount = min($totalSales, $rule->maximum_amount);
@@ -872,13 +876,8 @@ class EmployeeCommissionsController extends Controller
         }
 
         // Dynamic calculation (existing logic)
-        if ($totalSales < $rule->minimum_amount) {
-            // Case 1
-            return 0;
-        } else {
-            // Case 2
-            return $rule->minimum_amount * ($rule->percent / 100);
-        }
+        // Case 2
+        return $rule->minimum_amount * ($rule->percent / 100);
     }
 
     /**
