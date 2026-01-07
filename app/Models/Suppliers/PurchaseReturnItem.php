@@ -147,18 +147,5 @@ class PurchaseReturnItem extends Model
                 $purchaseReturnItem->item_code = $purchaseReturnItem->item->code;
             }
         });
-
-        // Uncomment if you want automatic recalculation on save/delete
-        // static::saved(function ($purchaseReturnItem) {
-        //     if ($purchaseReturnItem->purchaseReturn) {
-        //         $purchaseReturnItem->purchaseReturn->recalculateFromItems();
-        //     }
-        // });
-
-        // static::deleted(function ($purchaseReturnItem) {
-        //     if ($purchaseReturnItem->purchaseReturn) {
-        //         $purchaseReturnItem->purchaseReturn->recalculateFromItems();
-        //     }
-        // });
     }
 }

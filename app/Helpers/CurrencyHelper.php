@@ -41,4 +41,37 @@ class CurrencyHelper {
         }
     }
 
+    public static function fromUsd(int $currencyId, float $amountUsd, ?float $rate = null): float
+    {
+        $currency = Currency::with('activeRate')->find($currencyId);
+
+        // If currency not found, return amount as-is (assume it stays in USD)
+        if (!$currency) {
+            Log::warning("Currency with ID {$currencyId} not found. Returning amount as-is.");
+            return $amountUsd;
+        }
+
+        // Get rate from activeRate relationship if not provided
+        if(is_null($rate)){
+            if (!$currency->activeRate) {
+                Log::warning("No active rate found for currency {$currency->code}. Returning amount as-is.");
+                return $amountUsd;
+            }
+            $rate = $currency->activeRate->rate;
+        }
+
+        // Prevent division by zero
+        if ($rate == 0) {
+            Log::error("Currency rate is zero for currency {$currency->code}. Returning amount as-is.");
+            return $amountUsd;
+        }
+
+        // Convert based on calculation type (reverse of toUsd)
+        if($currency->calculation_type == 'multiply'){
+            return $amountUsd / $rate;
+        }else{
+            return $amountUsd * $rate;
+        }
+    }
+
 }

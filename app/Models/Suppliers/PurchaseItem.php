@@ -152,19 +152,5 @@ class PurchaseItem extends Model
             }
         });
 
-
-        // static::saved(function ($purchaseItem) {
-        //     // Update purchase totals when item is saved
-        //     if ($purchaseItem->purchase) {
-        //         $purchaseItem->purchase->recalculateFromItems();
-        //     }
-        // });
-
-        // static::deleted(function ($purchaseItem) {
-        //     // Update purchase totals when item is deleted
-        //     if ($purchaseItem->purchase) {
-        //         $purchaseItem->purchase->recalculateFromItems();
-        //     }
-        // });
     }
 }

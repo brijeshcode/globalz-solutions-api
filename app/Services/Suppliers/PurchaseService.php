@@ -431,12 +431,17 @@ class PurchaseService
 
         $subTotal = $items->sum('total_price');
         $subTotalUsd = $items->sum('total_price_usd');
-        $total = $subTotal - $purchase->discount_amount;
-        $totalUsd = $subTotalUsd - $purchase->discount_amount_usd;
+        $total = $subTotal - $purchase->discount_amount + CurrencyHelper::fromUsd($purchase->currency_id, $purchase->tax_usd);
+        $totalUsd = $subTotalUsd - $purchase->discount_amount_usd + $purchase->tax_usd;
 
-        $finalTotal = $total;
+        
+        // final total usd = total + custom + shipping + other fees 
         $finalTotalUsd = $totalUsd + $purchase->shipping_fee_usd + $purchase->customs_fee_usd
-                        + $purchase->other_fee_usd + $purchase->tax_usd;
+        + $purchase->other_fee_usd + $purchase->tax_usd;
+
+        // final total = UsdToCurrency(final total usd ) 
+        
+        $finalTotal = CurrencyHelper::fromUsd($purchase->currency_id, $total) ;
 
         $purchase->update([
             'sub_total' => $subTotal,

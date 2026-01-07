@@ -204,32 +204,6 @@ class Purchase extends Model
         return $this->purchaseItems()->exists();
     }
 
-
-
-    // Business Logic Methods
-    public function recalculateFromItems(): void
-    {
-        $items = $this->purchaseItems;
-        
-        $subTotal = $items->sum('total_price');
-        $subTotalUsd = $items->sum('total_price_usd');
-        $total = $subTotal - $this->discount_amount;
-        $totalUsd = $subTotalUsd - $this->discount_amount_usd;
-        
-        $finalTotal = $total;
-        $finalTotalUsd = $totalUsd + $this->shipping_fee_usd + $this->customs_fee_usd 
-                        + $this->other_fee_usd + $this->tax_usd;
-        
-        $this->update([
-            'sub_total' => $subTotal,
-            'sub_total_usd' => $subTotalUsd,
-            'total' => $total,
-            'total_usd' => $totalUsd,
-            'final_total' => $finalTotal,
-            'final_total_usd' => $finalTotalUsd,
-        ]);
-    }
-
     // Code generation methods
     public static function generateNextPurchaseCode(): string
     {
