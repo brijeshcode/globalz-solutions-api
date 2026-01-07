@@ -79,7 +79,7 @@ class ItemAdjustsController extends Controller
             'createdBy:id,name',
             'updatedBy:id,name',
             'warehouse:id,name',
-            'itemAdjustItems.item:id,code,short_name',
+            'itemAdjustItems.item:id,code,short_name,description',
         ]);
 
         return ApiResponse::show(
