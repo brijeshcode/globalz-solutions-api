@@ -287,7 +287,7 @@ class SaleOrdersController extends Controller
         }
 
         $sale->load([
-            'customer:id,name,code,address,city,mobile,mof_tax_number',
+            'customer:id,name,code,address,city,mobile,mof_tax_number,price_list_id_INV,price_list_id_INX',
             'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
