@@ -421,10 +421,13 @@ class CustomerStatmentController extends Controller
 
     private function calculateStats($transactions)
     {
+        // Get the balance from the most recent transaction by date (not by array position)
+        $latestTransaction = $transactions->sortByDesc('timestamp')->first();
+
         return [
             'total_debit' => $transactions->sum('debit'),
             'total_credit' => $transactions->sum('credit'),
-            'balance' => $transactions->last()['balance'] ?? 0,
+            'balance' => $latestTransaction['balance'] ?? 0,
         ];
     }
 
