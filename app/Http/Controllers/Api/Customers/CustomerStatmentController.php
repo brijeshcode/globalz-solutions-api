@@ -279,21 +279,24 @@ class CustomerStatmentController extends Controller
             );
         }
 
-        // Sort by date - default to desc
-        $sortDirection = $request->get('sort_direction', 'desc');
-        $sortedTransactions = $sortDirection === 'asc'
-            ? $allTransactions->sortBy('date')->values()
-            : $allTransactions->sortByDesc('date')->values();
+        // Always sort chronologically first for balance calculation
+        $chronologicalTransactions = $allTransactions->sortBy('date')->values();
 
-        // Calculate running balance
+        // Calculate running balance in chronological order (oldest to newest)
         $balance = 0;
-        $transactionsWithBalance = $sortedTransactions->map(function ($transaction) use (&$balance) {
+        $transactionsWithBalance = $chronologicalTransactions->map(function ($transaction) use (&$balance) {
             $balance += $transaction['credit'] - $transaction['debit'];
             $transaction['balance'] = $balance;
             return $transaction;
         });
 
-        return $transactionsWithBalance->values();
+        // Now sort for display based on user preference
+        $sortDirection = $request->get('sort_direction', 'desc');
+        $finalTransactions = $sortDirection === 'asc'
+            ? $transactionsWithBalance
+            : $transactionsWithBalance->sortByDesc('date')->values();
+
+        return $finalTransactions;
     }
 
     private function getCreditDebitNotes(Request $request, Customer $customer, ?string $noteSearch = null)
