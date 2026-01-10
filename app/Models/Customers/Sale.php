@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Currency\CurrencyService;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\CustomersHelper;
+use App\Models\Items\PriceList;
 use App\Traits\Authorable;
 use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
@@ -44,6 +45,7 @@ class Sale extends Model
         'customer_id',
         'currency_id',
         'warehouse_id',
+        'price_list_id',
         'customer_payment_term_id',
         'customer_last_payment_receipt_id',
         'client_po_number',
@@ -147,6 +149,11 @@ class Sale extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function priceList(): BelongsTo
+    {
+        return $this->belongsTo(PriceList::class);
     }
 
     public function salesperson(): BelongsTo
@@ -489,6 +496,10 @@ class Sale extends Model
             $sale->status = 'Waiting';
             if (!$sale->code) {
                 $sale->setSaleCode();
+            }
+            $customer = Customer::select('price_list_id_INV', 'price_list_id_INX')->find($sale->customer_id);
+            if( !is_null($customer) ){
+                $sale->price_list_id = $sale->prefix ==  self::TAXFREEPREFIX ? $customer->price_list_id_INX : $customer->price_list_id_INV;
             }
 
             // Calculate value_date based on payment term

@@ -16,6 +16,7 @@ class SaleResource extends JsonResource
             'date' => $this->date,
             'prefix' => $this->prefix,
             'salesperson_id' => $this->salesperson_id,
+            'price_list_id' => $this->price_list_id,
             'customer_id' => $this->customer_id,
             'currency_id' => $this->currency_id,
             'warehouse_id' => $this->warehouse_id,
@@ -53,6 +54,7 @@ class SaleResource extends JsonResource
             'sale_items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
             'items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
             'warehouse' => $this->whenLoaded('warehouse'),
+            'priceList' => $this->whenLoaded('priceList'),
             'currency' => $this->whenLoaded('currency', function () {
                 return [
                     'id' => $this->currency->id,

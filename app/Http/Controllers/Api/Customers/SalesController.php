@@ -26,7 +26,7 @@ class SalesController extends Controller
         $query = $this->saleQuery($request);
 
         $sales = $this->applyPagination($query, $request);
-        
+
         return ApiResponse::paginated(
             'Sales retrieved successfully',
             $sales,
@@ -37,7 +37,7 @@ class SalesController extends Controller
     public function store(SalesStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
-        
+
         /** @var \App\Models\User $user */
         $user = \Illuminate\Support\Facades\Auth::user();
 
@@ -48,7 +48,7 @@ class SalesController extends Controller
 
         $data['approved_by'] = $user->id;
         $data['approved_at'] = now();
-        if(Sale::TAXFREEPREFIX == $data['prefix']){
+        if (Sale::TAXFREEPREFIX == $data['prefix']) {
             $data['total_tax_amount'] = 0;
             $data['total_tax_amount_usd'] = 0;
             $data['invoice_tax_label'] = '';
@@ -76,7 +76,7 @@ class SalesController extends Controller
 
                     // Get cost price from item's price (already in USD)
                     $costPrice = $item?->itemPrice?->price_usd ?? 0;
-                    if(Sale::TAXFREEPREFIX == $data['prefix']){
+                    if (Sale::TAXFREEPREFIX == $data['prefix']) {
 
                         $saleItems[$index]['tax_percent'] = 0;
                         $saleItems[$index]['tax_amount'] = 0;
@@ -199,25 +199,35 @@ class SalesController extends Controller
 
     public function show(Sale $sale): JsonResponse
     {
+        $this->updateAllSalePriceList();
         // Only show approved sales
         if (!$sale->isApproved()) {
             return ApiResponse::customError('Sale is not approved', 404);
         }
 
-        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name']);
+        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name']);
 
         return ApiResponse::show(
             'Sale retrieved successfully',
             new SaleResource($sale)
         );
     }
+    
+    private function updateAllSalePriceList(){
+        $sales  = Sale::with('customer:id,price_list_id_INV,price_list_id_INX')->whereNull('price_list_id')->get();
+        
+        foreach($sales as $sale){
+            $priceListId = $sale->prefix == Sale::TAXPREFIX ? $sale->customer->price_list_id_INV : $sale->customer->price_list_id_INX;
+            $sale->price_list_id = $priceListId;
+            $sale->save();
+        }
+    }
 
     public function update(SalesUpdateRequest $request, Sale $sale): JsonResponse
     {
         // Cannot update unapproved sales (they should be in sale orders)
-        if(!RoleHelper::canAdmin()){
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Cannot update an approved sales', 422);
-
         }
 
         $data = $request->validated();
@@ -385,7 +395,7 @@ class SalesController extends Controller
 
     public function destroy(Sale $sale): JsonResponse
     {
-        if(!RoleHelper::canAdmin()){
+        if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Cannot delete an approved sales', 422);
         }
 
@@ -683,7 +693,7 @@ class SalesController extends Controller
         }
 
         if ($request->has('status')) {
-            $query->where('status' , $request->status);
+            $query->where('status', $request->status);
         }
 
         if ($request->has('date_from') && $request->has('date_to')) {
