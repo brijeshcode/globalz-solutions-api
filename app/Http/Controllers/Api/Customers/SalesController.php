@@ -199,7 +199,7 @@ class SalesController extends Controller
 
     public function show(Sale $sale): JsonResponse
     {
-        $this->updateAllSalePriceList();
+        // $this->updateAllSalePriceList();
         // Only show approved sales
         if (!$sale->isApproved()) {
             return ApiResponse::customError('Sale is not approved', 404);
@@ -215,7 +215,7 @@ class SalesController extends Controller
     
     private function updateAllSalePriceList(){
         $sales  = Sale::with('customer:id,price_list_id_INV,price_list_id_INX')->whereNull('price_list_id')->get();
-        
+
         foreach($sales as $sale){
             $priceListId = $sale->prefix == Sale::TAXPREFIX ? $sale->customer->price_list_id_INV : $sale->customer->price_list_id_INX;
             $sale->price_list_id = $priceListId;
