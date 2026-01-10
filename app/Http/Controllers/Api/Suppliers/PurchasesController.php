@@ -46,49 +46,60 @@ class PurchasesController extends Controller
      */
     public function store(PurchasesStoreRequest $request): JsonResponse
     {
-        $data = $request->validated();
-        $items = $data['items'] ?? [];
-        unset($data['items']); // Remove items from purchase data
+        try {
+            $data = $request->validated();
+            $items = $data['items'] ?? [];
+            unset($data['items']); // Remove items from purchase data
 
-        // Create purchase with items using service
-        $purchase = $this->purchaseService->createPurchaseWithItems($data, $items);
+            // Remove auto-calculated fields if present (these are calculated by the service)
+            unset($data['sub_total'], $data['sub_total_usd'], $data['total'], $data['total_usd'], $data['final_total'], $data['final_total_usd']);
 
-        // Handle document uploads
-        if ($request->hasFile('documents')) {
-            $files = $request->file('documents');
-            if (!is_array($files)) {
-                $files = [$files];
-            }
+            // Create purchase with items using service
+            $purchase = $this->purchaseService->createPurchaseWithItems($data, $items);
 
-            // Validate each document file
-            foreach ($files as $file) {
-                $validationErrors = $purchase->validateDocumentFile($file);
-                if (!empty($validationErrors)) {
-                    return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
+            // Handle document uploads
+            if ($request->hasFile('documents')) {
+                $files = $request->file('documents');
+                if (!is_array($files)) {
+                    $files = [$files];
                 }
+
+                // Validate each document file
+                foreach ($files as $file) {
+                    $validationErrors = $purchase->validateDocumentFile($file);
+                    if (!empty($validationErrors)) {
+                        return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
+                    }
+                }
+
+                // Upload documents
+                $purchase->createDocuments($files, [
+                    'type' => 'purchase_document'
+                ]);
             }
 
-            // Upload documents
-            $purchase->createDocuments($files, [
-                'type' => 'purchase_document'
+            $purchase->load([
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'supplier:id,code,name',
+                'warehouse:id,name',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                // 'account:id,name',
+                'purchaseItems.item:id,code,short_name',
+                'documents'
             ]);
+
+            return ApiResponse::store(
+                'Purchase created successfully',
+                new PurchaseResource($purchase)
+            );
+        } catch (\InvalidArgumentException $e) {
+            // Validation errors (inventory issues, etc.) - user-friendly messages
+            return ApiResponse::customError($e->getMessage(), 422);
+        } catch (\Exception $e) {
+            // System/unexpected errors
+            return ApiResponse::customError('Failed to create purchase: ' . $e->getMessage(), 500);
         }
-
-        $purchase->load([
-            'createdBy:id,name',
-            'updatedBy:id,name',
-            'supplier:id,code,name',
-            'warehouse:id,name',
-            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            // 'account:id,name',
-            'purchaseItems.item:id,code,short_name',
-            'documents'
-        ]);
-
-        return ApiResponse::store(
-            'Purchase created successfully',
-            new PurchaseResource($purchase)
-        );
     }
 
     /**
@@ -118,48 +129,60 @@ class PurchasesController extends Controller
      */
     public function update(PurchasesUpdateRequest $request, Purchase $purchase): JsonResponse
     {
-        $data = $request->validated();
-        $items = $data['items'] ?? [];
-        unset($data['items']); // Remove items from purchase data
-        unset($data['code']); // Remove code from data if present (code is system generated only, not updatable)
-        // Update purchase with items using service
-        $purchase = $this->purchaseService->updatePurchaseWithItems($purchase, $data, $items);
+        try {
+            $data = $request->validated();
+            $items = $data['items'] ?? [];
+            unset($data['items']); // Remove items from purchase data
+            unset($data['code']); // Remove code from data if present (code is system generated only, not updatable)
 
-        // Handle document uploads
-        if ($request->hasFile('documents')) {
-            $files = $request->file('documents');
-            if (!is_array($files)) {
-                $files = [$files];
-            }
+            // Remove auto-calculated fields if present (these are calculated by the service)
+            unset($data['sub_total'], $data['sub_total_usd'], $data['total'], $data['total_usd'], $data['final_total'], $data['final_total_usd']);
 
-            // Validate each document file
-            foreach ($files as $file) {
-                $validationErrors = $purchase->validateDocumentFile($file);
-                if (!empty($validationErrors)) {
-                    return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
+            // Update purchase with items using service
+            $purchase = $this->purchaseService->updatePurchaseWithItems($purchase, $data, $items);
+
+            // Handle document uploads
+            if ($request->hasFile('documents')) {
+                $files = $request->file('documents');
+                if (!is_array($files)) {
+                    $files = [$files];
                 }
+
+                // Validate each document file
+                foreach ($files as $file) {
+                    $validationErrors = $purchase->validateDocumentFile($file);
+                    if (!empty($validationErrors)) {
+                        return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
+                    }
+                }
+
+                $purchase->updateDocuments($files, [
+                    'type' => 'purchase_document'
+                ]);
             }
 
-            $purchase->updateDocuments($files, [
-                'type' => 'purchase_document'
+            $purchase->load([
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'supplier:id,code,name',
+                'warehouse:id,name',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                // 'account:id,name',
+                'purchaseItems.item:id,code,short_name',
+                'documents'
             ]);
+
+            return ApiResponse::update(
+                'Purchase updated successfully',
+                new PurchaseResource($purchase)
+            );
+        } catch (\InvalidArgumentException $e) {
+            // Validation errors (inventory issues, etc.) - user-friendly messages
+            return ApiResponse::customError($e->getMessage(), 422);
+        } catch (\Exception $e) {
+            // System/unexpected errors
+            return ApiResponse::customError('Failed to update purchase: ' . $e->getMessage(), 500);
         }
-
-        $purchase->load([
-            'createdBy:id,name',
-            'updatedBy:id,name',
-            'supplier:id,code,name',
-            'warehouse:id,name',
-            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            // 'account:id,name',
-            'purchaseItems.item:id,code,short_name',
-            'documents'
-        ]);
-
-        return ApiResponse::update(
-            'Purchase updated successfully',
-            new PurchaseResource($purchase)
-        );
     }
 
     /**

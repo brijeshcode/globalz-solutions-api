@@ -37,6 +37,9 @@ class PriceService
 
         $currentItemPrice = self::getCurrentPrice($purchaseItem->item_id);
 
+        // Use today's date for updates, purchase date for new entries
+        $effectiveDate = $isUpdate ? now()->toDateString() : $purchase->date;
+
         if ($currentItemPrice) {
             $oldPriceUsd = $currentItemPrice->price_usd;
             // Calculate price based on item's cost calculation method
@@ -48,10 +51,14 @@ class PriceService
             $priceDifference = abs($newPriceUsd - $oldPriceUsd);
 
             if ($priceDifference > 0) {
-                self::updatePrice($purchaseItem->item_id, $newPriceUsd, $purchase->date, $oldPriceUsd, "Purchase #{$purchase->id}", 'purchase', $purchase->id);
+                // Build descriptive note
+                $note = self::buildPurchaseUpdateNote($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
+
+                self::updatePrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $oldPriceUsd, $note, 'purchase', $purchase->id);
             }
         } else {
-            self::createPrice($purchaseItem->item_id, $newPriceUsd, $purchase->date, "Purchase #{$purchase->id}", 'purchase', $purchase->id);
+            $note = "Initial price from Purchase #{$purchase->id}";
+            self::createPrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $note, 'purchase', $purchase->id);
         }
     }
 
@@ -111,6 +118,31 @@ class PriceService
                 $item->id
             );
         }
+    }
+
+    /**
+     * Build descriptive note for purchase price updates
+     */
+    private static function buildPurchaseUpdateNote(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate, ?float $oldCostPerItemUsd, ?int $oldQuantity): string
+    {
+        if (!$isUpdate) {
+            return "Purchase #{$purchase->id} - {$purchaseItem->quantity} units @ \${$purchaseItem->cost_per_item_usd}/unit";
+        }
+
+        // For updates, show what changed
+        $changes = [];
+
+        if ($oldQuantity !== null && $oldQuantity != $purchaseItem->quantity) {
+            $changes[] = "qty: {$oldQuantity} → {$purchaseItem->quantity}";
+        }
+
+        if ($oldCostPerItemUsd !== null && $oldCostPerItemUsd != $purchaseItem->cost_per_item_usd) {
+            $changes[] = "cost: \${$oldCostPerItemUsd} → \${$purchaseItem->cost_per_item_usd}";
+        }
+
+        $changeText = !empty($changes) ? ' (' . implode(', ', $changes) . ')' : '';
+
+        return "Updated Purchase #{$purchase->id}{$changeText}";
     }
 
     /**
