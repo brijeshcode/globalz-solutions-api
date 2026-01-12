@@ -25,6 +25,15 @@ class SalesController extends Controller
     {
         $query = $this->saleQuery($request);
 
+        // If no custom sort is specified, apply default ordering: Waiting first, then latest
+        if (!$request->has('sort_by')) {
+            $query->orderByRaw("CASE WHEN status = 'Waiting' THEN 0 ELSE 1 END")
+                  ->orderBy('date', 'desc')
+                  ->orderBy('id', 'desc');
+        } else {
+            $query->sortable($request);
+        }
+
         $sales = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
@@ -634,7 +643,7 @@ class SalesController extends Controller
             ->with(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson'])
             ->approved()
             ->searchable($request)
-            ->sortable($request);
+            ;
 
         // Role-based filtering: salesman can only see their own returns
         if (RoleHelper::isSalesman() && !RoleHelper::isAdmin()) {
