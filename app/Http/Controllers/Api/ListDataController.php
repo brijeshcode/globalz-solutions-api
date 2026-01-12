@@ -252,8 +252,8 @@ class ListDataController extends Controller
 
     private function items()
     {
-        $with = ['itemUnit:id,name,short_name', 'itemPrice:id,item_id,price_usd', 'inventories:id,warehouse_id,item_id,quantity'];
-        return Item::with($with)->orderBy('description')->active()->get(['id', 'description', 'code', 'short_name', 'item_unit_id']);
+        $with = ['itemUnit:id,name,short_name', 'itemPrice:id,item_id,price_usd', 'inventories:id,warehouse_id,item_id,quantity', 'taxCode:id,name,tax_percent'];
+        return Item::with($with)->orderBy('description')->active()->get(['id', 'description', 'code', 'short_name', 'item_unit_id', 'tax_code_id']);
     }
 
     private function itemPriceLists()
