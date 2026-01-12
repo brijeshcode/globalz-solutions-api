@@ -23,8 +23,6 @@ class IncomeTransactionsController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $this->updateExistingTransactionsCurrency();
-
         $query = IncomeTransaction::query()
             ->with([
                 'createdBy:id,name',
@@ -374,70 +372,5 @@ class IncomeTransactionsController extends Controller
                 ];
             })
         );
-    }
-
-    /**
-     * Update existing income transactions with currency fields
-     */
-    public function updateExistingTransactionsCurrency(): JsonResponse
-    {
-        $updated = 0;
-        $failed = 0;
-        $errors = [];
-
-        // Get all income transactions where currency_id is null
-        $transactions = IncomeTransaction::whereNull('currency_id')
-            ->with('account.currency.activeRate')
-            ->get();
-
-        foreach ($transactions as $transaction) {
-            try {
-                $account = $transaction->account;
-
-                if (!$account || !$account->currency_id) {
-                    $failed++;
-                    $errors[] = "Transaction INC{$transaction->code}: Account has no currency";
-                    continue;
-                }
-
-                // Set currency_id from account
-                $currencyId = $account->currency_id;
-
-                // Get currency rate (use active rate or default to 1)
-                $currencyRate = $account->currency->activeRate->rate ?? 1;
-
-                // Convert amount to USD
-                $amountUsd = CurrencyHelper::toUsd(
-                    $currencyId,
-                    $transaction->amount,
-                    $currencyRate
-                );
-
-                // Update transaction
-                $transaction->updateQuietly([
-                    'currency_id' => $currencyId,
-                    'currency_rate' => $currencyRate,
-                    'amount_usd' => $amountUsd,
-                ]);
-
-                $updated++;
-            } catch (\Exception $e) {
-                $failed++;
-                $errors[] = "Transaction INC{$transaction->code}: " . $e->getMessage();
-            }
-        }
-
-        $result = [
-            'total' => $transactions->count(),
-            'updated' => $updated,
-            'failed' => $failed,
-            'errors' => $errors,
-        ];
-
-        if ($failed > 0) {
-            return ApiResponse::customError('Some transactions failed to update', 422, $result);
-        }
-
-        return ApiResponse::show('Income transactions updated successfully', $result);
     }
 }
