@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SalesStoreRequest;
@@ -521,6 +522,46 @@ class SalesController extends Controller
             new SaleResource($sale)
         );
         $sale->load(['saleItems.item', 'warehouse', 'currency']);
+    }
+
+    public function unapprove(Sale $sale): JsonResponse
+    {
+        // Only admin can unapprove sales
+        if (!RoleHelper::canAdmin()) {
+            return ApiResponse::customError('Only admin users can unapprove sales.', 403);
+        }
+
+        // Check if sale is approved
+        if (!$sale->isApproved()) {
+            return ApiResponse::customError('Sale is not approved.', 422);
+        }
+
+        // Check if sale is in Waiting status
+        if ($sale->status !== Sale::STATUS_WAITING) {
+            return ApiResponse::customError('Can only unapprove sales in Waiting status.', 422);
+        }
+
+        DB::transaction(function () use ($sale) {
+            // Restore customer balance (add back the amount that was deducted)
+            $customer = $sale->customer;
+            if ($customer) {
+                CustomersHelper::addBalance($customer, $sale->total_usd);
+            }
+
+            // Clear approval fields
+            $sale->update([
+                'approved_by' => null,
+                'approved_at' => null,
+                'approve_note' => null,
+            ]);
+        });
+
+        $sale->load(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson']);
+
+        return ApiResponse::update(
+            'Sale unapproved successfully',
+            new SaleResource($sale)
+        );
     }
 
     /**

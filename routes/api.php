@@ -185,6 +185,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('{sale}', 'update')->name('update');
             Route::delete('{sale}', 'destroy')->name('destroy');
             Route::patch('{sale}/changeStatus', 'changeStatus')->name('changeStatus');
+            Route::patch('{sale}/unapprove', 'unapprove')->name('unapprove');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
 
