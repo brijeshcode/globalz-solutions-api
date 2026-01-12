@@ -893,8 +893,11 @@ class EmployeeCommissionsController extends Controller
     {
         // If percent_type is 'fixed', use simple calculation with max_amount cap
         if ($rule->percent_type === CommissionTargetRule::PERCENTAGE_TYPE_FIXED) {
-            // $cappedAmount = min($totalPayments, $rule->maximum_amount);
-            $cappedAmount =  $rule->minimum_amount;
+            if ($totalPayments < $rule->minimum_amount) {
+                // Case 1
+                return 0;
+            }
+            $cappedAmount = min($totalPayments, $rule->maximum_amount);
             return $cappedAmount * ($rule->percent / 100);
         }
 
