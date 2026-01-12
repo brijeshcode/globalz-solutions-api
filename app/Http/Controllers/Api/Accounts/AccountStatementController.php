@@ -12,6 +12,7 @@ use App\Models\Accounts\IncomeTransaction;
 use App\Models\Accounts\AccountAdjust;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Employees\AdvanceLoan;
+use App\Models\Employees\Salary;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Suppliers\SupplierPayment;
 use App\Traits\HasPagination;
@@ -189,6 +190,11 @@ class AccountStatementController extends Controller
             );
         }
 
+        if (!$transactionType || $transactionType === 'salary') {
+            $allTransactions = $allTransactions->concat(
+                $this->getSalaryTransactions($request, $account, $noteSearch)
+            );
+        }
 
         if (!$transactionType || $transactionType === 'income') {
             $allTransactions = $allTransactions->concat(
@@ -393,6 +399,40 @@ class AccountStatementController extends Controller
                 ],
                 'transaction_type' => 'advance_loan',
                 'source_table' => 'advance_loans',
+                'timestamp' => $item->date->timestamp,
+            ];
+        });
+    }
+
+    private function getSalaryTransactions(Request $request, Account $account, ?string $noteSearch = null)
+    {
+        $query = Salary::query()
+            ->select('id', 'code', 'prefix', 'date', 'final_total', 'amount_usd', 'note', 'employee_id', 'account_id', 'month', 'year', 'created_at');
+
+        $this->applyFilters($query, $request, $account, $noteSearch);
+
+        return $query->with('employee:id,code,name')->get()->map(function ($item) use ($account) {
+            return [
+                'id' => $item->id,
+                'code' => $item->prefix . $item->code,
+                'type' => 'Salary',
+                'name' => $item->employee->name,
+                'date' => $item->date->format('Y-m-d'),
+                'amount' => -$item->final_total,
+                'debit' => $item->final_total,
+                'credit' => 0,
+                'note' => $item->note ?? "Salary for {$item->month}/{$item->year}",
+                'employee' => [
+                    'id' => $item->employee->id,
+                    'code' => $item->employee->code,
+                    'name' => $item->employee->name,
+                ],
+                'account' => [
+                    'id' => $account->id,
+                    'name' => $account->name,
+                ],
+                'transaction_type' => 'salary',
+                'source_table' => 'salaries',
                 'timestamp' => $item->date->timestamp,
             ];
         });
