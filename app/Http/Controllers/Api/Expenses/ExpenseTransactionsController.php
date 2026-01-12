@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\Expenses;
 
+use App\Helpers\CurrencyHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Expenses\ExpenseTransactionsStoreRequest;
 use App\Http\Requests\Api\Expenses\ExpenseTransactionsUpdateRequest;
 use App\Http\Resources\Api\Expenses\ExpenseTransactionResource;
+use App\Models\Accounts\Account;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
@@ -21,12 +23,14 @@ class ExpenseTransactionsController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->updateExistingTransactionsCurrency();
         $query = ExpenseTransaction::query()
             ->with([
-                'createdBy:id,name', 
-                'updatedBy:id,name', 
-                'expenseCategory:id,name', 
-                'account:id,name'
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'expenseCategory:id,name',
+                'account:id,name',
+                'currency:id,name,code,symbol'
             ])
             ->searchable($request)
             ->sortable($request);
@@ -62,6 +66,23 @@ class ExpenseTransactionsController extends Controller
     public function store(ExpenseTransactionsStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
+
+        // Fetch account to get currency details
+        $account = Account::with('currency.activeRate')->findOrFail($data['account_id']);
+
+        // Set currency_id from account
+        $data['currency_id'] = $account->currency_id;
+
+        // Get currency rate (use active rate or default to 1)
+        $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
+
+        // Convert amount to USD
+        $data['amount_usd'] = CurrencyHelper::toUsd(
+            $data['currency_id'],
+            $data['amount'],
+            $data['currency_rate']
+        );
+
         $expenseTransaction = ExpenseTransaction::create($data);
         
         // Handle document uploads
@@ -86,10 +107,11 @@ class ExpenseTransactionsController extends Controller
         }
 
         $expenseTransaction->load([
-            'createdBy:id,name', 
-            'updatedBy:id,name', 
-            'expenseCategory:id,name', 
+            'createdBy:id,name',
+            'updatedBy:id,name',
+            'expenseCategory:id,name',
             'account:id,name',
+            'currency:id,name,code,symbol',
             'documents'
         ]);
 
@@ -105,10 +127,11 @@ class ExpenseTransactionsController extends Controller
     public function show(ExpenseTransaction $expenseTransaction): JsonResponse
     {
         $expenseTransaction->load([
-            'createdBy:id,name', 
-            'updatedBy:id,name', 
-            'expenseCategory:id,name', 
+            'createdBy:id,name',
+            'updatedBy:id,name',
+            'expenseCategory:id,name',
             'account:id,name',
+            'currency:id,name,code,symbol',
             'documents'
         ]);
 
@@ -123,7 +146,32 @@ class ExpenseTransactionsController extends Controller
      */
     public function update(ExpenseTransactionsUpdateRequest $request, ExpenseTransaction $expenseTransaction): JsonResponse
     {
-        $expenseTransaction->update($request->validated());
+        $data = $request->validated();
+
+        // If account_id or amount changed, recalculate currency fields
+        if (isset($data['account_id']) && $data['account_id'] != $expenseTransaction->account_id) {
+            // Account changed - fetch new account's currency
+            $account = Account::with('currency.activeRate')->findOrFail($data['account_id']);
+            $data['currency_id'] = $account->currency_id;
+            $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
+
+            // Convert amount to USD
+            $amount = $data['amount'] ?? $expenseTransaction->amount;
+            $data['amount_usd'] = CurrencyHelper::toUsd(
+                $data['currency_id'],
+                $amount,
+                $data['currency_rate']
+            );
+        } elseif (isset($data['amount']) && $data['amount'] != $expenseTransaction->amount) {
+            // Amount changed but same account - use existing currency
+            $data['amount_usd'] = CurrencyHelper::toUsd(
+                $expenseTransaction->currency_id,
+                $data['amount'],
+                $expenseTransaction->currency_rate
+            );
+        }
+
+        $expenseTransaction->update($data);
 
         // Handle document uploads
         if ($request->hasFile('documents')) {
@@ -146,10 +194,11 @@ class ExpenseTransactionsController extends Controller
         }
 
         $expenseTransaction->load([
-            'createdBy:id,name', 
-            'updatedBy:id,name', 
-            'expenseCategory:id,name', 
+            'createdBy:id,name',
+            'updatedBy:id,name',
+            'expenseCategory:id,name',
             'account:id,name',
+            'currency:id,name,code,symbol',
             'documents'
         ]);
 
@@ -176,10 +225,11 @@ class ExpenseTransactionsController extends Controller
     {
         $query = ExpenseTransaction::onlyTrashed()
             ->with([
-                'createdBy:id,name', 
-                'updatedBy:id,name', 
-                'expenseCategory:id,name', 
-                'account:id,name'
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'expenseCategory:id,name',
+                'account:id,name',
+                'currency:id,name,code,symbol'
             ])
             ->searchable($request)
             ->sortable($request);
@@ -321,5 +371,70 @@ class ExpenseTransactionsController extends Controller
                 ];
             })
         );
+    }
+
+    /**
+     * Update existing expense transactions with currency fields
+     */
+    private function updateExistingTransactionsCurrency(): JsonResponse
+    {
+        $updated = 0;
+        $failed = 0;
+        $errors = [];
+
+        // Get all expense transactions where currency_id is null
+        $transactions = ExpenseTransaction::whereNull('currency_id')
+            ->with('account.currency.activeRate')
+            ->get();
+
+        foreach ($transactions as $transaction) {
+            try {
+                $account = $transaction->account;
+
+                if (!$account || !$account->currency_id) {
+                    $failed++;
+                    $errors[] = "Transaction EXP{$transaction->code}: Account has no currency";
+                    continue;
+                }
+
+                // Set currency_id from account
+                $currencyId = $account->currency_id;
+
+                // Get currency rate (use active rate or default to 1)
+                $currencyRate = $account->currency->activeRate->rate ?? 1;
+
+                // Convert amount to USD
+                $amountUsd = CurrencyHelper::toUsd(
+                    $currencyId,
+                    $transaction->amount,
+                    $currencyRate
+                );
+
+                // Update transaction
+                $transaction->updateQuietly([
+                    'currency_id' => $currencyId,
+                    'currency_rate' => $currencyRate,
+                    'amount_usd' => $amountUsd,
+                ]);
+
+                $updated++;
+            } catch (\Exception $e) {
+                $failed++;
+                $errors[] = "Transaction EXP{$transaction->code}: " . $e->getMessage();
+            }
+        }
+
+        $result = [
+            'total' => $transactions->count(),
+            'updated' => $updated,
+            'failed' => $failed,
+            'errors' => $errors,
+        ];
+
+        if ($failed > 0) {
+            return ApiResponse::customError('Some transactions failed to update', 422, $result);
+        }
+
+        return ApiResponse::show('Expense transactions updated successfully', $result);
     }
 }

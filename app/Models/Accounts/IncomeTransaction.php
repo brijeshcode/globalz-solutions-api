@@ -26,6 +26,9 @@ class IncomeTransaction extends Model
         'account_id',
         'subject',
         'amount',
+        'amount_usd',
+        'currency_id',
+        'currency_rate',
         'order_number',
         'check_number',
         'bank_ref_number',
@@ -35,6 +38,8 @@ class IncomeTransaction extends Model
     protected $casts = [
         'date' => 'date',
         'amount' => 'decimal:2',
+        'amount_usd' => 'decimal:8',
+        'currency_rate' => 'decimal:4',
     ];
 
     protected $searchable = [
@@ -78,6 +83,11 @@ class IncomeTransaction extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
     }
 
     public function scopeByDateRange($query, $startDate, $endDate)

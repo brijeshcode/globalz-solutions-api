@@ -72,7 +72,7 @@ class MontlyProfitReportController extends Controller
             ->selectRaw('
                 MONTH(date) as month,
                 YEAR(date) as year,
-                SUM(amount) as total_expenses
+                SUM(amount_usd) as total_expenses
             ')
             ->whereYear('date', $year)
             ->whereNull('deleted_at')
