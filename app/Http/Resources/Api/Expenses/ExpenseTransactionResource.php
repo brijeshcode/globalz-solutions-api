@@ -20,6 +20,7 @@ class ExpenseTransactionResource extends JsonResource
             'code' => $this->code,
             'subject' => $this->subject,
             'amount' => $this->amount,
+            'amount_usd' => $this->amount_usd,
             'order_number' => $this->order_number,
             'check_number' => $this->check_number,
             'bank_ref_number' => $this->bank_ref_number,

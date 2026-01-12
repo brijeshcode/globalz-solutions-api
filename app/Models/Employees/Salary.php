@@ -32,6 +32,9 @@ class Salary extends Model
         'advance_payment',
         'others',
         'final_total',
+        'amount_usd',
+        'currency_id',
+        'currency_rate',
         'others_note',
         'note',
     ];
@@ -44,6 +47,8 @@ class Salary extends Model
         'advance_payment' => 'decimal:2',
         'others' => 'decimal:2',
         'final_total' => 'decimal:2',
+        'amount_usd' => 'decimal:8',
+        'currency_rate' => 'decimal:4',
     ];
 
     protected $searchable = [
@@ -79,6 +84,11 @@ class Salary extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
     }
 
     // Scopes

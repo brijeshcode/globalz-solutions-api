@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Employees;
 
+use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Employees\SalariesStoreRequest;
 use App\Http\Requests\Api\Employees\SalariesUpdateRequest;
 use App\Http\Resources\Api\Employees\SalaryResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Accounts\Account;
 use App\Models\Employees\AdvanceLoan;
 use App\Models\Employees\Salary;
 use App\Traits\HasPagination;
@@ -20,6 +22,7 @@ class SalaryController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $this->updateExistingSalariesCurrency();
         $query = $this->salaryQuery($request);
 
         $salaries = $this->applyPagination($query, $request);
@@ -35,11 +38,28 @@ class SalaryController extends Controller
     {
         $data = $request->validated();
 
+        // Fetch account to get currency details
+        $account = Account::with('currency.activeRate')->findOrFail($data['account_id']);
+
+        // Set currency_id from account
+        $data['currency_id'] = $account->currency_id;
+
+        // Get currency rate (use active rate or default to 1)
+        $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
+
+        // Convert final_total to USD
+        $data['amount_usd'] = CurrencyHelper::toUsd(
+            $data['currency_id'],
+            $data['final_total'],
+            $data['currency_rate']
+        );
+
         $salary = Salary::create($data);
 
         $salary->load([
             'employee:id,name,code',
             'account:id,name',
+            'currency:id,name,code,symbol',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -52,6 +72,7 @@ class SalaryController extends Controller
         $salary->load([
             'employee:id,name,code,address,phone,mobile,email,is_active',
             'account:id,name',
+            'currency:id,name,code,symbol',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -64,11 +85,37 @@ class SalaryController extends Controller
 
     public function update(SalariesUpdateRequest $request, Salary $salary): JsonResponse
     {
-        $salary->update($request->validated());
+        $data = $request->validated();
+
+        // If account_id or final_total changed, recalculate currency fields
+        if (isset($data['account_id']) && $data['account_id'] != $salary->account_id) {
+            // Account changed - fetch new account's currency
+            $account = Account::with('currency.activeRate')->findOrFail($data['account_id']);
+            $data['currency_id'] = $account->currency_id;
+            $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
+
+            // Convert final_total to USD
+            $finalTotal = $data['final_total'] ?? $salary->final_total;
+            $data['amount_usd'] = CurrencyHelper::toUsd(
+                $data['currency_id'],
+                $finalTotal,
+                $data['currency_rate']
+            );
+        } elseif (isset($data['final_total']) && $data['final_total'] != $salary->final_total) {
+            // Amount changed but same account - use existing currency
+            $data['amount_usd'] = CurrencyHelper::toUsd(
+                $salary->currency_id,
+                $data['final_total'],
+                $salary->currency_rate
+            );
+        }
+
+        $salary->update($data);
 
         $salary->load([
             'employee:id,name,code',
             'account:id,name',
+            'currency:id,name,code,symbol',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -93,6 +140,7 @@ class SalaryController extends Controller
             ->with([
                 'employee:id,name,code',
                 'account:id,name',
+                'currency:id,name,code,symbol',
                 'createdBy:id,name',
                 'updatedBy:id,name'
             ])
@@ -129,6 +177,7 @@ class SalaryController extends Controller
         $salary->load([
             'employee:id,name,code',
             'account:id,name',
+            'currency:id,name,code,symbol',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -179,6 +228,7 @@ class SalaryController extends Controller
             ->with([
                 'employee:id,name,code',
                 'account:id,name',
+                'currency:id,name,code,symbol',
                 'createdBy:id,name',
                 'updatedBy:id,name'
             ])
@@ -251,11 +301,77 @@ class SalaryController extends Controller
 
         $salary->load([
             'employee:id,name,code,address,phone,mobile,email,is_active',
+            'currency:id,name,code,symbol',
         ]);
 
         return ApiResponse::show(
             'Salary retrieved successfully',
             new SalaryResource($salary)
         );
+    }
+
+    /**
+     * Update existing salaries with currency fields
+     */
+    public function updateExistingSalariesCurrency(): JsonResponse
+    {
+        $updated = 0;
+        $failed = 0;
+        $errors = [];
+
+        // Get all salaries where currency_id is null
+        $salaries = Salary::whereNull('currency_id')
+            ->with('account.currency.activeRate')
+            ->get();
+
+        foreach ($salaries as $salary) {
+            try {
+                $account = $salary->account;
+
+                if (!$account || !$account->currency_id) {
+                    $failed++;
+                    $errors[] = "Salary {$salary->prefix}{$salary->code}: Account has no currency";
+                    continue;
+                }
+
+                // Set currency_id from account
+                $currencyId = $account->currency_id;
+
+                // Get currency rate (use active rate or default to 1)
+                $currencyRate = $account->currency->activeRate->rate ?? 1;
+
+                // Convert final_total to USD
+                $amountUsd = CurrencyHelper::toUsd(
+                    $currencyId,
+                    $salary->final_total,
+                    $currencyRate
+                );
+
+                // Update salary
+                $salary->updateQuietly([
+                    'currency_id' => $currencyId,
+                    'currency_rate' => $currencyRate,
+                    'amount_usd' => $amountUsd,
+                ]);
+
+                $updated++;
+            } catch (\Exception $e) {
+                $failed++;
+                $errors[] = "Salary {$salary->prefix}{$salary->code}: " . $e->getMessage();
+            }
+        }
+
+        $result = [
+            'total' => $salaries->count(),
+            'updated' => $updated,
+            'failed' => $failed,
+            'errors' => $errors,
+        ];
+
+        if ($failed > 0) {
+            return ApiResponse::customError('Some salaries failed to update', 422, $result);
+        }
+
+        return ApiResponse::show('Salaries updated successfully', $result);
     }
 }
