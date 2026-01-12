@@ -7,6 +7,8 @@ use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerReturnOrdersStoreRequest;
 use App\Http\Requests\Api\Customers\CustomerReturnOrdersUpdateRequest;
+use App\Http\Requests\Api\Customers\CustomerDirectReturnStoreRequest;
+use App\Http\Requests\Api\Customers\CustomerDirectReturnUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerReturnOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerReturn;
@@ -40,6 +42,7 @@ class CustomerReturnOrdersController extends Controller
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'warehouse:id,name,address_line_1',
                 'salesperson:id,name',
+                'items',
                 'approvedBy:id,name',
                 'createdBy:id,name',
                 'updatedBy:id,name'
@@ -256,6 +259,170 @@ class CustomerReturnOrdersController extends Controller
         ]);
 
         $message = 'Customer return order updated successfully (pending approval)';
+
+        return ApiResponse::update($message, new CustomerReturnOrderResource($customerReturn));
+    }
+
+    /**
+     * Store a direct customer return (not linked to any sale)
+     */
+    public function storeDirectReturn(CustomerDirectReturnStoreRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+
+        $return = DB::transaction(function () use ($data, &$return) {
+            // Extract items data
+            $itemsInput = $data['items'];
+            unset($data['items']);
+
+            // Create the return order
+            $return = CustomerReturn::create($data);
+
+            // Prepare and create return items directly from input
+            foreach ($itemsInput as $itemInput) {
+                $itemData = [
+                    'item_id' => $itemInput['item_id'],
+                    'item_code' => $itemInput['item_code'],
+                    'quantity' => $itemInput['quantity'],
+                    'price' => $itemInput['price'],
+                    'price_usd' => $itemInput['price_usd'],
+                    'discount_percent' => $itemInput['discount_percent'] ?? 0,
+                    'unit_discount_amount' => $itemInput['unit_discount_amount'] ?? 0,
+                    'unit_discount_amount_usd' => $itemInput['unit_discount_amount_usd'] ?? 0,
+                    'tax_percent' => $itemInput['tax_percent'] ?? 0,
+                    'tax_label' => $itemInput['tax_label'] ?? 'TVA',
+                    'tax_amount' => $itemInput['tax_amount'] ?? 0,
+                    'tax_amount_usd' => $itemInput['tax_amount_usd'] ?? 0,
+                    'ttc_price' => $itemInput['ttc_price'] ?? 0,
+                    'ttc_price_usd' => $itemInput['ttc_price_usd'] ?? 0,
+                    'total_price' => $itemInput['total_price'],
+                    'total_price_usd' => $itemInput['total_price_usd'],
+                    'total_volume_cbm' => $itemInput['total_volume_cbm'] ?? 0,
+                    'total_weight_kg' => $itemInput['total_weight_kg'] ?? 0,
+                    'note' => $itemInput['note'] ?? null,
+                    // No sale_id or sale_item_id for direct returns
+                ];
+
+                $return->items()->create($itemData);
+            }
+
+            // Recalculate return totals
+            $return->total = $return->items->sum('total_price');
+            $return->total_usd = $return->items->sum('total_price_usd');
+            $return->total_volume_cbm = $return->items->sum('total_volume_cbm');
+            $return->total_weight_kg = $return->items->sum('total_weight_kg');
+            $return->save();
+
+            return $return;
+        });
+
+        $return->load([
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'warehouse:id,name,address_line_1',
+            'salesperson:id,name',
+            'items.item:id,short_name,description,code',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
+
+        $message = 'Direct customer return order created successfully (pending approval)';
+
+        return ApiResponse::store($message, new CustomerReturnOrderResource($return));
+    }
+
+    /**
+     * Update a direct customer return (not linked to any sale)
+     */
+    public function updateDirectReturn(CustomerDirectReturnUpdateRequest $request, CustomerReturn $customerReturn): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Check if salesman can only update their own returns
+        $employee = RoleHelper::getSalesmanEmployee();
+        if ($user->isSalesman() && $customerReturn->salesperson_id !== $employee->id) {
+            return ApiResponse::customError('You can only update your own return orders', 403);
+        }
+
+        if ($customerReturn->isApproved()) {
+            return ApiResponse::customError('Cannot update approved returns', 422);
+        }
+
+        if ($customerReturn->isReceived()) {
+            return ApiResponse::customError('Cannot update returns that have been received', 422);
+        }
+
+        $data = $request->validated();
+
+        DB::transaction(function () use ($data, $customerReturn) {
+            // Extract items data
+            $itemsInput = $data['items'];
+            unset($data['items']);
+
+            // Update the return order
+            $customerReturn->update($data);
+
+            // Get IDs of items in the request
+            $requestItemIds = collect($itemsInput)->pluck('id')->filter()->toArray();
+
+            // Delete items that are not in the request
+            $customerReturn->items()->whereNotIn('id', $requestItemIds)->delete();
+
+            // Update or create items
+            foreach ($itemsInput as $itemInput) {
+                $itemData = [
+                    'item_id' => $itemInput['item_id'],
+                    'item_code' => $itemInput['item_code'],
+                    'quantity' => $itemInput['quantity'],
+                    'price' => $itemInput['price'],
+                    'price_usd' => $itemInput['price_usd'],
+                    'discount_percent' => $itemInput['discount_percent'] ?? 0,
+                    'unit_discount_amount' => $itemInput['unit_discount_amount'] ?? 0,
+                    'unit_discount_amount_usd' => $itemInput['unit_discount_amount_usd'] ?? 0,
+                    'tax_percent' => $itemInput['tax_percent'] ?? 0,
+                    'tax_label' => $itemInput['tax_label'] ?? 'TVA',
+                    'tax_amount' => $itemInput['tax_amount'] ?? 0,
+                    'tax_amount_usd' => $itemInput['tax_amount_usd'] ?? 0,
+                    'ttc_price' => $itemInput['ttc_price'] ?? 0,
+                    'ttc_price_usd' => $itemInput['ttc_price_usd'] ?? 0,
+                    'total_price' => $itemInput['total_price'],
+                    'total_price_usd' => $itemInput['total_price_usd'],
+                    'total_volume_cbm' => $itemInput['total_volume_cbm'] ?? 0,
+                    'total_weight_kg' => $itemInput['total_weight_kg'] ?? 0,
+                    'note' => $itemInput['note'] ?? null,
+                    // No sale_id or sale_item_id for direct returns
+                ];
+
+                if (isset($itemInput['id']) && $itemInput['id']) {
+                    // Update existing item
+                    $customerReturn->items()->where('id', $itemInput['id'])->update($itemData);
+                } else {
+                    // Create new item
+                    $customerReturn->items()->create($itemData);
+                }
+            }
+
+            // Recalculate return totals
+            $customerReturn->refresh();
+            $customerReturn->total = $customerReturn->items->sum('total_price');
+            $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
+            $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
+            $customerReturn->save();
+        });
+
+        $customerReturn->load([
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'warehouse:id,name,address_line_1',
+            'salesperson:id,name',
+            'items.item:id,short_name,description,code',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
+
+        $message = 'Direct customer return order updated successfully (pending approval)';
 
         return ApiResponse::update($message, new CustomerReturnOrderResource($customerReturn));
     }

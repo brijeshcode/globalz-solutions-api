@@ -264,8 +264,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('sale-items-for-return', 'getSaleItemsForReturn')->name('sale-items-for-return');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
+            Route::post('direct', 'storeDirectReturn')->name('store-direct');
             Route::get('{customerReturn}', 'show')->name('show');
             Route::put('{customerReturn}', 'update')->name('update');
+            Route::put('direct/{customerReturn}', 'updateDirectReturn')->name('update-direct');
             Route::delete('{customerReturn}', 'destroy')->name('destroy');
             Route::patch('{customerReturn}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');

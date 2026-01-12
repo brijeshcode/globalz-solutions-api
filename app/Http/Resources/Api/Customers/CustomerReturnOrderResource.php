@@ -160,8 +160,8 @@ class CustomerReturnOrderResource extends JsonResource
 
                         ] : null,
 
-                        // Sale details
-                        'sale' => $item->relationLoaded('sale') ? [
+                        // Sale details (optional - only for returns linked to sales)
+                        'sale' => $item->sale_id && $item->relationLoaded('sale') && $item->sale ? [
                             'id' => $item->sale->id,
                             'code' => $item->sale->code,
                             'sale_code' => $item->sale->prefix . $item->sale->code,
@@ -169,8 +169,8 @@ class CustomerReturnOrderResource extends JsonResource
                             'date' => $item->sale->date,
                         ] : null,
 
-                        // Sale item details
-                        'sale_item' => $item->relationLoaded('saleItem') ? [
+                        // Sale item details (optional - only for returns linked to sales)
+                        'sale_item' => $item->sale_item_id && $item->relationLoaded('saleItem') && $item->saleItem ? [
                             'id' => $item->saleItem->id,
                             'quantity' => $item->saleItem->quantity,
                         ] : null,
