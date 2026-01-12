@@ -476,24 +476,24 @@ class CustomerReturnsController extends Controller
             'trashed_returns' => (clone $query)->onlyTrashed()->count(),
             'total_amount' => (clone $query)->sum('total'),
             'total_amount_usd' => (clone $query)->sum('total_usd'),
-            'returns_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(total) as total_amount')
-                ->groupBy('prefix')
-                ->get(),
-            'returns_by_warehouse' => (clone $query)->with('warehouse:id,name')
-                ->selectRaw('warehouse_id, count(*) as count, sum(total) as total_amount')
-                ->groupBy('warehouse_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'returns_by_currency' => (clone $query)->with('currency:id,name,code')
-                ->selectRaw('currency_id, count(*) as count, sum(total) as total_amount')
-                ->groupBy('currency_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'recent_received' => (clone $query)->received()
-                ->with(['customer:id,name,code', 'returnReceivedBy:id,name'])
-                ->orderBy('return_received_at', 'desc')
-                ->limit(5)
-                ->get(),
+            // 'returns_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(total) as total_amount')
+            //     ->groupBy('prefix')
+            //     ->get(),
+            // 'returns_by_warehouse' => (clone $query)->with('warehouse:id,name')
+            //     ->selectRaw('warehouse_id, count(*) as count, sum(total) as total_amount')
+            //     ->groupBy('warehouse_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'returns_by_currency' => (clone $query)->with('currency:id,name,code')
+            //     ->selectRaw('currency_id, count(*) as count, sum(total) as total_amount')
+            //     ->groupBy('currency_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'recent_received' => (clone $query)->received()
+            //     ->with(['customer:id,name,code', 'returnReceivedBy:id,name'])
+            //     ->orderBy('return_received_at', 'desc')
+            //     ->limit(5)
+            //     ->get(),
         ];
 
         return ApiResponse::show('Customer return statistics retrieved successfully', $stats);

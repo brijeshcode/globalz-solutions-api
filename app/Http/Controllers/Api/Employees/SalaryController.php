@@ -206,7 +206,14 @@ class SalaryController extends Controller
             'total_sub_total' => (clone $query)->sum('sub_total'),
             'total_advance_payment' => (clone $query)->sum('advance_payment'),
             'total_others' => (clone $query)->sum('others'),
-            'total_final_total' => (clone $query)->sum('final_total'),
+            'total_amount_usd' => (clone $query)->sum('amount_usd'),
+            'this_month_salaries' => (clone $query)->whereMonth('date', now()->month)
+                ->whereYear('date', now()->year)
+                ->count(),
+            'this_month_amount_usd' => (clone $query)->whereMonth('date', now()->month)
+                ->whereYear('date', now()->year)
+                ->sum('amount_usd'),
+
         ];
 
         return ApiResponse::show('Salary statistics retrieved successfully', $stats);

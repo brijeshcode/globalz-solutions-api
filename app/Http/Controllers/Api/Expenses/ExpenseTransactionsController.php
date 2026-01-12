@@ -23,32 +23,18 @@ class ExpenseTransactionsController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = ExpenseTransaction::query()
-            ->with([
+        $query = $this->query($request)
+        ->with([
                 'createdBy:id,name',
                 'updatedBy:id,name',
                 'expenseCategory:id,name',
                 'account:id,name',
-                'currency:id,name,code,symbol'
+                'documents',
+                'currency:id,name,code,symbol,calculation_type,thousand_separator,decimal_separator,decimal_places'
             ])
-            ->searchable($request)
-            ->sortable($request);
+        ->sortable($request);
 
-        if ($request->has('expense_category_id')) {
-            $query->where('expense_category_id', $request->input('expense_category_id'));
-        }
-
-        if ($request->has('account_id')) {
-            $query->where('account_id', $request->input('account_id'));
-        }
-
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->input('start_date'), $request->input('end_date'));
-        }
-
-        if ($request->has('date')) {
-            $query->whereDate('date', $request->input('date'));
-        }
+        
 
         $expenseTransactions = $this->applyPagination($query, $request);
 
@@ -370,5 +356,49 @@ class ExpenseTransactionsController extends Controller
                 ];
             })
         );
+    }
+ 
+    public function stats(Request $request): JsonResponse
+    {
+        $query = $this->query($request);
+
+        $stats = [
+            'total_transactions' => (clone $query)->count(),
+            'total_amount_usd' => (clone $query)->sum('amount_usd'),
+            'this_month_transactions' => (clone $query)->whereMonth('date', now()->month)
+                ->whereYear('date', now()->year)
+                ->count(),
+            'this_month_amount_usd' => (clone $query)->whereMonth('date', now()->month)
+                ->whereYear('date', now()->year)
+                ->sum('amount_usd'),
+        ];
+
+        return ApiResponse::show('Expense transaction statistics retrieved successfully', $stats);
+    }
+
+    private function query(Request $request) 
+    {
+
+        $query = ExpenseTransaction::query()
+            ->searchable($request)
+            ;
+
+        if ($request->has('expense_category_id')) {
+            $query->where('expense_category_id', $request->input('expense_category_id'));
+        }
+
+        if ($request->has('account_id')) {
+            $query->where('account_id', $request->input('account_id'));
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->byDateRange($request->input('start_date'), $request->input('end_date'));
+        }
+
+        if ($request->has('date')) {
+            $query->whereDate('date', $request->input('date'));
+        }
+        return $query;
+
     }
 }
