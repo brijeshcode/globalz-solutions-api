@@ -931,5 +931,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('finance')->name('finance.')->group(function () {
             Route::get('monthly-profit', [\App\Http\Controllers\Api\Reports\Finance\MontlyProfitReportController::class, 'index'])->name('monthly-profit');
         });
+
+        // Inventory Reports
+        Route::prefix('inventory')->name('inventory.')->group(function () {
+            Route::get('warehouse', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'index'])->name('warehouse.index');
+            Route::get('warehouse/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'show'])->name('warehouse.show');
+        });
     });
 });
