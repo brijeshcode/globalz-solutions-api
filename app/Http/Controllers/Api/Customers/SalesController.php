@@ -28,9 +28,11 @@ class SalesController extends Controller
 
         // If no custom sort is specified, apply default ordering: Waiting first, then latest
         if (!$request->has('sort_by')) {
-            $query->orderByRaw("CASE WHEN status = 'Waiting' THEN 0 ELSE 1 END")
-                  ->orderBy('date', 'desc')
-                  ->orderBy('id', 'desc');
+            $query
+            ->orderByRaw("CASE WHEN status = 'Waiting' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN status = 'Shipped' THEN 0 ELSE 1 END")
+            ->orderBy('date', 'desc')
+            ->orderBy('id', 'desc');
         } else {
             $query->sortable($request);
         }
