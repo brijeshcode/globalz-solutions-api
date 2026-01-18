@@ -699,7 +699,7 @@ class CustomersController extends Controller
         }
 
         if ($request->boolean('hide_zero_balance')) {
-            $query->where('current_balance', '!=', 0);
+            $query->whereNotBetween('current_balance', [-1, 1]);
         }
 
         // Filter by customer group
