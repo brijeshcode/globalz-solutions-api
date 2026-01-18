@@ -68,7 +68,8 @@ class ActivityLogHandler
                     $activityLog,
                     $timestamp,
                     $model,
-                    $parentModel
+                    $parentModel,
+                    $event
                 );
 
                 if ($shouldIncrementBatch) {
@@ -118,12 +119,14 @@ class ActivityLogHandler
      *
      * Batch should be incremented if:
      * 1. Time gap > configured batch_window since last change
+     * 2. Event type changed (except for same event types within window)
      */
     protected function shouldIncrementBatch(
         ActivityLog $activityLog,
         $timestamp,
         string $currentModel,
-        string $parentModel
+        string $parentModel,
+        string $currentEvent
     ): bool {
         $batchWindow = config('activitylog.batch_window', 2);
 
@@ -147,6 +150,18 @@ class ActivityLogHandler
             return false;
         }
 
+        // Check for event type change
+        $eventChanged = $lastDetail->event !== $currentEvent;
+
+        // If event changed, check time difference
+        if ($eventChanged) {
+            $timeDiff = strtotime($timestamp) - strtotime($lastDetail->timestamp);
+            // Only increment batch if event changed AND time gap > batch window
+            // This allows grouping of same event types (all deletes together, all updates together)
+            return $timeDiff > $batchWindow;
+        }
+
+        // Same event type - check time difference
         $timeDiff = strtotime($timestamp) - strtotime($lastDetail->timestamp);
 
         // If last detail was more than batch window ago, start new batch
