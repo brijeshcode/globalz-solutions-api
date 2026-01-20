@@ -290,4 +290,176 @@ class CategorySalesReportController extends Controller
 
         return round(($profit / $netSales) * 100, 2);
     }
+
+    /**
+     * Get detailed sale items for a specific month and category
+     */
+    public function getSaleItemsDetail(Request $request): JsonResponse
+    {
+        $year = $request->get('year', now()->year);
+        $month = $request->get('month');
+        $itemCategoryId = $request->get('item_category_id');
+        $itemGroupId = $request->get('item_group_id');
+        $warehouseId = $request->get('warehouse_id');
+        $salesmanId = $request->get('salesman_id');
+
+        if (!$month) {
+            return ApiResponse::send('Month is required', 422);
+        }
+
+        if (!$itemCategoryId && $itemCategoryId !== '0' && $itemCategoryId !== 0) {
+            return ApiResponse::send('Item category is required', 422);
+        }
+
+        $query = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('items', 'sale_items.item_id', '=', 'items.id')
+            ->leftJoin('item_categories', 'items.item_category_id', '=', 'item_categories.id')
+            ->select([
+                'sale_items.id',
+                'sale_items.item_code',
+                'items.description as item_description',
+                'items.short_name as item_name',
+                DB::raw('CONCAT(sales.prefix, sales.code) as invoice_code'),
+                'sales.date',
+                'sale_items.quantity',
+                'sale_items.sale_id as sale_id',
+                'sale_items.price_usd as unit_price',
+                'sale_items.discount_percent',
+                'sale_items.unit_discount_amount_usd as unit_discount',
+                'sale_items.discount_amount_usd as total_discount',
+                'sale_items.net_sell_price_usd as net_unit_price',
+                'sale_items.total_price_usd as total_price',
+                'sale_items.unit_profit',
+                'sale_items.total_profit',
+                DB::raw('COALESCE(item_categories.id, 0) as category_id'),
+                DB::raw('COALESCE(item_categories.name, "Uncategorized") as category_name'),
+            ])
+            ->whereYear('sales.date', $year)
+            ->whereMonth('sales.date', $month)
+            ->whereNull('sales.deleted_at')
+            ->whereNotNull('sales.approved_by')
+            ->whereNull('sale_items.deleted_at');
+
+        // Apply category filter (0 means uncategorized)
+        if ($itemCategoryId == 0) {
+            $query->whereNull('items.item_category_id');
+        } else {
+            $query->where('items.item_category_id', $itemCategoryId);
+        }
+
+        if ($itemGroupId) {
+            $query->where('items.item_group_id', $itemGroupId);
+        }
+
+        if ($warehouseId) {
+            $query->where('sales.warehouse_id', $warehouseId);
+        }
+
+        if ($salesmanId) {
+            $query->where('sales.salesperson_id', $salesmanId);
+        }
+
+        $saleItems = $query->orderBy('sales.date', 'desc')
+            ->orderBy('invoice_code', 'desc')
+            ->get();
+
+        // Calculate totals
+        $totals = [
+            'total_quantity' => $saleItems->sum('quantity'),
+            'total_discount' => round($saleItems->sum('total_discount'), 2),
+            'total_sales' => round($saleItems->sum('total_price'), 2),
+            'total_profit' => round($saleItems->sum('total_profit'), 2),
+        ];
+
+        return ApiResponse::send('Sale items detail retrieved successfully', 200, [
+            'items' => $saleItems,
+            'totals' => $totals,
+        ]);
+    }
+
+    /**
+     * Get detailed return items for a specific month and category
+     */
+    public function getReturnItemsDetail(Request $request): JsonResponse
+    {
+        $year = $request->get('year', now()->year);
+        $month = $request->get('month');
+        $itemCategoryId = $request->get('item_category_id');
+        $itemGroupId = $request->get('item_group_id');
+        $warehouseId = $request->get('warehouse_id');
+        $salesmanId = $request->get('salesman_id');
+
+        if (!$month) {
+            return ApiResponse::send('Month is required', 422);
+        }
+
+        if (!$itemCategoryId && $itemCategoryId !== '0' && $itemCategoryId !== 0) {
+            return ApiResponse::send('Item category is required', 422);
+        }
+
+        $query = DB::table('customer_return_items')
+            ->join('customer_returns', 'customer_return_items.customer_return_id', '=', 'customer_returns.id')
+            ->join('items', 'customer_return_items.item_id', '=', 'items.id')
+            ->leftJoin('item_categories', 'items.item_category_id', '=', 'item_categories.id')
+            ->select([
+                'customer_return_items.id',
+                'customer_return_items.item_code',
+                'items.description as item_description',
+                'items.short_name as item_name',
+                DB::raw('CONCAT(customer_returns.prefix, customer_returns.code) as return_code'),
+                'customer_returns.date',
+                'customer_return_items.quantity',
+                'customer_return_items.price_usd as unit_price',
+                'customer_return_items.discount_percent',
+                'customer_return_items.unit_discount_amount_usd as unit_discount',
+                'customer_return_items.discount_amount_usd as total_discount',
+                'customer_return_items.ttc_price_usd as net_unit_price',
+                'customer_return_items.total_price_usd as total_price',
+                'customer_return_items.total_profit',
+                DB::raw('COALESCE(item_categories.id, 0) as category_id'),
+                DB::raw('COALESCE(item_categories.name, "Uncategorized") as category_name'),
+            ])
+            ->whereYear('customer_returns.date', $year)
+            ->whereMonth('customer_returns.date', $month)
+            ->whereNull('customer_returns.deleted_at')
+            ->whereNotNull('customer_returns.return_received_by')
+            ->whereNull('customer_return_items.deleted_at');
+
+        // Apply category filter (0 means uncategorized)
+        if ($itemCategoryId == 0) {
+            $query->whereNull('items.item_category_id');
+        } else {
+            $query->where('items.item_category_id', $itemCategoryId);
+        }
+
+        if ($itemGroupId) {
+            $query->where('items.item_group_id', $itemGroupId);
+        }
+
+        if ($warehouseId) {
+            $query->where('customer_returns.warehouse_id', $warehouseId);
+        }
+
+        if ($salesmanId) {
+            $query->where('customer_returns.salesperson_id', $salesmanId);
+        }
+
+        $returnItems = $query->orderBy('customer_returns.date', 'desc')
+            ->orderBy('return_code', 'desc')
+            ->get();
+
+        // Calculate totals
+        $totals = [
+            'total_quantity' => $returnItems->sum('quantity'),
+            'total_discount' => round($returnItems->sum('total_discount'), 2),
+            'total_returns' => round($returnItems->sum('total_price'), 2),
+            'total_profit' => round($returnItems->sum('total_profit'), 2),
+        ];
+
+        return ApiResponse::send('Return items detail retrieved successfully', 200, [
+            'items' => $returnItems,
+            'totals' => $totals,
+        ]);
+    }
 }
