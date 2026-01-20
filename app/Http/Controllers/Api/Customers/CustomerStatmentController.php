@@ -132,8 +132,9 @@ class CustomerStatmentController extends Controller
 
         $transactions = $this->getTransactions($request, $customer, null);
 
-        // Calculate the correct balance
-        $calculatedBalance = $transactions->last()['balance'] ?? 0;
+        // Calculate the correct balance directly (total credit - total debit)
+        // This is independent of transaction sort order
+        $calculatedBalance = $transactions->sum('credit') - $transactions->sum('debit');
         $oldBalance = $customer->current_balance;
 
         // Check if balance is different
