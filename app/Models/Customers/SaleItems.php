@@ -118,7 +118,23 @@ class SaleItems extends Model
 
     protected function getActivityLogParent()
     {
-        return $this->sale; // Relationship to parent
+        // Ensure sale relationship is loaded (important for delete events)
+        if (!$this->relationLoaded('sale')) {
+            $this->load('sale');
+        }
+        return $this->sale;
+    }
+
+    protected function shouldSkipActivityLog(): bool
+    {
+        // Skip if parent sale doesn't exist or is being deleted
+        $sale = $this->getActivityLogParent();
+        if (!$sale || $sale->trashed()) {
+            return true;
+        }
+
+        // Skip if parent sale is not approved
+        return is_null($sale->approved_at);
     }
 
     protected static function boot()
