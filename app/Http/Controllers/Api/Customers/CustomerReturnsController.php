@@ -34,8 +34,8 @@ class CustomerReturnsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = CustomerReturn::query()
-            ->with([
+        $query = $this->customerReturnQuery($request);
+        $query->with([
                 'customer:id,name,code,address,city,mobile,mof_tax_number',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'warehouse:id,name,address_line_1',
@@ -49,72 +49,7 @@ class CustomerReturnsController extends Controller
                 'createdBy:id,name',
                 'updatedBy:id,name'
             ])
-            ->approved()
-            ->searchable($request)
             ->sortable($request);
-
-        // Role-based filtering: salesman can only see their own returns
-        if (RoleHelper::isSalesman()) {
-            $employee = RoleHelper::getSalesmanEmployee();
-            if ($employee) {
-                $query->where('salesperson_id', $employee->id);
-            } else {
-                // If employee not found, return no results
-                $query->whereRaw('1 = 0');
-            }
-        }
-
-        if ($request->has('customer_id')) {
-            $query->byCustomer($request->customer_id);
-        }
-
-        if ($request->has('currency_id')) {
-            $query->byCurrency($request->currency_id);
-        }
-
-        if (RoleHelper::isWarehouseManager()) {
-            $employee = RoleHelper::getWarehouseEmployee();
-            if (! $employee) {
-                return $query->whereRaw('1 = 0');
-            }
-            $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
-            if ($warehouseIds->isEmpty()) {
-                return $query->whereRaw('1 = 0');
-            }
-
-            if ($request->has('warehouse_id')) {
-                // Only allow filtering by warehouse_id if it's in their assigned warehouses
-                if ($warehouseIds->contains($request->warehouse_id)) {
-                    $query->byWarehouse($request->warehouse_id);
-                } else {
-                    $query->whereIn('warehouse_id', $warehouseIds);
-                }
-            } else {
-                $query->whereIn('warehouse_id', $warehouseIds);
-            }
-        }elseif ($request->has('warehouse_id')) {
-            $query->byWarehouse($request->warehouse_id);
-        }
-
-        if ($request->has('salesperson_id')) {
-            $query->where('salesperson_id', $request->salesperson_id);
-        }
-
-        if ($request->has('prefix')) {
-            $query->byPrefix($request->prefix);
-        }
-
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->start_date, $request->end_date);
-        }
-
-        if ($request->has('status')) {
-            if ($request->status === 'received') {
-                $query->received();
-            } elseif ($request->status === 'not_received') {
-                $query->notReceived();
-            }
-        }
 
         $returns = $this->applyPagination($query, $request);
 
@@ -457,18 +392,9 @@ class CustomerReturnsController extends Controller
         return ApiResponse::delete('Customer return permanently deleted successfully');
     }
 
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        $query = CustomerReturn::approved();
-
-        // Role-based filtering for stats: salesman sees only their own stats
-        if ($user->isSalesman()) {
-            $query->where('salesperson_id', $user->id);
-        }
-
+        $query = $this->customerReturnQuery($request);
         $stats = [
             'total_returns' => (clone $query)->count(),
             'received_returns' => (clone $query)->received()->count(),
@@ -497,5 +423,78 @@ class CustomerReturnsController extends Controller
         ];
 
         return ApiResponse::show('Customer return statistics retrieved successfully', $stats);
+    }
+
+    private function customerReturnQuery(Request $request)
+    {
+        $query = CustomerReturn::query()
+            ->approved()
+            ->searchable($request)
+            ;
+
+        // Role-based filtering: salesman can only see their own returns
+        if (RoleHelper::isSalesman()) {
+            $employee = RoleHelper::getSalesmanEmployee();
+            if ($employee) {
+                $query->where('salesperson_id', $employee->id);
+            } else {
+                // If employee not found, return no results
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if ($request->has('customer_id')) {
+            $query->byCustomer($request->customer_id);
+        }
+
+        if ($request->has('currency_id')) {
+            $query->byCurrency($request->currency_id);
+        }
+
+        if (RoleHelper::isWarehouseManager()) {
+            $employee = RoleHelper::getWarehouseEmployee();
+            if (! $employee) {
+                return $query->whereRaw('1 = 0');
+            }
+            $warehouseIds = $employee->warehouses()->pluck('warehouses.id');
+            if ($warehouseIds->isEmpty()) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            if ($request->has('warehouse_id')) {
+                // Only allow filtering by warehouse_id if it's in their assigned warehouses
+                if ($warehouseIds->contains($request->warehouse_id)) {
+                    $query->byWarehouse($request->warehouse_id);
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                }
+            } else {
+                $query->whereIn('warehouse_id', $warehouseIds);
+            }
+        }elseif ($request->has('warehouse_id')) {
+            $query->byWarehouse($request->warehouse_id);
+        }
+
+        if ($request->has('salesperson_id')) {
+            $query->where('salesperson_id', $request->salesperson_id);
+        }
+
+        if ($request->has('prefix')) {
+            $query->byPrefix($request->prefix);
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $query->byDateRange($request->start_date, $request->end_date);
+        }
+
+        if ($request->has('status')) {
+            if ($request->status === 'received') {
+                $query->received();
+            } elseif ($request->status === 'not_received') {
+                $query->notReceived();
+            }
+        }
+
+        return $query;
     }
 }
