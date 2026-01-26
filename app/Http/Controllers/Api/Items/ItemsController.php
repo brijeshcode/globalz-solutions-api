@@ -370,48 +370,23 @@ class ItemsController extends Controller
         $query = $this->itemQuery($request);
 
         $stats = [
-            'total_items' => Item::count(),
-            'active_items' => Item::where('is_active', true)->count(),
-            'inactive_items' => Item::where('is_active', false)->count(),
-            'trashed_items' => Item::onlyTrashed()->count(),
-            'low_stock_items' => Item::whereNotNull('low_quantity_alert')
+            'total_items' => (clone $query)->count(),
+            'active_items' => (clone $query)->where('is_active', true)->count(),
+            'inactive_items' => (clone $query)->where('is_active', false)->count(),
+            'trashed_items' => (clone $query)->onlyTrashed()->count(),
+            'low_stock_items' => (clone $query)->whereNotNull('low_quantity_alert')
                 ->whereHas('inventories')
                 ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) <= items.low_quantity_alert')
                 ->count(),
-            'items_with_stock' => Item::whereHas('inventories', function ($query) {
+            'items_with_stock' => (clone $query)->whereHas('inventories', function ($query) {
                 $query->where('quantity', '>', 0);
             })->count(),
-            'total_stock_value' => DB::table('items')
+            'total_stock_value' => (clone $query)
                 ->leftJoin('inventories', 'items.id', '=', 'inventories.item_id')
                 ->leftJoin('item_prices', 'items.id', '=', 'item_prices.item_id')
-                ->selectRaw('SUM(COALESCE(item_prices.price_usd, items.base_cost, 0) * COALESCE(inventories.quantity, 0)) as total')
-                ->whereNull('items.deleted_at')
+                ->select(DB::raw('SUM(COALESCE(item_prices.price_usd, items.base_cost, 0) * COALESCE(inventories.quantity, 0)) as total'))
                 ->value('total') ?? 0,
-            // 'total_inventory_quantity' => DB::table('inventories')->sum('quantity'),
-            // 'total_net_quantity' => Item::sum('starting_quantity') + DB::table('inventories')->sum('quantity'),
-            // 'total_inventory_value' => Item::selectRaw('SUM(starting_quantity * base_cost) as total')->value('total') ?? 0,
-            // 'total_warehouse_inventory_value' => DB::table('inventories')
-            //     ->join('items', 'inventories.item_id', '=', 'items.id')
-            //     ->selectRaw('SUM(inventories.quantity * items.base_cost) as total')
-            //     ->value('total') ?? 0,
-            // 'items_by_type' => Item::with('itemType:id,name')
-            //     ->selectRaw('item_type_id, count(*) as count')
-            //     ->groupBy('item_type_id')
-            //     ->having('count', '>', 0)
-            //     ->get(),
-            // 'items_by_family' => Item::with('itemFamily:id,name')
-            //     ->selectRaw('item_family_id, count(*) as count')
-            //     ->groupBy('item_family_id')
-            //     ->having('count', '>', 0)
-            //     ->get(),
-            // 'cost_calculation_breakdown' => Item::selectRaw('cost_calculation, count(*) as count')
-            //     ->groupBy('cost_calculation')
-            //     ->get(),
-            // 'inventory_by_warehouse' => DB::table('inventories')
-            //     ->join('warehouses', 'inventories.warehouse_id', '=', 'warehouses.id')
-            //     ->selectRaw('warehouses.name as warehouse_name, SUM(inventories.quantity) as total_quantity')
-            //     ->groupBy('warehouses.id', 'warehouses.name')
-            //     ->get(),
+             
         ];
 
         return ApiResponse::show('Item statistics retrieved successfully', $stats);
