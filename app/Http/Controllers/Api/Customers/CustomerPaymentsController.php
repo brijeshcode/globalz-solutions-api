@@ -260,8 +260,12 @@ class CustomerPaymentsController extends Controller
             $query->byPrefix($request->prefix);
         }
 
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->start_date, $request->end_date);
+        if ($request->has('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->where('date', '<=', $request->date_to);
         }
 
         if ($request->has('status')) {
