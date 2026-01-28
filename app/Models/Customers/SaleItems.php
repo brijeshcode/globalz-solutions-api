@@ -18,6 +18,11 @@ class SaleItems extends Model
 {
     use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, TracksActivity;
 
+    /**
+     * Static storage for original quantities before update (not persisted to DB)
+     */
+    protected static array $originalQuantities = [];
+
     protected $fillable = [
         'item_code',
         'sale_id',
@@ -181,6 +186,11 @@ class SaleItems extends Model
         });
 
         static::updating(function ($saleItem) {
+            // Store original quantity for inventory adjustment in updated event
+            if ($saleItem->isDirty('quantity')) {
+                static::$originalQuantities[$saleItem->id] = $saleItem->getOriginal('quantity');
+            }
+
             // Recalculate tax label, volume and weight if item, quantity, or tax_percent changed
             if ($saleItem->isDirty(['item_id', 'quantity', 'tax_percent'])) {
                 if ($saleItem->item_id) {
@@ -214,10 +224,13 @@ class SaleItems extends Model
 
         static::updated(function ($saleItem) {
             // Handle quantity changes on update
-            if ($saleItem->isDirty('quantity')) {
-                $oldQuantity = $saleItem->getOriginal('quantity');
+            if ($saleItem->wasChanged('quantity')) {
+                $oldQuantity = static::$originalQuantities[$saleItem->id] ?? $saleItem->quantity;
                 $newQuantity = $saleItem->quantity;
                 $difference = $newQuantity - $oldQuantity;
+
+                // Clean up stored original quantity
+                unset(static::$originalQuantities[$saleItem->id]);
 
                 if ($difference > 0) {
                     // Quantity increased - reduce more inventory
@@ -239,7 +252,7 @@ class SaleItems extends Model
             }
 
             // Recalculate total tax amount on the sale if tax-related fields changed
-            if ($saleItem->isDirty(['tax_amount', 'tax_amount_usd', 'quantity'])) {
+            if ($saleItem->wasChanged(['tax_amount', 'tax_amount_usd', 'quantity'])) {
                 $saleItem->sale->recalculateTotalTax();
             }
         });

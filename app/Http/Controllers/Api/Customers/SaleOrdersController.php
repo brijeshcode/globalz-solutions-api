@@ -451,8 +451,11 @@ class SaleOrdersController extends Controller
                 // Update or create items
                 foreach ($items as $itemData) {
                     if (isset($itemData['id']) && $itemData['id']) {
-                        // Update existing item
-                        $sale->items()->where('id', $itemData['id'])->update($itemData);
+                        // Update existing item - must use model instance to trigger events
+                        $saleItem = $sale->items()->find($itemData['id']);
+                        if ($saleItem) {
+                            $saleItem->update($itemData);
+                        }
                     } else {
                         // Create new item
                         $sale->items()->create($itemData);
