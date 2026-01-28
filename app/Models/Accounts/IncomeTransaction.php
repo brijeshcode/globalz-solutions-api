@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class IncomeTransaction extends Model
 {
+    public const PREFIX = 'INC';
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasBooleanFilters,HasDocuments, Searchable, Sortable;
 
     protected $fillable = [
@@ -72,7 +73,7 @@ class IncomeTransaction extends Model
      */
     public function getCodeAttribute($value): ?string
     {
-        return $value ? 'INC' . $value : null;
+        return $value ? self::PREFIX . $value : null;
     }
 
     public function incomeCategory(): BelongsTo

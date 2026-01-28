@@ -149,6 +149,8 @@ class AccountStatementController extends Controller
             $allTransactions->push([
                 'id' => null,
                 'code' => 'OPENING',
+                'transaction_number' => 'OPENING',
+                'prefix' => '',
                 'name' => $account->name,
                 'type' => 'Opening Balance',
                 'date' => $account->created_at->format('Y-m-d'),
@@ -246,7 +248,9 @@ class AccountStatementController extends Controller
         return $query->with('customer:id,code,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
-                'code' => $item->prefix . $item->code,
+                'transaction_number' => $item->prefix . $item->code,
+                'code' => $item->code,
+                'prefix' => $item->prefix,
                 'type' => 'Customer Payment',
                 'name' => $item->customer->name,
                 'date' => $item->date->format('Y-m-d'),
@@ -280,7 +284,9 @@ class AccountStatementController extends Controller
         return $query->with('supplier:id,code,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
-                'code' => $item->prefix . $item->code,
+                'transaction_number' => $item->prefix . $item->code,
+                'code' => $item->code,
+                'prefix' => $item->prefix,
                 'type' => 'Supplier Payment',
                 'name' => $item->supplier->name,
                 'date' => $item->date->format('Y-m-d'),
@@ -314,7 +320,10 @@ class AccountStatementController extends Controller
         return $query->with('incomeCategory:id,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
-                'code' => $item->code,
+                'transaction_number' => $item->code,
+                'code' => $item->getRawOriginal('code'),
+                'prefix' => IncomeTransaction::PREFIX,
+                
                 'name' => $item->incomeCategory->name,
                 'type' => 'Income',
                 'date' => $item->date->format('Y-m-d'),
@@ -347,7 +356,9 @@ class AccountStatementController extends Controller
         return $query->with('expenseCategory:id,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
-                'code' => $item->code,
+                'transaction_number' => $item->code,
+                'code' => $item->getRawOriginal('code'),
+                'prefix' => ExpenseTransaction::PREFIX,
                 'name' => $item->expenseCategory->name,
                 'type' => 'Expense',
                 'date' => $item->date->format('Y-m-d'),
@@ -380,7 +391,9 @@ class AccountStatementController extends Controller
         return $query->with('employee:id,code,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
-                'code' => $item->prefix . $item->code,
+                'transaction_number' => $item->prefix . $item->code,
+                'code' => $item->code,
+                'prefix' => $item->prefix,
                 'type' => 'AdvanceLoan',
                 'name' => $item->employee->name,
                 'date' => $item->date->format('Y-m-d'),
@@ -414,7 +427,9 @@ class AccountStatementController extends Controller
         return $query->with('employee:id,code,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
-                'code' => $item->prefix . $item->code,
+                'transaction_number' => $item->prefix . $item->code,
+                'code' => $item->code,
+                'prefix' => $item->prefix,
                 'type' => 'Salary',
                 'name' => $item->employee->name,
                 'date' => $item->date->format('Y-m-d'),
@@ -452,7 +467,9 @@ class AccountStatementController extends Controller
         $transfersFrom = $queryFrom->with('toAccount:id,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
-                'code' => $item->prefix . $item->code,
+                'transaction_number' => $item->prefix . $item->code,
+                'code' => $item->code,
+                'prefix' => $item->prefix,
                 'name' => $account->name,
                 'type' => 'Account Transfer (Sent)',
                 'date' => $item->date->format('Y-m-d'),
@@ -484,7 +501,9 @@ class AccountStatementController extends Controller
         $transfersTo = $queryTo->with('fromAccount:id,name')->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
-                'code' => $item->prefix . $item->code,
+                'transaction_number' => $item->prefix . $item->code,
+                'code' => $item->code,
+                'prefix' => $item->prefix,
                 'name' => $account->name,
                 'type' => 'Account Transfer (Received)',
                 'date' => $item->date->format('Y-m-d'),
@@ -521,7 +540,9 @@ class AccountStatementController extends Controller
 
             return [
                 'id' => $item->id,
-                'code' => $item->prefix . $item->code,
+                'transaction_number' => $item->prefix . $item->code,
+                'code' => $item->code,
+                'prefix' => $item->prefix,
                 'name' => $account->name,
                 'type' => 'Account Adjust (' . $item->type . ')',
                 'date' => $item->date->format('Y-m-d'),

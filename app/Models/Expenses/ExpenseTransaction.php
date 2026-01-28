@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ExpenseTransaction extends Model
 {
+    public const PREFIX = 'EXP';
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasBooleanFilters,HasDocuments, Searchable, Sortable;
 
     protected $fillable = [
@@ -73,7 +74,7 @@ class ExpenseTransaction extends Model
      */
     public function getCodeAttribute($value): ?string
     {
-        return $value ? 'EXP' . $value : null;
+        return $value ? self::PREFIX . $value : null;
     }
 
     public function expenseCategory(): BelongsTo
