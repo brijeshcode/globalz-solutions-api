@@ -25,12 +25,16 @@ class Account extends Model
         'current_balance',
         'description',
         'is_active',
+        'hide_from_transaction',
+        'include_in_total',
         'is_private',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'is_private' => 'boolean',
+        'hide_from_transaction' => 'boolean',
+        'include_in_total' => 'boolean'
     ];
 
     protected $searchable = [
@@ -55,6 +59,15 @@ class Account extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeHideFromTransaction($query)
+    {
+        return $query->where('hide_from_transaction', true);
+    }
+
+    public function scopeIncludeInTotal($query)
+    {
+        return $query->where('include_in_total', true);
+    }
 
     public function currency(): BelongsTo 
     {

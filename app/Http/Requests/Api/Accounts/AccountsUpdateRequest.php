@@ -13,7 +13,7 @@ class AccountsUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return RoleHelper::isSuperAdmin();
+        return RoleHelper::canSuperAdmin();
     }
 
     /**
@@ -38,6 +38,8 @@ class AccountsUpdateRequest extends FormRequest
             'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
             'description' => 'nullable|string|max:65535',
             'is_active' => 'boolean',
+            'hide_from_transaction' => 'boolean',
+            'include_in_total' => 'boolean',
             'is_private' => 'boolean',
         ];
     }

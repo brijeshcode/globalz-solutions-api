@@ -212,7 +212,7 @@ class ListDataController extends Controller
             $query->where('is_private', false);
         }
 
-        return $query->orderBy('name')->get(['id', 'name', 'currency_id', 'current_balance']);
+        return $query->orderBy('name')->get(['id', 'name', 'currency_id', 'include_in_total', 'hide_from_transaction', 'current_balance']);
     }
 
     private function accountTypes()

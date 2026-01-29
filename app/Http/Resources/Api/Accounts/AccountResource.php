@@ -20,6 +20,8 @@ class AccountResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'is_active' => $this->is_active,
+            'hide_from_transaction' => $this->hide_from_transaction,
+            'include_in_total' => $this->include_in_total,
             'opening_balance' => $this->opening_balance,
             'usd_current_balance' => CurrencyHelper::toUsd($this->currency_id, $this->current_balance),
             'current_balance' => $this->current_balance,

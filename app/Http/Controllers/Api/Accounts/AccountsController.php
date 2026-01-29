@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Accounts;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Accounts\AccountsStoreRequest;
 use App\Http\Requests\Api\Accounts\AccountsUpdateRequest;
@@ -85,6 +86,10 @@ class AccountsController extends Controller
 
     public function destroy(Account $account): JsonResponse
     {
+        if(! RoleHelper::canSuperAdmin()){
+            return ApiResponse::forbidden('You are not authorized');
+        }
+        
         $account->delete();
 
         return ApiResponse::delete('Account deleted successfully');
@@ -161,10 +166,14 @@ class AccountsController extends Controller
         $privateAccounts = $accounts->where('is_private', true);
         $nonPrivateAccounts = $accounts->where('is_private', false);
 
-        // Calculate total current balance in USD for non-private accounts
+        // Filter accounts that should be included in total (include_in_total = true)
+        $accountsForTotal = $nonPrivateAccounts->where('include_in_total', true);
+        $privateAccountsForTotal = $privateAccounts->where('include_in_total', true);
+
+        // Calculate total current balance in USD for non-private accounts (only those with include_in_total = true)
         $totalCurrentBalanceUsd = 0;
 
-        foreach ($nonPrivateAccounts as $account) {
+        foreach ($accountsForTotal as $account) {
             $balance = $account->current_balance ?? 0;
 
             // Skip conversion if currency is already USD
@@ -179,10 +188,10 @@ class AccountsController extends Controller
             }
         }
 
-        // Calculate total current balance in USD for private accounts
+        // Calculate total current balance in USD for private accounts (only those with include_in_total = true)
         $totalPrivateBalanceUsd = 0;
 
-        foreach ($privateAccounts as $account) {
+        foreach ($privateAccountsForTotal as $account) {
             $balance = $account->current_balance ?? 0;
 
             // Skip conversion if currency is already USD
