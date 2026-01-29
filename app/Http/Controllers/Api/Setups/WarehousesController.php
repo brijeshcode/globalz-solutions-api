@@ -114,6 +114,10 @@ class WarehousesController extends Controller
 
     public function destroy(Warehouse $warehouse): JsonResponse
     {
+        if(! RoleHelper::canSuperAdmin()){
+            return ApiResponse::forbidden('You are not authorized');
+        }
+        
         $warehouse->delete();
 
         return ApiResponse::delete('Warehouse deleted successfully');

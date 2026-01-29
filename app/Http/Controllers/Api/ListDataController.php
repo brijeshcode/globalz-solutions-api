@@ -113,7 +113,7 @@ class ListDataController extends Controller
             }
         }
 
-        return $query->get(['id', 'name', 'is_default', 'address_line_1']);
+        return $query->get(['id', 'name', 'is_default', 'include_in_total_stock', 'is_available_for_sales', 'address_line_1']);
     }
 
     private function currencies()

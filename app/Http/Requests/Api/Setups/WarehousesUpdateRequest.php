@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Setups;
 
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -9,7 +10,7 @@ class WarehousesUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::canSuperAdmin();
     }
 
     public function rules(): array
@@ -24,6 +25,8 @@ class WarehousesUpdateRequest extends FormRequest
             'note' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
             'is_default' => 'boolean',
+            'is_available_for_sales' => 'boolean',
+            'include_in_total_stock' => 'boolean',
             'address_line_1' => 'nullable|string|max:255',
             'address_line_2' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:100',

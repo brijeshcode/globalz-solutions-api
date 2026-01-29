@@ -20,6 +20,8 @@ class Warehouse extends Model
         'name',
         'note',
         'is_active',
+        'is_available_for_sales',
+        'include_in_total_stock',
         'is_default',
         'address_line_1',
         'address_line_2',
@@ -35,6 +37,8 @@ class Warehouse extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_available_for_sales' => 'boolean',
+        'include_in_total_stock' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -72,6 +76,16 @@ class Warehouse extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeIsAvailableForSale($query)
+    {
+        return $query->where('is_available_for_sales', true);
+    }
+
+    public function scopeIncludeInStockCount($query)
+    {
+        return $query->where('include_in_total_stock', true);
     }
 
     public function employees()

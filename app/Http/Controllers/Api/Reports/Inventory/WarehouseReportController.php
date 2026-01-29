@@ -121,6 +121,8 @@ class WarehouseReportController extends Controller
                 $totalQuantity += $quantity;
             }
 
+            $priceUsd = $item->itemPrice ? (float) $item->itemPrice->price_usd : 0;
+
             return [
                 'id' => $item->id,
                 'code' => $item->code,
@@ -131,9 +133,10 @@ class WarehouseReportController extends Controller
                     'name' => $item->itemUnit->name,
                     'short_name' => $item->itemUnit->short_name,
                 ] : null,
-                'price_usd' => $item->itemPrice ? (float) $item->itemPrice->price_usd : null,
+                'price_usd' => $priceUsd ?: null,
                 'low_quantity_alert' => $item->low_quantity_alert ? (float) $item->low_quantity_alert : null,
                 'total_quantity' => $totalQuantity,
+                'value' => $totalQuantity * $priceUsd,
                 'warehouse_quantities' => $warehouseQuantities,
                 'stock_status' => $this->getStockStatus($totalQuantity, $item->low_quantity_alert),
             ];
