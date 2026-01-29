@@ -158,6 +158,7 @@ class AccountStatementController extends Controller
                 'debit' => $openingBalance < 0 ? $openingBalance : 0,
                 'credit' => $openingBalance > 0 ? abs($openingBalance) : 0,
                 'note' => 'Opening balance',
+                'by' => null,
                 'account' => [
                     'id' => $account->id,
                     'name' => $account->name,
@@ -241,11 +242,11 @@ class AccountStatementController extends Controller
     {
         $query = CustomerPayment::query()
             ->approved()
-            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'customer_id', 'account_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'customer_id', 'account_id', 'created_by', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
-        return $query->with('customer:id,code,name')->get()->map(function ($item) use ($account) {
+        return $query->with(['customer:id,code,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'transaction_number' => $item->prefix . $item->code,
@@ -258,6 +259,7 @@ class AccountStatementController extends Controller
                 'debit' => 0,
                 'credit' => $item->amount,
                 'note' => $item->note,
+                'by' => $item->createdBy?->name,
                 'customer' => [
                     'id' => $item->customer->id,
                     'code' => $item->customer->code,
@@ -277,11 +279,11 @@ class AccountStatementController extends Controller
     private function getSupplierPayments(Request $request, Account $account, ?string $noteSearch = null)
     {
         $query = SupplierPayment::query()
-            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'supplier_id', 'account_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'supplier_id', 'account_id', 'created_by', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
-        return $query->with('supplier:id,code,name')->get()->map(function ($item) use ($account) {
+        return $query->with(['supplier:id,code,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'transaction_number' => $item->prefix . $item->code,
@@ -294,6 +296,7 @@ class AccountStatementController extends Controller
                 'debit' => $item->amount,
                 'credit' => 0,
                 'note' => $item->note,
+                'by' => $item->createdBy?->name,
                 'supplier' => [
                     'id' => $item->supplier->id,
                     'code' => $item->supplier->code,
@@ -313,17 +316,17 @@ class AccountStatementController extends Controller
     private function getIncomeTransactions(Request $request, Account $account, ?string $noteSearch = null)
     {
         $query = IncomeTransaction::query()
-            ->select('id', 'code', 'date', 'amount', 'subject', 'note', 'income_category_id', 'account_id', 'created_at');
+            ->select('id', 'code', 'date', 'amount', 'subject', 'note', 'income_category_id', 'account_id', 'created_by', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
-        return $query->with('incomeCategory:id,name')->get()->map(function ($item) use ($account) {
+        return $query->with(['incomeCategory:id,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'transaction_number' => $item->code,
                 'code' => $item->getRawOriginal('code'),
                 'prefix' => IncomeTransaction::PREFIX,
-                
+
                 'name' => $item->incomeCategory->name,
                 'type' => 'Income',
                 'date' => $item->date->format('Y-m-d'),
@@ -331,6 +334,7 @@ class AccountStatementController extends Controller
                 'debit' => 0,
                 'credit' => $item->amount,
                 'note' => $item->note ?? $item->subject,
+                'by' => $item->createdBy?->name,
                 'income_category' => [
                     'id' => $item->incomeCategory->id,
                     'name' => $item->incomeCategory->name,
@@ -349,11 +353,11 @@ class AccountStatementController extends Controller
     private function getExpenseTransactions(Request $request, Account $account, ?string $noteSearch = null)
     {
         $query = ExpenseTransaction::query()
-            ->select('id', 'code', 'date', 'amount', 'subject', 'note', 'expense_category_id', 'account_id', 'created_at');
+            ->select('id', 'code', 'date', 'amount', 'subject', 'note', 'expense_category_id', 'account_id', 'created_by', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
-        return $query->with('expenseCategory:id,name')->get()->map(function ($item) use ($account) {
+        return $query->with(['expenseCategory:id,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'transaction_number' => $item->code,
@@ -366,6 +370,7 @@ class AccountStatementController extends Controller
                 'debit' => $item->amount,
                 'credit' => 0,
                 'note' => $item->note ?? $item->subject,
+                'by' => $item->createdBy?->name,
                 'expense_category' => [
                     'id' => $item->expenseCategory->id,
                     'name' => $item->expenseCategory->name,
@@ -384,11 +389,11 @@ class AccountStatementController extends Controller
     private function getAdvanceLoanTransactions(Request $request, Account $account, ?string $noteSearch = null)
     {
         $query = AdvanceLoan::query()
-            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'employee_id', 'account_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'amount', 'amount_usd', 'note', 'employee_id', 'account_id', 'created_by', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
-        return $query->with('employee:id,code,name')->get()->map(function ($item) use ($account) {
+        return $query->with(['employee:id,code,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'transaction_number' => $item->prefix . $item->code,
@@ -401,6 +406,7 @@ class AccountStatementController extends Controller
                 'debit' => $item->amount,
                 'credit' => 0,
                 'note' => $item->note,
+                'by' => $item->createdBy?->name,
                 'employee' => [
                     'id' => $item->employee->id,
                     'code' => $item->employee->code,
@@ -420,11 +426,11 @@ class AccountStatementController extends Controller
     private function getSalaryTransactions(Request $request, Account $account, ?string $noteSearch = null)
     {
         $query = Salary::query()
-            ->select('id', 'code', 'prefix', 'date', 'final_total', 'amount_usd', 'note', 'employee_id', 'account_id', 'month', 'year', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'final_total', 'amount_usd', 'note', 'employee_id', 'account_id', 'month', 'year', 'created_by', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
-        return $query->with('employee:id,code,name')->get()->map(function ($item) use ($account) {
+        return $query->with(['employee:id,code,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'transaction_number' => $item->prefix . $item->code,
@@ -437,6 +443,7 @@ class AccountStatementController extends Controller
                 'debit' => $item->final_total,
                 'credit' => 0,
                 'note' => $item->note ?? "Salary for {$item->month}/{$item->year}",
+                'by' => $item->createdBy?->name,
                 'employee' => [
                     'id' => $item->employee->id,
                     'code' => $item->employee->code,
@@ -459,12 +466,12 @@ class AccountStatementController extends Controller
 
         // Get transfers where this account is sending money (debit)
         $queryFrom = AccountTransfer::query()
-            ->select('id', 'code', 'prefix', 'date', 'sent_amount', 'note', 'from_account_id', 'to_account_id', 'created_at')
+            ->select('id', 'code', 'prefix', 'date', 'sent_amount', 'note', 'from_account_id', 'to_account_id', 'created_by', 'created_at')
             ->where('from_account_id', $account->id);
 
         $this->applyDateAndSearchFilters($queryFrom, $request, $noteSearch);
 
-        $transfersFrom = $queryFrom->with('toAccount:id,name')->get()->map(function ($item) use ($account) {
+        $transfersFrom = $queryFrom->with(['toAccount:id,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'transaction_number' => $item->prefix . $item->code,
@@ -477,6 +484,7 @@ class AccountStatementController extends Controller
                 'debit' => $item->sent_amount,
                 'credit' => 0,
                 'note' => $item->note,
+                'by' => $item->createdBy?->name,
                 'to_account' => [
                     'id' => $item->toAccount->id,
                     'name' => $item->toAccount->name,
@@ -493,12 +501,12 @@ class AccountStatementController extends Controller
 
         // Get transfers where this account is receiving money (credit)
         $queryTo = AccountTransfer::query()
-            ->select('id', 'code', 'prefix', 'date', 'received_amount', 'note', 'from_account_id', 'to_account_id', 'created_at')
+            ->select('id', 'code', 'prefix', 'date', 'received_amount', 'note', 'from_account_id', 'to_account_id', 'created_by', 'created_at')
             ->where('to_account_id', $account->id);
 
         $this->applyDateAndSearchFilters($queryTo, $request, $noteSearch);
 
-        $transfersTo = $queryTo->with('fromAccount:id,name')->get()->map(function ($item) use ($account) {
+        $transfersTo = $queryTo->with(['fromAccount:id,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
             return [
                 'id' => $item->id,
                 'transaction_number' => $item->prefix . $item->code,
@@ -511,6 +519,7 @@ class AccountStatementController extends Controller
                 'debit' => 0,
                 'credit' => $item->received_amount,
                 'note' => $item->note,
+                'by' => $item->createdBy?->name,
                 'from_account' => [
                     'id' => $item->fromAccount->id,
                     'name' => $item->fromAccount->name,
@@ -531,11 +540,11 @@ class AccountStatementController extends Controller
     private function getAccountAdjusts(Request $request, Account $account, ?string $noteSearch = null)
     {
         $query = AccountAdjust::query()
-            ->select('id', 'code', 'prefix', 'date', 'type', 'amount', 'note', 'account_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'type', 'amount', 'note', 'account_id', 'created_by', 'created_at');
 
         $this->applyFilters($query, $request, $account, $noteSearch);
 
-        return $query->get()->map(function ($item) use ($account) {
+        return $query->with('createdBy:id,name')->get()->map(function ($item) use ($account) {
             $isCredit = $item->type === 'Credit';
 
             return [
@@ -550,6 +559,7 @@ class AccountStatementController extends Controller
                 'debit' => $isCredit ? 0 : $item->amount,
                 'credit' => $isCredit ? $item->amount : 0,
                 'note' => $item->note,
+                'by' => $item->createdBy?->name,
                 'adjust_type' => $item->type,
                 'account' => [
                     'id' => $account->id,
