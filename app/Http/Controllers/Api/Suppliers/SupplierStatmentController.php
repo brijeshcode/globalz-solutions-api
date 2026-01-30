@@ -306,7 +306,7 @@ class SupplierStatmentController extends Controller
     private function getPurchases(Request $request, Supplier $supplier, ?string $noteSearch = null)
     {
         $query = Purchase::query()
-            ->select('id', 'code', 'prefix', 'date', 'final_total_usd', 'note', 'supplier_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'total_usd', 'note', 'supplier_id', 'created_at');
 
         $this->applyFilters($query, $request, $supplier, $noteSearch);
 
@@ -316,8 +316,8 @@ class SupplierStatmentController extends Controller
                 'code' => $item->prefix . $item->code,
                 'type' => 'Purchase',
                 'date' => $item->date,
-                'amount' => $item->final_total_usd,
-                'debit' => $item->final_total_usd,
+                'amount' => $item->total_usd,
+                'debit' => $item->total_usd,
                 'credit' => 0,
                 'note' => $item->note,
                 'supplier' => [
@@ -364,7 +364,7 @@ class SupplierStatmentController extends Controller
     private function getReturns(Request $request, Supplier $supplier, ?string $noteSearch = null)
     {
         $query = PurchaseReturn::query()
-            ->select('id', 'code', 'prefix', 'date', 'final_total_usd', 'note', 'supplier_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'total_usd', 'note', 'supplier_id', 'created_at');
 
         $this->applyFilters($query, $request, $supplier, $noteSearch);
 
@@ -374,9 +374,9 @@ class SupplierStatmentController extends Controller
                 'code' => $item->prefix . $item->code,
                 'type' => 'Purchase Return',
                 'date' => $item->date,
-                'amount' => -$item->final_total_usd,
+                'amount' => -$item->total_usd,
                 'debit' => 0,
-                'credit' => $item->final_total_usd,
+                'credit' => $item->total_usd,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
