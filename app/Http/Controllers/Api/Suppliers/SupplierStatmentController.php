@@ -257,19 +257,22 @@ class SupplierStatmentController extends Controller
             );
         }
 
-        // Sort by date - default to desc
-        $sortDirection = $request->get('sort_direction', 'desc');
-        $sortedTransactions = $sortDirection === 'asc'
-            ? $allTransactions->sortBy('date')->values()
-            : $allTransactions->sortByDesc('date')->values(); 
+        // Always sort by date ascending first to calculate correct running balance
+        $sortedByDateAsc = $allTransactions->sortBy('date')->values();
 
-        // Calculate running balance
+        // Calculate running balance in chronological order (oldest to newest)
         $balance = 0;
-        $transactionsWithBalance = $sortedTransactions->map(function ($transaction) use (&$balance) {
+        $transactionsWithBalance = $sortedByDateAsc->map(function ($transaction) use (&$balance) {
             $balance += $transaction['debit'] - $transaction['credit'];
             $transaction['balance'] = $balance;
             return $transaction;
         });
+
+        // Now apply the requested sort direction for display
+        $sortDirection = $request->get('sort_direction', 'desc');
+        if ($sortDirection === 'desc') {
+            return $transactionsWithBalance->reverse()->values();
+        }
 
         return $transactionsWithBalance->values();
     }
@@ -392,10 +395,13 @@ class SupplierStatmentController extends Controller
 
     private function calculateStats($transactions)
     {
+        $totalDebit = $transactions->sum('debit');
+        $totalCredit = $transactions->sum('credit');
+
         return [
-            'total_debit' => $transactions->sum('debit'),
-            'total_credit' => $transactions->sum('credit'),
-            'balance' => $transactions->last()['balance'] ?? 0,
+            'total_debit' => $totalDebit,
+            'total_credit' => $totalCredit,
+            'balance' => $totalDebit - $totalCredit,
         ];
     }
 
