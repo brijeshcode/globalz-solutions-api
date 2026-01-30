@@ -290,16 +290,16 @@ class Purchase extends Model
             if ($purchase->status === 'Delivered') {
                 // Case 1: Status just changed to Delivered (add full amount)
                 if ($original['status'] !== 'Delivered') {
-                    SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+                    SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->total_usd);
                 }
                 // Case 2: Already delivered and supplier changed
                 elseif ($original['supplier_id'] != $purchase->supplier_id) {
-                    SuppliersHelper::removeBalance(Supplier::find($original['supplier_id']), $original['final_total_usd']);
-                    SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+                    SuppliersHelper::removeBalance(Supplier::find($original['supplier_id']), $original['total_usd']);
+                    SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->total_usd);
                 }
                 // Case 3: Already delivered and amount changed on same supplier
-                elseif ($original['final_total_usd'] != $purchase->final_total_usd) {
-                    $difference = $purchase->final_total_usd - $original['final_total_usd'];
+                elseif ($original['total_usd'] != $purchase->total_usd) {
+                    $difference = $purchase->total_usd - $original['total_usd'];
                     SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $difference);
                 }
             }
@@ -308,7 +308,7 @@ class Purchase extends Model
         static::deleted(function ($purchase) {
             // Only remove from supplier balance if purchase was delivered
             if ($purchase->status === 'Delivered') {
-                SuppliersHelper::removeBalance(Supplier::find($purchase->supplier_id), $purchase->final_total_usd);
+                SuppliersHelper::removeBalance(Supplier::find($purchase->supplier_id), $purchase->total_usd);
             }
         });
 
