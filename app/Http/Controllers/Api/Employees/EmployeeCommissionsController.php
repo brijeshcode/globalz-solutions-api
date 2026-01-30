@@ -606,8 +606,12 @@ class EmployeeCommissionsController extends Controller
         }
 
         return [
+            'subtotal_sales' => (float) array_sum(array_column($salesData, 'total')),
+            'subtotal_returns' => (float) array_sum(array_column($returnsData, 'total')),
             'total_sales' => (float) array_sum(array_column($salesData, 'after_tax_total')),
             'total_returns' => (float) array_sum(array_column($returnsData, 'after_tax_total')),
+            'sales_by_prefix' => $salesData,
+            'returns_by_prefix' => $returnsData,
         ];
     }
 
@@ -656,7 +660,9 @@ class EmployeeCommissionsController extends Controller
         }
 
         return [
+            'subtotal_payments' => (float) array_sum(array_column($paymentsData, 'total')),
             'total_payments' => (float) array_sum(array_column($paymentsData, 'after_tax_total')),
+            'payments_by_prefix' => $paymentsData,
         ];
     }
 
@@ -672,7 +678,7 @@ class EmployeeCommissionsController extends Controller
             ->byMonth($month)
             ->byYear($year)
             ->first();
-
+        info($currentCommissionTarget);
         // Determine include_type for sale and payment rules
         // Note: Fuel rules don't need their own data fetching - they use sale and payment data
         $saleIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
@@ -720,10 +726,16 @@ class EmployeeCommissionsController extends Controller
                 'month' => (int) $month,
                 'year' => (int) $year,
                 'VAT' => self::TAX_RATE,
+                'subtotal_sales' => $salesStats['subtotal_sales'],
+                'subtotal_returns' => $salesStats['subtotal_returns'],
+                'subtotal_payments' => $paymentsStats['subtotal_payments'],
                 'total_sales' => $totalSales,
                 'total_returns' => $totalReturns,
                 'total_payments' => $totalPayments,
                 'net_sales' => (float) ($totalSales - $totalReturns),
+                'sales_by_prefix' => $salesStats['sales_by_prefix'],
+                'payments_by_prefix' => $paymentsStats['payments_by_prefix'],
+                'returns_by_prefix' => $salesStats['returns_by_prefix'],
             ];
         }
 
@@ -903,12 +915,12 @@ class EmployeeCommissionsController extends Controller
 
         // Dynamic calculation (existing logic)
         if ($totalPayments <= $rule->maximum_amount) {
-            // Case 1
+            // Case 1: Scale percent based on achievement ratio
             $dynamicPercent = ($totalPayments / $rule->maximum_amount) * $rule->percent;
             return ($dynamicPercent / 100) * $totalPayments;
         } else {
-            // Case 2
-            return $rule->maximum_amount * ($rule->percent / 100);
+            // Case 2: Use full percent on total payments (no cap)
+            return $totalPayments * ($rule->percent / 100);
         }
     }
 }
