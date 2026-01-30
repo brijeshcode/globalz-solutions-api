@@ -678,7 +678,6 @@ class EmployeeCommissionsController extends Controller
             ->byMonth($month)
             ->byYear($year)
             ->first();
-        info($currentCommissionTarget);
         // Determine include_type for sale and payment rules
         // Note: Fuel rules don't need their own data fetching - they use sale and payment data
         $saleIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
