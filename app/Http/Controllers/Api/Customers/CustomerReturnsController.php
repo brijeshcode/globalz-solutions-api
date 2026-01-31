@@ -48,9 +48,16 @@ class CustomerReturnsController extends Controller
                 'returnReceivedBy:id,name',
                 'createdBy:id,name',
                 'updatedBy:id,name'
-            ])
-            ->sortable($request);
+            ]);
 
+        if (!$request->has('sort_by')) {
+            info('here we come');
+            $query->orderByRaw("CASE WHEN return_received_by IS NULL THEN 0 ELSE 1 END")
+                ->orderBy('date', 'desc')
+                ->orderBy('id', 'desc');
+        } else {
+            $query->sortable($request);
+        }
         $returns = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
