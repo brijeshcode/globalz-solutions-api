@@ -117,11 +117,6 @@ class CustomerCreditDebitNote extends Model
         return $query->where('prefix', $prefix);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
-    {
-        return $query->whereBetween('date', [$startDate, $endDate]);
-    }
-
     public function scopeByCode($query, $code)
     {
         return $query->where('code', $code);
