@@ -23,7 +23,15 @@ class CustomerCreditDebitNotesController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = $this->query($request);
+        $query = $this->query($request)
+            ->with([
+                'customer:id,name,code',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ])
+            ->sortable($request)
+            ;
 
         $notes = $this->applyPagination($query, $request);
 
@@ -202,26 +210,14 @@ class CustomerCreditDebitNotesController extends Controller
         $query = $this->query($request);
 
         $stats = [
-            'total_notes' => (clone $query)->count(),
-            'credit_notes' => (clone $query)->credit()->count(),
-            'debit_notes' => (clone $query)->debit()->count(),
-            'trashed_notes' => (clone $query)->onlyTrashed()->count(),
-            'total_credit_amount' => (clone $query)->credit()->sum('amount'),
-            'total_debit_amount' => (clone $query)->debit()->sum('amount'),
+            // 'total_notes' => (clone $query)->count(),
+            'total_credit_notes' => (clone $query)->credit()->count(),
+            'total_debit_notes' => (clone $query)->debit()->count(),
+            // 'trashed_notes' => (clone $query)->onlyTrashed()->count(),
+            // 'total_credit_amount' => (clone $query)->credit()->sum('amount'),
+            // 'total_debit_amount' => (clone $query)->debit()->sum('amount'),
             'total_credit_amount_usd' => (clone $query)->credit()->sum('amount_usd'),
             'total_debit_amount_usd' => (clone $query)->debit()->sum('amount_usd'),
-            // 'notes_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(amount) as total_amount')
-            //     ->groupBy('prefix')
-            //     ->get(),
-            // 'notes_by_currency' => (clone $query)->with('currency:id,name,code')
-            //     ->selectRaw('currency_id, count(*) as count, sum(amount) as total_amount')
-            //     ->groupBy('currency_id')
-            //     ->having('count', '>', 0)
-            //     ->get(),
-            // 'recent_notes' => (clone $query)->with(['customer:id,name,code', 'createdBy:id,name'])
-            //     ->orderBy('created_at', 'desc')
-            //     ->limit(10)
-            //     ->get(),
         ];
 
         return ApiResponse::show('Customer credit/debit note statistics retrieved successfully', $stats);
@@ -230,14 +226,8 @@ class CustomerCreditDebitNotesController extends Controller
     private function query(Request $request)
     {
         $query = CustomerCreditDebitNote::query()
-            ->with([
-                'customer:id,name,code',
-                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'createdBy:id,name',
-                'updatedBy:id,name'
-            ])
             ->searchable($request)
-            ->sortable($request);
+            ;
 
         if ($request->has('customer_id')) {
             $query->byCustomer($request->customer_id);
@@ -255,8 +245,12 @@ class CustomerCreditDebitNotesController extends Controller
             $query->byPrefix($request->prefix);
         }
 
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->start_date, $request->end_date);
+        if ($request->has('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+
+        if ($request->has('date_to')) {
+            $query->where('date', '<=', $request->date_to);
         }
 
         // Filter by salesman if user has salesman role
