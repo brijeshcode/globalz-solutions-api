@@ -8,6 +8,7 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Supplier;
 use App\Models\User;
 use App\Traits\Authorable;
+use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SupplierCreditDebitNote extends Model
 {
     /** @use HasFactory<\Database\Factories\Suppliers\SupplierCreditDebitNoteFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'code',

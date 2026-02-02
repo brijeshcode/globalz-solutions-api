@@ -73,10 +73,12 @@ class ItemCostHistoryController extends Controller
 
         // Apply date range filter
         if ($request->has('from_date')) {
-            $query->where('purchases.date', '>=', $request->get('from_date'));
+            // $query->where('purchases.date', '>=', $request->get('from_date'));
+            $query->fromDate( $request->get('from_date'), 'purchases.date');
         }
         if ($request->has('to_date')) {
-            $query->where('purchases.date', '<=', $request->get('to_date'));
+            // $query->where('purchases.date', '<=', $request->get('to_date'));
+            $query->toDate( $request->get('to_date'), 'purchases.date');
         }
 
         // Order by purchase date descending (latest on top)

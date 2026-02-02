@@ -10,6 +10,7 @@ use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use App\Traits\Authorable;
+use App\Traits\HasDateFilters;
 use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
@@ -22,7 +23,7 @@ use Illuminate\Support\Collection;
 
 class CustomerPayment extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
 
     public const TAXPREFIX = 'RCT';
     public const TAXFREEPREFIX = 'RCX';

@@ -243,6 +243,14 @@ class SupplierPaymentsController extends Controller
             $query->byDateRange($request->start_date, $request->end_date);
         }
 
+        if ($request->has('date_from')) {
+            $query->fromDate($request->date_from);
+        } 
+        
+        if ($request->has('date_to')) {
+            $query->toDate( $request->date_to);
+        }
+
         return $query;
     }
 }

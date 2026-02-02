@@ -7,6 +7,7 @@ use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
+use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class AdvanceLoan extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\AdvanceLoanFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'date',

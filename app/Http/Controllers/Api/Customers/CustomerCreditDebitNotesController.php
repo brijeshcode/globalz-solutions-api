@@ -246,11 +246,11 @@ class CustomerCreditDebitNotesController extends Controller
         }
 
         if ($request->has('date_from')) {
-            $query->where('date', '>=', $request->date_from);
+            $query->fromDate($request->date_from);
         }
 
         if ($request->has('date_to')) {
-            $query->where('date', '<=', $request->date_to);
+            $query->toDate($request->date_to);
         }
 
         // Filter by salesman if user has salesman role

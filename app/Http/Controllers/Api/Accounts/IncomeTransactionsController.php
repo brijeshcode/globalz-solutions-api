@@ -399,8 +399,12 @@ class IncomeTransactionsController extends Controller
             $query->byDateRange($request->input('start_date'), $request->input('end_date'));
         }
 
-        if ($request->has('date')) {
-            $query->whereDate('date', $request->input('date'));
+        if ($request->has('date_from')) {
+            $query->fromDate($request->date_from);
+        } 
+        
+        if ($request->has('date_to')) {
+            $query->toDate( $request->date_to);
         }
 
         return $query;

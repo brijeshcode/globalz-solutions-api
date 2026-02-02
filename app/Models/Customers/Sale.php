@@ -12,6 +12,7 @@ use App\Services\Currency\CurrencyService;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\CustomersHelper;
 use App\Models\Items\PriceList;
+use App\Traits\HasDateFilters;
 use App\Traits\Authorable;
 use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
@@ -34,7 +35,7 @@ class Sale extends Model
 
     public const STATUS_WAITING = 'Waiting';
 
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
 
     protected $fillable = [
         'code',

@@ -10,6 +10,7 @@ use App\Models\Setups\Supplier;
 use App\Models\Setups\SupplierPaymentTerm;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
+use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\HasDocuments;
 use App\Traits\Searchable;
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SupplierPayment extends Model
 {
     /** @use HasFactory<\Database\Factories\Suppliers\SupplierPaymentFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasDocuments, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasDocuments, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'date',

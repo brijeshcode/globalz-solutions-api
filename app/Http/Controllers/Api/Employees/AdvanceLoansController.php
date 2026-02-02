@@ -189,12 +189,13 @@ class AdvanceLoansController extends Controller
             $query->byPrefix($request->prefix);
         }
 
-        if ($request->has('from_date') && $request->has('to_date')) {
-            $query->byDateRange($request->from_date, $request->to_date);
-        } elseif ($request->has('from_date')) {
-            $query->where('date', '>=', $request->from_date);
-        } elseif ($request->has('to_date')) {
-            $query->where('date', '<=', $request->to_date);
+        
+        if ($request->has('date_from')) {
+            $query->fromDate($request->date_from);
+        } 
+        
+        if ($request->has('date_to')) {
+            $query->toDate( $request->date_to);
         }
 
         return $query;

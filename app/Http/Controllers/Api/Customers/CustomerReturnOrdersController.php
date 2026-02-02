@@ -748,8 +748,12 @@ class CustomerReturnOrdersController extends Controller
             $query->byPrefix($request->prefix);
         }
 
-        if ($request->has('start_date') && $request->has('end_date')) {
-            $query->byDateRange($request->start_date, $request->end_date);
+        if ($request->has('start_date')) {
+            $query->fromDate($request->start_date);
+        }
+
+        if ($request->has('end_date')) {
+            $query->toDate($request->end_date);
         }
 
         return $query;

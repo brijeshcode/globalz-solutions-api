@@ -5,6 +5,7 @@ namespace App\Models\Accounts;
 use App\Helpers\AccountsHelper;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AccountAdjust extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'date',

@@ -4,6 +4,7 @@ namespace App\Models\Employees;
 
 use App\Models\Setting;
 use App\Traits\Authorable;
+use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class CommissionTarget extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\CommissionTargetFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'code',

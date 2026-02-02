@@ -272,6 +272,14 @@ class CustomerPaymentOrdersController extends Controller
             });
         }
 
+        if ($request->has('from_date')) {
+            $query->fromDate($request->from_date);
+        }
+
+        if ($request->has('toDate')) {
+            $query->toDate($request->toDate);
+        }
+
         // Filter by salesman if user has salesman role
         if (RoleHelper::isSalesman()) {
             $salesmanEmployee = RoleHelper::getSalesmanEmployee();

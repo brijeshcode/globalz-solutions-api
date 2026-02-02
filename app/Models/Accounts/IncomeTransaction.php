@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Models\Setups\Accounts\IncomeCategory;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\HasDocuments;
 use App\Traits\Searchable;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class IncomeTransaction extends Model
 {
     public const PREFIX = 'INC';
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasBooleanFilters,HasDocuments, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasBooleanFilters,HasDocuments, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'date',

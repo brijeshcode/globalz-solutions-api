@@ -250,11 +250,11 @@ class ItemAdjustsController extends Controller
         }
 
         if ($request->has('from_date')) {
-            $query->where('date', '>=', $request->from_date);
+            $query->fromDate($request->from_date);
         }
 
         if ($request->has('to_date')) {
-            $query->where('date', '<=', $request->to_date);
+            $query->toDate($request->to_date);
         }
 
         return $query;

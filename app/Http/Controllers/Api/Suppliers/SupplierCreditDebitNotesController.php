@@ -242,6 +242,14 @@ class SupplierCreditDebitNotesController extends Controller
             $query->byPrefix($request->prefix);
         }
 
+        if ($request->has('from_date')) {
+            $query->fromDate($request->from_date);
+        } 
+        
+        if ($request->has('to_date')) {
+            $query->toDate( $request->to_date);
+        }
+
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->byDateRange($request->start_date, $request->end_date);
         }

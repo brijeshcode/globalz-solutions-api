@@ -231,16 +231,11 @@ class AccountAdjustsController extends Controller
 
         // Filter by date range
         if ($request->filled('from_date')) {
-            $query->whereDate('date', '>=', $request->from_date);
+            $query->fromDate($request->from_date);
         }
 
         if ($request->filled('to_date')) {
-            $query->whereDate('date', '<=', $request->to_date);
-        }
-
-        // Filter by date range (alternative)
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('date', [$request->start_date, $request->end_date]);
+            $query->toDate( $request->to_date);
         }
 
         // Filter by amount

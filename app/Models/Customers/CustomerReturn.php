@@ -8,6 +8,7 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
 use App\Traits\Authorable;
+use App\Traits\HasDateFilters;
 use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
@@ -21,7 +22,7 @@ use Illuminate\Support\Collection;
 
 class CustomerReturn extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
 
     public const TAXPREFIX = 'RTN';
     public const TAXFREEPREFIX = 'RTX';

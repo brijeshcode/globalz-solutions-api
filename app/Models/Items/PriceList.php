@@ -4,6 +4,7 @@ namespace App\Models\Items;
 
 use App\Models\Customers\Customer;
 use App\Traits\Authorable;
+use App\Traits\HasDateFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class PriceList extends Model
 {
     /** @use HasFactory<\Database\Factories\Items\PriceListFactory> */
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'code',
