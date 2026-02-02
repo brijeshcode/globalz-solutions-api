@@ -22,7 +22,18 @@ class CustomerPaymentsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = $this->paymentQuery($request);
-
+        $query->with([
+                'customer:id,name,code,salesperson_id',
+                'customer.salesperson',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'customerPaymentTerm:id,name,days',
+                'approvedBy:id,name',
+                'account:id,name',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ])
+        ->sortable($request);
+    
         $payments = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
@@ -102,7 +113,7 @@ class CustomerPaymentsController extends Controller
 
     public function destroy(CustomerPayment $customerPayment): JsonResponse
     {
-        if (! RoleHelper::isSuperAdmin() && $customerPayment->isApproved()) {
+        if (! RoleHelper::canSuperAdmin() && $customerPayment->isApproved()) {
             return ApiResponse::customError('Cannot delete approved payments', 422);
         }
 
@@ -153,9 +164,10 @@ class CustomerPaymentsController extends Controller
  
     public function trashed(Request $request): JsonResponse
     {
-        $query = CustomerPayment::onlyTrashed()
+        $query = $this->paymentQuery($request)->onlyTrashed()
             ->with([
-                'customer:id,name,code',
+                'customer:id,name,code,salesperson_id',
+                'customer.salesperson',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                 'customerPaymentTerm:id,name,days',
                 'approvedBy:id,name',
@@ -164,22 +176,36 @@ class CustomerPaymentsController extends Controller
                 'updatedBy:id,name'
             ])
             ->searchable($request)
-            ->sortable($request);
-
-        if ($request->has('customer_id')) {
-            $query->byCustomer($request->customer_id);
-        }
-
-        if ($request->has('currency_id')) {
-            $query->byCurrency($request->currency_id);
-        }
-
+            ->orderBy('deleted_at', 'desc')
+            ->sortable($request)
+            ;
         $payments = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
             'Trashed customer payments retrieved successfully',
             $payments,
             CustomerPaymentResource::class
+        );
+    }
+
+    public function showTrashed(int $id): JsonResponse
+    {
+        $payment = CustomerPayment::onlyTrashed()
+            ->with([
+                'customer:id,name,code,address,city,mobile',
+                'customer.salesperson',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'customerPaymentTerm:id,name,days',
+                'approvedBy:id,name',
+                'account:id,name',
+                'createdBy:id,name',
+                'updatedBy:id,name'
+            ])
+            ->findOrFail($id);
+
+        return ApiResponse::show(
+            'Trashed customer payment retrieved successfully',
+            new CustomerPaymentResource($payment)
         );
     }
 
@@ -228,19 +254,9 @@ class CustomerPaymentsController extends Controller
     private function paymentQuery(Request $request)
     {
         $query = CustomerPayment::query()
-            ->with([
-                'customer:id,name,code,salesperson_id',
-                'customer.salesperson',
-                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'customerPaymentTerm:id,name,days',
-                'approvedBy:id,name',
-                'account:id,name',
-                'createdBy:id,name',
-                'updatedBy:id,name'
-            ])
+            
             ->approved()
-            ->searchable($request)
-            ->sortable($request);
+            ->searchable($request);
 
         if ($request->has('customer_id')) {
             $query->byCustomer($request->customer_id);
