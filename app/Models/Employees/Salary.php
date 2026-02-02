@@ -6,6 +6,7 @@ use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Traits\Authorable;
+use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Salary extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\SalaryFactory> */
-    use HasFactory, Authorable, SoftDeletes, HasDateWithTime, Searchable, Sortable;
+    use HasFactory, Authorable, SoftDeletes, HasDateWithTime, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'date',

@@ -439,11 +439,11 @@ class CustomerStatmentController extends Controller
         }
 
         if ($request->has('from_date')) {
-            $query->where('date', '>=', $request->get('from_date'));
+            $query->fromDate($request->get('from_date'));
         }
 
         if ($request->has('to_date')) {
-            $query->where('date', '<=', $request->get('to_date'));
+            $query->toDate($request->get('to_date'));
         }
 
         if ($noteSearch) {
