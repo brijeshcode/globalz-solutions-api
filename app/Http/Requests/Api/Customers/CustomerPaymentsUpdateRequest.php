@@ -6,7 +6,6 @@ use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 
 class CustomerPaymentsUpdateRequest extends FormRequest
 {
@@ -30,12 +29,7 @@ class CustomerPaymentsUpdateRequest extends FormRequest
             'amount_usd' => 'required|numeric|min:0.01',
             'credit_limit' => 'nullable|numeric|min:0',
             'last_payment_amount' => 'nullable|numeric|min:0',
-            'rtc_book_number' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('customer_payments', 'rtc_book_number')->ignore($paymentId)
-            ],
+            'rtc_book_number' => 'nullable|string|max:255',
             'note' => 'nullable|string',
             'account_id' => 'required|exists:accounts,id',
             'approve_note' => 'nullable|string|max:1000',
@@ -58,8 +52,6 @@ class CustomerPaymentsUpdateRequest extends FormRequest
             'amount.min' => 'Payment amount must be greater than 0',
             'amount_usd.required' => 'Payment amount in USD is required',
             'amount_usd.min' => 'Payment amount in USD must be greater than 0',
-            'rtc_book_number.required' => 'RCT book number is required',
-            'rtc_book_number.unique' => 'RCT book number must be unique',
             'credit_limit.min' => 'Credit limit must be 0 or greater',
             'last_payment_amount.min' => 'Last payment amount must be 0 or greater',
             'customer_payment_term_id.exists' => 'Selected payment term does not exist',
