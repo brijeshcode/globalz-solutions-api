@@ -56,7 +56,7 @@ class CustomerPaymentOrdersUpdateRequest extends FormRequest
             'amount.min' => 'Payment amount must be greater than 0',
             'amount_usd.required' => 'Payment amount in USD is required',
             'amount_usd.min' => 'Payment amount in USD must be greater than 0',
-            'rtc_book_number.unique' => 'RTC book number must be unique',
+            'rtc_book_number.unique' => 'RCT book number must be unique',
             'credit_limit.min' => 'Credit limit must be 0 or greater',
             'last_payment_amount.min' => 'Last payment amount must be 0 or greater',
             'customer_payment_term_id.exists' => 'Selected payment term does not exist',
@@ -75,7 +75,7 @@ class CustomerPaymentOrdersUpdateRequest extends FormRequest
             'amount_usd' => 'amount in USD',
             'credit_limit' => 'credit limit',
             'last_payment_amount' => 'last payment amount',
-            'rtc_book_number' => 'RTC book number',
+            'rtc_book_number' => 'RCT book number',
             'account_id' => 'account',
             'approve_note' => 'approval note',
         ];
