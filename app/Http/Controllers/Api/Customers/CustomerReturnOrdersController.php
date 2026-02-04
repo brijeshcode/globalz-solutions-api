@@ -145,7 +145,7 @@ class CustomerReturnOrdersController extends Controller
             return ApiResponse::customError('You can only update your own return orders', 403);
         }
 
-        if ($customerReturn->isApproved()) {
+        if ($customerReturn->isApproved() && !RoleHelper::canAdmin()) {
             return ApiResponse::customError('Cannot update approved returns', 422);
         }
 
@@ -281,23 +281,20 @@ class CustomerReturnOrdersController extends Controller
      */
     public function updateDirectReturn(CustomerDirectReturnUpdateRequest $request, CustomerReturn $customerReturn): JsonResponse
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        // Check if salesman can only update their own returns
-        $employee = RoleHelper::getSalesmanEmployee();
-        if ($user->isSalesman() && $customerReturn->salesperson_id !== $employee->id) {
-            return ApiResponse::customError('You can only update your own return orders', 403);
-        }
-
-        if ($customerReturn->isApproved()) {
-            return ApiResponse::customError('Cannot update approved returns', 422);
-        }
-
         if ($customerReturn->isReceived()) {
             return ApiResponse::customError('Cannot update returns that have been received', 422);
         }
 
+        if ($customerReturn->isApproved() && !RoleHelper::canAdmin()) {
+            return ApiResponse::customError('Cannot update approved returns', 422);
+        }
+
+        // Check if salesman can only update their own returns
+        $employee = RoleHelper::getSalesmanEmployee();
+        if (RoleHelper::isSalesman() && $customerReturn->salesperson_id !== $employee->id) {
+            return ApiResponse::customError('You can only update your own return orders', 403);
+        }
+        
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $customerReturn) {
