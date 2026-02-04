@@ -24,7 +24,7 @@ class ItemAdjustsUpdateRequest extends FormRequest
             'items' => 'required|array|min:1',
             'items.*.id' => 'nullable|integer|exists:item_adjust_items,id',
             'items.*.item_id' => 'required_with:items|integer|exists:items,id',
-            'items.*.quantity' => 'required_with:items|numeric|min:0.0001|max:999999.9999',
+            'items.*.quantity' => 'required_with:items|numeric|min:1|max:999999',
             'items.*.note' => 'nullable|string|max:1000',
         ];
     }
@@ -38,7 +38,7 @@ class ItemAdjustsUpdateRequest extends FormRequest
             'warehouse_id.required' => 'Warehouse is required.',
             'items.*.item_id.required_with' => 'Item is required for each adjustment item.',
             'items.*.quantity.required_with' => 'Quantity is required for each adjustment item.',
-            'items.*.quantity.min' => 'Quantity must be greater than 0.',
+            'items.*.quantity.min' => 'Quantity must be greater than 1.',
             'items.required' => 'At least one item is required for the adjustment.',
             'items.min' => 'At least one item is required for the adjustment.',
         ];

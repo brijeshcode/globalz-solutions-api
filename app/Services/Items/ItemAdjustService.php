@@ -205,18 +205,38 @@ class ItemAdjustService
             // For updates, adjust inventory by the difference
             $quantityDifference = $itemAdjustItem->quantity - $oldQuantity;
             if ($quantityDifference != 0) {
+                $absoluteDifference = abs($quantityDifference);
+
                 if ($itemAdjust->type === 'Add') {
-                    InventoryService::add(
-                        $itemAdjustItem->item_id,
-                        $itemAdjust->warehouse_id,
-                        $quantityDifference
-                    );
+                    // Add type: positive diff = add more, negative diff = subtract
+                    if ($quantityDifference > 0) {
+                        InventoryService::add(
+                            $itemAdjustItem->item_id,
+                            $itemAdjust->warehouse_id,
+                            $absoluteDifference
+                        );
+                    } else {
+                        InventoryService::subtract(
+                            $itemAdjustItem->item_id,
+                            $itemAdjust->warehouse_id,
+                            $absoluteDifference
+                        );
+                    }
                 } else {
-                    InventoryService::subtract(
-                        $itemAdjustItem->item_id,
-                        $itemAdjust->warehouse_id,
-                        $quantityDifference
-                    );
+                    // Subtract type: positive diff = subtract more, negative diff = add back
+                    if ($quantityDifference > 0) {
+                        InventoryService::subtract(
+                            $itemAdjustItem->item_id,
+                            $itemAdjust->warehouse_id,
+                            $absoluteDifference
+                        );
+                    } else {
+                        InventoryService::add(
+                            $itemAdjustItem->item_id,
+                            $itemAdjust->warehouse_id,
+                            $absoluteDifference
+                        );
+                    }
                 }
             }
         } else {

@@ -205,19 +205,33 @@ class ItemTransferService
             // For updates, adjust inventory by the difference
             $quantityDifference = $itemTransferItem->quantity - $oldQuantity;
             if ($quantityDifference != 0) {
-                // Subtract difference from source warehouse
-                InventoryService::subtract(
-                    $itemTransferItem->item_id,
-                    $itemTransfer->from_warehouse_id,
-                    $quantityDifference
-                );
+                $absoluteDifference = abs($quantityDifference);
 
-                // Add difference to destination warehouse
-                InventoryService::add(
-                    $itemTransferItem->item_id,
-                    $itemTransfer->to_warehouse_id,
-                    $quantityDifference
-                );
+                if ($quantityDifference > 0) {
+                    // Increasing transfer: subtract more from source, add more to destination
+                    InventoryService::subtract(
+                        $itemTransferItem->item_id,
+                        $itemTransfer->from_warehouse_id,
+                        $absoluteDifference
+                    );
+                    InventoryService::add(
+                        $itemTransferItem->item_id,
+                        $itemTransfer->to_warehouse_id,
+                        $absoluteDifference
+                    );
+                } else {
+                    // Decreasing transfer: add back to source, subtract from destination
+                    InventoryService::add(
+                        $itemTransferItem->item_id,
+                        $itemTransfer->from_warehouse_id,
+                        $absoluteDifference
+                    );
+                    InventoryService::subtract(
+                        $itemTransferItem->item_id,
+                        $itemTransfer->to_warehouse_id,
+                        $absoluteDifference
+                    );
+                }
             }
         } else {
             // Subtract from source warehouse
