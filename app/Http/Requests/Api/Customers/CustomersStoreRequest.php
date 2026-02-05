@@ -27,10 +27,10 @@ class CustomersStoreRequest extends FormRequest
             // Main Info Tab
             'parent_id' => 'nullable|exists:customers,id',
             'name' => 'required|string|max:255',
-            'customer_type_id' => 'nullable|exists:customer_types,id',
+            'customer_type_id' => 'required|exists:customer_types,id',
             'customer_group_id' => 'nullable|exists:customer_groups,id',
-            'price_list_id_INV' => 'nullable|exists:price_lists,id',
-            'price_list_id_INX' => 'nullable|exists:price_lists,id',
+            'price_list_id_INV' => 'required|exists:price_lists,id',
+            'price_list_id_INX' => 'required|exists:price_lists,id',
             'customer_province_id' => 'nullable|exists:customer_provinces,id',
             'customer_zone_id' => 'nullable|exists:customer_zones,id',
             
@@ -41,9 +41,9 @@ class CustomersStoreRequest extends FormRequest
 
             // Additional Info Tab
             'address' => 'nullable|string',
-            'city' => 'nullable|string|max:255',
+            'city' => 'required|string|max:255',
             'telephone' => 'nullable|string|max:20',
-            'mobile' => 'nullable|string|max:20',
+            'mobile' => 'required|string|max:20',
             'url' => 'nullable|url|max:255',
             'email' => 'nullable|email|max:255',
             'contact_name' => 'nullable|string|max:255',
@@ -55,7 +55,7 @@ class CustomersStoreRequest extends FormRequest
             'mof_tax_number' => 'nullable|string|max:50',
 
             // Sales Info Tab
-            'salesperson_id' => 'nullable|exists:employees,id',
+            'salesperson_id' => 'required|exists:employees,id',
             'customer_payment_term_id' => 'nullable|exists:customer_payment_terms,id',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'credit_limit' => 'nullable|numeric|min:0|max:999999999.9999',
