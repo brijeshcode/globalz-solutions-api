@@ -280,7 +280,7 @@ class SupplierStatmentController extends Controller
     private function getCreditDebitNotes(Request $request, Supplier $supplier, ?string $noteSearch = null)
     {
         $query = SupplierCreditDebitNote::query()
-            ->select('id', 'code', 'prefix', 'date', 'type', 'amount_usd', 'note', 'supplier_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'type', 'amount', 'note', 'supplier_id', 'created_at');
 
         $this->applyFilters($query, $request, $supplier, $noteSearch);
 
@@ -290,9 +290,9 @@ class SupplierStatmentController extends Controller
                 'code' => $item->prefix . $item->code,
                 'type' => $item->type == 'credit' ? 'Credit Note' : 'Debit Note',
                 'date' => $item->date,
-                'amount' => $item->type === 'credit' ? -$item->amount_usd : $item->amount_usd,
-                'debit' => $item->type === 'debit' ? $item->amount_usd : 0,
-                'credit' => $item->type === 'credit' ? $item->amount_usd : 0,
+                'amount' => $item->type === 'credit' ? -$item->amount : $item->amount,
+                'debit' => $item->type === 'debit' ? $item->amount : 0,
+                'credit' => $item->type === 'credit' ? $item->amount : 0,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
@@ -309,7 +309,7 @@ class SupplierStatmentController extends Controller
     private function getPurchases(Request $request, Supplier $supplier, ?string $noteSearch = null)
     {
         $query = Purchase::query()
-            ->select('id', 'code', 'prefix', 'date', 'total_usd', 'note', 'supplier_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'total', 'note', 'supplier_id', 'created_at');
 
         $this->applyFilters($query, $request, $supplier, $noteSearch);
 
@@ -319,8 +319,8 @@ class SupplierStatmentController extends Controller
                 'code' => $item->prefix . $item->code,
                 'type' => 'Purchase',
                 'date' => $item->date,
-                'amount' => $item->total_usd,
-                'debit' => $item->total_usd,
+                'amount' => $item->total,
+                'debit' => $item->total,
                 'credit' => 0,
                 'note' => $item->note,
                 'supplier' => [
@@ -338,7 +338,7 @@ class SupplierStatmentController extends Controller
     private function getPayments(Request $request, Supplier $supplier, ?string $noteSearch = null)
     {
         $query = SupplierPayment::query()
-            ->select('id', 'code', 'prefix', 'date', 'amount_usd', 'note', 'supplier_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'amount', 'note', 'supplier_id', 'created_at');
 
         $this->applyFilters($query, $request, $supplier, $noteSearch);
 
@@ -348,9 +348,9 @@ class SupplierStatmentController extends Controller
                 'code' => $item->prefix . $item->code,
                 'type' => 'Payment',
                 'date' => $item->date,
-                'amount' => -$item->amount_usd,
+                'amount' => -$item->amount,
                 'debit' => 0,
-                'credit' => $item->amount_usd,
+                'credit' => $item->amount,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
@@ -367,7 +367,7 @@ class SupplierStatmentController extends Controller
     private function getReturns(Request $request, Supplier $supplier, ?string $noteSearch = null)
     {
         $query = PurchaseReturn::query()
-            ->select('id', 'code', 'prefix', 'date', 'total_usd', 'note', 'supplier_id', 'created_at');
+            ->select('id', 'code', 'prefix', 'date', 'total', 'note', 'supplier_id', 'created_at');
 
         $this->applyFilters($query, $request, $supplier, $noteSearch);
 
@@ -377,9 +377,9 @@ class SupplierStatmentController extends Controller
                 'code' => $item->prefix . $item->code,
                 'type' => 'Purchase Return',
                 'date' => $item->date,
-                'amount' => -$item->total_usd,
+                'amount' => -$item->total,
                 'debit' => 0,
-                'credit' => $item->total_usd,
+                'credit' => $item->total,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
