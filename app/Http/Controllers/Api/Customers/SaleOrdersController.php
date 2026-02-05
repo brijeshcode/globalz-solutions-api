@@ -14,6 +14,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\Sale;
 use App\Models\Items\Item;
+use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -449,7 +450,17 @@ class SaleOrdersController extends Controller
                 // Get IDs of items in the request
                 $requestItemIds = collect($items)->pluck('id')->filter()->toArray();
 
-                // Delete items that are not in the request
+                // Handle removed items - restore inventory explicitly before bulk delete
+                $itemsToDelete = $sale->items()->whereNotIn('id', $requestItemIds)->get();
+                foreach ($itemsToDelete as $itemToDelete) {
+                    InventoryService::add(
+                        $itemToDelete->item_id,
+                        $sale->warehouse_id,
+                        $itemToDelete->quantity,
+                        "Sale #{$sale->code} - Item removed"
+                    );
+                }
+                // Bulk delete removed items (inventory already restored above)
                 $sale->items()->whereNotIn('id', $requestItemIds)->delete();
 
                 // Update or create items

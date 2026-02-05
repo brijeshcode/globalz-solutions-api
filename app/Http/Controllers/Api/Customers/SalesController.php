@@ -13,6 +13,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Sale;
 use App\Models\Customers\SaleItems;
 use App\Models\Items\Item;
+use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -371,10 +372,18 @@ class SalesController extends Controller
                     ->values()
                     ->all();
 
-                // Delete sale items that are not in the request
-                $sale->saleItems()
-                    ->whereNotIn('id', $requestItemIds)
-                    ->delete();
+                // Handle removed items - restore inventory explicitly before bulk delete
+                $itemsToDelete = $sale->saleItems()->whereNotIn('id', $requestItemIds)->get();
+                foreach ($itemsToDelete as $itemToDelete) {
+                    InventoryService::add(
+                        $itemToDelete->item_id,
+                        $sale->warehouse_id,
+                        $itemToDelete->quantity,
+                        "Sale #{$sale->code} - Item removed"
+                    );
+                }
+                // Bulk delete removed items (inventory already restored above)
+                $sale->saleItems()->whereNotIn('id', $requestItemIds)->delete();
 
                 foreach ($saleItems as $itemData) {
                     $itemData['sale_id'] = $sale->id;
