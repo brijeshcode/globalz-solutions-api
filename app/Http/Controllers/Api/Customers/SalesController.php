@@ -138,8 +138,8 @@ class SalesController extends Controller
                     $totalPrice = $ttcPrice * $quantity;
                     $totalPriceUsd = $ttcPriceUsd * $quantity;
 
-                    // Step 9: Calculate profit
-                    $unitProfit = $ttcPriceUsd - $costPrice;
+                    // Step 9: Calculate profit (excluding tax)
+                    $unitProfit = $netSellPriceUsd - $costPrice;
                     $itemTotalProfit = $unitProfit * $quantity;
 
                     // Assign all calculated values to sale item
@@ -311,8 +311,8 @@ class SalesController extends Controller
                         $totalPrice = $ttcPrice * $quantity;
                         $totalPriceUsd = $ttcPriceUsd * $quantity;
 
-                        // Step 9: Calculate profit
-                        $unitProfit = $ttcPriceUsd - $costPrice;
+                        // Step 9: Calculate profit (excluding tax)
+                        $unitProfit = $netSellPriceUsd - $costPrice;
                         $itemTotalProfit = $unitProfit * $quantity;
 
                         // Assign all calculated values to sale item

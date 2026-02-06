@@ -394,7 +394,7 @@ class Sale extends Model
             $totalPriceUsd = $ttcPriceUsd * $quantity;
 
             // Step 9: Calculate profit
-            $unitProfit = $ttcPriceUsd - $costPrice;
+            $unitProfit = $netSellPriceUsd - $costPrice;
             $itemTotalProfit = $unitProfit * $quantity;
 
             // Update sale item without firing events
