@@ -580,7 +580,6 @@ class SalesController extends Controller
      */
     public function recalculateSale(Sale $sale): JsonResponse
     {
-        $this->recalculateAllSales();
         try {
             $sale->recalculateAllFields();
             $sale->load(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson']);
