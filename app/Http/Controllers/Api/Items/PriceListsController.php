@@ -9,6 +9,7 @@ use App\Http\Requests\Api\Items\PriceListsUpdateRequest;
 use App\Http\Resources\Api\Items\PriceListResource;
 use App\Http\Resources\Api\Items\PriceListItemResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Customers\Customer;
 use App\Models\Items\Item;
 use App\Models\Items\PriceList;
 use App\Models\Items\PriceListItem;
@@ -498,5 +499,34 @@ class PriceListsController extends Controller
             'PriceList default set',
             new PriceListResource($priceList)
         );
+    }
+
+    public function changeCustomerPriceList(Request $request): JsonResponse
+    {
+        $request->validate([
+            'old_price_list_id_inv' => 'nullable|integer',
+            'new_price_list_id_inv' => 'nullable|integer|required_with:old_price_list_id_inv',
+            'old_price_list_id_inx' => 'nullable|integer',
+            'new_price_list_id_inx' => 'nullable|integer|required_with:old_price_list_id_inx',
+        ]);
+
+        $hasInvPair = $request->old_price_list_id_inv && $request->new_price_list_id_inv;
+        $hasInxPair = $request->old_price_list_id_inx && $request->new_price_list_id_inx;
+
+        if (!$hasInvPair && !$hasInxPair) {
+            return ApiResponse::customError('At least one complete price list pair (old and new) is required', 422);
+        }
+
+        if ($request->old_price_list_id_inv && $request->new_price_list_id_inv) {
+            Customer::where('price_list_id_INV', $request->old_price_list_id_inv)
+                ->update(['price_list_id_INV' => $request->new_price_list_id_inv]);
+        }
+
+        if ($request->old_price_list_id_inx && $request->new_price_list_id_inx) {
+            Customer::where('price_list_id_INX', $request->old_price_list_id_inx)
+                ->update(['price_list_id_INX' => $request->new_price_list_id_inx]);
+        }
+
+        return ApiResponse::update('Customer price lists updated successfully');
     }
 }

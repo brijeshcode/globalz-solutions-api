@@ -802,6 +802,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             Route::patch('{priceList}/setdefault', 'setDefault')->name('setDefault');
+            Route::post('change-customer-price-list', 'changeCustomerPriceList')->name('changeCustomerPriceList');
 
             // Price List Items Management
             Route::get('{priceList}/items', 'getItems')->name('items.index');
