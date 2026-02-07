@@ -20,6 +20,7 @@ class ExpenseCategoryResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'is_active' => $this->is_active,
+            'exclude_from_profit' => $this->exclude_from_profit,
             'is_root' => $this->is_root,
             'has_children' => $this->has_children,
 

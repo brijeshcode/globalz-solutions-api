@@ -67,15 +67,20 @@ class MontlyProfitReportController extends Controller
 
         $returnsProfitData = $returnsProfitQuery->get()->keyBy('month');
 
-        // Get expenses data
+        // Get expenses data (excluding categories marked as exclude_from_profit)
         $expensesQuery = DB::table('expense_transactions')
+            ->leftJoin('expense_categories', 'expense_transactions.expense_category_id', '=', 'expense_categories.id')
             ->selectRaw('
-                MONTH(date) as month,
-                YEAR(date) as year,
-                SUM(amount_usd) as total_expenses
+                MONTH(expense_transactions.date) as month,
+                YEAR(expense_transactions.date) as year,
+                SUM(expense_transactions.amount_usd) as total_expenses
             ')
-            ->whereYear('date', $year)
-            ->whereNull('deleted_at')
+            ->whereYear('expense_transactions.date', $year)
+            ->whereNull('expense_transactions.deleted_at')
+            ->where(function ($query) {
+                $query->whereNull('expense_categories.exclude_from_profit')
+                    ->orWhere('expense_categories.exclude_from_profit', false);
+            })
             ->groupBy('month', 'year');
 
         $expensesData = $expensesQuery->get()->keyBy('month');

@@ -21,10 +21,12 @@ class ExpenseCategory extends Model
         'name',
         'description',
         'is_active',
+        'exclude_from_profit',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'exclude_from_profit' => 'boolean',
     ];
 
     protected $searchable = [
@@ -57,6 +59,11 @@ class ExpenseCategory extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeExcludeProfit($query)
+    {
+        return $query->where('exclude_from_profit', true);
     }
 
     public function scopeRootCategories($query)

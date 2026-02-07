@@ -13,7 +13,7 @@ class ExpenseCategoriesUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return RoleHelper::isSuperAdmin();
+        return RoleHelper::canSuperAdmin();
     }
 
     /**
@@ -50,6 +50,7 @@ class ExpenseCategoriesUpdateRequest extends FormRequest
             ],
             'description' => 'nullable|string|max:500',
             'is_active' => 'boolean',
+            'exclude_from_profit' => 'boolean',
         ];
     }
 
