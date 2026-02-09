@@ -381,11 +381,11 @@ class ItemsController extends Controller
             'items_with_stock' => (clone $query)->whereHas('inventories', function ($query) {
                 $query->where('quantity', '>', 0);
             })->count(),
-            'total_stock_value' => (clone $query)
-                ->leftJoin('inventories', 'items.id', '=', 'inventories.item_id')
-                ->leftJoin('item_prices', 'items.id', '=', 'item_prices.item_id')
-                ->select(DB::raw('SUM(COALESCE(item_prices.price_usd, items.base_cost, 0) * COALESCE(inventories.quantity, 0)) as total'))
-                ->value('total') ?? 0,
+            // 'total_stock_value' => (clone $query)
+            //     ->leftJoin('inventories', 'items.id', '=', 'inventories.item_id')
+            //     ->leftJoin('item_prices', 'items.id', '=', 'item_prices.item_id')
+            //     ->select(DB::raw('SUM(COALESCE(item_prices.price_usd, items.base_cost, 0) * COALESCE(inventories.quantity, 0)) as total'))
+            //     ->value('total') ?? 0,
              
         ];
 
