@@ -16,8 +16,8 @@ class WarehouseReportController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $this->fixAllInventory($request);
-        $perPage = $request->get('per_page', 15);
+        // $this->fixAllInventory($request);
+        $perPage = $request->get('per_page', 50);
         $search = $request->get('search');
         $warehouseId = $request->get('warehouse_id');
         $itemCategoryId = $request->get('item_category_id');
@@ -25,6 +25,9 @@ class WarehouseReportController extends Controller
         $itemBrandId = $request->get('item_brand_id');
         $supplierId = $request->get('supplier_id');
         $stockStatus = $request->get('stock_status'); // in_stock, out_of_stock, low_stock
+        $itemTypeId = $request->get('item_type_id');
+        $itemFamilyId = $request->get('item_family_id');
+        $status = $request->get('status'); // active, inactive
 
         // Get all active warehouses for column headers
         $warehouses = Warehouse::active()->orderBy('name')->get(['id', 'name']);
@@ -62,6 +65,21 @@ class WarehouseReportController extends Controller
         // Apply supplier filter
         if ($supplierId) {
             $query->where('supplier_id', $supplierId);
+        }
+
+        // Apply type filter
+        if ($itemTypeId) {
+            $query->where('item_type_id', $itemTypeId);
+        }
+
+        // Apply family filter
+        if ($itemFamilyId) {
+            $query->where('item_family_id', $itemFamilyId);
+        }
+
+        // Apply status filter
+        if ($status) {
+            $query->where('is_active', $status === 'active');
         }
 
         // Apply warehouse filter - only show items that have inventory in the specified warehouse
@@ -143,7 +161,7 @@ class WarehouseReportController extends Controller
         });
 
         // Calculate summary stats
-        $stats = $this->calculateStats($warehouseId);
+        $stats = $this->calculateStats($warehouseId, $search, $itemCategoryId, $itemGroupId, $itemBrandId, $supplierId, $stockStatus, $itemTypeId, $itemFamilyId, $status);
 
         return ApiResponse::paginated(
             'Warehouse inventory report retrieved successfully',
@@ -221,13 +239,100 @@ class WarehouseReportController extends Controller
         return 'in_stock';
     }
 
-    private function calculateStats(?int $warehouseId): array
-    {
+    private function calculateStats(
+        ?int $warehouseId,
+        ?string $search = null,
+        ?int $itemCategoryId = null,
+        ?int $itemGroupId = null,
+        ?int $itemBrandId = null,
+        ?int $supplierId = null,
+        ?string $stockStatus = null,
+        ?int $itemTypeId = null,
+        ?int $itemFamilyId = null,
+        ?string $status = null
+    ): array {
         $baseQuery = Item::query();
+
+        // Apply the same filters as the main query
+        if ($search) {
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('short_name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($itemCategoryId) {
+            $baseQuery->where('item_category_id', $itemCategoryId);
+        }
+
+        if ($itemGroupId) {
+            $baseQuery->where('item_group_id', $itemGroupId);
+        }
+
+        if ($itemBrandId) {
+            $baseQuery->where('item_brand_id', $itemBrandId);
+        }
+
+        if ($supplierId) {
+            $baseQuery->where('supplier_id', $supplierId);
+        }
+
+        if ($itemTypeId) {
+            $baseQuery->where('item_type_id', $itemTypeId);
+        }
+
+        if ($itemFamilyId) {
+            $baseQuery->where('item_family_id', $itemFamilyId);
+        }
+
+        if ($status) {
+            $baseQuery->where('is_active', $status === 'active');
+        }
+
+        if ($warehouseId) {
+            $baseQuery->whereHas('inventories', fn($q) => $q->where('warehouse_id', $warehouseId));
+        }
+
+        if ($stockStatus) {
+            switch ($stockStatus) {
+                case 'in_stock':
+                    $baseQuery->whereHas('inventories', function ($q) {
+                        $q->where('quantity', '>', 0);
+                    });
+                    break;
+                case 'out_of_stock':
+                    $baseQuery->where(function ($q) {
+                        $q->whereDoesntHave('inventories')
+                            ->orWhereHas('inventories', function ($subQ) {
+                                $subQ->havingRaw('SUM(quantity) <= 0');
+                            });
+                    });
+                    break;
+                case 'low_stock':
+                    $baseQuery->lowStock();
+                    break;
+            }
+        }
+
+        // Get filtered item IDs for stock value calculation
+        $filteredItemIds = (clone $baseQuery)->pluck('items.id');
+
+        // Calculate total stock value (SUM of quantity * price_usd) for filtered items
+        $stockValueQuery = DB::table('inventories')
+            ->join('item_prices', 'inventories.item_id', '=', 'item_prices.item_id')
+            ->whereIn('inventories.item_id', $filteredItemIds);
+
+        if ($warehouseId) {
+            $stockValueQuery->where('inventories.warehouse_id', $warehouseId);
+        }
+
+        $totalStockValue = (float) $stockValueQuery->sum(DB::raw('inventories.quantity * item_prices.price_usd'));
 
         if ($warehouseId) {
             return [
-                'total_items' => (clone $baseQuery)->whereHas('inventories', fn($q) => $q->where('warehouse_id', $warehouseId))->count(),
+                'total_items' => (clone $baseQuery)->count(),
                 'in_stock_items' => (clone $baseQuery)->whereHas('inventories', fn($q) => $q->where('warehouse_id', $warehouseId)->where('quantity', '>', 0))->count(),
                 'out_of_stock_items' => (clone $baseQuery)->whereHas('inventories', fn($q) => $q->where('warehouse_id', $warehouseId)->where('quantity', '<=', 0))->count(),
                 'low_stock_items' => (clone $baseQuery)
@@ -236,19 +341,23 @@ class WarehouseReportController extends Controller
                         ->whereColumn('quantity', '<=', 'items.low_quantity_alert')
                         ->where('quantity', '>', 0)
                     )->count(),
+                'total_stock_value' => $totalStockValue,
             ];
         }
 
         return [
-            'total_items' => Item::count(),
-            'in_stock_items' => Item::whereHas('inventories', fn($q) => $q->where('quantity', '>', 0))->count(),
-            'out_of_stock_items' => Item::whereDoesntHave('inventories')
-                ->orWhereHas('inventories', function ($q) {
-                    $q->selectRaw('item_id, SUM(quantity) as total')
-                        ->groupBy('item_id')
-                        ->havingRaw('SUM(quantity) <= 0');
-                })->count(),
-            'low_stock_items' => Item::lowStock()->count(),
+            'total_items' => (clone $baseQuery)->count(),
+            'in_stock_items' => (clone $baseQuery)->whereHas('inventories', fn($q) => $q->where('quantity', '>', 0))->count(),
+            'out_of_stock_items' => (clone $baseQuery)->where(function ($q) {
+                $q->whereDoesntHave('inventories')
+                    ->orWhereHas('inventories', function ($subQ) {
+                        $subQ->selectRaw('item_id, SUM(quantity) as total')
+                            ->groupBy('item_id')
+                            ->havingRaw('SUM(quantity) <= 0');
+                    });
+            })->count(),
+            'low_stock_items' => (clone $baseQuery)->lowStock()->count(),
+            'total_stock_value' => $totalStockValue,
         ];
     }
 

@@ -941,6 +941,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Inventory Reports
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('warehouse', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'index'])->name('warehouse.index');
+            Route::get('warehouse/discrepancies', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'previewDiscrepancies'])->name('warehouse.discrepancies');
+            Route::post('warehouse/fix-all', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'fixAllInventory'])->name('warehouse.fix-all');
+            Route::post('warehouse/fix/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'fixItemInventory'])->name('warehouse.fix-item');
             Route::get('warehouse/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'show'])->name('warehouse.show');
         });
     });
