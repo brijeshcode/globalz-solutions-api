@@ -21,12 +21,13 @@ class MontlyProfitReportController extends Controller
 
     private function getMonthlyProfitData(int $year): array
     {
-        // Get sales data (approved sales only)
+        // Get sales data (approved sales only) - exclude tax from total
         $salesQuery = DB::table('sales')
             ->selectRaw('
                 MONTH(date) as month,
                 YEAR(date) as year,
-                SUM(total_usd) as total_sales,
+                SUM(total_usd - total_tax_amount_usd) as total_sales,
+                SUM(total_tax_amount_usd) as total_sale_tax,
                 SUM(total_profit) as total_profit
             ')
             ->whereYear('date', $year)
@@ -36,27 +37,14 @@ class MontlyProfitReportController extends Controller
 
         $salesData = $salesQuery->get()->keyBy('month');
 
-        // Get returns data (approved and received returns only)
-        $returnsQuery = DB::table('customer_returns')
-            ->selectRaw('
-                MONTH(date) as month,
-                YEAR(date) as year,
-                SUM(total_usd) as total_returns
-            ')
-            ->whereYear('date', $year)
-            ->whereNull('deleted_at')
-            ->whereNotNull('approved_by')
-            ->whereNotNull('return_received_by')
-            ->groupBy('month', 'year');
-
-        $returnsData = $returnsQuery->get()->keyBy('month');
-
-        // Get returns profit (from customer_return_items - only for received returns)
-        $returnsProfitQuery = DB::table('customer_return_items')
+        // Get returns data (approved and received returns only) - exclude tax and get profit
+        $returnsQuery = DB::table('customer_return_items')
             ->join('customer_returns', 'customer_return_items.customer_return_id', '=', 'customer_returns.id')
             ->selectRaw('
                 MONTH(customer_returns.date) as month,
                 YEAR(customer_returns.date) as year,
+                SUM(customer_return_items.total_price_usd - (customer_return_items.tax_amount_usd * customer_return_items.quantity)) as total_returns,
+                SUM(customer_return_items.tax_amount_usd * customer_return_items.quantity) as total_return_tax,
                 SUM(customer_return_items.total_profit) as total_profit
             ')
             ->whereYear('customer_returns.date', $year)
@@ -65,7 +53,7 @@ class MontlyProfitReportController extends Controller
             ->whereNotNull('customer_returns.return_received_by')
             ->groupBy('month', 'year');
 
-        $returnsProfitData = $returnsProfitQuery->get()->keyBy('month');
+        $returnsData = $returnsQuery->get()->keyBy('month');
 
         // Get expenses data (excluding categories marked as exclude_from_profit)
         $expensesQuery = DB::table('expense_transactions')
@@ -116,8 +104,11 @@ class MontlyProfitReportController extends Controller
         $months = [];
         $yearTotals = [
             'total_sales' => 0,
+            'total_sale_tax' => 0,
             'total_returns' => 0,
+            'total_return_tax' => 0,
             'net_sales' => 0,
+            'net_sale_tax' => 0,
             'sales_profit' => 0,
             'returns_profit' => 0,
             'net_profit' => 0,
@@ -131,21 +122,23 @@ class MontlyProfitReportController extends Controller
         for ($month = 1; $month <= 12; $month++) {
             $sales = $salesData->get($month);
             $returns = $returnsData->get($month);
-            $returnsProfit = $returnsProfitData->get($month);
             $expenses = $expensesData->get($month);
             $salaries = $salariesData->get($month);
             $creditNotes = $creditNotesData->get($month);
 
             $totalSales = $sales ? (float)$sales->total_sales : 0.00;
+            $totalSaleTax = $sales ? (float)$sales->total_sale_tax : 0.00;
             $salesProfit = $sales ? (float)$sales->total_profit : 0.00;
             $totalReturns = $returns ? (float)$returns->total_returns : 0.00;
-            $returnsProfitAmount = $returnsProfit ? (float)$returnsProfit->total_profit : 0.00;
+            $totalReturnTax = $returns ? (float)$returns->total_return_tax : 0.00;
+            $returnsProfitAmount = $returns ? (float)$returns->total_profit : 0.00;
             $totalExpenses = $expenses ? (float)$expenses->total_expenses : 0.00;
             $totalSalaries = $salaries ? (float)$salaries->total_salaries : 0.00;
             $totalCreditNotes = $creditNotes ? (float)$creditNotes->total_credit_notes : 0.00;
 
             // Calculate net values
             $netSales = $totalSales - $totalReturns;
+            $netSaleTax = $totalSaleTax - $totalReturnTax;
             $netProfit = $salesProfit - $returnsProfitAmount;
             $finalNetProfit = $netProfit - $totalExpenses - $totalSalaries - $totalCreditNotes;
 
@@ -154,8 +147,11 @@ class MontlyProfitReportController extends Controller
                 'month_name' => date('F', mktime(0, 0, 0, $month, 1)),
                 'year' => $year,
                 'sales' => round($totalSales, 2),
+                'total_sale_tax' => round($totalSaleTax, 2),
                 'returns' => round($totalReturns, 2),
+                'total_return_tax' => round($totalReturnTax, 2),
                 'net_sales' => round($netSales, 2),
+                'net_sale_tax' => round($netSaleTax, 2),
                 'sales_profit' => round($salesProfit, 2),
                 'returns_profit' => round($returnsProfitAmount, 2),
                 'net_profit' => round($netProfit, 2),
@@ -167,8 +163,11 @@ class MontlyProfitReportController extends Controller
 
             // Add to year totals
             $yearTotals['total_sales'] += $totalSales;
+            $yearTotals['total_sale_tax'] += $totalSaleTax;
             $yearTotals['total_returns'] += $totalReturns;
+            $yearTotals['total_return_tax'] += $totalReturnTax;
             $yearTotals['net_sales'] += $netSales;
+            $yearTotals['net_sale_tax'] += $netSaleTax;
             $yearTotals['sales_profit'] += $salesProfit;
             $yearTotals['returns_profit'] += $returnsProfitAmount;
             $yearTotals['net_profit'] += $netProfit;
@@ -181,8 +180,11 @@ class MontlyProfitReportController extends Controller
         // Round year totals
         $yearTotals = [
             'total_sales' => round($yearTotals['total_sales'], 2),
+            'total_sale_tax' => round($yearTotals['total_sale_tax'], 2),
             'total_returns' => round($yearTotals['total_returns'], 2),
+            'total_return_tax' => round($yearTotals['total_return_tax'], 2),
             'net_sales' => round($yearTotals['net_sales'], 2),
+            'net_sale_tax' => round($yearTotals['net_sale_tax'], 2),
             'sales_profit' => round($yearTotals['sales_profit'], 2),
             'returns_profit' => round($yearTotals['returns_profit'], 2),
             'net_profit' => round($yearTotals['net_profit'], 2),

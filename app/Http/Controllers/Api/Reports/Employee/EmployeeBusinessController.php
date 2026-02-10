@@ -21,7 +21,7 @@ class EmployeeBusinessController extends Controller
 
     private function getEmployeeBusinessData(int $year): array
     {
-        // Get sales data by employee - only approved sales
+        // Get sales data by employee - only approved sales, exclude tax
         $salesQuery = DB::table('sales')
             ->join('employees', 'sales.salesperson_id', '=', 'employees.id')
             ->selectRaw('
@@ -29,7 +29,8 @@ class EmployeeBusinessController extends Controller
                 employees.name as employee_name,
                 MONTH(sales.date) as month,
                 YEAR(sales.date) as year,
-                SUM(sales.total_usd) as total_sales
+                SUM(sales.total_usd - sales.total_tax_amount_usd) as total_sales,
+                SUM(sales.total_tax_amount_usd) as total_sale_tax
             ')
             ->whereYear('sales.date', $year)
             ->whereNull('sales.deleted_at')
@@ -62,18 +63,21 @@ class EmployeeBusinessController extends Controller
             return $item->employee_id . '_' . $item->month;
         });
 
-        // Get returns data by employee - only received returns
-        $returnsQuery = DB::table('customer_returns')
+        // Get returns data by employee - only received returns, exclude tax
+        $returnsQuery = DB::table('customer_return_items')
+            ->join('customer_returns', 'customer_return_items.customer_return_id', '=', 'customer_returns.id')
             ->join('employees', 'customer_returns.salesperson_id', '=', 'employees.id')
             ->selectRaw('
                 employees.id as employee_id,
                 employees.name as employee_name,
                 MONTH(customer_returns.date) as month,
                 YEAR(customer_returns.date) as year,
-                SUM(customer_returns.total_usd) as total_returns
+                SUM(customer_return_items.total_price_usd - (customer_return_items.tax_amount_usd * customer_return_items.quantity)) as total_returns,
+                SUM(customer_return_items.tax_amount_usd * customer_return_items.quantity) as total_return_tax
             ')
             ->whereYear('customer_returns.date', $year)
             ->whereNull('customer_returns.deleted_at')
+            ->whereNull('customer_return_items.deleted_at')
             ->whereNotNull('customer_returns.return_received_by')
             ->groupBy('employee_id', 'employee_name', 'month', 'year');
 
@@ -94,8 +98,10 @@ class EmployeeBusinessController extends Controller
         $employeesData = [];
         $yearTotals = [
             'total_sales' => 0,
+            'total_sale_tax' => 0,
             'total_payments' => 0,
             'total_returns' => 0,
+            'total_return_tax' => 0,
         ];
 
         foreach ($employeeIds as $employeeId) {
@@ -107,8 +113,10 @@ class EmployeeBusinessController extends Controller
             $months = [];
             $employeeTotals = [
                 'total_sales' => 0,
+                'total_sale_tax' => 0,
                 'total_payments' => 0,
                 'total_returns' => 0,
+                'total_return_tax' => 0,
             ];
 
             // Loop through all 12 months
@@ -120,22 +128,28 @@ class EmployeeBusinessController extends Controller
                 $returns = $returnsData->get($key);
 
                 $totalSales = $sales ? (float)$sales->total_sales : 0.00;
+                $totalSaleTax = $sales ? (float)$sales->total_sale_tax : 0.00;
                 $totalPayments = $payments ? (float)$payments->total_payments : 0.00;
                 $totalReturns = $returns ? (float)$returns->total_returns : 0.00;
+                $totalReturnTax = $returns ? (float)$returns->total_return_tax : 0.00;
 
                 $months[] = [
                     'month' => $month,
                     'month_name' => date('F', mktime(0, 0, 0, $month, 1)),
                     'year' => $year,
                     'total_sales' => round($totalSales, 2),
+                    'total_sale_tax' => round($totalSaleTax, 2),
                     'total_payments' => round($totalPayments, 2),
                     'total_returns' => round($totalReturns, 2),
+                    'total_return_tax' => round($totalReturnTax, 2),
                 ];
 
                 // Add to employee totals
                 $employeeTotals['total_sales'] += $totalSales;
+                $employeeTotals['total_sale_tax'] += $totalSaleTax;
                 $employeeTotals['total_payments'] += $totalPayments;
                 $employeeTotals['total_returns'] += $totalReturns;
+                $employeeTotals['total_return_tax'] += $totalReturnTax;
             }
 
             // Round employee totals
@@ -152,8 +166,10 @@ class EmployeeBusinessController extends Controller
 
             // Add to year totals
             $yearTotals['total_sales'] += $employeeTotals['total_sales'];
+            $yearTotals['total_sale_tax'] += $employeeTotals['total_sale_tax'];
             $yearTotals['total_payments'] += $employeeTotals['total_payments'];
             $yearTotals['total_returns'] += $employeeTotals['total_returns'];
+            $yearTotals['total_return_tax'] += $employeeTotals['total_return_tax'];
         }
 
         // Round year totals

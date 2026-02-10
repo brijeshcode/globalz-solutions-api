@@ -50,12 +50,13 @@ class CategorySalesReportController extends Controller
                 COALESCE(item_categories.name, "Uncategorized") as category_name,
                 MONTH(sales.date) as month,
                 YEAR(sales.date) as year,
-                SUM(sale_items.total_price_usd) as total_sales,
+                SUM(sale_items.total_net_sell_price_usd) as total_sales,
+                SUM(sale_items.total_tax_amount_usd) as total_sale_tax,
                 SUM(sale_items.total_profit) as total_profit,
                 SUM(
                     CASE
                         WHEN sales.sub_total_usd > 0
-                        THEN (sale_items.total_price_usd / sales.sub_total_usd) * sales.discount_amount_usd
+                        THEN (sale_items.total_net_sell_price_usd / sales.sub_total_usd) * sales.discount_amount_usd
                         ELSE 0
                     END
                 ) as total_sale_discount
@@ -100,7 +101,8 @@ class CategorySalesReportController extends Controller
                     COALESCE(item_categories.name, "Uncategorized") as category_name,
                     MONTH(customer_returns.date) as month,
                     YEAR(customer_returns.date) as year,
-                    SUM(customer_return_items.total_price_usd) as total_returns,
+                    SUM(customer_return_items.total_price_usd - (customer_return_items.tax_amount_usd * customer_return_items.quantity)) as total_returns,
+                    SUM(customer_return_items.tax_amount_usd * customer_return_items.quantity) as total_return_tax,
                     SUM(customer_return_items.total_profit) as total_return_profit
                 ')
                 ->whereYear('customer_returns.date', $year)
@@ -158,10 +160,12 @@ class CategorySalesReportController extends Controller
             // Get returns data for this category and month
             $returns = $returnsData->get($monthKey);
             $totalReturns = $returns ? $returns->total_returns : 0;
+            $totalReturnTax = $returns ? $returns->total_return_tax : 0;
             $totalReturnProfit = $returns ? $returns->total_return_profit : 0;
 
             // Calculate metrics
             $netSales = $sale->total_sales - $sale->total_sale_discount - $totalReturns;
+            $netTax = $sale->total_sale_tax - $totalReturnTax;
             // Deduct invoice-level discount and return profit from sales profit
             $netProfit = $sale->total_profit - $sale->total_sale_discount - $totalReturnProfit;
             $profitPercentage = $this->calculateProfitPercentage($netSales, $netProfit);
@@ -172,8 +176,11 @@ class CategorySalesReportController extends Controller
                 'month_name' => date('F', mktime(0, 0, 0, $sale->month, 1)),
                 'year' => $sale->year,
                 'total_sales' => round($sale->total_sales, 2),
+                'total_sale_tax' => round($sale->total_sale_tax, 2),
                 'total_returns' => round($totalReturns, 2),
+                'total_return_tax' => round($totalReturnTax, 2),
                 'net_sales' => round($netSales, 2),
+                'net_sale_tax' => round($netTax, 2),
                 'sales_profit' => round($sale->total_profit, 2),
                 'return_profit' => round($totalReturnProfit, 2),
                 'net_profit' => round($netProfit, 2),
@@ -185,8 +192,11 @@ class CategorySalesReportController extends Controller
         // Pad all categories with all 12 months and calculate totals
         $yearTotals = [
             'total_sales' => 0,
+            'total_sale_tax' => 0,
             'total_returns' => 0,
+            'total_return_tax' => 0,
             'net_sales' => 0,
+            'net_sale_tax' => 0,
             'sales_profit' => 0,
             'return_profit' => 0,
             'net_profit' => 0,
@@ -197,8 +207,11 @@ class CategorySalesReportController extends Controller
             $months = [];
             $categoryTotals = [
                 'total_sales' => 0,
+                'total_sale_tax' => 0,
                 'total_returns' => 0,
+                'total_return_tax' => 0,
                 'net_sales' => 0,
+                'net_sale_tax' => 0,
                 'sales_profit' => 0,
                 'return_profit' => 0,
                 'net_profit' => 0,
@@ -213,8 +226,11 @@ class CategorySalesReportController extends Controller
 
                     // Add to category totals
                     $categoryTotals['total_sales'] += $monthData['total_sales'];
+                    $categoryTotals['total_sale_tax'] += $monthData['total_sale_tax'];
                     $categoryTotals['total_returns'] += $monthData['total_returns'];
+                    $categoryTotals['total_return_tax'] += $monthData['total_return_tax'];
                     $categoryTotals['net_sales'] += $monthData['net_sales'];
+                    $categoryTotals['net_sale_tax'] += $monthData['net_sale_tax'];
                     $categoryTotals['sales_profit'] += $monthData['sales_profit'];
                     $categoryTotals['return_profit'] += $monthData['return_profit'];
                     $categoryTotals['net_profit'] += $monthData['net_profit'];
@@ -226,8 +242,11 @@ class CategorySalesReportController extends Controller
                         'month_name' => date('F', mktime(0, 0, 0, $month, 1)),
                         'year' => $year,
                         'total_sales' => 0.00,
+                        'total_sale_tax' => 0.00,
                         'total_returns' => 0.00,
+                        'total_return_tax' => 0.00,
                         'net_sales' => 0.00,
+                        'net_sale_tax' => 0.00,
                         'sales_profit' => 0.00,
                         'return_profit' => 0.00,
                         'net_profit' => 0.00,
@@ -254,8 +273,11 @@ class CategorySalesReportController extends Controller
 
             // Add to year totals
             $yearTotals['total_sales'] += $categoryTotals['total_sales'];
+            $yearTotals['total_sale_tax'] += $categoryTotals['total_sale_tax'];
             $yearTotals['total_returns'] += $categoryTotals['total_returns'];
+            $yearTotals['total_return_tax'] += $categoryTotals['total_return_tax'];
             $yearTotals['net_sales'] += $categoryTotals['net_sales'];
+            $yearTotals['net_sale_tax'] += $categoryTotals['net_sale_tax'];
             $yearTotals['sales_profit'] += $categoryTotals['sales_profit'];
             $yearTotals['return_profit'] += $categoryTotals['return_profit'];
             $yearTotals['net_profit'] += $categoryTotals['net_profit'];
@@ -329,7 +351,8 @@ class CategorySalesReportController extends Controller
                 'sale_items.unit_discount_amount_usd as unit_discount',
                 'sale_items.discount_amount_usd as total_discount',
                 'sale_items.net_sell_price_usd as net_unit_price',
-                'sale_items.total_price_usd as total_price',
+                'sale_items.total_net_sell_price_usd as total_price',
+                'sale_items.total_tax_amount_usd as total_tax',
                 'sale_items.unit_profit',
                 'sale_items.total_profit',
                 DB::raw('COALESCE(item_categories.id, 0) as category_id'),
@@ -415,7 +438,8 @@ class CategorySalesReportController extends Controller
                 'customer_return_items.unit_discount_amount_usd as unit_discount',
                 'customer_return_items.discount_amount_usd as total_discount',
                 'customer_return_items.ttc_price_usd as net_unit_price',
-                'customer_return_items.total_price_usd as total_price',
+                DB::raw('(customer_return_items.total_price_usd - (customer_return_items.tax_amount_usd * customer_return_items.quantity)) as total_price'),
+                DB::raw('(customer_return_items.tax_amount_usd * customer_return_items.quantity) as total_tax'),
                 'customer_return_items.total_profit',
                 DB::raw('COALESCE(item_categories.id, 0) as category_id'),
                 DB::raw('COALESCE(item_categories.name, "Uncategorized") as category_name'),
