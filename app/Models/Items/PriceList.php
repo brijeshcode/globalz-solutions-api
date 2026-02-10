@@ -59,9 +59,14 @@ class PriceList extends Model
         return $this->hasMany(PriceListItem::class);
     }
 
-    public function customers(): HasMany
+    public function customersInv(): HasMany
     {
-        return $this->hasMany(Customer::class);
+        return $this->hasMany(Customer::class, 'price_list_id_INV');
+    }
+
+    public function customersInx(): HasMany
+    {
+        return $this->hasMany(Customer::class, 'price_list_id_INX');
     }
 
     // Scopes

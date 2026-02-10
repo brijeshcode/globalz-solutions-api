@@ -19,6 +19,8 @@ class PriceListResource extends JsonResource
             'code' => $this->code,
             'description' => $this->description,
             'item_count' => $this->item_count,
+            'customers_inv_count' => $this->customers_inv_count ?? 0,
+            'customers_inx_count' => $this->customers_inx_count ?? 0,
             'note' => $this->note,
             'is_default' => $this->is_default,
             'created_at' => $this->created_at,

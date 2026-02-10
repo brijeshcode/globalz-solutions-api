@@ -27,6 +27,7 @@ class PriceListsController extends Controller
     {
         $query = PriceList::query()
             ->with(['items.item', 'createdBy:id,name', 'updatedBy:id,name'])
+            ->withCount(['customersInv', 'customersInx'])
             ->searchable($request)
             ->sortable($request);
 
