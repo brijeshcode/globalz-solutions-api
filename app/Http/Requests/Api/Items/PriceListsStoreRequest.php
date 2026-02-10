@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Items;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PriceListsStoreRequest extends FormRequest
 {
@@ -26,7 +27,7 @@ class PriceListsStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => 'required|string|max:255|unique:price_lists,code',
+            'code' => ['required', 'string', 'max:255', Rule::unique('price_lists', 'code')->whereNull('deleted_at')],
             'description' => 'nullable|string|max:500',
             'note' => 'nullable|string',
 
