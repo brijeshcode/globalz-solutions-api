@@ -89,24 +89,51 @@ class WarehouseReportController extends Controller
             });
         }
 
-        // Apply stock status filter
+        // Apply stock status filter (scoped to selected warehouse if provided)
         if ($stockStatus) {
             switch ($stockStatus) {
                 case 'in_stock':
-                    $query->whereHas('inventories', function ($q) {
+                    $query->whereHas('inventories', function ($q) use ($warehouseId) {
+                        if ($warehouseId) {
+                            $q->where('warehouse_id', $warehouseId);
+                        }
                         $q->where('quantity', '>', 0);
                     });
                     break;
                 case 'out_of_stock':
-                    $query->where(function ($q) {
-                        $q->whereDoesntHave('inventories')
-                            ->orWhereHas('inventories', function ($subQ) {
-                                $subQ->havingRaw('SUM(quantity) <= 0');
-                            });
-                    });
+                    if ($warehouseId) {
+                        $query->where(function ($q) use ($warehouseId) {
+                            $q->whereDoesntHave('inventories', fn($subQ) => $subQ->where('warehouse_id', $warehouseId))
+                                ->orWhereHas('inventories', fn($subQ) => $subQ->where('warehouse_id', $warehouseId)->where('quantity', '<=', 0));
+                        });
+                    } else {
+                        $query->where(function ($q) {
+                            $q->whereDoesntHave('inventories')
+                                ->orWhereHas('inventories', function ($subQ) {
+                                    $subQ->havingRaw('SUM(quantity) <= 0');
+                                });
+                        });
+                    }
                     break;
                 case 'low_stock':
-                    $query->lowStock();
+                    if ($warehouseId) {
+                        $query->whereNotNull('low_quantity_alert')
+                            ->whereHas('inventories', function ($q) use ($warehouseId) {
+                                $q->where('warehouse_id', $warehouseId)
+                                    ->whereColumn('quantity', '<=', 'items.low_quantity_alert')
+                                    ->where('quantity', '>', 0);
+                            });
+                    } else {
+                        $query->lowStock();
+                    }
+                    break;
+                case 'negative':
+                    $query->whereHas('inventories', function ($q) use ($warehouseId) {
+                        if ($warehouseId) {
+                            $q->where('warehouse_id', $warehouseId);
+                        }
+                        $q->where('quantity', '<', 0);
+                    });
                     break;
             }
         }
@@ -298,20 +325,47 @@ class WarehouseReportController extends Controller
         if ($stockStatus) {
             switch ($stockStatus) {
                 case 'in_stock':
-                    $baseQuery->whereHas('inventories', function ($q) {
+                    $baseQuery->whereHas('inventories', function ($q) use ($warehouseId) {
+                        if ($warehouseId) {
+                            $q->where('warehouse_id', $warehouseId);
+                        }
                         $q->where('quantity', '>', 0);
                     });
                     break;
                 case 'out_of_stock':
-                    $baseQuery->where(function ($q) {
-                        $q->whereDoesntHave('inventories')
-                            ->orWhereHas('inventories', function ($subQ) {
-                                $subQ->havingRaw('SUM(quantity) <= 0');
-                            });
-                    });
+                    if ($warehouseId) {
+                        $baseQuery->where(function ($q) use ($warehouseId) {
+                            $q->whereDoesntHave('inventories', fn($subQ) => $subQ->where('warehouse_id', $warehouseId))
+                                ->orWhereHas('inventories', fn($subQ) => $subQ->where('warehouse_id', $warehouseId)->where('quantity', '<=', 0));
+                        });
+                    } else {
+                        $baseQuery->where(function ($q) {
+                            $q->whereDoesntHave('inventories')
+                                ->orWhereHas('inventories', function ($subQ) {
+                                    $subQ->havingRaw('SUM(quantity) <= 0');
+                                });
+                        });
+                    }
                     break;
                 case 'low_stock':
-                    $baseQuery->lowStock();
+                    if ($warehouseId) {
+                        $baseQuery->whereNotNull('low_quantity_alert')
+                            ->whereHas('inventories', function ($q) use ($warehouseId) {
+                                $q->where('warehouse_id', $warehouseId)
+                                    ->whereColumn('quantity', '<=', 'items.low_quantity_alert')
+                                    ->where('quantity', '>', 0);
+                            });
+                    } else {
+                        $baseQuery->lowStock();
+                    }
+                    break;
+                case 'negative':
+                    $baseQuery->whereHas('inventories', function ($q) use ($warehouseId) {
+                        if ($warehouseId) {
+                            $q->where('warehouse_id', $warehouseId);
+                        }
+                        $q->where('quantity', '<', 0);
+                    });
                     break;
             }
         }
