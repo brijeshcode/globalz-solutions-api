@@ -35,6 +35,10 @@ class PriceListsController extends Controller
             $query->byCode($request->code);
         }
 
+        if ($request->has('is_active')) {
+            $query->where('is_active', filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN));
+        }
+
         if ($request->has('date_from')) {
             $query->fromDate($request->date_from, 'created_at');
         } 
@@ -529,5 +533,18 @@ class PriceListsController extends Controller
         }
 
         return ApiResponse::update('Customer price lists updated successfully');
+    }
+
+    public function updateStatus(Request $request, PriceList $priceList)
+    {
+        $status = $request->status === 'active';
+
+        if ($priceList->customersInv()->exists() || $priceList->customersInx()->exists()) {
+            return ApiResponse::error('Cannot deactivate price list that has customers assigned to it.', 422);
+        }
+
+        $priceList->update(['is_active' => $status]);
+
+        return ApiResponse::update('Price list status updated successfully');
     }
 }

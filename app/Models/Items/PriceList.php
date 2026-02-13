@@ -23,11 +23,13 @@ class PriceList extends Model
         'is_default',
         'item_count',
         'note',
+        'is_active',
     ];
 
     protected $casts = [
         'item_count' => 'integer',
-        'is_default' => 'boolean'
+        'is_default' => 'boolean',
+        'is_active' => 'boolean'
     ];
 
     protected $searchable = [
@@ -78,6 +80,11 @@ class PriceList extends Model
     public function scopeDefault($query)
     {
         return $query->where('is_default', true);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 
     // Static Methods

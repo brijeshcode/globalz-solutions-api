@@ -258,7 +258,7 @@ class ListDataController extends Controller
 
     private function itemPriceLists()
     {
-        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default']);
+        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->active()->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default']);
     }
 
     private function itemDefaultPriceList()
