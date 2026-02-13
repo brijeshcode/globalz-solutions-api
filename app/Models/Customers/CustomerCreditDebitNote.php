@@ -58,7 +58,7 @@ class CustomerCreditDebitNote extends Model
         'updated_at',
     ];
 
-    protected $defaultSortField = 'id';
+    protected $defaultSortField = 'date';
     protected $defaultSortDirection = 'desc';
 
     // Relationships
