@@ -306,11 +306,12 @@ class CategorySalesReportController extends Controller
      */
     private function calculateProfitPercentage(float $netSales, float $profit): float
     {
-        if ($netSales == 0) {
+        $cost = $netSales - $profit;
+        if ($cost == 0) {
             return 0;
         }
 
-        return round(($profit / $netSales) * 100, 2);
+        return round(($profit / $cost) * 100, 2);
     }
 
     /**
