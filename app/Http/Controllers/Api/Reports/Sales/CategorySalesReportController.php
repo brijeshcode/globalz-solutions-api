@@ -346,6 +346,7 @@ class CategorySalesReportController extends Controller
                 'sales.date',
                 'sale_items.quantity',
                 'sale_items.sale_id as sale_id',
+                'sale_items.cost_price as cost_price',
                 'sale_items.price_usd as unit_price',
                 'sale_items.discount_percent',
                 'sale_items.unit_discount_amount_usd as unit_discount',
