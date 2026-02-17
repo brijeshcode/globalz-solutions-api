@@ -2,6 +2,7 @@
 
 namespace App\Models\Setups;
 
+use App\Models\Items\Item;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
@@ -124,8 +125,8 @@ class TaxCode extends Model
         return static::where('code', $code)->where('is_active', true)->first();
     }
 
-    // public function items(): HasMany
-    // {
-    //     return $this->hasMany(Item::class);
-    // }
+    public function items(): HasMany
+    {
+        return $this->hasMany(Item::class);
+    }
 }

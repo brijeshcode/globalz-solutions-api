@@ -14,6 +14,7 @@ class TaxCodeResource extends JsonResource
             'code' => $this->code,
             'name' => $this->name,
             'description' => $this->description,
+            'item_count' => $this->items_count,
             'tax_percent' => $this->tax_percent,
             'tax_rate' => $this->tax_rate, // Calculated accessor (tax_percent / 100)
             'type' => $this->type,

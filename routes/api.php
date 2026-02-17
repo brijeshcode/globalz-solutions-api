@@ -679,6 +679,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('{taxCode}', 'show')->name('show');
             Route::put('{taxCode}', 'update')->name('update');
             Route::delete('{taxCode}', 'destroy')->name('destroy');
+            Route::patch('change-items-tax', 'changeItemsTax')->name('changeItemsTax');
         });
 
         Route::prefix('items')->name('items.')->group(function () {

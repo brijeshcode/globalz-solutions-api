@@ -7,6 +7,7 @@ use App\Http\Requests\Api\Setups\TaxCodeStoreRequest;
 use App\Http\Requests\Api\Setups\TaxCodeUpdateRequest;
 use App\Http\Resources\Api\Setups\TaxCodeResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Items\Item;
 use App\Models\Setups\TaxCode;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,7 @@ class TaxCodesController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = TaxCode::query()
+            ->withCount('items')
             ->searchable($request)
             ->sortable($request);
  
@@ -235,5 +237,20 @@ class TaxCodesController extends Controller
             'deleted_count' => $deletedCount,
             'errors' => $errors
         ]);
+    }
+
+    /***
+     * in future we will add filter also like for give category, type , family change the tax from this to given. 
+     */
+    public function changeItemsTax(Request $request): JsonResponse
+    {
+        $request->validate([
+            'old_tax_code_id' => 'required|integer|exists:tax_codes,id',
+            'new_tax_code_id' => 'required|integer|exists:tax_codes,id',
+        ]);
+
+        Item::where('tax_code_id', $request->old_tax_code_id)->update(['tax_code_id' => $request->new_tax_code_id]);
+
+        return ApiResponse::update('Items Tax code updated successfully');
     }
 }
