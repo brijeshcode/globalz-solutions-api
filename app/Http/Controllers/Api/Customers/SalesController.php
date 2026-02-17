@@ -12,6 +12,7 @@ use App\Http\Resources\Api\Customers\SaleResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Sale;
 use App\Models\Customers\SaleItems;
+use App\Models\Customers\Customer;
 use App\Models\Items\Item;
 use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
@@ -274,7 +275,8 @@ class SalesController extends Controller
                         $sellingPrice = $itemData['price'] ?? 0;
                         $quantity = $itemData['quantity'] ?? 0;
                         $discountPercent = $itemData['discount_percent'] ?? 0;
-                        $taxPercent = $itemData['tax_percent'] ?? 0;
+                        $prefix = $data['prefix'] ?? $sale->prefix;
+                        $taxPercent = ($prefix == Sale::TAXFREEPREFIX) ? 0 : ($itemData['tax_percent'] ?? 0);
 
                         // Convert base price to USD
                         $sellingPriceUsd = CurrencyHelper::toUsd($sale->currency_id, $sellingPrice, $currencyRate);
@@ -315,6 +317,11 @@ class SalesController extends Controller
                         $unitProfit = $netSellPriceUsd - $costPrice;
                         $itemTotalProfit = $unitProfit * $quantity;
 
+                        // For tax-free prefix, clear tax label
+                        if ($prefix == Sale::TAXFREEPREFIX) {
+                            $saleItems[$index]['tax_label'] = '';
+                        }
+
                         // Assign all calculated values to sale item
                         $saleItems[$index]['cost_price'] = $costPrice;
                         $saleItems[$index]['price_usd'] = $sellingPriceUsd;
@@ -354,11 +361,31 @@ class SalesController extends Controller
                 $additionalDiscount = $data['discount_amount'] ?? 0;
                 $additionalDiscountUsd = $data['discount_amount_usd'] ?? 0;
 
+                // Handle prefix-dependent fields
+                $prefix = $data['prefix'] ?? $sale->prefix;
+                if ($prefix == Sale::TAXFREEPREFIX) {
+                    $saleTotalTax = 0;
+                    $saleTotalTaxUsd = 0;
+                    $data['total_tax_amount'] = 0;
+                    $data['total_tax_amount_usd'] = 0;
+                    $data['invoice_tax_label'] = '';
+                } else {
+                    $data['total_tax_amount'] = $saleTotalTax;
+                    $data['total_tax_amount_usd'] = $saleTotalTaxUsd;
+                    $data['invoice_tax_label'] = 'TVA 11%';
+                }
+
+                // Update price_list_id when prefix changes
+                $customer = Customer::select('price_list_id_INV', 'price_list_id_INX')->find($data['customer_id'] ?? $sale->customer_id);
+                if ($customer) {
+                    $data['price_list_id'] = $prefix == Sale::TAXFREEPREFIX
+                        ? $customer->price_list_id_INX
+                        : $customer->price_list_id_INV;
+                }
+
                 // Calculate sale totals
                 $data['sub_total'] = $subTotal;
                 $data['sub_total_usd'] = $subTotalUsd;
-                $data['total_tax_amount'] = $saleTotalTax;
-                $data['total_tax_amount_usd'] = $saleTotalTaxUsd;
                 $data['total'] = $subTotal + $saleTotalTax - $additionalDiscount;
                 $data['total_usd'] = $subTotalUsd + $saleTotalTaxUsd - $additionalDiscountUsd;
                 $data['total_profit'] = $totalProfit - $additionalDiscountUsd;

@@ -376,7 +376,7 @@
                                  style="height: {{ $company['stamp_height'] ?? '150' }}px; width: {{ $company['stamp_width'] ?? '150' }}px; position: absolute; left: 35%; top: -50%;">
                         @endif
                     </td>
-                    <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Add. Discount</td>
+                    <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Amount Discount</td>
                     <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->discount_amount, 2) }}</td>
                 </tr>
 
