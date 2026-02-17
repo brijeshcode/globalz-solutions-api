@@ -353,18 +353,18 @@
         <table class="items-table" style="margin-top: -1px;">
             <tbody>
                 <tr class="totals-row first-total">
-                    <td colspan="{{ $sale->prefix === 'INV' ? 4 : 3 }}" style="width: {{ $sale->prefix === 'INV' ? 45 : 38 }}%; border: none;">
+                    <td colspan="{{ $sale->prefix === 'INV' ? 4 : 4 }}" style="width: {{ $sale->prefix === 'INV' ? 45 : 45 }}%; border: none;">
                         <div style="font-size: 8pt;">
                             <strong>Volume CBM:</strong> {{ number_format($totalVolume, 2) }}
                         </div>
                     </td>
-                    <td colspan="2" style="width: {{ $sale->prefix === 'INV' ? 20 : 24 }}%; border: none;"></td>
+                    <td colspan="2" style="width: {{ $sale->prefix === 'INV' ? 20 : 20 }}%; border: none;"></td>
                     <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Sub Total</td>
                     <td class="text-right font-bold" style="width: 15%;">{{ number_format($calculatedSubTotal, 2) }}</td>
                 </tr>
 
                 <tr class="totals-row">
-                    <td colspan="{{ $sale->prefix === 'INV' ? 6 : 5 }}" style="width: {{ $sale->prefix === 'INV' ? 73 : 80 }}%; position: relative; border: none;">
+                    <td colspan="{{ $sale->prefix === 'INV' ? 6 : 6 }}" style="width: {{ $sale->prefix === 'INV' ? 73 : 73 }}%; position: relative; border: none;">
                         <div style="font-size: 8pt;">
                             <strong>Weight KG:</strong> {{ number_format($totalWeight, 2) }}
                         </div>
@@ -417,7 +417,7 @@
             @if(!empty($sale->invoice_nb1))
                 {{ $sale->invoice_nb1 }}<br><br>
             @endif
-            @if(!empty($sale->invoice_nb2))
+            @if(!empty($sale->invoice_nb2) && $sale->prefix !== 'INX')
                 {{ $sale->invoice_nb2 }}
             @endif
         </div>
