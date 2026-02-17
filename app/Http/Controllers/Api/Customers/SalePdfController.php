@@ -62,9 +62,22 @@ class SalePdfController extends Controller
                 'margin_footer' => 8,       // Reduced from 10
             ]);
 
-            // Set footer with invoice code and page numbers
+            // Set footer with company info, invoice code and page numbers
             $invoiceCode = $sale->prefix . '-' . $sale->code;
-            $mpdf->SetFooter('
+            $companyFooterParts = [];
+            if (!empty($companyData['address'])) $companyFooterParts[] = $companyData['address'];
+            if (!empty($companyData['phone'])) $companyFooterParts[] = $companyData['phone'];
+            if (!empty($companyData['email'])) $companyFooterParts[] = $companyData['email'];
+            if (!empty($companyData['website'])) $companyFooterParts[] = $companyData['website'];
+            $companyFooterLine = htmlspecialchars(implode(' | ', $companyFooterParts));
+
+            $companyFooterHtml = '';
+            if ($sale->prefix === 'INV' && !empty($companyFooterLine)) {
+                $companyFooterHtml = '<div style="text-align: center; font-size: 8pt; border-top: 2px solid #000000; padding-top: 4px; margin-bottom: 4px;">' . $companyFooterLine . '</div>';
+            }
+
+            $mpdf->SetHTMLFooter('
+                ' . $companyFooterHtml . '
                 <table width="100%" style="font-size: 9pt; border-top: 1px solid #000000; padding-top: 5px;">
                     <tr>
                         <td width="33%" style="text-align: left;">' . $invoiceCode . '</td>

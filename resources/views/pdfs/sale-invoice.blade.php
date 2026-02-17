@@ -185,7 +185,6 @@
             width: 100%;
             border-top: 2px solid #000000;
             padding-top: 5px;
-            margin-top: 30px;
             font-size: 8pt;
         }
 
@@ -422,25 +421,7 @@
             @endif
         </div>
 
-        <!-- Footer -->
-        @if($sale->prefix === 'INV')
-        <div class="footer">
-            <div class="footer-info">
-                @if(!empty($company['address']))
-                    {{ $company['address'] }} |
-                @endif
-                @if(!empty($company['phone']))
-                    {{ $company['phone'] }} |
-                @endif
-                @if(!empty($company['email']))
-                    {{ $company['email'] }} |
-                @endif
-                @if(!empty($company['website']))
-                    {{ $company['website'] }}
-                @endif
-            </div>
-        </div>
-        @endif
+        <!-- Footer is rendered via mPDF SetFooter in SalePdfController -->
     </div>
 </body>
 </html>
