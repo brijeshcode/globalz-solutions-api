@@ -169,6 +169,7 @@ class CategorySalesReportController extends Controller
             // Deduct invoice-level discount and return profit from sales profit
             $netProfit = $sale->total_profit - $sale->total_sale_discount - $totalReturnProfit;
             $profitPercentage = $this->calculateProfitPercentage($netSales, $netProfit);
+            $profitMargin = $this->calculateProfitMargin($netSales, $netProfit);
 
             // Store month data
             $categorizedData[$categoryKey]['months_data'][$sale->month] = [
@@ -185,7 +186,8 @@ class CategorySalesReportController extends Controller
                 'return_profit' => round($totalReturnProfit, 2),
                 'net_profit' => round($netProfit, 2),
                 'total_sale_discount' => round($sale->total_sale_discount, 2),
-                'profit_percentage' => $profitPercentage
+                'profit_percentage' => $profitPercentage,
+                'profit_margin' => $profitMargin
             ];
         }
 
@@ -251,13 +253,18 @@ class CategorySalesReportController extends Controller
                         'return_profit' => 0.00,
                         'net_profit' => 0.00,
                         'total_sale_discount' => 0.00,
-                        'profit_percentage' => 0.00
+                        'profit_percentage' => 0.00,
+                        'profit_margin' => 0.00
                     ];
                 }
             }
 
-            // Calculate category profit percentage
+            // Calculate category profit percentage and margin
             $categoryTotals['profit_percentage'] = $this->calculateProfitPercentage(
+                $categoryTotals['net_sales'],
+                $categoryTotals['net_profit']
+            );
+            $categoryTotals['profit_margin'] = $this->calculateProfitMargin(
                 $categoryTotals['net_sales'],
                 $categoryTotals['net_profit']
             );
@@ -284,8 +291,12 @@ class CategorySalesReportController extends Controller
             $yearTotals['total_sale_discount'] += $categoryTotals['total_sale_discount'];
         }
 
-        // Calculate year profit percentage
+        // Calculate year profit percentage and margin
         $yearTotals['profit_percentage'] = $this->calculateProfitPercentage(
+            $yearTotals['net_sales'],
+            $yearTotals['net_profit']
+        );
+        $yearTotals['profit_margin'] = $this->calculateProfitMargin(
             $yearTotals['net_sales'],
             $yearTotals['net_profit']
         );
@@ -312,6 +323,18 @@ class CategorySalesReportController extends Controller
         }
 
         return round(($profit / $cost) * 100, 2);
+    }
+
+    /**
+     * Calculate profit margin (profit as % of revenue)
+     */
+    private function calculateProfitMargin(float $netSales, float $profit): float
+    {
+        if ($netSales == 0) {
+            return 0;
+        }
+
+        return round(($profit / $netSales) * 100, 2);
     }
 
     /**
