@@ -2,11 +2,14 @@
 
 namespace App\Console\Commands;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class AnalyzeQueries extends Command
 {
     protected $signature = 'query:analyze';
+
+    protected $cleanDays = 365;
 
     protected $description = 'Analyze slow-queries.log and generate a query report';
 
@@ -217,6 +220,34 @@ class AnalyzeQueries extends Command
         $this->newLine();
         $this->info("Report saved to: storage/logs/query-report.md");
 
+        // Clean old log entries
+        $this->cleanOldLogs($logPath, $lines);
+
         return 0;
+    }
+
+    protected function cleanOldLogs(string $logPath, array $lines): void
+    {
+        $cutoff = Carbon::now()->subDays($this->cleanDays)->format('Y-m-d');
+        $kept = [];
+
+        foreach ($lines as $line) {
+            if (preg_match('/^\[(\d{4}-\d{2}-\d{2})/', $line, $match)) {
+                if ($match[1] >= $cutoff) {
+                    $kept[] = $line;
+                }
+            } else {
+                $kept[] = $line;
+            }
+        }
+
+        $removed = count($lines) - count($kept);
+
+        if ($removed > 0) {
+            file_put_contents($logPath, implode("\n", $kept) . "\n");
+            $this->info("Cleaned {$removed} log entries older than {$this->cleanDays} days.");
+        } else {
+            $this->info("No log entries older than {$this->cleanDays} days to clean.");
+        }
     }
 }

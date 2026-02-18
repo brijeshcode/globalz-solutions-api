@@ -23,6 +23,7 @@ class LogApiHits
             'status' => $response->getStatusCode(),
             'duration' => $duration . 'ms',
             'user_id' => $request->user()?->id,
+            'user_name' => $request->user()?->name,
             'ip' => $request->ip(),
         ]);
 

@@ -2,12 +2,15 @@
 
 namespace App\Console\Commands;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class AnalyzeApiHits extends Command
 {
     protected $signature = 'api:analyze';
 
+    protected $cleanDays = 365;
+    
     protected $description = 'Analyze api-hits.log and generate an API usage report';
 
     public function handle()
@@ -31,6 +34,7 @@ class AnalyzeApiHits extends Command
         $maxTime = [];
         $statusCodes = [];
         $monthly = []; // month => endpoint => [hits, totalTime, maxTime]
+        $users = []; // "id|name" => [hits, totalTime, endpoints => [endpoint => hits]]
 
         foreach ($lines as $line) {
             // Extract timestamp
@@ -46,6 +50,12 @@ class AnalyzeApiHits extends Command
             $url = $urlMatch[1];
             $duration = (float) $durationMatch[1];
             $status = $statusMatch[1];
+
+            // Extract user info
+            preg_match('/"user_id":(\d+|null)/', $line, $userIdMatch);
+            preg_match('/"user_name":"([^"]*)"/', $line, $userNameMatch);
+            $userId = ($userIdMatch[1] ?? 'null') !== 'null' ? $userIdMatch[1] : null;
+            $userName = $userNameMatch[1] ?? null;
 
             // Normalize URL: replace numeric IDs with {id}
             $normalized = preg_replace('/\/\d+/', '/{id}', $url);
@@ -64,6 +74,15 @@ class AnalyzeApiHits extends Command
             $monthly[$month][$key]['hits']++;
             $monthly[$month][$key]['totalTime'] += $duration;
             $monthly[$month][$key]['maxTime'] = max($monthly[$month][$key]['maxTime'], $duration);
+
+            // User stats
+            $userKey = $userId ? "{$userId}|{$userName}" : 'guest|Guest';
+            if (!isset($users[$userKey])) {
+                $users[$userKey] = ['hits' => 0, 'totalTime' => 0, 'endpoints' => []];
+            }
+            $users[$userKey]['hits']++;
+            $users[$userKey]['totalTime'] += $duration;
+            $users[$userKey]['endpoints'][$key] = ($users[$userKey]['endpoints'][$key] ?? 0) + 1;
         }
 
         arsort($endpoints);
@@ -89,6 +108,22 @@ class AnalyzeApiHits extends Command
         }
 
         $this->table(['#', 'Hits', 'Avg Time', 'Max Time', 'Status Codes', 'Endpoint'], $tableRows);
+
+        // User summary console table
+        uasort($users, fn ($a, $b) => $b['hits'] <=> $a['hits']);
+        $userRows = [];
+        $rank = 1;
+        foreach (array_slice($users, 0, 15, true) as $userKey => $data) {
+            [$id, $name] = explode('|', $userKey, 2);
+            $avgTime = round($data['totalTime'] / $data['hits'], 2);
+            arsort($data['endpoints']);
+            $topEndpoint = array_key_first($data['endpoints']);
+            $userRows[] = [$rank++, $id, $name, $data['hits'], $avgTime . 'ms', $topEndpoint];
+        }
+
+        $this->newLine();
+        $this->info('User Activity:');
+        $this->table(['#', 'User ID', 'Name', 'Hits', 'Avg Time', 'Top Endpoint'], $userRows);
 
         // Generate markdown report
         $report = "# API Usage Report\n\n";
@@ -153,12 +188,75 @@ class AnalyzeApiHits extends Command
             $report .= "\n";
         }
 
+        // User activity summary
+        uasort($users, fn ($a, $b) => $b['hits'] <=> $a['hits']);
+
+        $report .= "\n## User Activity\n\n";
+        $report .= "| # | User ID | User Name | Hits | Avg Time | Top Endpoint |\n";
+        $report .= "|--:|--------:|-----------|-----:|---------:|--------------|\n";
+
+        $rank = 1;
+        foreach ($users as $userKey => $data) {
+            [$id, $name] = explode('|', $userKey, 2);
+            $avgTime = round($data['totalTime'] / $data['hits'], 2);
+            arsort($data['endpoints']);
+            $topEndpoint = array_key_first($data['endpoints']);
+            $topHits = $data['endpoints'][$topEndpoint];
+            $report .= "| {$rank} | {$id} | {$name} | {$data['hits']} | {$avgTime}ms | `{$topEndpoint}` ({$topHits}x) |\n";
+            $rank++;
+        }
+
+        // Per-user endpoint breakdown
+        $report .= "\n## User Endpoint Breakdown\n\n";
+        foreach (array_slice($users, 0, 10, true) as $userKey => $data) {
+            [$id, $name] = explode('|', $userKey, 2);
+            $report .= "### {$name} (ID: {$id}) — {$data['hits']} hits\n\n";
+            $report .= "| # | Hits | Endpoint |\n";
+            $report .= "|--:|-----:|----------|\n";
+
+            arsort($data['endpoints']);
+            $r = 1;
+            foreach (array_slice($data['endpoints'], 0, 10, true) as $ep => $hits) {
+                $report .= "| {$r} | {$hits} | `{$ep}` |\n";
+                $r++;
+            }
+            $report .= "\n";
+        }
+
         $reportPath = storage_path('logs/api-report.md');
         file_put_contents($reportPath, $report);
 
         $this->newLine();
         $this->info("Report saved to: storage/logs/api-report.md");
 
+        // Clean old log entries
+        $this->cleanOldLogs($logPath, $lines);
+
         return 0;
+    }
+
+    protected function cleanOldLogs(string $logPath, array $lines): void
+    {
+        $cutoff = Carbon::now()->subDays($this->cleanDays)->format('Y-m-d');
+        $kept = [];
+
+        foreach ($lines as $line) {
+            if (preg_match('/^\[(\d{4}-\d{2}-\d{2})/', $line, $match)) {
+                if ($match[1] >= $cutoff) {
+                    $kept[] = $line;
+                }
+            } else {
+                $kept[] = $line;
+            }
+        }
+
+        $removed = count($lines) - count($kept);
+
+        if ($removed > 0) {
+            file_put_contents($logPath, implode("\n", $kept) . "\n");
+            $this->info("Cleaned {$removed} log entries older than {$this->cleanDays} days.");
+        } else {
+            $this->info("No log entries older than {$this->cleanDays} days to clean.");
+        }
     }
 }
