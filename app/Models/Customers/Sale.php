@@ -2,6 +2,7 @@
 
 namespace App\Models\Customers;
 
+use App\Helpers\CommonHelper;
 use App\Models\Employees\Employee;
 use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
@@ -513,9 +514,9 @@ class Sale extends Model
 
             $localCurrency = Currency::with('activeRate')->where('code', config('app.local_currency'))->first();
             $sale->local_curreny_rate = $localCurrency && $localCurrency->activeRate ? $localCurrency->activeRate->rate : 1;
-            $sale->invoice_tax_label = 'TVA 11%';
-            $sale->invoice_nb1 = 'Payment in USD or Market Price.';
-            $sale->invoice_nb2 = 'ملاحظة : ألضريبة على ألقيمة المضافة لا تسترد بعد ثلاثة أشهر من تاريخ إصدار ألفاتورة';
+            $sale->invoice_tax_label = CommonHelper::getTaxLable();
+            $sale->invoice_nb1 = CommonHelper::invoiceNb1();
+            $sale->invoice_nb2 = CommonHelper::invoiceNb2();
         });
 
         static::created(function ($sale) {

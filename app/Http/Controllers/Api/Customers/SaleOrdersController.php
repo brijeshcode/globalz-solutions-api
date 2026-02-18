@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
-use App\Helpers\ApiHelper;
+
+use App\Helpers\CommonHelper;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
@@ -163,7 +164,7 @@ class SaleOrdersController extends Controller
                     $sellingPrice = $itemData['price'] ?? 0;
                     $quantity = $itemData['quantity'] ?? 0;
                     $discountPercent = $itemData['discount_percent'] ?? 0;
-                    $taxPercent = $itemData['tax_percent'] ?? 0;
+                    $taxPercent = $items[$index]['tax_percent'] ?? $itemData['tax_percent'] ?? 0;
 
                     // Convert base price to USD
                     $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice, $currencyRate);
@@ -453,7 +454,7 @@ class SaleOrdersController extends Controller
                 } else {
                     $data['total_tax_amount'] = $saleTotalTax;
                     $data['total_tax_amount_usd'] = $saleTotalTaxUsd;
-                    $data['invoice_tax_label'] = 'TVA 11%';
+                    $data['invoice_tax_label'] = CommonHelper::getTaxLable();
                 }
 
                 // Update price_list_id when prefix changes
