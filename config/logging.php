@@ -127,6 +127,12 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'slow_queries' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/slow-queries.log'),
+            'level' => 'warning',
+        ],
+
     ],
 
 ];

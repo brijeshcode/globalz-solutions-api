@@ -38,74 +38,65 @@ class SettingsServiceProvider extends ServiceProvider
         try {
             // Only override if database is available and settings table exists
             if ($this->app->hasBeenBootstrapped() && $this->settingsTableExists()) {
-                // Override app name
-                $appName = SettingsHelper::get('system', 'app_name');
+                // Load ALL settings in a single query
+                $allSettings = \App\Models\Setting::all()
+                    ->groupBy('group_name')
+                    ->map(fn ($group) => $group->mapWithKeys(fn ($s) => [$s->key_name => $s->getCastValue()]))
+                    ->toArray();
+
+                $get = fn (string $group, string $key, $default = null) =>
+                    $allSettings[$group][$key] ?? $default;
+
+                // Override app settings
+                $appName = $get('system', 'app_name');
                 if ($appName) {
                     config(['app.name' => $appName]);
                 }
 
-                // Override timezone
-                $timezone = SettingsHelper::get('system', 'timezone');
+                $timezone = $get('system', 'timezone');
                 if ($timezone) {
                     config(['app.timezone' => $timezone]);
                     date_default_timezone_set($timezone);
                 }
 
-                // Override pagination
-                $pagination = SettingsHelper::globalPagination();
+                $pagination = $get('system', 'global_pagination');
                 if ($pagination) {
                     config(['app.pagination.default' => $pagination]);
                 }
 
-                // Override mail settings if they exist
-                $this->overrideMailConfig();
-                
-                // Override other system settings
-                $this->overrideSystemConfig();
+                // Override mail settings
+                $mailMap = [
+                    'mail.from.name' => $get('email', 'from_name'),
+                    'mail.from.address' => $get('email', 'from_address'),
+                    'mail.mailers.smtp.host' => $get('email', 'smtp_host'),
+                    'mail.mailers.smtp.port' => $get('email', 'smtp_port'),
+                    'mail.mailers.smtp.username' => $get('email', 'smtp_username'),
+                    'mail.mailers.smtp.password' => $get('email', 'smtp_password'),
+                    'mail.mailers.smtp.encryption' => $get('email', 'smtp_encryption'),
+                ];
+
+                foreach ($mailMap as $configKey => $value) {
+                    if ($value !== null) {
+                        config([$configKey => $value]);
+                    }
+                }
+
+                // Override system settings
+                $systemMap = [
+                    'session.lifetime' => $get('security', 'session_timeout'),
+                    'auth.passwords.users.expire' => $get('security', 'password_reset_expire', 60),
+                    'filesystems.default' => $get('system', 'default_filesystem'),
+                ];
+
+                foreach ($systemMap as $configKey => $value) {
+                    if ($value !== null) {
+                        config([$configKey => $value]);
+                    }
+                }
             }
         } catch (\Exception $e) {
             // Fail silently if settings cannot be loaded
             logger('Settings override failed: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Override mail configuration with settings
-     */
-    protected function overrideMailConfig(): void
-    {
-        $mailSettings = [
-            'mail.from.name' => SettingsHelper::get('email', 'from_name'),
-            'mail.from.address' => SettingsHelper::get('email', 'from_address'),
-            'mail.mailers.smtp.host' => SettingsHelper::get('email', 'smtp_host'),
-            'mail.mailers.smtp.port' => SettingsHelper::get('email', 'smtp_port'),
-            'mail.mailers.smtp.username' => SettingsHelper::get('email', 'smtp_username'),
-            'mail.mailers.smtp.password' => SettingsHelper::get('email', 'smtp_password'),
-            'mail.mailers.smtp.encryption' => SettingsHelper::get('email', 'smtp_encryption'),
-        ];
-
-        foreach ($mailSettings as $configKey => $value) {
-            if ($value !== null) {
-                config([$configKey => $value]);
-            }
-        }
-    }
-
-    /**
-     * Override other system configurations with settings
-     */
-    protected function overrideSystemConfig(): void
-    {
-        $systemSettings = [
-            'session.lifetime' => SettingsHelper::get('security', 'session_timeout'),
-            'auth.passwords.users.expire' => SettingsHelper::get('security', 'password_reset_expire', 60),
-            'filesystems.default' => SettingsHelper::get('system', 'default_filesystem'),
-        ];
-
-        foreach ($systemSettings as $configKey => $value) {
-            if ($value !== null) {
-                config([$configKey => $value]);
-            }
         }
     }
 
