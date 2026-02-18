@@ -1,0 +1,73 @@
+name: Deploy Laravel to Server
+
+on:
+  push:
+    branches:
+      - main  # Change to your production branch
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    name: Deploy to Production Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            echo "🚀 Starting deployment..."
+
+            # Navigate to project directory
+            cd ${{ secrets.SERVER_PROJECT_PATH }}
+
+            # Pull latest code
+            echo "📥 Pulling latest code from GitHub..."
+            git pull origin main
+
+            # Install/Update Composer dependencies
+            echo "📦 Installing Composer dependencies..."
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+            # Run migrations
+            echo "🗄️ Running database migrations..."
+            php artisan migrate --force
+
+            # Clear and cache config
+            echo "🔧 Optimizing application..."
+            php artisan config:clear
+            php artisan cache:clear
+            php artisan route:clear
+            php artisan view:clear
+
+            # Optimize for production
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            # Set proper permissions
+            echo "🔒 Setting permissions..."
+            chmod -R 775 storage bootstrap/cache
+
+            # Restart queue workers (if using)
+            echo "🔄 Restarting queue workers..."
+            php artisan queue:restart
+
+            echo "✅ Deployment completed successfully!"
+
+      - name: Deployment Status
+        if: success()
+        run: echo "🎉 Deployment successful!"
+
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          exit 1

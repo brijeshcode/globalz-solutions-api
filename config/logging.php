@@ -133,6 +133,12 @@ return [
             'level' => 'warning',
         ],
 
+        'api_hits' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/api-hits.log'),
+            'level' => 'info',
+        ],
+
     ],
 
 ];
