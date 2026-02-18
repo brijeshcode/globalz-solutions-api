@@ -74,6 +74,13 @@ class AnalyzeQueries extends Command
         return ['-', '-'];
     }
 
+    private function normalizeQuery(string $sql): string
+    {
+        $normalized = preg_replace('/\bin \([\d, ]+\)/', 'in (?)', $sql);
+        $normalized = preg_replace('/= \d+/', '= ?', $normalized);
+        return $normalized;
+    }
+
     public function handle()
     {
         $logPath = storage_path('logs/slow-queries.log');
@@ -92,22 +99,30 @@ class AnalyzeQueries extends Command
 
         $queries = [];
         $totalTime = [];
+        $monthly = []; // month => query => [count, totalTime, maxTime]
 
         foreach ($lines as $line) {
-            if (!preg_match('/"sql":"([^"]+)"/', $line, $sqlMatch)) {
-                continue;
-            }
-            if (!preg_match('/"time":"([0-9.]+)ms"/', $line, $timeMatch)) {
-                continue;
-            }
+            // Extract timestamp
+            preg_match('/^\[(\d{4}-\d{2})/', $line, $monthMatch);
+            $month = $monthMatch[1] ?? 'unknown';
 
-            $sql = $sqlMatch[1];
-            // Normalize: replace specific values with ? for grouping
-            $normalized = preg_replace('/\bin \([\d, ]+\)/', 'in (?)', $sql);
-            $normalized = preg_replace('/= \d+/', '= ?', $normalized);
+            if (!preg_match('/"sql":"([^"]+)"/', $line, $sqlMatch)) continue;
+            if (!preg_match('/"time":"([0-9.]+)ms"/', $line, $timeMatch)) continue;
 
+            $normalized = $this->normalizeQuery($sqlMatch[1]);
+            $time = (float) $timeMatch[1];
+
+            // Overall stats
             $queries[$normalized] = ($queries[$normalized] ?? 0) + 1;
-            $totalTime[$normalized] = ($totalTime[$normalized] ?? 0) + (float) $timeMatch[1];
+            $totalTime[$normalized] = ($totalTime[$normalized] ?? 0) + $time;
+
+            // Monthly stats
+            if (!isset($monthly[$month][$normalized])) {
+                $monthly[$month][$normalized] = ['count' => 0, 'totalTime' => 0, 'maxTime' => 0];
+            }
+            $monthly[$month][$normalized]['count']++;
+            $monthly[$month][$normalized]['totalTime'] += $time;
+            $monthly[$month][$normalized]['maxTime'] = max($monthly[$month][$normalized]['maxTime'], $time);
         }
 
         arsort($queries);
@@ -166,6 +181,34 @@ class AnalyzeQueries extends Command
                 $report .= "- **Fix:** {$item['fix']}\n";
                 $report .= "- **Query:** `{$item['sql']}`\n\n";
             }
+        }
+
+        // Monthly summary
+        ksort($monthly);
+        $report .= "\n## Monthly Summary\n\n";
+
+        foreach ($monthly as $month => $queryData) {
+            $totalCount = array_sum(array_column($queryData, 'count'));
+            $totalMs = round(array_sum(array_column($queryData, 'totalTime')), 2);
+            $report .= "### {$month} ({$totalCount} queries, {$totalMs}ms total)\n\n";
+            $report .= "| # | Count | Avg Time | Max Time | Issue | Query |\n";
+            $report .= "|--:|------:|---------:|---------:|-------|-------|\n";
+
+            // Sort by count descending
+            uasort($queryData, fn ($a, $b) => $b['count'] <=> $a['count']);
+
+            $rank = 1;
+            foreach (array_slice($queryData, 0, 15, true) as $sql => $data) {
+                $avgTime = round($data['totalTime'] / $data['count'], 2);
+                $max = round($data['maxTime'], 2);
+                [$issue] = $this->detectIssue($sql, $data['count']);
+                $escapedSql = str_replace('|', '\\|', $sql);
+                $shortSql = strlen($escapedSql) > 80 ? substr($escapedSql, 0, 80) . '...' : $escapedSql;
+                $report .= "| {$rank} | {$data['count']} | {$avgTime}ms | {$max}ms | {$issue} | `{$shortSql}` |\n";
+                $rank++;
+            }
+
+            $report .= "\n";
         }
 
         $reportPath = storage_path('logs/query-report.md');

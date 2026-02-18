@@ -30,20 +30,17 @@ class AnalyzeApiHits extends Command
         $totalTime = [];
         $maxTime = [];
         $statusCodes = [];
+        $monthly = []; // month => endpoint => [hits, totalTime, maxTime]
 
         foreach ($lines as $line) {
-            if (!preg_match('/"method":"([^"]+)"/', $line, $methodMatch)) {
-                continue;
-            }
-            if (!preg_match('/"url":"([^"]+)"/', $line, $urlMatch)) {
-                continue;
-            }
-            if (!preg_match('/"duration":"([0-9.]+)ms"/', $line, $durationMatch)) {
-                continue;
-            }
-            if (!preg_match('/"status":(\d+)/', $line, $statusMatch)) {
-                continue;
-            }
+            // Extract timestamp
+            preg_match('/^\[(\d{4}-\d{2})/', $line, $monthMatch);
+            $month = $monthMatch[1] ?? 'unknown';
+
+            if (!preg_match('/"method":"([^"]+)"/', $line, $methodMatch)) continue;
+            if (!preg_match('/"url":"([^"]+)"/', $line, $urlMatch)) continue;
+            if (!preg_match('/"duration":"([0-9.]+)ms"/', $line, $durationMatch)) continue;
+            if (!preg_match('/"status":(\d+)/', $line, $statusMatch)) continue;
 
             $method = $methodMatch[1];
             $url = $urlMatch[1];
@@ -54,10 +51,19 @@ class AnalyzeApiHits extends Command
             $normalized = preg_replace('/\/\d+/', '/{id}', $url);
             $key = $method . ' ' . $normalized;
 
+            // Overall stats
             $endpoints[$key] = ($endpoints[$key] ?? 0) + 1;
             $totalTime[$key] = ($totalTime[$key] ?? 0) + $duration;
             $maxTime[$key] = max($maxTime[$key] ?? 0, $duration);
             $statusCodes[$key][$status] = ($statusCodes[$key][$status] ?? 0) + 1;
+
+            // Monthly stats
+            if (!isset($monthly[$month][$key])) {
+                $monthly[$month][$key] = ['hits' => 0, 'totalTime' => 0, 'maxTime' => 0];
+            }
+            $monthly[$month][$key]['hits']++;
+            $monthly[$month][$key]['totalTime'] += $duration;
+            $monthly[$month][$key]['maxTime'] = max($monthly[$month][$key]['maxTime'], $duration);
         }
 
         arsort($endpoints);
@@ -88,6 +94,7 @@ class AnalyzeApiHits extends Command
         $report = "# API Usage Report\n\n";
         $report .= "Generated: " . now()->toDateTimeString() . "\n\n";
         $report .= "Total API hits logged: " . count($lines) . "\n\n";
+        $report .= "## Overall\n\n";
         $report .= "| # | Hits | Avg Time | Max Time | Status Codes | Endpoint |\n";
         $report .= "|--:|-----:|---------:|---------:|--------------|----------|\n";
 
@@ -120,6 +127,30 @@ class AnalyzeApiHits extends Command
             $max = round($maxTime[$key], 2);
             $report .= "| {$rank} | {$avgTime}ms | {$max}ms | {$count} | `{$key}` |\n";
             $rank++;
+        }
+
+        // Monthly summary
+        ksort($monthly);
+        $report .= "\n## Monthly Summary\n\n";
+
+        foreach ($monthly as $month => $endpointData) {
+            $totalHits = array_sum(array_column($endpointData, 'hits'));
+            $report .= "### {$month} ({$totalHits} total hits)\n\n";
+            $report .= "| # | Hits | Avg Time | Max Time | Endpoint |\n";
+            $report .= "|--:|-----:|---------:|---------:|----------|\n";
+
+            // Sort by hits descending
+            uasort($endpointData, fn ($a, $b) => $b['hits'] <=> $a['hits']);
+
+            $rank = 1;
+            foreach (array_slice($endpointData, 0, 20, true) as $key => $data) {
+                $avgTime = round($data['totalTime'] / $data['hits'], 2);
+                $max = round($data['maxTime'], 2);
+                $report .= "| {$rank} | {$data['hits']} | {$avgTime}ms | {$max}ms | `{$key}` |\n";
+                $rank++;
+            }
+
+            $report .= "\n";
         }
 
         $reportPath = storage_path('logs/api-report.md');

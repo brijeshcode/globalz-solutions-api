@@ -221,6 +221,10 @@ class Customer extends Model
 
     public function hasChildren(): bool
     {
+        if (array_key_exists('children_count', $this->attributes)) {
+            return $this->children_count > 0;
+        }
+
         return $this->children()->count() > 0;
     }
 

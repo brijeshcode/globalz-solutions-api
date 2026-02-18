@@ -106,8 +106,8 @@ class CustomersController extends Controller
     public function show(Customer $customer): JsonResponse
     {
         $customer->load([
-            'parent:id,code,name',
-            'children:id,code,name,current_balance',
+            // 'parent:id,code,name',
+            // 'children:id,code,name,current_balance',
             'priceListINV:id,code,description',
             'priceListINX:id,code,description',
             'customerType:id,name',
@@ -158,7 +158,7 @@ class CustomersController extends Controller
         }
 
         $customer->load([
-            'parent:id,code,name',
+            // 'parent:id,code,name',
             'customerType:id,name',
             'priceListINV:id,code,description',
             'priceListINX:id,code,description',
@@ -166,7 +166,7 @@ class CustomersController extends Controller
             'customerProvince:id,name',
             'customerZone:id,name',
             'salesperson:id,code,name,department_id',
-            'salesperson.department:id,name',
+            // 'salesperson.department:id,name',
             'customerPaymentTerm:id,name,days',
             'createdBy:id,name',
             'updatedBy:id,name',
@@ -508,7 +508,7 @@ class CustomersController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Customer Import Exception', [
+            Log::error('Customer Import error', [
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -669,21 +669,21 @@ class CustomersController extends Controller
     public function customerQuery(Request $request)
     {
         $query = Customer::query()
-
+            ->withCount('children')
             ->with([
-                'parent:id,code,name',
-                'customerType:id,name',
-                'customerGroup:id,name',
+                // 'parent:id,code,name',
+                // 'customerType:id,name',
+                // 'customerGroup:id,name',
                 'priceListINV:id,code,description',
                 'priceListINX:id,code,description',
-                'customerProvince:id,name',
-                'customerZone:id,name',
+                // 'customerProvince:id,name',
+                // 'customerZone:id,name',
                 'salesperson:id,code,name,department_id',
-                'salesperson.department:id,name',
-                'customerPaymentTerm:id,name,days',
-                'createdBy:id,name',
-                'updatedBy:id,name',
-                'documents'
+                // 'salesperson.department:id,name',
+                // 'customerPaymentTerm:id,name,days',
+                // 'createdBy:id,name',
+                // 'updatedBy:id,name',
+                // 'documents'
             ])
             ->searchable($request)
             ->sortable($request);
