@@ -20,6 +20,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class CustomerCreditDebitNote extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
+    
+    public const CREDITTAXPREFIX = 'CRN';
+    public const CREDITTAXFREEPREFIX = 'CRX';
+
+    public const DEBITTAXPREFIX = 'DBN';
+    public const DEBITTAXFREEPREFIX = 'DBX';
 
     protected $fillable = [
         'code',

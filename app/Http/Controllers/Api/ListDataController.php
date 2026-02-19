@@ -86,7 +86,7 @@ class ListDataController extends Controller
             // employees
             'employees' => $this->employees(),
             'commissionTargets' => $this->commissionTargets(),
-            'sales-employees' => $this->salesEmployee(),
+            'all-sales-employees' => $this->salesEmployee(),
             'departments' => $this->departments(),
 
             // generals
@@ -379,7 +379,7 @@ class ListDataController extends Controller
 
     private function salesEmployee()
     {
-        return Employee::active()->isSaleDepartment()->orderBy('name')->get(['id', 'name', 'email', 'phone']);
+        return Employee::isSaleDepartment()->orderBy('name')->get(['id', 'name', 'email', 'phone', 'is_active']);
     }
 
     private function departments()

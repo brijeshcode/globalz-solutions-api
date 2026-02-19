@@ -51,7 +51,6 @@ class CustomerReturnsController extends Controller
             ]);
 
         if (!$request->has('sort_by')) {
-            info('here we come');
             $query->orderByRaw("CASE WHEN return_received_by IS NULL THEN 0 ELSE 1 END")
                 ->orderBy('date', 'desc')
                 ->orderBy('id', 'desc');

@@ -307,7 +307,6 @@ class CustomersController extends Controller
         }
 
         $salespersons = $salesDepartment->employees()
-            ->active()
             ->select('id', 'code', 'name', 'department_id')
             ->with('department:id,name')
             ->get();

@@ -18,6 +18,8 @@ use Illuminate\Http\Request;
 class CustomerStatmentController extends Controller
 {
     use HasPagination;
+    private const TAXFEE= [Sale::TAXFREEPREFIX, CustomerReturn::TAXFREEPREFIX, CustomerPayment::TAXFREEPREFIX, CustomerCreditDebitNote::CREDITTAXFREEPREFIX, CustomerCreditDebitNote::DEBITTAXFREEPREFIX ];
+    private const TAX= [Sale::TAXPREFIX, CustomerReturn::TAXPREFIX, CustomerPayment::TAXPREFIX, CustomerCreditDebitNote::CREDITTAXPREFIX, CustomerCreditDebitNote::DEBITTAXPREFIX ];
     
     public function customerStatements(Request $request, Customer $customer ): JsonResponse
     {
@@ -311,6 +313,7 @@ class CustomerStatmentController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
+                'prefix' => $item->prefix,
                 'type' => $item->type == 'credit' ? 'Credit Note' : 'Debit Note',
                 'date' => $item->date,
                 'amount' => $item->type === 'credit' ? -$item->amount_usd : $item->amount_usd,
@@ -341,6 +344,7 @@ class CustomerStatmentController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
+                'prefix' => $item->prefix,
                 'type' => 'Sale Invoice',
                 'date' => $item->date,
                 'amount' => $item->total_usd,
@@ -371,6 +375,7 @@ class CustomerStatmentController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
+                'prefix' => $item->prefix,
                 'type' => 'Payment',
                 'date' => $item->date,
                 'amount' => -$item->amount_usd,
@@ -402,6 +407,7 @@ class CustomerStatmentController extends Controller
             return [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
+                'prefix' => $item->prefix,
                 'type' => 'Sales Return',
                 'date' => $item->date,
                 'amount' => -$item->total_usd,
@@ -425,10 +431,20 @@ class CustomerStatmentController extends Controller
         // Get the balance from the most recent transaction by date (not by array position)
         $latestTransaction = $transactions->sortByDesc('timestamp')->first();
 
+        $taxTransactions = $transactions->whereIn('prefix', self::TAX);
+        $taxFreeTransactions = $transactions->whereIn('prefix', self::TAXFEE);
+
+        $saleTransactions = $transactions->where('transaction_type', 'sale');
+
         return [
             'total_debit' => $transactions->sum('debit'),
             'total_credit' => $transactions->sum('credit'),
             'balance' => $latestTransaction['balance'] ?? 0,
+            'tax_balance' => $taxTransactions->sum('credit') - $taxTransactions->sum('debit'),
+            'tax_free_balance' => $taxFreeTransactions->sum('credit') - $taxFreeTransactions->sum('debit'),
+            'sale_tax_total' => $saleTransactions->where('prefix', Sale::TAXPREFIX)->sum('debit'),
+            'sale_tax_free_total' => $saleTransactions->where('prefix', Sale::TAXFREEPREFIX)->sum('debit'),
+            'sale_balance' => $saleTransactions->sum('debit'),
         ];
     }
 
