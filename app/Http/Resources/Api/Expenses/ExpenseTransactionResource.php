@@ -17,6 +17,7 @@ class ExpenseTransactionResource extends JsonResource
         return [
             'id' => $this->id,
             'date' => $this->date?->format('Y-m-d'),
+            'expense_month' => $this->expense_month?->format('Y-m'),
             'code' => $this->code,
             'subject' => $this->subject,
             'amount' => $this->amount,

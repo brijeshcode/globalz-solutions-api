@@ -24,6 +24,7 @@ class ExpenseTransactionsStoreRequest extends FormRequest
     {
         return [
             'date' => 'required|date',
+            'expense_month' => 'required|date_format:Y-m',
             'expense_category_id' => 'required|integer|exists:expense_categories,id',
             'account_id' => 'required|integer|exists:accounts,id',
             'subject' => 'nullable|string|max:200',

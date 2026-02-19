@@ -25,6 +25,7 @@ class ExpenseTransaction extends Model
 
     protected $fillable = [
         'date',
+        'expense_month',
         'expense_category_id',
         'account_id',
         'subject',
@@ -43,6 +44,7 @@ class ExpenseTransaction extends Model
         'amount' => 'decimal:2',
         'amount_usd' => 'decimal:8',
         'currency_rate' => 'decimal:4',
+        'expense_month' => 'date:Y-m-01',
     ];
 
     protected $searchable = [
@@ -76,6 +78,11 @@ class ExpenseTransaction extends Model
     public function getCodeAttribute($value): ?string
     {
         return $value ? self::PREFIX . $value : null;
+    }
+
+    public function setExpenseMonthAttribute($value): void
+    {
+        $this->attributes['expense_month'] = $value ? $value . '-01' : null;
     }
 
     public function expenseCategory(): BelongsTo
