@@ -184,7 +184,20 @@ class CompanyController extends Controller
      */
     public function getTenantDetails(): JsonResponse
     {
-        $tenantData = SettingsHelper::getGroup(self::TENANT_DETAILS_GROUP);
+        // Query directly without cache to avoid cross-tenant cache issues on public endpoint
+        $tenantData = Setting::where('group_name', self::TENANT_DETAILS_GROUP)
+            ->get()
+            ->mapWithKeys(fn($setting) => [$setting->key_name => $setting->getCastValue()])
+            ->toArray();
+
+        // If no tenant details exist, create defaults
+        if (empty($tenantData)) {
+            $this->createDefaultTenantDetails();
+            $tenantData = Setting::where('group_name', self::TENANT_DETAILS_GROUP)
+                ->get()
+                ->mapWithKeys(fn($setting) => [$setting->key_name => $setting->getCastValue()])
+                ->toArray();
+        }
 
         // For logo and favicon, get the actual document data with URLs
         foreach (['logo', 'favicon'] as $field) {
@@ -201,12 +214,6 @@ class CompanyController extends Controller
                     ];
                 }
             }
-        }
-
-        // If no tenant details exist, create defaults
-        if (empty($tenantData)) {
-            $this->createDefaultTenantDetails();
-            $tenantData = SettingsHelper::getGroup(self::TENANT_DETAILS_GROUP);
         }
 
         return ApiResponse::show('Tenant Details', $tenantData);
