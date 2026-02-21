@@ -2,6 +2,7 @@
 
 namespace App\Services\Tenants;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Spatie\Multitenancy\Contracts\IsTenant;
@@ -56,21 +57,20 @@ class OriginTenantFinder extends TenantFinder
         }
 
         // Find tenant by domain using landlord connection
-        $tenantModelClass = config('multitenancy.tenant_model');
-        $landlordConnection = config('multitenancy.landlord_database_connection_name', 'mysql');
+        try {
+            $tenantModelClass = config('multitenancy.tenant_model');
+            $landlordConnection = config('multitenancy.landlord_database_connection_name', 'mysql');
 
-        $tenant = $tenantModelClass::on($landlordConnection)
-            ->where('domain', $domain)
-            ->where('is_active', true)
-            ->first();
+            $tenant = $tenantModelClass::on($landlordConnection)
+                ->where('domain', $domain)
+                ->where('is_active', true)
+                ->first();
+        } catch (QueryException $e) {
+            Log::warning('Tenant DB error: ' . $e->getMessage());
+            return null;
+        }
 
-        if ($tenant) {
-            // \Log::info('Tenant identified', [
-            //     'tenant' => $tenant->name,
-            //     'domain' => $domain,
-            //     'database' => $tenant->database,
-            // ]);
-        } else {
+        if (!$tenant) {
             Log::warning('No tenant found for domain', ['domain' => $domain]);
         }
 

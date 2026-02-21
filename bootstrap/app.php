@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Route;
+use Spatie\Multitenancy\Exceptions\NoCurrentTenant;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -96,5 +97,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Return clean JSON response instead of stack trace (reason already logged in OriginTenantFinder)
+        $exceptions->renderable(function (NoCurrentTenant $e, $request) {
+            return response()->json([
+                'message' => 'Unable to identify system. Please check your domain configuration.',
+            ], 403);
+        });
+
     })->create();
