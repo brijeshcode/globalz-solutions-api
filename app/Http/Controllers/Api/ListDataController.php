@@ -136,6 +136,7 @@ class ListDataController extends Controller
         $query = Customer::with([
             'priceListINV:id,code,description,is_default',
             'priceListINX:id,code,description,is_default',
+            'salesperson:id,name',
         ])->active()->orderby('name');
 
         if (RoleHelper::isSalesman()) {
