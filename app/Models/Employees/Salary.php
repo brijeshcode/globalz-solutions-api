@@ -33,6 +33,8 @@ class Salary extends Model
         'advance_payment',
         'others',
         'final_total',
+        'net_salary',
+        'net_salary_usd',
         'amount_usd',
         'currency_id',
         'currency_rate',
@@ -48,6 +50,8 @@ class Salary extends Model
         'advance_payment' => 'decimal:2',
         'others' => 'decimal:2',
         'final_total' => 'decimal:2',
+        'net_salary' => 'decimal:2',
+        'net_salary_usd' => 'decimal:8',
         'amount_usd' => 'decimal:8',
         'currency_rate' => 'decimal:4',
     ];

@@ -54,6 +54,14 @@ class SalaryController extends Controller
             $data['currency_rate']
         );
 
+        // Calculate net salary and its USD equivalent
+        $data['net_salary'] = ($data['base_salary'] ?? 0) + ($data['sub_total'] ?? 0) + ($data['others'] ?? 0);
+        $data['net_salary_usd'] = CurrencyHelper::toUsd(
+            $data['currency_id'],
+            $data['net_salary'],
+            $data['currency_rate']
+        );
+
         $salary = Salary::create($data);
 
         $salary->load([
@@ -101,6 +109,15 @@ class SalaryController extends Controller
                 $finalTotal,
                 $data['currency_rate']
             );
+
+            // Recalculate net salary USD with new currency
+            $netSalary = ($data['base_salary'] ?? $salary->base_salary) + ($data['sub_total'] ?? $salary->sub_total) + ($data['others'] ?? $salary->others);
+            $data['net_salary'] = $netSalary;
+            $data['net_salary_usd'] = CurrencyHelper::toUsd(
+                $data['currency_id'],
+                $netSalary,
+                $data['currency_rate']
+            );
         } elseif (isset($data['final_total']) && $data['final_total'] != $salary->final_total) {
             // Amount changed but same account - use existing currency
             $data['amount_usd'] = CurrencyHelper::toUsd(
@@ -108,6 +125,15 @@ class SalaryController extends Controller
                 $data['final_total'],
                 $salary->currency_rate
             );
+        }
+
+        // Recalculate net salary if any component changed
+        if (isset($data['base_salary']) || isset($data['sub_total']) || isset($data['others'])) {
+            $netSalary = ($data['base_salary'] ?? $salary->base_salary) + ($data['sub_total'] ?? $salary->sub_total) + ($data['others'] ?? $salary->others);
+            $data['net_salary'] = $netSalary;
+            $currencyId = $data['currency_id'] ?? $salary->currency_id;
+            $currencyRate = $data['currency_rate'] ?? $salary->currency_rate;
+            $data['net_salary_usd'] = CurrencyHelper::toUsd($currencyId, $netSalary, $currencyRate);
         }
 
         $salary->update($data);
@@ -202,17 +228,18 @@ class SalaryController extends Controller
         $query = $this->salaryQuery($request);
 
         $stats = [
-            'total_salaries' => (clone $query)->count(),
-            'total_sub_total' => (clone $query)->sum('sub_total'),
-            'total_advance_payment' => (clone $query)->sum('advance_payment'),
-            'total_others' => (clone $query)->sum('others'),
-            'total_amount_usd' => (clone $query)->sum('amount_usd'),
-            'this_month_salaries' => (clone $query)->whereMonth('date', now()->month)
-                ->whereYear('date', now()->year)
-                ->count(),
-            'this_month_amount_usd' => (clone $query)->whereMonth('date', now()->month)
-                ->whereYear('date', now()->year)
-                ->sum('amount_usd'),
+            // 'total_salaries' => (clone $query)->count(),
+            'total_commission_total' => (clone $query)->sum('sub_total'),
+            // 'total_advance_payment' => (clone $query)->sum('advance_payment'),
+            // 'total_others' => (clone $query)->sum('others'),
+            // 'total_amount_usd' => (clone $query)->sum('amount_usd'),
+            'total_net_salary_usd' => (clone $query)->sum('net_salary_usd'),
+            // 'this_month_salaries' => (clone $query)->whereMonth('date', now()->month)
+            //     ->whereYear('date', now()->year)
+            //     ->count(),
+            // 'this_month_net_salary_usd' => (clone $query)->whereMonth('date', now()->month)
+            //     ->whereYear('date', now()->year)
+            //     ->sum('net_salary_usd'),
 
         ];
 

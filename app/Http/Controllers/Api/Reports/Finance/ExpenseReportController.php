@@ -198,8 +198,8 @@ class ExpenseReportController extends Controller
             ->selectRaw('
                 employees.id as employee_id,
                 employees.name as employee_name,
-                SUM(salaries.final_total) as total,
-                SUM(salaries.amount_usd) as total_usd
+                SUM(salaries.net_salary) as total,
+                SUM(salaries.net_salary_usd) as total_usd
             ')
             ->when($fromDate, fn($q) => $q->fromDate($fromDate))
             ->when($toDate, fn($q) => $q->toDate($toDate))

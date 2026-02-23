@@ -28,6 +28,8 @@ class SalaryResource extends JsonResource
             'advance_payment' => $this->advance_payment,
             'others' => $this->others,
             'final_total' => $this->final_total,
+            'net_salary' => $this->net_salary,
+            'net_salary_usd' => $this->net_salary_usd,
             'others_note' => $this->others_note,
             'base_salary' => $this->base_salary,
             'note' => $this->note,
