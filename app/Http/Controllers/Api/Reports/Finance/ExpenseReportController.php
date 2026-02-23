@@ -15,23 +15,31 @@ class ExpenseReportController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $fromDate = $request->get('from_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-        $toDate = $request->get('to_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+        $fromDate = $request->get('from_date');
+        $toDate = $request->get('to_date');
+        $month = $request->get('month'); // yyyy-mm
 
-        $expenseReport = $this->getExpenseReport($fromDate, $toDate, false);
-        $excludedCategoryReport = $this->getExpenseReport($fromDate, $toDate, true);
-        $salaryReport = $this->getSalaryReport($fromDate, $toDate);
+        // Default to current month if no filters provided
+        if (!$fromDate && !$toDate && !$month) {
+            $fromDate = Carbon::now()->startOfMonth()->format('Y-m-d');
+            $toDate = Carbon::now()->endOfMonth()->format('Y-m-d');
+        }
+
+        $expenseReport = $this->getExpenseReport($fromDate, $toDate, $month, false);
+        $excludedCategoryReport = $this->getExpenseReport($fromDate, $toDate, $month, true);
+        $salaryReport = $this->getSalaryReport($fromDate, $toDate, $month);
 
         return ApiResponse::send('Expense report retrieved successfully', 200, [
             'from_date' => $fromDate,
             'to_date' => $toDate,
+            'month' => $month,
             'expense_report' => $expenseReport,
             'excluded_category_report' => $excludedCategoryReport,
             'salary_report' => $salaryReport,
         ]);
     }
 
-    private function getExpenseReport(string $fromDate, string $toDate, bool $excludedOnly): array
+    private function getExpenseReport(?string $fromDate, ?string $toDate, ?string $month, bool $excludedOnly): array
     {
         // Get expense totals grouped by category at database level
         $query = ExpenseTransaction::query()
@@ -43,8 +51,9 @@ class ExpenseReportController extends Controller
                 SUM(expense_transactions.amount) as total,
                 SUM(expense_transactions.amount_usd) as total_usd
             ')
-            ->fromDate($fromDate)
-            ->toDate($toDate)
+            ->when($fromDate, fn($q) => $q->fromDate($fromDate))
+            ->when($toDate, fn($q) => $q->toDate($toDate))
+            ->when($month, fn($q) => $q->where('expense_transactions.expense_month', $month . '-01'))
             ->whereNull('expense_categories.deleted_at')
             ->groupBy(
                 'expense_categories.id',
@@ -182,7 +191,7 @@ class ExpenseReportController extends Controller
         ];
     }
 
-    private function getSalaryReport(string $fromDate, string $toDate): array
+    private function getSalaryReport(?string $fromDate, ?string $toDate, ?string $month): array
     {
         $salaries = Salary::query()
             ->join('employees', 'salaries.employee_id', '=', 'employees.id')
@@ -192,8 +201,12 @@ class ExpenseReportController extends Controller
                 SUM(salaries.final_total) as total,
                 SUM(salaries.amount_usd) as total_usd
             ')
-            ->fromDate($fromDate)
-            ->toDate($toDate)
+            ->when($fromDate, fn($q) => $q->fromDate($fromDate))
+            ->when($toDate, fn($q) => $q->toDate($toDate))
+            ->when($month, function ($q) use ($month) {
+                [$year, $m] = explode('-', $month);
+                return $q->byMonthYear((int) $m, (int) $year);
+            })
             ->whereNull('employees.deleted_at')
             ->groupBy('employees.id', 'employees.name')
             ->orderBy('employees.name')
