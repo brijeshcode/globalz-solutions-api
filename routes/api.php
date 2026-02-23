@@ -794,6 +794,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::controller(PriceListsController::class)->prefix('price-lists')->name('price-lists.')->group(function () {
             Route::get('stats', 'stats')->name('stats');
             Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('filterByItems', 'filterByItems')->name('filterByItems');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{priceList}', 'show')->name('show');
