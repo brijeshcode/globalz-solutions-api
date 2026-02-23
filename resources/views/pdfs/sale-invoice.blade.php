@@ -381,18 +381,22 @@
 
                 @if($sale->prefix === 'INV')
                 <tr class="totals-row">
-                    <td colspan="4" style="width: 43%; border: none;">&nbsp;</td>
+                    <td colspan="{{ ($sale->currency->code ?? '') !== 'LBP' ? 4 : 6 }}" style="width: 43%; border: none;">&nbsp;</td>
+                    @if(($sale->currency->code ?? '') !== 'LBP')
                     <td  class="font-bold" style="width: 12%; white-space: nowrap;">{{ $sale->invoice_tax_label }} LL</td>
                     <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_tax_amount_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
+                    @endif
                     <td class="font-bold" style="width: 13%; white-space: nowrap;">{{ $sale->invoice_tax_label }}</td>
                     <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_tax_amount, 2) }}</td>
                 </tr>
                 @endif
 
                 <tr class="totals-row">
-                    <td colspan="4" style="width: 43%; border: none;"></td>
+                    <td colspan="{{ ($sale->currency->code ?? '') !== 'LBP' ? 4 : 6 }}" style="width: 43%; border: none;"></td>
+                    @if(($sale->currency->code ?? '') !== 'LBP')
                     <td  class="font-bold" style="width:12%; white-space: nowrap;">Net Total LL</td>
                     <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
+                    @endif
                     <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Net Total</td>
                     <td class="text-right font-bold" style="width: 15%; font-size: 10pt;">{{ number_format($sale->total, 2) }}</td>
                 </tr>
