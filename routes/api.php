@@ -64,6 +64,7 @@ use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
 use App\Http\Controllers\Api\Employees\SalaryController;
+use App\Http\Controllers\Api\Items\PriceListBulkUpdateController;
 use App\Http\Controllers\Api\Reports\Sales\CategorySalesReportController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
@@ -794,7 +795,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::controller(PriceListsController::class)->prefix('price-lists')->name('price-lists.')->group(function () {
             Route::get('stats', 'stats')->name('stats');
             Route::get('trashed', 'trashed')->name('trashed');
-            Route::get('filterByItems', 'filterByItems')->name('filterByItems');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{priceList}', 'show')->name('show');
@@ -812,6 +812,16 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('{priceList}/items', 'addItem')->name('items.store');
             Route::put('{priceList}/items/{priceListItem}', 'updateItem')->name('items.update');
             Route::delete('items/{priceListItem}', 'deleteItem')->name('items.delete');
+        });
+
+        // Price List Bulk Updates Controller
+        Route::controller(PriceListBulkUpdateController::class)->prefix('price-list-bulk-updates')->name('price-list-bulk-updates.')->group(function () {
+            Route::get('filter-by-items', 'filterByItems')->name('filterByItems');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{bulkUpdate}', 'show')->name('show');
+            Route::put('{bulkUpdate}', 'update')->name('update');
+            Route::delete('{bulkUpdate}', 'destroy')->name('destroy');
         });
 
         Route::prefix('incomes')->name('incomes.')->group(function() {
