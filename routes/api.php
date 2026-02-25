@@ -61,6 +61,7 @@ use App\Http\Controllers\Api\Suppliers\SupplierCreditDebitNotesController;
 use App\Http\Controllers\Api\Suppliers\SupplierPaymentsController;
 use App\Http\Controllers\Api\Suppliers\SupplierStatmentController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
+use App\Http\Controllers\Api\CacheVersionController;
 use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
 use App\Http\Controllers\Api\Employees\SalaryController;
@@ -91,6 +92,10 @@ Route::get('/documents/{document}/preview-signed', [DocumentController::class, '
 Route::get('/tenant-details', [CompanyController::class, 'getTenantDetails'])
     ->name('tenant-details.public');
 
+// Cache Versions - Public endpoint for app startup cache check
+Route::get('/cache-versions', [CacheVersionController::class, 'index'])
+    ->name('cache-versions.index');
+
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -98,6 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/unlock-ip', [AuthController::class, 'unlockIp']);
+    Route::post('/cache/invalidate', [CacheVersionController::class, 'invalidate'])->name('cache.invalidate');
 
     // Login Logs
     Route::get('/login-logs', [LoginLogsController::class, 'index'])->name('login-logs.index');

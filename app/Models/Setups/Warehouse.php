@@ -3,6 +3,7 @@
 namespace App\Models\Setups;
 
 use App\Models\Employees\Employee;
+use App\Traits\InvalidatesCacheVersion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,7 +15,9 @@ use App\Traits\Sortable;
 class Warehouse extends Model
 {
     /** @use HasFactory<\Database\Factories\Setups\WarehouseFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'warehouses';
 
     protected $fillable = [
         'name',
@@ -94,4 +97,5 @@ class Warehouse extends Model
                     ->withTimestamps()
                     ->withPivot('is_primary');
     }
+
 }

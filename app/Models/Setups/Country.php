@@ -7,13 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 
 class Country extends Model
 {
     /** @use HasFactory<\Database\Factories\Setups\CountryFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'countries';
 
     protected $fillable = [
         'name',

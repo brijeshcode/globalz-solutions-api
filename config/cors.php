@@ -16,7 +16,7 @@ return [
         ['X-Company-Domain'] // Ensure custom header is always allowed
     ),
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['X-Cache-Versions'],
 
     'max_age' => env('CORS_MAX_AGE', 0),
 

@@ -3,6 +3,7 @@
 namespace App\Models\Setups;
 
 use App\Traits\Authorable;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ItemUnit extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'item_units';
 
     protected $fillable = [
         'name',

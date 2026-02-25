@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Add tenant middleware to all API routes
         $middleware->api(append: [
+            \App\Http\Middleware\AttachCacheVersion::class,
             \App\Http\Middleware\LogApiHits::class,
             \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,

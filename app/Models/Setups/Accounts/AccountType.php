@@ -4,6 +4,7 @@ namespace App\Models\Setups\Accounts;
 
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AccountType extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'account_types';
 
     protected $fillable = [
         'name',

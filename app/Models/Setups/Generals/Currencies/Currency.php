@@ -7,13 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 
 class Currency extends Model
 {
     /** @use HasFactory<\Database\Factories\Setups\CurrencyFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'currencies';
+
     public const CALCULATION_TYPE = [ 'multiply', 'divide'];
 
     protected $fillable = [
