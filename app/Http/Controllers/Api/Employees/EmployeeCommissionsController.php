@@ -824,6 +824,7 @@ class EmployeeCommissionsController extends Controller
         return [
             'rule_id' => $rule->id,
             'type' => $rule->type,
+            'percent_type' => $rule->percent_type,
             'commission_label' => $rule->comission_label,
             'minimum_amount' => (float) $rule->minimum_amount,
             'maximum_amount' => (float) $rule->maximum_amount,
