@@ -17,7 +17,7 @@ class ExpenseCategory extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable, InvalidatesCacheVersion;
 
-    protected static string $cacheVersionKey = 'expense_category';
+    protected static string $cacheVersionKey = 'expense_categories';
 
     protected $fillable = [
         'parent_id',
