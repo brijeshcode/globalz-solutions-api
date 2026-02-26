@@ -49,7 +49,7 @@ class ItemsController extends Controller
             'sell_price' => \App\Models\Items\PriceListItem::select('sell_price')
                 ->whereColumn('item_id', 'items.id')
                 ->whereHas('priceList', function($q) {
-                    $q->where('is_default', true);
+                    $q->where('is_default_inv', true);
                 })
                 ->limit(1)
         ]);
