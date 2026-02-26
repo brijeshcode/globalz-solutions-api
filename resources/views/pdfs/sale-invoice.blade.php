@@ -359,7 +359,7 @@
                     </td>
                     <td colspan="2" style="width: {{ $sale->prefix === 'INV' ? 20 : 20 }}%; border: none;"></td>
                     <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Sub Total</td>
-                    <td class="text-right font-bold" style="width: 15%;">{{ number_format($calculatedSubTotal, 2) }}</td>
+                    <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->sub_total, 2) }}</td>
                 </tr>
 
                 <tr class="totals-row">

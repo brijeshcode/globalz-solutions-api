@@ -36,7 +36,7 @@ class SalePdfController extends Controller
             // Calculate totals for items
             $totalVolume = $sale->items->sum('total_volume_cbm');
             $totalWeight = $sale->items->sum('total_weight_kg');
-            $calculatedSubTotal = $sale->items->sum('total_net_sell_price');
+            // $calculatedSubTotal = $sale->items->sum('total_net_sell_price');
 
             // Prepare data for the view
             $data = [
@@ -44,7 +44,7 @@ class SalePdfController extends Controller
                 'company' => $companyData,
                 'totalVolume' => $totalVolume,
                 'totalWeight' => $totalWeight,
-                'calculatedSubTotal' => $calculatedSubTotal,
+                // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
 
             // Render the Blade view to HTML
