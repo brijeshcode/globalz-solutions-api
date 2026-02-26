@@ -495,14 +495,33 @@ class PriceListsController extends Controller
         return ApiResponse::delete('Price list item deleted successfully');
     }
 
-    public function setDefault(PriceList $priceList): JsonResponse
-    { 
-        PriceList::where('is_default', true)->update(['is_default' => false]);
-        $priceList->update(['is_default' => true]);
-        
+    public function setDefault(Request $request): JsonResponse
+    {
+        $request->validate([
+            'price_list_id_inv' => 'nullable|integer|exists:price_lists,id',
+            'price_list_id_inx' => 'nullable|integer|exists:price_lists,id',
+        ]);
+
+        if (!$request->price_list_id_inv && !$request->price_list_id_inx) {
+            return ApiResponse::customError('At least one price list ID is required', 422);
+        }
+
+        if ($request->price_list_id_inv) {
+            PriceList::where('is_default_inv', true)->update(['is_default_inv' => false]);
+            PriceList::where('id', $request->price_list_id_inv)->update(['is_default_inv' => true]);
+        }
+
+        if ($request->price_list_id_inx) {
+            PriceList::where('is_default_inx', true)->update(['is_default_inx' => false]);
+            PriceList::where('id', $request->price_list_id_inx)->update(['is_default_inx' => true]);
+        }
+
         return ApiResponse::update(
-            'PriceList default set',
-            new PriceListResource($priceList)
+            'PriceList defaults set',
+            [
+                'default_inv' => $request->price_list_id_inv ? new PriceListResource(PriceList::find($request->price_list_id_inv)) : null,
+                'default_inx' => $request->price_list_id_inx ? new PriceListResource(PriceList::find($request->price_list_id_inx)) : null,
+            ]
         );
     }
 

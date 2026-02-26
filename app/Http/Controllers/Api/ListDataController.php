@@ -134,8 +134,8 @@ class ListDataController extends Controller
         // Load price lists but NOT their items (would be 300k+ records!)
         // Price list items should be loaded separately when viewing a specific customer
         $query = Customer::with([
-            'priceListINV:id,code,description,is_default',
-            'priceListINX:id,code,description,is_default',
+            'priceListINV:id,code,description,is_default_inv,is_default_inx',
+            'priceListINX:id,code,description,is_default_inv,is_default_inx',
             'salesperson:id,name',
         ])->active()->orderby('name');
 
@@ -259,12 +259,18 @@ class ListDataController extends Controller
 
     private function itemPriceLists()
     {
-        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->active()->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default']);
+        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->active()->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default_inv', 'is_default_inx']);
     }
 
     private function itemDefaultPriceList()
     {
-        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->select('id', 'code', 'description', 'item_count', 'is_default')->default()->first();
+        $fields = ['id', 'code', 'description', 'item_count', 'is_default_inv', 'is_default_inx'];
+        $with = 'priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id';
+
+        return [
+            'inv' => PriceList::with($with)->select($fields)->defaultInv()->first(),
+            'inx' => PriceList::with($with)->select($fields)->defaultInx()->first(),
+        ];
     }
 
     public function itemWithParameter(array $files = [] , array $relations = ['tax_code']): JsonResponse

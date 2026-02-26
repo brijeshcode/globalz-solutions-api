@@ -15,6 +15,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\Sale;
 use App\Models\Items\Item;
+use App\Models\Items\PriceList;
 use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -460,9 +461,18 @@ class SaleOrdersController extends Controller
                 // Update price_list_id when prefix changes
                 $customer = Customer::select('price_list_id_INV', 'price_list_id_INX')->find($data['customer_id'] ?? $sale->customer_id);
                 if ($customer) {
-                    $data['price_list_id'] = $prefix == Sale::TAXFREEPREFIX
+                    $customerPriceList = $prefix == Sale::TAXFREEPREFIX
                         ? $customer->price_list_id_INX
                         : $customer->price_list_id_INV;
+
+                    if (!$customerPriceList) {
+                        $defaultPriceList = $prefix == Sale::TAXFREEPREFIX
+                            ? PriceList::getDefaultInx()
+                            : PriceList::getDefaultInv();
+                        $customerPriceList = $defaultPriceList?->id;
+                    }
+
+                    $data['price_list_id'] = $customerPriceList;
                 }
 
                 // Calculate sale totals

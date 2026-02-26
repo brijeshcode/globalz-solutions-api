@@ -20,7 +20,8 @@ class PriceList extends Model
     protected $fillable = [
         'code',
         'description',
-        'is_default',
+        'is_default_inv',
+        'is_default_inx',
         'item_count',
         'note',
         'is_active',
@@ -28,7 +29,8 @@ class PriceList extends Model
 
     protected $casts = [
         'item_count' => 'integer',
-        'is_default' => 'boolean',
+        'is_default_inv' => 'boolean',
+        'is_default_inx' => 'boolean',
         'is_active' => 'boolean'
     ];
 
@@ -77,9 +79,14 @@ class PriceList extends Model
         return $query->where('code', $code);
     }
 
-    public function scopeDefault($query)
+    public function scopeDefaultInv($query)
     {
-        return $query->where('is_default', true);
+        return $query->where('is_default_inv', true);
+    }
+
+    public function scopeDefaultInx($query)
+    {
+        return $query->where('is_default_inx', true);
     }
 
     public function scopeActive($query)
@@ -88,9 +95,14 @@ class PriceList extends Model
     }
 
     // Static Methods
-    public static function getDefault(): ?self
+    public static function getDefaultInv(): ?self
     {
-        return static::where('is_default', true)->first();
+        return static::where('is_default_inv', true)->first();
+    }
+
+    public static function getDefaultInx(): ?self
+    {
+        return static::where('is_default_inx', true)->first();
     }
 
     // Helper Methods

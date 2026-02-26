@@ -809,7 +809,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('{priceList}/duplicate', 'duplicate')->name('duplicate');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
-            Route::patch('{priceList}/setdefault', 'setDefault')->name('setDefault');
+            Route::patch('setdefault', 'setDefault')->name('setDefault');
             Route::post('change-customer-price-list', 'changeCustomerPriceList')->name('changeCustomerPriceList');
             Route::patch('{priceList}/update-status', 'updateStatus')->name('updateStatus');
 

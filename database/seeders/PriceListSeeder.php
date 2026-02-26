@@ -21,7 +21,8 @@ class PriceListSeeder extends Seeder
             [
                 'code' => 'DEFAULT PL',
                 'description' => 'price list default',
-                'is_default' => 1,
+                'is_default_inv' => 1,
+                'is_default_inx' => 1,
                 'note' => 'price list description',
                 'items' => [
                     [
@@ -72,7 +73,8 @@ class PriceListSeeder extends Seeder
             [
                 'code' => 'REGULER PL',
                 'description' => 'price list normal',
-                'is_default' => 0,
+                'is_default_inv' => 0,
+                'is_default_inx' => 0,
                 'note' => 'price list description',
                 'items' => [
                     [
@@ -104,7 +106,8 @@ class PriceListSeeder extends Seeder
         foreach ($priceLists as $priceList) {
             PriceList::create([
                 'code' => $priceList['code'],
-                'is_default' => $priceList['is_default'],
+                'is_default_inv' => $priceList['is_default_inv'],
+                'is_default_inx' => $priceList['is_default_inx'],
                 'description' => $priceList['description'],
                 'note' => $priceList['note'],
             ]);
