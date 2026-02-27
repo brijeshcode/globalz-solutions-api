@@ -955,6 +955,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('finance')->name('finance.')->group(function () {
             Route::get('monthly-profit', [\App\Http\Controllers\Api\Reports\Finance\MontlyProfitReportController::class, 'index'])->name('monthly-profit');
             Route::get('expense', [\App\Http\Controllers\Api\Reports\Finance\ExpenseReportController::class, 'index'])->name('expense');
+            Route::get('capital', [\App\Http\Controllers\Api\Reports\Finance\CapitalReportController::class, 'index'])->name('capital');
         });
 
         // Inventory Reports
