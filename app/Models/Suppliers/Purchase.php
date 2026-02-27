@@ -29,7 +29,8 @@ class Purchase extends Model
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, HasDocuments, Searchable, Sortable, HasDateFilters;
     public const STATUS_WAITING = 'Waiting';
     public const DELIVERY_STATUS = ['Waiting', 'Shipped', 'Delivered'];
-    
+    public const TAXPREFIX = 'PUR';
+    public const TAXFREEPREFIX = 'PAX';
     protected $fillable = [
         'code',
         'date',

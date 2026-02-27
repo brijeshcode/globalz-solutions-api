@@ -50,11 +50,17 @@ class CapitalReportController extends Controller
             ->sum(DB::raw('inventories.quantity * item_prices.price_usd'));
 
         // 2. VAT paid on current stock (stock value * default tax rate - VAT already paid in purchases)
+        // Subtract stock value from tax-free (PAX) purchases before applying tax
+        $taxFreePurchasesTotal = (float) Purchase::where('status', 'Delivered')
+            ->where('prefix', 'PAX')
+            ->sum('total_usd');
+
         $defaultTaxPercent = (float) DB::table('tax_codes')
             ->where('is_active', true)
             ->where('is_default', true)
             ->value('tax_percent') ?? 0;
-        $totalVatOnStock = round($stockValue * $defaultTaxPercent / 100, 2);
+        $taxableStockValue = $stockValue - $taxFreePurchasesTotal;
+        $totalVatOnStock = round($taxableStockValue * $defaultTaxPercent / 100, 2);
 
         // Subtract VAT already paid on delivered purchases
         $vatPaidInPurchases = (float) Purchase::where('status', 'Delivered')
@@ -105,6 +111,7 @@ class CapitalReportController extends Controller
 
         return [
             'available_stock_value' => round($stockValue, 2),
+            'tax_free_purchases_total' => round($taxFreePurchasesTotal, 2),
             'total_vat_on_stock' => round($totalVatOnStock, 2),
             'vat_paid_on_purchase' => round($vatPaidInPurchases, 2),
             'default_tax_percent' => round($defaultTaxPercent, 2),
