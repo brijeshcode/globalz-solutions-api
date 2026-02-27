@@ -86,6 +86,13 @@ return Application::configure(basePath: dirname(__DIR__))
         //     ->withoutOverlapping()
         //     ->runInBackground();
 
+        // Take capital snapshot at end of each month (1st of next month at 00:30)
+        $schedule->command('capital:snapshot')
+            ->monthlyOn(1, '00:30')
+            ->name('take-capital-snapshot')
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // Cleanup old activity logs daily at 2:00 AM (only if auto_cleanup is enabled)
         if (config('activitylog.auto_cleanup')) {
             $schedule->command('activitylog:cleanup --force')
