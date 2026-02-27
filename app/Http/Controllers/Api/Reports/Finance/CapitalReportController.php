@@ -105,6 +105,9 @@ class CapitalReportController extends Controller
 
         return [
             'available_stock_value' => round($stockValue, 2),
+            'total_vat_on_stock' => round($totalVatOnStock, 2),
+            'vat_paid_on_purchase' => round($vatPaidInPurchases, 2),
+            'default_tax_percent' => round($defaultTaxPercent, 2),
             'vat_on_current_stock' => round($vatOnStock, 2),
             'pending_purchases_value' => round($pendingPurchasesValue, 2),
             'net_stock_value' => round($netStockValue, 2),

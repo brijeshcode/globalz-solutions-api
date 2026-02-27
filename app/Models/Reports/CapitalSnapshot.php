@@ -10,6 +10,9 @@ class CapitalSnapshot extends Model
         'year',
         'month',
         'available_stock_value',
+        'total_vat_on_stock',
+        'vat_paid_on_purchase',
+        'default_tax_percent',
         'vat_on_current_stock',
         'pending_purchases_value',
         'net_stock_value',
@@ -23,6 +26,9 @@ class CapitalSnapshot extends Model
 
     protected $casts = [
         'available_stock_value' => 'decimal:2',
+        'total_vat_on_stock' => 'decimal:2',
+        'vat_paid_on_purchase' => 'decimal:2',
+        'default_tax_percent' => 'decimal:2',
         'vat_on_current_stock' => 'decimal:2',
         'pending_purchases_value' => 'decimal:2',
         'net_stock_value' => 'decimal:2',
