@@ -403,7 +403,8 @@ class AuthController extends Controller
             $user->id,
             $user->role,
             $request->ip(),
-            $request->userAgent() ?? 'Unknown'
+            $request->userAgent() ?? 'Unknown',
+            $user->email
         );
 
         // Store login log ID in token metadata for logout tracking

@@ -52,10 +52,11 @@ class LoginLog extends Model
     /**
      * Log a successful login attempt.
      */
-    public static function logSuccessfulLogin(int $userId, string $userRole, string $ipAddress, string $userAgent): self
+    public static function logSuccessfulLogin(int $userId, string $userRole, string $ipAddress, string $userAgent, ?string $email = null): self
     {
         return self::create([
             'user_id' => $userId,
+            'email' => $email,
             'user_role' => $userRole,
             'ip_address' => $ipAddress,
             'user_agent' => $userAgent,
