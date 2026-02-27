@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Reports\Finance;
 
+use App\Helpers\CurrencyHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
@@ -84,18 +85,20 @@ class CapitalReportController extends Controller
         $unapprovedPayments = (float) CustomerPayment::pending()
             ->sum('amount_usd');
 
-        // 7. Money from all active accounts (except "Do Not Include in Totals")
+        // 7. Money from all active accounts (except "Do Not Include in Totals"), converted to USD
         $accountsBalance = (float) Account::active()
             ->includeInTotal()
-            ->sum('current_balance');
+            ->get(['id', 'currency_id', 'current_balance'])
+            ->sum(fn ($account) => CurrencyHelper::toUsd($account->currency_id, $account->current_balance));
 
         // 8. Net capital
         $netCapital = $netStockValue + $unpaidCustomerBalance + $unapprovedPayments + $accountsBalance;
 
-        // 9. Debt account (accounts with account type "Debt")
+        // 9. Debt account (accounts with account type "Debt"), converted to USD
         $debtAccount = (float) Account::whereHas('accountType', function ($query) {
             $query->where('name', 'Debt');
-        })->sum('current_balance');
+        })->get(['id', 'currency_id', 'current_balance'])
+            ->sum(fn ($account) => CurrencyHelper::toUsd($account->currency_id, $account->current_balance));
 
         // 10. Final result
         $finalResult = $netCapital + $debtAccount;
