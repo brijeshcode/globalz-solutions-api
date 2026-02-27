@@ -10,6 +10,7 @@ class CapitalSnapshot extends Model
         'year',
         'month',
         'available_stock_value',
+        'tax_free_purchases_total',
         'total_vat_on_stock',
         'vat_paid_on_purchase',
         'default_tax_percent',
@@ -26,6 +27,7 @@ class CapitalSnapshot extends Model
 
     protected $casts = [
         'available_stock_value' => 'decimal:2',
+        'tax_free_purchases_total' => 'decimal:2',
         'total_vat_on_stock' => 'decimal:2',
         'vat_paid_on_purchase' => 'decimal:2',
         'default_tax_percent' => 'decimal:2',

@@ -48,6 +48,7 @@ class TakeCapitalSnapshot extends Command
                 ['year' => $year, 'month' => $month],
                 [
                     'available_stock_value' => $report['available_stock_value'],
+                    'tax_free_purchases_total' => $report['tax_free_purchases_total'],
                     'total_vat_on_stock' => $report['total_vat_on_stock'],
                     'vat_paid_on_purchase' => $report['vat_paid_on_purchase'],
                     'default_tax_percent' => $report['defaultTaxPercent'],
