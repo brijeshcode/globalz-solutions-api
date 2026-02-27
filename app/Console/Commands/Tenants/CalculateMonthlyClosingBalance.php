@@ -1,29 +1,19 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Tenants;
 
 use App\Services\Customers\CustomerBalanceService;
 use Illuminate\Console\Command;
+use Spatie\Multitenancy\Commands\Concerns\TenantAware;
 
 class CalculateMonthlyClosingBalance extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'customers:calculate-monthly-closing';
+    use TenantAware;
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
+    protected $signature = 'customers:calculate-monthly-closing {--tenant=* : Tenant ID(s), defaults to all tenants}';
+
     protected $description = 'Calculate closing balance for all customers at the end of the month';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
         $this->info('Starting monthly closing balance calculation...');
@@ -31,7 +21,6 @@ class CalculateMonthlyClosingBalance extends Command
         $this->info('');
 
         try {
-            // Pass null to only process current month (this is the scheduled task)
             $stats = CustomerBalanceService::processMonthlyClosingForAllCustomers(null);
 
             $this->info('Monthly closing balance calculation completed!');

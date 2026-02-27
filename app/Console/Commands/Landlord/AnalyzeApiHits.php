@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Landlord;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -17,10 +17,8 @@ class AnalyzeApiHits extends Command
     {
         $specificTenant = $this->argument('tenant');
 
-        // Find all tenant log files
         $logFiles = glob(storage_path('logs/api-hits-*.log'));
 
-        // Also check old single log file for backward compatibility
         $oldLogPath = storage_path('logs/api-hits.log');
         if (file_exists($oldLogPath) && !$specificTenant) {
             $logFiles[] = $oldLogPath;
@@ -34,7 +32,6 @@ class AnalyzeApiHits extends Command
         $processedCount = 0;
 
         foreach ($logFiles as $logFile) {
-            // Extract tenant key from filename
             $filename = basename($logFile);
             if (preg_match('/^api-hits-(.+)\.log$/', $filename, $match)) {
                 $tenantKey = $match[1];
@@ -44,7 +41,6 @@ class AnalyzeApiHits extends Command
                 continue;
             }
 
-            // Filter by specific tenant if provided
             if ($specificTenant && $tenantKey !== $specificTenant) {
                 continue;
             }
@@ -125,7 +121,6 @@ class AnalyzeApiHits extends Command
 
         arsort($endpoints);
 
-        // Build console table
         $tableRows = [];
         $rank = 1;
         foreach (array_slice($endpoints, 0, 30, true) as $key => $count) {
@@ -147,7 +142,6 @@ class AnalyzeApiHits extends Command
 
         $this->table(['#', 'Hits', 'Avg Time', 'Max Time', 'Status Codes', 'Endpoint'], $tableRows);
 
-        // User summary console table
         uasort($users, fn ($a, $b) => $b['hits'] <=> $a['hits']);
         $userRows = [];
         $rank = 1;
@@ -163,7 +157,6 @@ class AnalyzeApiHits extends Command
         $this->info('User Activity:');
         $this->table(['#', 'User ID', 'Name', 'Hits', 'Avg Time', 'Top Endpoint'], $userRows);
 
-        // Generate markdown report
         $report = "# API Usage Report — Tenant: {$tenantKey}\n\n";
         $report .= "Generated: " . now()->toDateTimeString() . "\n\n";
         $report .= "Total API hits logged: " . count($lines) . "\n\n";
@@ -183,7 +176,6 @@ class AnalyzeApiHits extends Command
             $rank++;
         }
 
-        // Slowest endpoints
         $byAvgTime = [];
         foreach ($endpoints as $key => $count) {
             $byAvgTime[$key] = round($totalTime[$key] / $count, 2);
@@ -202,7 +194,6 @@ class AnalyzeApiHits extends Command
             $rank++;
         }
 
-        // Monthly summary
         ksort($monthly);
         $report .= "\n## Monthly Summary\n\n";
 
@@ -225,7 +216,6 @@ class AnalyzeApiHits extends Command
             $report .= "\n";
         }
 
-        // User activity summary
         uasort($users, fn ($a, $b) => $b['hits'] <=> $a['hits']);
 
         $report .= "\n## User Activity\n\n";
@@ -243,7 +233,6 @@ class AnalyzeApiHits extends Command
             $rank++;
         }
 
-        // Per-user endpoint breakdown
         $report .= "\n## User Endpoint Breakdown\n\n";
         foreach (array_slice($users, 0, 10, true) as $userKey => $data) {
             [$id, $name] = explode('|', $userKey, 2);
@@ -266,7 +255,6 @@ class AnalyzeApiHits extends Command
         $this->newLine();
         $this->info("  Report saved to: storage/logs/api-report-{$tenantKey}.md");
 
-        // Clean old log entries
         $this->cleanOldLogs($logPath, $lines);
     }
 
@@ -276,7 +264,7 @@ class AnalyzeApiHits extends Command
         $kept = [];
 
         foreach ($lines as $line) {
-            if (preg_match('/^\[(\d{4}-\d{2}-\d{2})/', $line, $match)) {
+            if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $line, $match)) {
                 if ($match[1] >= $cutoff) {
                     $kept[] = $line;
                 }

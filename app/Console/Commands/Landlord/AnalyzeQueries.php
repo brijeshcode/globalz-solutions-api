@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Landlord;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -13,9 +13,6 @@ class AnalyzeQueries extends Command
 
     protected $description = 'Analyze slow-queries.log and generate a query report';
 
-    /**
-     * Known issue patterns: regex => [issue, fix]
-     */
     private function getIssuePatterns(): array
     {
         return [
@@ -102,10 +99,9 @@ class AnalyzeQueries extends Command
 
         $queries = [];
         $totalTime = [];
-        $monthly = []; // month => query => [count, totalTime, maxTime]
+        $monthly = [];
 
         foreach ($lines as $line) {
-            // Extract timestamp
             preg_match('/^\[(\d{4}-\d{2})/', $line, $monthMatch);
             $month = $monthMatch[1] ?? 'unknown';
 
@@ -115,11 +111,9 @@ class AnalyzeQueries extends Command
             $normalized = $this->normalizeQuery($sqlMatch[1]);
             $time = (float) $timeMatch[1];
 
-            // Overall stats
             $queries[$normalized] = ($queries[$normalized] ?? 0) + 1;
             $totalTime[$normalized] = ($totalTime[$normalized] ?? 0) + $time;
 
-            // Monthly stats
             if (!isset($monthly[$month][$normalized])) {
                 $monthly[$month][$normalized] = ['count' => 0, 'totalTime' => 0, 'maxTime' => 0];
             }
@@ -130,7 +124,6 @@ class AnalyzeQueries extends Command
 
         arsort($queries);
 
-        // Build table for console
         $tableRows = [];
         $rank = 1;
         foreach (array_slice($queries, 0, 25, true) as $sql => $count) {
@@ -148,7 +141,6 @@ class AnalyzeQueries extends Command
 
         $this->table(['#', 'Count', 'Avg Time', 'Total Time', 'Issue', 'Query'], $tableRows);
 
-        // Generate markdown report
         $report = "# Query Analysis Report\n\n";
         $report .= "Generated: " . now()->toDateTimeString() . "\n\n";
         $report .= "Total queries logged: " . count($lines) . "\n\n";
@@ -186,7 +178,6 @@ class AnalyzeQueries extends Command
             }
         }
 
-        // Monthly summary
         ksort($monthly);
         $report .= "\n## Monthly Summary\n\n";
 
@@ -197,7 +188,6 @@ class AnalyzeQueries extends Command
             $report .= "| # | Count | Avg Time | Max Time | Issue | Query |\n";
             $report .= "|--:|------:|---------:|---------:|-------|-------|\n";
 
-            // Sort by count descending
             uasort($queryData, fn ($a, $b) => $b['count'] <=> $a['count']);
 
             $rank = 1;
@@ -220,7 +210,6 @@ class AnalyzeQueries extends Command
         $this->newLine();
         $this->info("Report saved to: storage/logs/query-report.md");
 
-        // Clean old log entries
         $this->cleanOldLogs($logPath, $lines);
 
         return 0;
@@ -232,7 +221,7 @@ class AnalyzeQueries extends Command
         $kept = [];
 
         foreach ($lines as $line) {
-            if (preg_match('/^\[(\d{4}-\d{2}-\d{2})/', $line, $match)) {
+            if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $line, $match)) {
                 if ($match[1] >= $cutoff) {
                     $kept[] = $line;
                 }

@@ -1,32 +1,21 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Tenants;
 
 use App\Services\Customers\CustomerBalanceService;
 use Illuminate\Console\Command;
+use Spatie\Multitenancy\Commands\Concerns\TenantAware;
 
 class CalculateYearlyClosingBalance extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'customers:calculate-yearly-closing {--year= : The year to calculate closing balance for (defaults to previous year)}';
+    use TenantAware;
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
+    protected $signature = 'customers:calculate-yearly-closing {--tenant=* : Tenant ID(s), defaults to all tenants} {--year= : The year to calculate closing balance for (defaults to previous year)}';
+
     protected $description = 'Calculate yearly closing balance for all customers at the end of the year';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
-        // Default to previous year if not specified
         $year = $this->option('year') ?? now()->subYear()->year;
 
         $this->info("Starting yearly closing balance calculation for year {$year}...");
