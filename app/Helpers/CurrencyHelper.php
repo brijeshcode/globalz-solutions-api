@@ -24,6 +24,15 @@ class CurrencyHelper {
         return self::$currencies[$currencyId] ?? null;
     }
 
+    /**
+     * Reset the static currency cache.
+     * Called by ResetCurrencyStaticsTask when switching tenants in queue workers.
+     */
+    public static function resetStaticCache(): void
+    {
+        self::$currencies = null;
+    }
+
     public static function toUsd( int $currencyId, float $amount, ?float $rate = null): float
     {
         $currency = self::getCurrency($currencyId);

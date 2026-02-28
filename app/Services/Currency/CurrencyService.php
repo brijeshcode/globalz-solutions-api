@@ -4,6 +4,7 @@ namespace App\Services\Currency;
 
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Generals\Currencies\currencyRate;
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
@@ -14,6 +15,14 @@ class CurrencyService
     const CACHE_DURATION = 3600; // 1 hour
     const BASE_CURRENCY_CACHE_KEY = 'base_currency_id';
     const DEFAULT_BASE_CURRENCY_CODE = 'USD';
+    const LOCAL_CURRENCY_CACHE_KEY = 'local_currency_id';
+
+    /**
+     * Class-level static (replaces function-level static in getUSDCurrencyId).
+     * Must be a class property so ResetCurrencyStaticsTask can reset it
+     * when a queue worker switches between tenants.
+     */
+    private static ?int $usdId = null;
 
     /**
      * Core conversion method - handles all currency conversions
@@ -166,18 +175,65 @@ class CurrencyService
     }
 
     /**
-     * Get USD currency ID (for legacy compatibility)
+     * Get USD currency ID (for legacy compatibility).
+     * Uses a class-level static property (not function-level) so
+     * ResetCurrencyStaticsTask can clear it on tenant switch in queue workers.
      */
     public static function getUSDCurrencyId(): ?int
     {
-        static $usdId = null;
-        
-        if ($usdId === null) {
-            $usdCurrency = Currency::where('code', 'USD')->first();
-            $usdId = $usdCurrency?->id;
+        if (self::$usdId === null) {
+            self::$usdId = Currency::where('code', 'USD')->value('id');
         }
-        
-        return $usdId;
+
+        return self::$usdId;
+    }
+
+    /**
+     * Get the tenant's local currency code from settings.
+     * This is the primary display and reporting currency for the tenant (e.g. 'LBP').
+     * USD remains the global conversion pivot and is separate from this.
+     */
+    public static function getLocalCurrencyCode(): string
+    {
+        return Setting::get('currency', 'local_currency', self::DEFAULT_BASE_CURRENCY_CODE);
+    }
+
+    /**
+     * Get the tenant's local currency ID.
+     * Result is cached via the tenant-prefixed cache (PrefixCacheTask handles isolation).
+     */
+    public static function getLocalCurrencyId(): ?int
+    {
+        $code = self::getLocalCurrencyCode();
+
+        return Cache::remember(self::LOCAL_CURRENCY_CACHE_KEY, self::CACHE_DURATION, function () use ($code) {
+            return Currency::where('code', $code)->value('id');
+        });
+    }
+
+    /**
+     * Check if the tenant is in multi-currency mode.
+     */
+    public static function isMultiCurrencyMode(): bool
+    {
+        return Setting::get('currency', 'system_currency_mode', 'multi') === 'multi';
+    }
+
+    /**
+     * Check if a given currency ID is the tenant's local currency.
+     */
+    public static function isLocalCurrency(int $currencyId): bool
+    {
+        return $currencyId === self::getLocalCurrencyId();
+    }
+
+    /**
+     * Reset all PHP-level static caches.
+     * Called by ResetCurrencyStaticsTask when switching tenants in queue workers.
+     */
+    public static function resetStaticCache(): void
+    {
+        self::$usdId = null;
     }
 
     /**
@@ -337,7 +393,7 @@ class CurrencyService
                         $fromRate = self::getRate($fromId);
                         $toRate = self::getRate($toId);
                         $matrix[$fromId][$toId] = $toRate / $fromRate;
-                    } catch (\Exception $e) {
+                    } catch (\Exception) {
                         $matrix[$fromId][$toId] = null;
                     }
                 }

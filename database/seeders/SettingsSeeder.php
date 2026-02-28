@@ -188,6 +188,22 @@ class SettingsSeeder extends Seeder
                 'description' => 'Require two-factor authentication',
             ],
 
+            // Currency Group
+            [
+                'group_name' => 'currency',
+                'key_name' => 'local_currency',
+                'value' => 'LBP',
+                'data_type' => Setting::TYPE_STRING,
+                'description' => 'Tenant local currency code (ISO 4217). Used for UI display and tenant reports.',
+            ],
+            [
+                'group_name' => 'currency',
+                'key_name' => 'system_currency_mode',
+                'value' => 'multi',
+                'data_type' => Setting::TYPE_STRING,
+                'description' => 'Currency mode: single (local currency only) or multi (multiple currencies). Cannot upgrade from single to multi.',
+            ],
+
             // Email Group
             [
                 'group_name' => 'email',

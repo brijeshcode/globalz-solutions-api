@@ -45,6 +45,10 @@ return [
         // Cache prefixing (auto tenant-isolated cache)
         \Spatie\Multitenancy\Tasks\PrefixCacheTask::class,
 
+        // Reset PHP-level static caches in currency helpers (required for queue workers
+        // that process multiple tenants in sequence — HTTP requests are unaffected)
+        \App\Services\Tenants\Tasks\ResetCurrencyStaticsTask::class,
+
         // Storage path (uncomment if you need tenant-isolated storage)
         // \Spatie\Multitenancy\Tasks\SwitchTenantStorageTask::class,
     ],

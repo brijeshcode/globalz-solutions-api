@@ -512,7 +512,7 @@ class Sale extends Model
                 }
             }
 
-            $localCurrency = Currency::with('activeRate')->where('code', config('app.local_currency'))->first();
+            $localCurrency = Currency::with('activeRate')->where('code', \App\Services\Currency\CurrencyService::getLocalCurrencyCode())->first();
             $sale->local_curreny_rate = $localCurrency && $localCurrency->activeRate ? $localCurrency->activeRate->rate : 1;
             $sale->invoice_tax_label = CommonHelper::getTaxLable();
             $sale->invoice_nb1 = CommonHelper::invoiceNb1();
