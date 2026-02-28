@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\Setups\Generals;
 
 use App\Http\Controllers\Controller;
 use App\Helpers\SettingsHelper;
+use App\Http\Middleware\AttachCacheVersion;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setting;
+use App\Services\Currency\CurrencyModeService;
 use App\Traits\HasDocuments;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -216,6 +218,9 @@ class CompanyController extends Controller
             }
         }
 
+        // Append currency settings so the frontend has them on first load
+        $tenantData['currency'] = CurrencyModeService::getSettings();
+
         return ApiResponse::show('Tenant Details', $tenantData);
     }
 
@@ -266,6 +271,8 @@ class CompanyController extends Controller
                 SettingsHelper::set(self::TENANT_DETAILS_GROUP, $field, $request->input($field), $dataType);
             }
         }
+
+        AttachCacheVersion::invalidate('tenant_details');
 
         return ApiResponse::index('Tenant details updated successfully');
     }

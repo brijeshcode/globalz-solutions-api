@@ -1,83 +1,68 @@
 <?php
 
-use App\Http\Controllers\Api\Landlord\TenantManagementController;
 use App\Http\Controllers\Api\Landlord\FeatureController;
+use App\Http\Controllers\Api\Landlord\TenantCacheController;
+use App\Http\Controllers\Api\Landlord\TenantManagementController;
+use App\Http\Controllers\Api\Landlord\TenantMigrationController;
+use App\Http\Controllers\Api\Landlord\TenantSetupController;
+use App\Http\Controllers\Api\Landlord\TenantUserController;
 use Illuminate\Support\Facades\Route;
 
 /**
  * Landlord Management Routes
  *
- * These routes are for landlord-level operations (managing tenants)
- * NO tenant middleware should be applied here
- * These routes use the landlord database connection
+ * No tenant middleware here — these routes operate on the landlord DB
+ * or explicitly switch into a tenant context via $tenant->execute().
  */
 
-
-// Landlord routes (authentication required, NO tenant required)
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Landlord Migrations
-    Route::post('/migrations', [TenantManagementController::class, 'runLandlordMigrations'])->name('landlord.migrations.run');
+    // ── Landlord migrations ────────────────────────────────────────────────
+    Route::post('/migrations', [TenantMigrationController::class, 'runLandlordMigrations'])
+        ->name('landlord.migrations.run');
 
-    // Tenant Management
+    // ── Tenant management ──────────────────────────────────────────────────
     Route::prefix('tenants')->name('tenants.')->group(function () {
 
-        // Statistics
+        // Stats
         Route::get('stats', [TenantManagementController::class, 'stats'])->name('stats');
 
-        // List all tenants
+        // CRUD
         Route::get('/', [TenantManagementController::class, 'index'])->name('index');
-
-        // Create new tenant
         Route::post('/', [TenantManagementController::class, 'store'])->name('store');
-
-        // Get specific tenant
         Route::get('{tenant}', [TenantManagementController::class, 'show'])->name('show');
-
-        // Update tenant
         Route::put('{tenant}', [TenantManagementController::class, 'update'])->name('update');
-
-        // Deactivate tenant
         Route::delete('{tenant}', [TenantManagementController::class, 'destroy'])->name('destroy');
-
-        // Activate tenant
         Route::patch('{tenant}/activate', [TenantManagementController::class, 'activate'])->name('activate');
 
-        // Run migrations for specific tenant
-        Route::post('{tenant}/migrations', [TenantManagementController::class, 'runMigrations'])->name('runMigrations');
+        // ── Setup & readiness ──────────────────────────────────────────────
+        Route::post('{tenant}/setup', [TenantSetupController::class, 'setup'])->name('setup');
+        Route::get('{tenant}/readiness', [TenantSetupController::class, 'readiness'])->name('readiness');
 
-        // Run migrations for all tenants
-        Route::post('migrations/run-all', [TenantManagementController::class, 'runAllTenantsMigrations'])->name('migrations.runAll');
+        // ── Migrations ─────────────────────────────────────────────────────
+        Route::post('migrations/run-all', [TenantMigrationController::class, 'runAllTenantsMigrations'])
+            ->name('migrations.runAll');
+        Route::post('{tenant}/migrations', [TenantMigrationController::class, 'runTenantMigrations'])
+            ->name('migrations.run');
 
-        // Get all users for tenant
-        Route::get('{tenant}/users', [TenantManagementController::class, 'getUsers'])->name('users.index');
+        // ── Cache ──────────────────────────────────────────────────────────
+        Route::post('{tenant}/cache/invalidate', [TenantCacheController::class, 'invalidate'])->name('cache.invalidate');
 
-        // Create user for tenant
-        Route::post('{tenant}/users', [TenantManagementController::class, 'createUser'])->name('users.create');
+        // ── Users ──────────────────────────────────────────────────────────
+        Route::get('{tenant}/users', [TenantUserController::class, 'index'])->name('users.index');
+        Route::post('{tenant}/users', [TenantUserController::class, 'store'])->name('users.store');
 
-        // Get tenant features
+        // ── Features ───────────────────────────────────────────────────────
         Route::get('{tenant}/features', [FeatureController::class, 'getTenantFeatures'])->name('features.index');
-
-        // Assign/update feature to tenant
         Route::post('{tenant}/features/{feature}', [FeatureController::class, 'assignFeatureToTenant'])->name('features.assign');
-
-        // Bulk update tenant features
         Route::post('{tenant}/features', [FeatureController::class, 'bulkUpdateTenantFeatures'])->name('features.bulk-update');
     });
 
-    // Feature Management
+    // ── Feature management ─────────────────────────────────────────────────
     Route::prefix('features')->name('features.')->group(function () {
-
-        // List all features
         Route::get('/', [FeatureController::class, 'index'])->name('index');
-
-        // Create new feature
         Route::post('/', [FeatureController::class, 'store'])->name('store');
-
-        // Update feature
         Route::put('{feature}', [FeatureController::class, 'update'])->name('update');
-
-        // Delete feature
         Route::delete('{feature}', [FeatureController::class, 'destroy'])->name('destroy');
     });
 });
