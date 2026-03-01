@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Api\Landlord\FeatureController;
 use App\Http\Controllers\Api\Landlord\TenantCacheController;
+use App\Http\Controllers\Api\Landlord\TenantCurrencyController;
 use App\Http\Controllers\Api\Landlord\TenantManagementController;
 use App\Http\Controllers\Api\Landlord\TenantMigrationController;
+use App\Http\Controllers\Api\Landlord\TenantSettingsController;
 use App\Http\Controllers\Api\Landlord\TenantSetupController;
 use App\Http\Controllers\Api\Landlord\TenantUserController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +41,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{tenant}/setup', [TenantSetupController::class, 'setup'])->name('setup');
         Route::get('{tenant}/readiness', [TenantSetupController::class, 'readiness'])->name('readiness');
 
+        // ── Settings ───────────────────────────────────────────────────────
+        Route::get('{tenant}/settings', [TenantSettingsController::class, 'show'])->name('settings.show');
+        Route::patch('{tenant}/settings', [TenantSettingsController::class, 'update'])->name('settings.update');
+
         // ── Migrations ─────────────────────────────────────────────────────
         Route::post('migrations/run-all', [TenantMigrationController::class, 'runAllTenantsMigrations'])
             ->name('migrations.runAll');
@@ -47,6 +53,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // ── Cache ──────────────────────────────────────────────────────────
         Route::post('{tenant}/cache/invalidate', [TenantCacheController::class, 'invalidate'])->name('cache.invalidate');
+
+        // ── Currencies ─────────────────────────────────────────────────────
+        Route::get('{tenant}/currencies', [TenantCurrencyController::class, 'index'])->name('currencies.index');
+        Route::post('{tenant}/currencies', [TenantCurrencyController::class, 'store'])->name('currencies.store');
+        Route::put('{tenant}/currencies/{code}', [TenantCurrencyController::class, 'update'])->name('currencies.update');
 
         // ── Users ──────────────────────────────────────────────────────────
         Route::get('{tenant}/users', [TenantUserController::class, 'index'])->name('users.index');

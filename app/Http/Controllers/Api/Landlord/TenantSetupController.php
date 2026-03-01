@@ -89,6 +89,9 @@ class TenantSetupController extends Controller
                     Setting::set('currency', 'local_currency', $validated['currency']['local_currency']);
                     Setting::set('currency', 'system_currency_mode', $validated['currency']['system_currency_mode']);
 
+                    // Seed USD as the default base currency
+                    TenantCurrencyController::seedUsdIfMissing();
+
                     // Required users
                     foreach ($validated['users'] as $userData) {
                         User::updateOrCreate(
