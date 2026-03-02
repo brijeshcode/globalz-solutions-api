@@ -48,12 +48,21 @@ class Setting extends Model
     private const CACHE_TTL = 3600; // 1 hour
 
     /**
+     * Return the current tenant's ID to scope all cache keys per-tenant.
+     * This makes caching safe regardless of whether PrefixCacheTask is working.
+     */
+    private static function tenantId(): int|string
+    {
+        return \App\Models\Tenant::current()?->getKey() ?? 0;
+    }
+
+    /**
      * Get setting value by group and key
      */
     public static function get(string $group, string $key, $default = null, $autoCreate = false, string $dataType = self::TYPE_STRING)
     {
-        $cacheKey = self::CACHE_PREFIX . $group . ':' . $key;
-        
+        $cacheKey = self::CACHE_PREFIX . $group . ':' . $key . ':t:' . self::tenantId();
+
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($group, $key, $default, $autoCreate, $dataType) {
             $setting = self::where('group_name', $group)
                           ->where('key_name', $key)
@@ -94,9 +103,9 @@ class Setting extends Model
             ]
         );
 
-        // Clear cache
-        $cacheKey = self::CACHE_PREFIX . $group . ':' . $key;
-        Cache::forget($cacheKey);
+        // Clear individual key cache and group cache (both are tenant-scoped)
+        Cache::forget(self::CACHE_PREFIX . $group . ':' . $key . ':t:' . self::tenantId());
+        Cache::forget(self::CACHE_PREFIX . 'group:' . $group . ':t:' . self::tenantId());
 
         return $setting;
     }
@@ -136,9 +145,8 @@ class Setting extends Model
             
             $setting->update(['value' => $newValue]);
 
-            // Clear cache
-            $cacheKey = self::CACHE_PREFIX . $group . ':' . $key;
-            Cache::forget($cacheKey);
+            Cache::forget(self::CACHE_PREFIX . $group . ':' . $key . ':t:' . self::tenantId());
+            Cache::forget(self::CACHE_PREFIX . 'group:' . $group . ':t:' . self::tenantId());
 
             return $newValue;
         });
@@ -162,9 +170,8 @@ class Setting extends Model
                 'description' => "Auto-created counter for {$group}.{$key}"
             ]);
             
-            // Clear cache
-            $cacheKey = self::CACHE_PREFIX . $group . ':' . $key;
-            Cache::forget($cacheKey);
+            Cache::forget(self::CACHE_PREFIX . $group . ':' . $key . ':t:' . self::tenantId());
+            Cache::forget(self::CACHE_PREFIX . 'group:' . $group . ':t:' . self::tenantId());
         }
 
         return (int) $setting->getCastValue();
@@ -175,8 +182,8 @@ class Setting extends Model
      */
     public static function getGroup(string $group): array
     {
-        $cacheKey = self::CACHE_PREFIX . 'group:' . $group;
-        
+        $cacheKey = self::CACHE_PREFIX . 'group:' . $group . ':t:' . self::tenantId();
+
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($group) {
             return self::where('group_name', $group)
                       ->get()
@@ -199,10 +206,9 @@ class Setting extends Model
         if ($setting) {
             $setting->delete();
             
-            // Clear cache
-            $cacheKey = self::CACHE_PREFIX . $group . ':' . $key;
-            Cache::forget($cacheKey);
-            
+            Cache::forget(self::CACHE_PREFIX . $group . ':' . $key . ':t:' . self::tenantId());
+            Cache::forget(self::CACHE_PREFIX . 'group:' . $group . ':t:' . self::tenantId());
+
             return true;
         }
 
@@ -214,7 +220,12 @@ class Setting extends Model
      */
     public static function clearCache(): void
     {
-        Cache::flush(); // Simple approach, or use Cache::tags if available
+        // Flush only the current tenant's settings — Cache::flush() would nuke all tenants
+        $tenantId = self::tenantId();
+        $groups = self::distinct()->pluck('group_name');
+        foreach ($groups as $group) {
+            Cache::forget(self::CACHE_PREFIX . 'group:' . $group . ':t:' . $tenantId);
+        }
     }
 
     /**
