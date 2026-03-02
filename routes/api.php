@@ -69,6 +69,7 @@ use App\Http\Controllers\Api\Items\PriceListBulkUpdateController;
 use App\Http\Controllers\Api\Reports\Sales\CategorySalesReportController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
+use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
 use Illuminate\Support\Facades\Route;
 
 // API Root - Health check / API info (no tenant required)
@@ -966,5 +967,19 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('warehouse/fix/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'fixItemInventory'])->name('warehouse.fix-item');
             Route::get('warehouse/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'show'])->name('warehouse.show');
         });
+    });
+
+    // Domain-Specific Settings Routes (admin only)
+    Route::prefix('settings')->group(function () {
+
+        // Invoice Settings
+        Route::prefix('invoice')->name('settings.invoice.')->group(function () {
+            Route::get('/', [InvoiceSettingsController::class, 'index'])->name('index');
+            Route::put('/', [InvoiceSettingsController::class, 'update'])->name('update');
+            Route::post('/reset', [InvoiceSettingsController::class, 'reset'])->name('reset');
+        });
+
+        // TODO: purchase, customer, system settings controllers
+
     });
 });

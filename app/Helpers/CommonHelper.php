@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\Setting;
 use App\Models\Setups\TaxCode;
 
 class CommonHelper {
@@ -22,13 +23,13 @@ class CommonHelper {
         return $label;
     }
     
-    public static function invoiceNb2(): string 
+    public static function invoiceNb1(): string
     {
-        return  'ملاحظة : ألضريبة على ألقيمة المضافة لا تسترد بعد ثلاثة أشهر من تاريخ إصدار ألفاتورة';
+        return Setting::get('invoice', 'note_1', 'Payment in USD or Market Price.');
     }
 
-    public static function invoiceNb1(): string 
+    public static function invoiceNb2(): string
     {
-        return 'Payment in USD or Market Price.';
+        return Setting::get('invoice', 'note_2', 'ملاحظة : ألضريبة على ألقيمة المضافة لا تسترد بعد ثلاثة أشهر من تاريخ إصدار ألفاتورة');
     }
 }

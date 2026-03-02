@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customers\Sale;
 use App\Helpers\SettingsHelper;
 use App\Models\Setting;
+use App\Services\Currency\CurrencyService;
 use Illuminate\Http\Response;
 use Mpdf\Mpdf;
 
@@ -38,12 +39,25 @@ class SalePdfController extends Controller
             $totalWeight = $sale->items->sum('total_weight_kg');
             // $calculatedSubTotal = $sale->items->sum('total_net_sell_price');
 
+            // Resolve local currency and invoice display settings (single query via getGroup)
+            $localCurrencyCode = CurrencyService::getLocalCurrencyCode();
+            $invoiceGroup      = Setting::getGroup('invoice');
+            $notLocalCurrency  = ($sale->currency->code ?? '') !== $localCurrencyCode;
+            $invoiceSettings   = [
+                'local_currency_code'       => $localCurrencyCode,
+                'show_local_currency_tax'   => $notLocalCurrency && ($invoiceGroup['show_local_currency_tax'] ?? false),
+                'show_local_currency_total' => $notLocalCurrency && ($invoiceGroup['show_local_currency_total'] ?? false),
+                'show_note_1'               => $invoiceGroup['show_note_1'] ?? true,
+                'show_note_2'               => $invoiceGroup['show_note_2'] ?? true,
+            ];
+
             // Prepare data for the view
             $data = [
-                'sale' => $sale,
-                'company' => $companyData,
-                'totalVolume' => $totalVolume,
-                'totalWeight' => $totalWeight,
+                'sale'            => $sale,
+                'company'         => $companyData,
+                'totalVolume'     => $totalVolume,
+                'totalWeight'     => $totalWeight,
+                'invoiceSettings' => $invoiceSettings,
                 // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
 
