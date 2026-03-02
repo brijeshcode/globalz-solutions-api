@@ -17,10 +17,15 @@ class CompanyController extends Controller
     use HasDocuments;
 
     private const TENANT_DETAILS_GROUP = 'tenant_details';
+    private const COMPANY_DETAILS = 'company';
 
     public function get(): JsonResponse
     {
-        $companyData = SettingsHelper::getGroup('company');
+        // Query directly without cache to avoid cross-tenant cache issues (same pattern as getTenantDetails)
+        $companyData = Setting::where('group_name', self::COMPANY_DETAILS)
+            ->get()
+            ->mapWithKeys(fn($setting) => [$setting->key_name => $setting->getCastValue()])
+            ->toArray();
 
         // For logo and stamp, get the actual document data instead of just file path
         foreach (['logo', 'stamp'] as $field) {
