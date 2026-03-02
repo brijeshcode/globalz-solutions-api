@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests\Api\Setups\Customers;
 
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CustomerPaymentTermsStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::canSuperAdmin();
     }
 
     public function rules(): array
