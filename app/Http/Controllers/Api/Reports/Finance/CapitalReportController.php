@@ -11,6 +11,7 @@ use App\Models\Customers\CustomerPayment;
 use App\Models\Reports\CapitalSnapshot;
 use App\Models\Setups\Warehouse;
 use App\Models\Suppliers\Purchase;
+use App\Models\Suppliers\SupplierPayment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -91,22 +92,28 @@ class CapitalReportController extends Controller
         $unapprovedPayments = (float) CustomerPayment::pending()
             ->sum('amount_usd');
 
-        // 7. Money from all active accounts (except "Do Not Include in Totals"), converted to USD
+        // 6b. Net unpaid customer balance (what customers owe minus unapproved payments)
+        $netUnpaidCustomerBalance = $unpaidCustomerBalance - $unapprovedPayments;
+
+        // 7. Total supplier payments made
+        $supplierPaymentsTotal = (float) SupplierPayment::sum('amount_usd');
+
+        // 8. Money from all active accounts (except "Do Not Include in Totals"), converted to USD
         $accountsBalance = (float) Account::active()
             ->includeInTotal()
             ->get(['id', 'currency_id', 'current_balance'])
             ->sum(fn ($account) => CurrencyHelper::toUsd($account->currency_id, $account->current_balance));
 
-        // 8. Net capital
-        $netCapital = $netStockValue + $unpaidCustomerBalance + $unapprovedPayments + $accountsBalance;
+        // 9. Net capital
+        $netCapital = $netStockValue + $netUnpaidCustomerBalance + $supplierPaymentsTotal + $accountsBalance;
 
-        // 9. Debt account (accounts with account type "Debt"), converted to USD
+        // 10. Debt account (accounts with account type "Debt"), converted to USD
         $debtAccount = (float) Account::whereHas('accountType', function ($query) {
             $query->where('name', 'Debt');
         })->get(['id', 'currency_id', 'current_balance'])
             ->sum(fn ($account) => CurrencyHelper::toUsd($account->currency_id, $account->current_balance));
 
-        // 10. Final result
+        // 11. Final result
         $finalResult = $netCapital + $debtAccount;
 
         return [
@@ -120,6 +127,8 @@ class CapitalReportController extends Controller
             'net_stock_value' => round($netStockValue, 2),
             'unpaid_customer_balance' => round($unpaidCustomerBalance, 2),
             'unapproved_payment_orders' => round($unapprovedPayments, 2),
+            'net_unpaid_customer_balance' => round($netUnpaidCustomerBalance, 2),
+            'supplier_payments_total' => round($supplierPaymentsTotal, 2),
             'money_in_all_accounts' => round($accountsBalance, 2),
             'net_capital' => round($netCapital, 2),
             'debt_account' => round($debtAccount, 2),
