@@ -23,9 +23,9 @@ class CustomerInvoiceSettingsUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'note_1'                    => 'sometimes|string|max:500',
+            'note_1'                    => 'sometimes|nullable|string|max:500',
             'show_note_1'               => 'sometimes|boolean',
-            'note_2'                    => 'sometimes|string|max:500',
+            'note_2'                    => 'sometimes|nullable|string|max:500',
             'show_note_2'               => 'sometimes|boolean',
             'show_local_currency_tax'       => 'sometimes|boolean',
             'show_local_currency_total'     => 'sometimes|boolean',

@@ -29,7 +29,7 @@ class InvoiceSettingsController extends Controller
         'show_note_2'      => ['value' => true,  'type' => Setting::TYPE_BOOLEAN],
         'show_local_currency_tax'        => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
         'show_local_currency_total'      => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
-        'default_invoice_currency_id'    => ['value' => 0,     'type' => Setting::TYPE_NUMBER],
+        'default_invoice_currency_id'    => ['value' => null,  'type' => Setting::TYPE_STRING],
 
     ];
 
