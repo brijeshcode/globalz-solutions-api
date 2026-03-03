@@ -15,7 +15,7 @@ class CurrencyService
     const CACHE_DURATION = 3600; // 1 hour
     const BASE_CURRENCY_CACHE_KEY = 'base_currency_id';
     const DEFAULT_BASE_CURRENCY_CODE = 'USD';
-    const LOCAL_CURRENCY_CACHE_KEY = 'local_currency_id';
+    const LOCAL_CURRENCY_CACHE_KEY = 'local_currency';
 
     /**
      * Class-level static (replaces function-level static in getUSDCurrencyId).
@@ -23,6 +23,14 @@ class CurrencyService
      * when a queue worker switches between tenants.
      */
     private static ?int $usdId = null;
+
+    /**
+     * Request-level static cache for the tenant's local Currency model.
+     * Avoids repeated DB/cache hits within the same request.
+     * Reset by ResetCurrencyStaticsTask on tenant switch in queue workers.
+     */
+    private static ?Currency $localCurrency = null;
+    private static bool $localCurrencyLoaded = false;
 
     /**
      * Core conversion method - handles all currency conversions
@@ -200,15 +208,11 @@ class CurrencyService
 
     /**
      * Get the tenant's local currency ID.
-     * Result is cached via the tenant-prefixed cache (PrefixCacheTask handles isolation).
+     * Derives from getLocalCurrency() so no extra query is made.
      */
     public static function getLocalCurrencyId(): ?int
     {
-        $code = self::getLocalCurrencyCode();
-
-        return Cache::remember(self::LOCAL_CURRENCY_CACHE_KEY, self::CACHE_DURATION, function () use ($code) {
-            return Currency::where('code', $code)->value('id');
-        });
+        return self::getLocalCurrency()?->id;
     }
 
     /**
@@ -217,6 +221,26 @@ class CurrencyService
     public static function isMultiCurrencyMode(): bool
     {
         return Setting::get('currency', 'system_currency_mode', 'multi') === 'multi';
+    }
+
+    /**
+     * Get the tenant's local Currency model.
+     * Fetches the full model once (persistent cache + static), so both
+     * getLocalCurrency() and getLocalCurrencyId() share the same single fetch.
+     */
+    public static function getLocalCurrency(): ?Currency
+    {
+        if (!self::$localCurrencyLoaded) {
+            $code = self::getLocalCurrencyCode();
+            self::$localCurrency = $code
+                ? Cache::remember(self::LOCAL_CURRENCY_CACHE_KEY, self::CACHE_DURATION, function () use ($code) {
+                    return Currency::where('code', $code)->first();
+                })
+                : null;
+            self::$localCurrencyLoaded = true;
+        }
+
+        return self::$localCurrency;
     }
 
     /**
@@ -234,6 +258,8 @@ class CurrencyService
     public static function resetStaticCache(): void
     {
         self::$usdId = null;
+        self::$localCurrency = null;
+        self::$localCurrencyLoaded = false;
     }
 
     /**

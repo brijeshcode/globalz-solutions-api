@@ -383,7 +383,7 @@
                 <tr class="totals-row">
                     <td colspan="{{ $invoiceSettings['show_local_currency_tax'] ? 4 : 6 }}" style="width: 43%; border: none;">&nbsp;</td>
                     @if($invoiceSettings['show_local_currency_tax'])
-                    <td class="font-bold" style="width: 12%; white-space: nowrap;">{{ $sale->invoice_tax_label }} {{ $invoiceSettings['local_currency_code'] }}</td>
+                    <td class="font-bold" style="width: 12%; white-space: nowrap;">{{ $sale->invoice_tax_label }} {{ $invoiceSettings['local_currency_symbol'] }}</td>
                     <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_tax_amount_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
                     @endif
                     <td class="font-bold" style="width: 13%; white-space: nowrap;">{{ $sale->invoice_tax_label }}</td>
@@ -394,7 +394,7 @@
                 <tr class="totals-row">
                     <td colspan="{{ $invoiceSettings['show_local_currency_total'] ? 4 : 6 }}" style="width: 43%; border: none;"></td>
                     @if($invoiceSettings['show_local_currency_total'])
-                    <td class="font-bold" style="width:12%; white-space: nowrap;">Net Total {{ $invoiceSettings['local_currency_code'] }}</td>
+                    <td class="font-bold" style="width:12%; white-space: nowrap;">Net Total {{ $invoiceSettings['local_currency_symbol'] }}</td>
                     <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
                     @endif
                     <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">Net Total</td>

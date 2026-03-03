@@ -40,11 +40,13 @@ class SalePdfController extends Controller
             // $calculatedSubTotal = $sale->items->sum('total_net_sell_price');
 
             // Resolve local currency and invoice display settings (single query via getGroup)
-            $localCurrencyCode = CurrencyService::getLocalCurrencyCode();
-            $invoiceGroup      = Setting::getGroup('invoice');
-            $notLocalCurrency  = ($sale->currency->code ?? '') !== $localCurrencyCode;
-            $invoiceSettings   = [
-                'local_currency_code'       => $localCurrencyCode,
+            $localCurrency    = CurrencyService::getLocalCurrency();
+            $invoiceGroup     = Setting::getGroup('invoice');
+            $notLocalCurrency = ($sale->currency->code ?? '') !== ($localCurrency?->code ?? '');
+            $invoiceSettings  = [
+                'local_currency_code'       => $localCurrency?->code,
+                'local_currency_symbol'     => $localCurrency?->symbol,
+                'local_currency_direction'  => $localCurrency?->symbol_position,
                 'show_local_currency_tax'   => $notLocalCurrency && ($invoiceGroup['show_local_currency_tax'] ?? false),
                 'show_local_currency_total' => $notLocalCurrency && ($invoiceGroup['show_local_currency_total'] ?? false),
                 'show_note_1'               => $invoiceGroup['show_note_1'] ?? true,
