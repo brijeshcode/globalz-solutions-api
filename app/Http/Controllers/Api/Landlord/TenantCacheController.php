@@ -8,6 +8,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class TenantCacheController extends Controller
 {
@@ -28,9 +29,10 @@ class TenantCacheController extends Controller
             'key' => 'required|string|max:100',
         ]);
 
-        $versions = $tenant->execute(
-            fn () => AttachCacheVersion::invalidate($validated['key'])
-        );
+        $versions = $tenant->execute(function () use ($validated) {
+            Cache::flush();
+            return AttachCacheVersion::invalidate($validated['key']);
+        });
 
         return ApiResponse::send('Cache invalidated successfully', 200, [
             'tenant_id'   => $tenant->id,
