@@ -27,8 +27,9 @@ class CustomerInvoiceSettingsUpdateRequest extends FormRequest
             'show_note_1'               => 'sometimes|boolean',
             'note_2'                    => 'sometimes|string|max:500',
             'show_note_2'               => 'sometimes|boolean',
-            'show_local_currency_tax'   => 'sometimes|boolean',
-            'show_local_currency_total' => 'sometimes|boolean',
+            'show_local_currency_tax'       => 'sometimes|boolean',
+            'show_local_currency_total'     => 'sometimes|boolean',
+            'default_invoice_currency_id'   => 'sometimes|nullable|integer|exists:currencies,id',
         ];
     }
 }
