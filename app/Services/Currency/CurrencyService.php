@@ -193,9 +193,9 @@ class CurrencyService
      * This is the primary display and reporting currency for the tenant (e.g. 'LBP').
      * USD remains the global conversion pivot and is separate from this.
      */
-    public static function getLocalCurrencyCode(): string
+    public static function getLocalCurrencyCode(): ?string
     {
-        return Setting::get('currency', 'local_currency', self::DEFAULT_BASE_CURRENCY_CODE);
+        return Setting::get('currency', 'local_currency', null);
     }
 
     /**
