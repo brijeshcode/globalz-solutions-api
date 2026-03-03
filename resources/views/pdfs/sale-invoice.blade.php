@@ -222,7 +222,7 @@
 
                     @if(!empty($company['tax_number']))
                         <div style="margin-top: 5px;">
-                            <strong>Tax Registration #: {{ $company['tax_number'] }}</strong>
+                            <strong>{{ $company['tax_number'] }}</strong>
                         </div>
                     @endif
                 @endif
