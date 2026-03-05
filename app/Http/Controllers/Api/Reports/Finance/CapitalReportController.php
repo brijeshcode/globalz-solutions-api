@@ -100,7 +100,7 @@ class CapitalReportController extends Controller
         $supplierPaymentsTotal = (float) SupplierPayment::sum('amount_usd');
 
         // 7. Total supplier Balance made
-        $supplierBalance = (float) Supplier::sum('balance');
+        $supplierBalance = (float) Supplier::sum('current_balance');
 
         // 8. Money from all active accounts (except "Do Not Include in Totals"), converted to USD
         $accountsBalance = (float) Account::active()
