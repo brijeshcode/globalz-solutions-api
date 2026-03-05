@@ -9,6 +9,7 @@ use App\Models\Accounts\Account;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Reports\CapitalSnapshot;
+use App\Models\Setups\Supplier;
 use App\Models\Setups\Warehouse;
 use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\SupplierPayment;
@@ -98,6 +99,9 @@ class CapitalReportController extends Controller
         // 7. Total supplier payments made
         $supplierPaymentsTotal = (float) SupplierPayment::sum('amount_usd');
 
+        // 7. Total supplier Balance made
+        $supplierBalance = (float) Supplier::sum('balance');
+
         // 8. Money from all active accounts (except "Do Not Include in Totals"), converted to USD
         $accountsBalance = (float) Account::active()
             ->includeInTotal()
@@ -105,7 +109,7 @@ class CapitalReportController extends Controller
             ->sum(fn ($account) => CurrencyHelper::toUsd($account->currency_id, $account->current_balance));
 
         // 9. Net capital
-        $netCapital = $netStockValue + $netUnpaidCustomerBalance + $supplierPaymentsTotal + $accountsBalance;
+        $netCapital = $netStockValue + $netUnpaidCustomerBalance + $supplierBalance + $accountsBalance;
 
         // 10. Debt account (accounts with account type "Debt"), converted to USD
         $debtAccount = (float) Account::whereHas('accountType', function ($query) {
@@ -129,6 +133,7 @@ class CapitalReportController extends Controller
             'unapproved_payment_orders' => round($unapprovedPayments, 2),
             'net_unpaid_customer_balance' => round($netUnpaidCustomerBalance, 2),
             'supplier_payments_total' => round($supplierPaymentsTotal, 2),
+            'supplier_balance' => round($supplierBalance, 2),
             'money_in_all_accounts' => round($accountsBalance, 2),
             'net_capital' => round($netCapital, 2),
             'debt_account' => round($debtAccount, 2),
