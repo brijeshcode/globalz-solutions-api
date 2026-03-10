@@ -2,6 +2,7 @@
 
 namespace App\Services\Currency;
 
+use App\Models\Landlord\TenantFeature;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Generals\Currencies\currencyRate;
 use App\Models\Setting;
@@ -220,7 +221,7 @@ class CurrencyService
      */
     public static function isMultiCurrencyMode(): bool
     {
-        return Setting::get('currency', 'system_currency_mode', 'multi') === 'multi';
+        return TenantFeature::isEnabled('multi_currency');
     }
 
     /**

@@ -196,13 +196,6 @@ class SettingsSeeder extends Seeder
                 'data_type' => Setting::TYPE_STRING,
                 'description' => 'Tenant local currency code (ISO 4217). Used for UI display and tenant reports.',
             ],
-            [
-                'group_name' => 'currency',
-                'key_name' => 'system_currency_mode',
-                'value' => 'multi',
-                'data_type' => Setting::TYPE_STRING,
-                'description' => 'Currency mode: single (local currency only) or multi (multiple currencies). Cannot upgrade from single to multi.',
-            ],
 
             // Email Group
             [

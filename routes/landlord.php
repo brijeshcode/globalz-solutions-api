@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Landlord\FeatureBundleController;
 use App\Http\Controllers\Api\Landlord\FeatureController;
 use App\Http\Controllers\Api\Landlord\TenantCacheController;
 use App\Http\Controllers\Api\Landlord\TenantCurrencyController;
@@ -63,17 +64,32 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{tenant}/users', [TenantUserController::class, 'index'])->name('users.index');
         Route::post('{tenant}/users', [TenantUserController::class, 'store'])->name('users.store');
 
-        // ── Features ───────────────────────────────────────────────────────
+        // ── Features (individual) ──────────────────────────────────────────
         Route::get('{tenant}/features', [FeatureController::class, 'getTenantFeatures'])->name('features.index');
         Route::post('{tenant}/features/{feature}', [FeatureController::class, 'assignFeatureToTenant'])->name('features.assign');
         Route::post('{tenant}/features', [FeatureController::class, 'bulkUpdateTenantFeatures'])->name('features.bulk-update');
+
+        // ── Bundles (apply as template to tenant) ─────────────────────────
+        Route::post('{tenant}/bundles/{featureBundle}/apply', [FeatureBundleController::class, 'applyBundleToTenant'])->name('bundles.apply');
     });
 
     // ── Feature management ─────────────────────────────────────────────────
     Route::prefix('features')->name('features.')->group(function () {
         Route::get('/', [FeatureController::class, 'index'])->name('index');
         Route::post('/', [FeatureController::class, 'store'])->name('store');
+        Route::post('seed', [FeatureController::class, 'seedDefaultFeatures'])->name('seed');
         Route::put('{feature}', [FeatureController::class, 'update'])->name('update');
         Route::delete('{feature}', [FeatureController::class, 'destroy'])->name('destroy');
+    });
+
+    // ── Bundle management (CRUD + features) ───────────────────────────────
+    Route::prefix('feature-bundles')->name('feature-bundles.')->group(function () {
+        Route::get('/', [FeatureBundleController::class, 'index'])->name('index');
+        Route::post('/', [FeatureBundleController::class, 'store'])->name('store');
+        Route::post('seed', [FeatureBundleController::class, 'seedDefaultBundles'])->name('seed');
+        Route::get('{featureBundle}', [FeatureBundleController::class, 'show'])->name('show');
+        Route::put('{featureBundle}', [FeatureBundleController::class, 'update'])->name('update');
+        Route::delete('{featureBundle}', [FeatureBundleController::class, 'destroy'])->name('destroy');
+        Route::post('{featureBundle}/features', [FeatureBundleController::class, 'syncFeatures'])->name('features.sync');
     });
 });

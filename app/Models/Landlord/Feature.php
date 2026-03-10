@@ -37,4 +37,13 @@ class Feature extends Model
     {
         return $this->hasMany(TenantFeature::class);
     }
+
+    /**
+     * Bundles that include this feature.
+     */
+    public function bundles()
+    {
+        return $this->belongsToMany(FeatureBundle::class, 'bundle_features')
+            ->withTimestamps();
+    }
 }

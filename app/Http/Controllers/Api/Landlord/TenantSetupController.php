@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Landlord;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
+use App\Models\Landlord\Feature;
+use App\Models\Landlord\TenantFeature;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
@@ -87,7 +89,6 @@ class TenantSetupController extends Controller
 
                     // Currency settings
                     Setting::set('currency', 'local_currency', $validated['currency']['local_currency']);
-                    Setting::set('currency', 'system_currency_mode', $validated['currency']['system_currency_mode']);
 
                     // Seed USD as the default base currency
                     TenantCurrencyController::seedUsdIfMissing();
@@ -108,6 +109,17 @@ class TenantSetupController extends Controller
                     }
                 });
             });
+
+            // Sync multi_currency feature flag based on chosen mode
+            $multiCurrencyFeature = Feature::where('key', 'multi_currency')->first();
+            if ($multiCurrencyFeature) {
+                $isMulti = ($validated['currency']['system_currency_mode'] === 'multi');
+                TenantFeature::updateOrCreate(
+                    ['tenant_id' => $tenant->id, 'feature_id' => $multiCurrencyFeature->id],
+                    ['is_enabled' => $isMulti]
+                );
+                TenantFeature::clearCache($tenant->id);
+            }
 
             return ApiResponse::store('Tenant setup completed successfully', [
                 'tenant_id'   => $tenant->id,
@@ -171,10 +183,6 @@ class TenantSetupController extends Controller
 
         if (empty(Setting::get('currency', 'local_currency'))) {
             $missing[] = 'local_currency not set';
-        }
-
-        if (empty(Setting::get('currency', 'system_currency_mode'))) {
-            $missing[] = 'system_currency_mode not set';
         }
 
         return ['passed' => empty($missing), 'missing' => $missing];

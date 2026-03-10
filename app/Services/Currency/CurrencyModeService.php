@@ -2,6 +2,7 @@
 
 namespace App\Services\Currency;
 
+use App\Models\Landlord\TenantFeature;
 use App\Models\Setting;
 
 class CurrencyModeService
@@ -18,7 +19,7 @@ class CurrencyModeService
         return [
             'local_currency'       => CurrencyService::getLocalCurrencyCode(),
             'local_currency_id'    => CurrencyService::getLocalCurrencyId(),
-            'system_currency_mode' => Setting::get('currency', 'system_currency_mode', self::MODE_MULTI),
+            'system_currency_mode' => TenantFeature::isEnabled('multi_currency') ? self::MODE_MULTI : self::MODE_SINGLE,
         ];
     }
 }

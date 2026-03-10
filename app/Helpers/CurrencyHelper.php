@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\Landlord\TenantFeature;
 use App\Models\Setups\Generals\Currencies\Currency;
 use Illuminate\Support\Facades\Log;
 
@@ -33,8 +34,19 @@ class CurrencyHelper {
         self::$currencies = null;
     }
 
+    /**
+     * Convert an amount to its USD equivalent.
+     *
+     * NOTE: In single-currency mode (multi_currency feature OFF), all amounts
+     * are treated as 1:1 with USD and returned as-is. This is intentional —
+     * do NOT add per-call overrides; the mode is enforced centrally here.
+     */
     public static function toUsd( int $currencyId, float $amount, ?float $rate = null): float
     {
+        if (!TenantFeature::isEnabled('multi_currency')) {
+            return $amount;
+        }
+
         $currency = self::getCurrency($currencyId);
 
         // If currency not found, return amount as-is (assume it's already in USD)
@@ -66,8 +78,18 @@ class CurrencyHelper {
         }
     }
 
+    /**
+     * Convert a USD amount back to the given currency.
+     *
+     * NOTE: In single-currency mode (multi_currency feature OFF), returns the
+     * amount as-is (1:1 with USD). Enforced centrally — see toUsd().
+     */
     public static function fromUsd(int $currencyId, float $amountUsd, ?float $rate = null): float
     {
+        if (!TenantFeature::isEnabled('multi_currency')) {
+            return $amountUsd;
+        }
+
         $currency = self::getCurrency($currencyId);
 
         // If currency not found, return amount as-is (assume it stays in USD)

@@ -20,7 +20,6 @@ class TenantSettingsController extends Controller
      */
     private const ONE_TIME_KEYS = [
         'currency.local_currency',
-        'currency.system_currency_mode',
     ];
 
     /**
@@ -28,8 +27,7 @@ class TenantSettingsController extends Controller
      * Add new controllable settings here as needed.
      */
     private const ALLOWED_SETTINGS = [
-        'local_currency'       => ['group' => 'currency', 'rule' => 'required|string|size:3'],
-        'system_currency_mode' => ['group' => 'currency', 'rule' => 'required|string|in:single,multi'],
+        'local_currency' => ['group' => 'currency', 'rule' => 'required|string|size:3'],
     ];
 
     /**

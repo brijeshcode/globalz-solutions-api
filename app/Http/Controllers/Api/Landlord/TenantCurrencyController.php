@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Landlord;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
+use App\Models\Landlord\TenantFeature;
 use App\Models\Setting;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Tenant;
@@ -84,8 +85,7 @@ class TenantCurrencyController extends Controller
         try {
             $currency = $tenant->execute(function () use ($validated) {
                 // In single-currency mode only 2 currencies are allowed: USD + local currency
-                $mode = Setting::get('currency', 'system_currency_mode', 'multi');
-                if ($mode === 'single' && Currency::count() >= 2) {
+                if (!TenantFeature::isEnabled('multi_currency') && Currency::count() >= 2) {
                     throw new \InvalidArgumentException(
                         'This tenant is in single-currency mode. Only 2 currencies are allowed (USD + local currency). No additional currencies can be added.'
                     );

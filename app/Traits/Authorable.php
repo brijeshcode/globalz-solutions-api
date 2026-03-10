@@ -4,25 +4,45 @@ namespace App\Traits;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 trait Authorable
 {
+    /**
+     * Resolve the auth user ID that is safe to write in the current tenant DB.
+     * Returns null when the authenticated user (e.g. a cross-tenant developer)
+     * does not exist in this tenant's users table, preventing FK violations.
+     */
+    private static function resolveAuthorId(): ?int
+    {
+        if (!Auth::check()) {
+            return null;
+        }
+
+        $userId = Auth::id();
+
+        // Cache per-request per-user so we only hit the DB once
+        static $cache = [];
+        if (!array_key_exists($userId, $cache)) {
+            $cache[$userId] = DB::table('users')->where('id', $userId)->exists();
+        }
+
+        return $cache[$userId] ? $userId : null;
+    }
+
     protected static function bootAuthorable()
     {
         // Set created_by when creating
         static::creating(function ($model) {
-            if (Auth::check()) {
-                $model->created_by = auth::id();
-                $model->updated_by = auth::id();
-            }
+            $authorId = static::resolveAuthorId();
+            $model->created_by = $authorId;
+            $model->updated_by = $authorId;
         });
 
         // Set updated_by when updating
         static::updating(function ($model) {
-            if (auth::check()) {
-                $model->updated_by = auth::id();
-            }
+            $model->updated_by = static::resolveAuthorId();
         });
     }
 
