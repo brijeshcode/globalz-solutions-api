@@ -13,7 +13,9 @@ use App\Models\Accounts\AccountAdjust;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Employees\AdvanceLoan;
 use App\Models\Employees\Salary;
+use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
+use App\Models\Landlord\TenantFeature;
 use App\Models\Suppliers\SupplierPayment;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -352,36 +354,49 @@ class AccountStatementController extends Controller
 
     private function getExpenseTransactions(Request $request, Account $account, ?string $noteSearch = null)
     {
-        $query = ExpenseTransaction::query()
-            ->select('id', 'code', 'date', 'amount', 'subject', 'note', 'expense_category_id', 'account_id', 'created_by', 'created_at');
+        $featureEnabled = TenantFeature::isEnabled('expense_deferred_payment');
 
-        $this->applyFilters($query, $request, $account, $noteSearch);
+        $query = ExpensePayment::query()
+            ->select('id', 'prefix', 'expense_transaction_id', 'date', 'amount', 'note', 'account_id', 'created_by', 'created_at')
+            ->where('account_id', $account->id);
 
-        return $query->with(['expenseCategory:id,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
+        $this->applyDateAndSearchFilters($query, $request, $noteSearch);
+
+        return $query->with([
+            'expenseTransaction:id,code,expense_category_id,subject',
+            'expenseTransaction.expenseCategory:id,name',
+            'createdBy:id,name',
+        ])->get()->map(function ($item) use ($account, $featureEnabled) {
+            $expCode        = ExpenseTransaction::PREFIX . $item->expenseTransaction?->getRawOriginal('code');
+            $paymentCode    = ($item->prefix ?? ExpensePayment::DEFAULT_PREFIX) . $item->id;
+            $transactionNumber = $featureEnabled 
+                ? "{$expCode} / {$paymentCode}"
+                : $expCode;
+
             return [
-                'id' => $item->id,
-                'transaction_number' => $item->code,
-                'code' => $item->getRawOriginal('code'),
-                'prefix' => ExpenseTransaction::PREFIX,
-                'name' => $item->expenseCategory->name,
-                'type' => 'Expense',
-                'date' => $item->date->format('Y-m-d'),
-                'amount' => -$item->amount,
-                'debit' => $item->amount,
-                'credit' => 0,
-                'note' => $item->note ?? $item->subject,
-                'by' => $item->createdBy?->name,
+                'id'                 => $item->expenseTransaction->id,
+                'transaction_number' => $transactionNumber,
+                'code'               => $item->expenseTransaction?->getRawOriginal('code'),
+                'prefix'             => ExpenseTransaction::PREFIX,
+                'name'             => $item->expenseTransaction?->expenseCategory?->name,
+                'type'             => 'Expense',
+                'date'             => $item->date->format('Y-m-d'),
+                'amount'           => -$item->amount,
+                'debit'            => $item->amount,
+                'credit'           => 0,
+                'note'             => $item->note ?? $item->expenseTransaction?->subject,
+                'by'               => $item->createdBy?->name,
                 'expense_category' => [
-                    'id' => $item->expenseCategory->id,
-                    'name' => $item->expenseCategory->name,
+                    'id'   => $item->expenseTransaction?->expenseCategory?->id,
+                    'name' => $item->expenseTransaction?->expenseCategory?->name,
                 ],
-                'account' => [
-                    'id' => $account->id,
+                'account'          => [
+                    'id'   => $account->id,
                     'name' => $account->name,
                 ],
                 'transaction_type' => 'expense',
-                'source_table' => 'expense_transactions',
-                'timestamp' => $item->date->timestamp,
+                'source_table'     => 'expense_payments',
+                'timestamp'        => $item->date->timestamp,
             ];
         });
     }

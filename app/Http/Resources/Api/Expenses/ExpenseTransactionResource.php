@@ -20,8 +20,12 @@ class ExpenseTransactionResource extends JsonResource
             'expense_month' => $this->expense_month?->format('Y-m'),
             'code' => $this->code,
             'subject' => $this->subject,
-            'amount' => $this->amount,
-            'amount_usd' => $this->amount_usd,
+            'amount'         => $this->amount,
+            'paid_amount'     => $this->paid_amount,
+            'paid_amount_usd' => $this->paid_amount_usd,
+            'due_amount'      => $this->due_amount,
+            'payment_status'  => $this->payment_status,
+            'amount_usd'      => $this->amount_usd,
             'order_number' => $this->order_number,
             'check_number' => $this->check_number,
             'bank_ref_number' => $this->bank_ref_number,
@@ -49,6 +53,24 @@ class ExpenseTransactionResource extends JsonResource
                 'id' => $this->updatedBy?->id,
                 'name' => $this->updatedBy?->name,
             ],
+
+            // Payments
+            'payments' => $this->whenLoaded('payments', function () {
+                return $this->payments->map(fn ($p) => [
+                    'id'              => $p->id,
+                    'code'            => $p->code,
+                    'prefix'          => $p->prefix,
+                    'date'            => $p->date?->format('Y-m-d'),
+                    'amount'          => $p->amount,
+                    'amount_usd'      => $p->amount_usd,
+                    'note'            => $p->note,
+                    'order_number'    => $p->order_number,
+                    'check_number'    => $p->check_number,
+                    'bank_ref_number' => $p->bank_ref_number,
+                    'account'         => $p->account ? ['id' => $p->account->id, 'name' => $p->account->name] : null,
+                    'created_at'      => $p->created_at?->format('Y-m-d H:i:s'),
+                ]);
+            }),
 
             // Documents
             'documents' => $this->whenLoaded('documents', function () {

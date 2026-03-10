@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Api\Expenses;
 
 use App\Helpers\CurrencyHelper;
+use App\Services\Currency\CurrencyService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Expenses\ExpenseTransactionsStoreRequest;
 use App\Http\Requests\Api\Expenses\ExpenseTransactionsUpdateRequest;
 use App\Http\Resources\Api\Expenses\ExpenseTransactionResource;
 use App\Models\Accounts\Account;
+use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
+use App\Models\Landlord\TenantFeature;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
+use App\Models\Setups\Generals\Currencies\Currency;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -47,47 +51,81 @@ class ExpenseTransactionsController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     *
+     * Behaviour depends on the tenant feature flag (expense_deferred_payment):
+     *  - Feature OFF (legacy): if account_id provided, an instant ExpensePayment is auto-created.
+     *  - Feature ON: payment is never auto-created; use the payment endpoints instead.
+     */
+    /**
+     * todo:
+     *
+     * if multi currency enable and expense payment deffere is enabled then we need to select currency when creating the new expense 
+     * so the payment will use this currency to show those accounts which will have that currency only .
      */
     public function store(ExpenseTransactionsStoreRequest $request): JsonResponse
     {
-        $data = $request->validated();
+        $data           = $request->validated();
+        $hasAccount     = !empty($data['account_id']);
+        $featureEnabled = TenantFeature::isEnabled('expense_deferred_payment');
+        $multiCurrencyEnabled = TenantFeature::isEnabled('multi_currency');
 
-        // Fetch account to get currency details
-        $account = Account::with('currency.activeRate')->findOrFail($data['account_id']);
+        // Resolve currency from account when account is provided
+        if ($hasAccount) {
+            $account               = Account::with('currency.activeRate')->findOrFail($data['account_id']);
+            $data['currency_id']   = $account->currency_id;
+            $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
+            $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $data['amount'], $data['currency_rate']);
+        } else if ($multiCurrencyEnabled) {
+            $currency = Currency::find($request->currency_id);
+            $data['currency_id'] = $request->currency_id;
+            $data['currency_rate'] = $currency->activeRate->rate ?? 1;
+            $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $data['amount'], $data['currency_rate']);
+        } else {
+            $data['currency_id'] = CurrencyService::getLocalCurrencyId();
+            $data['amount_usd']  = $data['amount'];
+        }
 
-        // Set currency_id from account
-        $data['currency_id'] = $account->currency_id;
-
-        // Get currency rate (use active rate or default to 1)
-        $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
-
-        // Convert amount to USD
-        $data['amount_usd'] = CurrencyHelper::toUsd(
-            $data['currency_id'],
-            $data['amount'],
-            $data['currency_rate']
-        );
+        // Legacy tenants: expense is instantly fully paid, so mirror amount into paid fields.
+        if ($hasAccount && !$featureEnabled) {
+            $data['paid_amount']     = $data['amount'];
+            $data['paid_amount_usd'] = $data['amount_usd'] ?? null;
+        }
 
         $expenseTransaction = ExpenseTransaction::create($data);
-        
+
+        // Legacy tenants: auto-create an instant full payment when account is provided.
+        // Feature tenants: payment is handled separately via payment endpoints.
+        if ($hasAccount && !$featureEnabled) {
+            ExpensePayment::create([
+                'expense_transaction_id' => $expenseTransaction->id,
+                'account_id'             => $data['account_id'],
+                'amount'                 => $data['amount'],
+                'amount_usd'             => $data['amount_usd'] ?? null,
+                'currency_id'            => $data['currency_id'] ?? null,
+                'currency_rate'          => $data['currency_rate'] ?? null,
+                'date'                   => $data['date'],
+                'order_number'           => $data['order_number'] ?? null,
+                'check_number'           => $data['check_number'] ?? null,
+                'bank_ref_number'        => $data['bank_ref_number'] ?? null,
+            ]);
+        }
+
         // Handle document uploads
         if ($request->hasFile('documents')) {
             $files = $request->file('documents');
             if (!is_array($files)) {
                 $files = [$files];
             }
-            
-            // Validate each document file
+
             foreach ($files as $file) {
                 $validationErrors = $expenseTransaction->validateDocumentFile($file);
                 if (!empty($validationErrors)) {
                     return ApiResponse::customError('Document validation failed: ' . implode(', ', $validationErrors), 422);
                 }
             }
-            
-            // Upload documents
+
             $expenseTransaction->createDocuments($files, [
-                'type' => 'expense_transaction_document'
+                'type' => 'expense_transaction_document',
             ]);
         }
 
@@ -97,7 +135,8 @@ class ExpenseTransactionsController extends Controller
             'expenseCategory:id,name',
             'account:id,name',
             'currency:id,name,code,symbol',
-            'documents'
+            'documents',
+            'payments.account:id,name',
         ]);
 
         return ApiResponse::store(
@@ -111,14 +150,20 @@ class ExpenseTransactionsController extends Controller
      */
     public function show(ExpenseTransaction $expenseTransaction): JsonResponse
     {
-        $expenseTransaction->load([
+        $relations = [
             'createdBy:id,name',
             'updatedBy:id,name',
             'expenseCategory:id,name',
             'account:id,name',
             'currency:id,name,code,symbol',
-            'documents'
-        ]);
+            'documents',
+        ];
+
+        if (TenantFeature::isEnabled('expense_deferred_payment')) {
+            $relations[] = 'payments.account:id,name';
+        }
+
+        $expenseTransaction->load($relations);
 
         return ApiResponse::show(
             'Expense transaction retrieved successfully',
@@ -131,32 +176,63 @@ class ExpenseTransactionsController extends Controller
      */
     public function update(ExpenseTransactionsUpdateRequest $request, ExpenseTransaction $expenseTransaction): JsonResponse
     {
-        $data = $request->validated();
+        $data           = $request->validated();
+        $featureEnabled = TenantFeature::isEnabled('expense_deferred_payment');
 
-        // If account_id or amount changed, recalculate currency fields
-        if (isset($data['account_id']) && $data['account_id'] != $expenseTransaction->account_id) {
-            // Account changed - fetch new account's currency
-            $account = Account::with('currency.activeRate')->findOrFail($data['account_id']);
-            $data['currency_id'] = $account->currency_id;
-            $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
+        $multiCurrencyEnabled = TenantFeature::isEnabled('multi_currency');
+        $hasAccount           = !empty($data['account_id']);
 
-            // Convert amount to USD
-            $amount = $data['amount'] ?? $expenseTransaction->amount;
-            $data['amount_usd'] = CurrencyHelper::toUsd(
-                $data['currency_id'],
-                $amount,
-                $data['currency_rate']
-            );
-        } elseif (isset($data['amount']) && $data['amount'] != $expenseTransaction->amount) {
-            // Amount changed but same account - use existing currency
-            $data['amount_usd'] = CurrencyHelper::toUsd(
-                $expenseTransaction->currency_id,
-                $data['amount'],
-                $expenseTransaction->currency_rate
-            );
+        if (!$featureEnabled) {
+            // Legacy tenants: recalculate currency on the expense when account or amount changes.
+            if ($hasAccount && $data['account_id'] != $expenseTransaction->account_id) {
+                $account               = Account::with('currency.activeRate')->findOrFail($data['account_id']);
+                $data['currency_id']   = $account->currency_id;
+                $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
+                $amount                = $data['amount'] ?? $expenseTransaction->amount;
+                $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $amount, $data['currency_rate']);
+            } elseif (isset($data['amount']) && $data['amount'] != $expenseTransaction->amount) {
+                $data['amount_usd'] = CurrencyHelper::toUsd(
+                    $expenseTransaction->currency_id,
+                    $data['amount'],
+                    $expenseTransaction->currency_rate
+                );
+            }
+
+            // Expense is always fully paid in legacy mode; keep paid fields in sync.
+            $data['paid_amount']     = $data['amount']     ?? $expenseTransaction->amount;
+            $data['paid_amount_usd'] = $data['amount_usd'] ?? $expenseTransaction->amount_usd;
+        } else {
+            // Feature tenants: recalculate amount_usd when amount or currency changes.
+            if ($hasAccount) {
+                $account               = Account::with('currency.activeRate')->findOrFail($data['account_id']);
+                $data['currency_id']   = $account->currency_id;
+                $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
+                $amount                = $data['amount'] ?? $expenseTransaction->amount;
+                $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $amount, $data['currency_rate']);
+            } elseif ($multiCurrencyEnabled) {
+                $currencyId   = $data['currency_id']   ?? $expenseTransaction->currency_id;
+                $currencyRate = $data['currency_rate'] ?? $expenseTransaction->currency_rate ?? 1;
+                $amount       = $data['amount']        ?? $expenseTransaction->amount;
+                $data['amount_usd'] = CurrencyHelper::toUsd($currencyId, $amount, $currencyRate);
+            } else {
+                $data['currency_id'] = CurrencyService::getLocalCurrencyId();
+                $data['amount_usd']  = $data['amount'] ?? $expenseTransaction->amount;
+            }
         }
 
         $expenseTransaction->update($data);
+
+        // Legacy tenants: keep the auto-created payment in sync with expense changes.
+        if (!$featureEnabled) {
+            $payment = $expenseTransaction->payments()->first();
+            if ($payment) {
+                $syncKeys    = ['account_id', 'amount', 'amount_usd', 'currency_id', 'currency_rate', 'date', 'order_number', 'check_number', 'bank_ref_number'];
+                $paymentData = array_intersect_key($data, array_flip($syncKeys));
+                if (!empty($paymentData)) {
+                    $payment->update($paymentData);
+                }
+            }
+        }
 
         // Handle document uploads
         if ($request->hasFile('documents')) {
@@ -184,7 +260,8 @@ class ExpenseTransactionsController extends Controller
             'expenseCategory:id,name',
             'account:id,name',
             'currency:id,name,code,symbol',
-            'documents'
+            'documents',
+            'payments.account:id,name',
         ]);
 
         return ApiResponse::update(
@@ -362,16 +439,23 @@ class ExpenseTransactionsController extends Controller
     {
         $query = $this->query($request);
 
+        $featureEnabled = TenantFeature::isEnabled('expense_deferred_payment');
+
         $stats = [
-            'total_transactions' => (clone $query)->count(),
-            'total_amount_usd' => (clone $query)->sum('amount_usd'),
+            'total_transactions'      => (clone $query)->count(),
+            'total_amount_usd'        => (clone $query)->sum('amount_usd'),
             'this_month_transactions' => (clone $query)->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
                 ->count(),
-            'this_month_amount_usd' => (clone $query)->whereMonth('date', now()->month)
+            'this_month_amount_usd'   => (clone $query)->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
                 ->sum('amount_usd'),
         ];
+
+        if ($featureEnabled) {
+            $stats['total_paid'] = (clone $query)->sum('paid_amount_usd');
+            $stats['total_due']      = (clone $query)->selectRaw('COALESCE(SUM(amount_usd - paid_amount_usd), 0) as due')->value('due');
+        }
 
         return ApiResponse::show('Expense transaction statistics retrieved successfully', $stats);
     }

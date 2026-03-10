@@ -2,7 +2,6 @@
 
 namespace App\Models\Expenses;
 
-use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Expenses\ExpenseCategory;
@@ -16,12 +15,13 @@ use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ExpenseTransaction extends Model
 {
     public const PREFIX = 'EXP';
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasBooleanFilters,HasDocuments, Searchable, Sortable, HasDateFilters;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasBooleanFilters, HasDocuments, Searchable, Sortable, HasDateFilters;
 
     protected $fillable = [
         'date',
@@ -30,6 +30,8 @@ class ExpenseTransaction extends Model
         'account_id',
         'subject',
         'amount',
+        'paid_amount',
+        'paid_amount_usd',
         'amount_usd',
         'currency_id',
         'currency_rate',
@@ -42,6 +44,8 @@ class ExpenseTransaction extends Model
     protected $casts = [
         'date' => 'date',
         'amount' => 'decimal:2',
+        'paid_amount' => 'decimal:2',
+        'paid_amount_usd' => 'decimal:8',
         'amount_usd' => 'decimal:8',
         'currency_rate' => 'decimal:4',
         'expense_month' => 'date:Y-m-01',
@@ -62,6 +66,7 @@ class ExpenseTransaction extends Model
         'code',
         'subject',
         'amount',
+        'paid_amount',
         'order_number',
         'check_number',
         'bank_ref_number',
@@ -72,18 +77,45 @@ class ExpenseTransaction extends Model
     protected $defaultSortField = 'id';
     protected $defaultSortDirection = 'desc';
 
-    /**
-     * Get the code attribute with "EXP" prefix
-     */
+    // ─── Accessors ────────────────────────────────────────────────────────────
+
     public function getCodeAttribute($value): ?string
     {
         return $value ? self::PREFIX . $value : null;
     }
 
+    /**
+     * How much is still owed. Derived — never stored.
+     */
+    public function getDueAmountAttribute(): float
+    {
+        return max(0, (float) $this->amount - (float) $this->paid_amount);
+    }
+
+    /**
+     * Derived from paid_amount vs amount — no column stored.
+     * Returns: 'unpaid' | 'partial' | 'paid'
+     */
+    public function getPaymentStatusAttribute(): string
+    {
+        $paid  = (float) $this->paid_amount;
+        $total = (float) $this->amount;
+
+        if ($paid <= 0) {
+            return 'unpaid';
+        }
+
+        return $paid >= $total ? 'paid' : 'partial';
+    }
+
+    // ─── Mutators ─────────────────────────────────────────────────────────────
+
     public function setExpenseMonthAttribute($value): void
     {
         $this->attributes['expense_month'] = $value ? $value . '-01' : null;
     }
+
+    // ─── Relationships ────────────────────────────────────────────────────────
 
     public function expenseCategory(): BelongsTo
     {
@@ -99,6 +131,13 @@ class ExpenseTransaction extends Model
     {
         return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(ExpensePayment::class);
+    }
+
+    // ─── Scopes ───────────────────────────────────────────────────────────────
 
     public function scopeByDateRange($query, $startDate, $endDate)
     {
@@ -120,9 +159,8 @@ class ExpenseTransaction extends Model
         return $query->where('code', $code);
     }
 
-    /**
-     * Generate the next expense transaction code from settings
-     */
+    // ─── Code generation ──────────────────────────────────────────────────────
+
     public static function generateNextExpenseTransactionCode(): string
     {
         $defaultValue = config('app.expense_transaction_code_start', 100);
@@ -130,9 +168,6 @@ class ExpenseTransaction extends Model
         return (string) $nextNumber;
     }
 
-    /**
-     * Reserve the next code number (increment counter)
-     */
     public static function reserveNextCode(): string
     {
         $defaultValue = config('app.expense_transaction_code_start', 100);
@@ -140,31 +175,22 @@ class ExpenseTransaction extends Model
         return (string) ($newValue - 1);
     }
 
-    /**
-     * Check if a code is unique
-     */
     public static function isCodeUnique(string $code, ?int $excludeId = null): bool
     {
         $query = self::withTrashed()->where('code', $code);
-        
+
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
         }
-        
+
         return !$query->exists();
     }
 
-    /**
-     * Get the next suggested code for frontend display
-     */
     public static function getNextSuggestedCode(): string
     {
         return self::generateNextExpenseTransactionCode();
     }
 
-    /**
-     * Validate and set code for new expense transaction
-     */
     public function setExpenseTransactionCode(?string $userCode = null): string
     {
         if ($userCode) {
@@ -172,7 +198,7 @@ class ExpenseTransaction extends Model
                 throw new \InvalidArgumentException("Code '{$userCode}' is already in use.");
             }
             $this->code = $userCode;
-            
+
             $suggestedCode = self::generateNextExpenseTransactionCode();
             if ($userCode === $suggestedCode) {
                 $defaultValue = config('app.expense_transaction_code_start', 100);
@@ -181,44 +207,25 @@ class ExpenseTransaction extends Model
         } else {
             $this->code = self::reserveNextCode();
         }
-        
+
         return $this->code;
     }
 
-    /**
-     * Handle code setting on model creation
-     */
-    protected static function boot()
+    // ─── Boot ─────────────────────────────────────────────────────────────────
+
+    protected static function boot(): void
     {
         parent::boot();
-        
-        static::creating(function ($expenseTransaction) {
+
+        static::creating(function (self $expenseTransaction) {
             if (!$expenseTransaction->code) {
                 $expenseTransaction->setExpenseTransactionCode();
             }
         });
 
-        static::created(function ($expenseTransaction) {
-            AccountsHelper::removeBalance(Account::find($expenseTransaction->account_id), $expenseTransaction->amount);
-        });
-
-        static::updated(function ($expenseTransaction) {
-            $original = $expenseTransaction->getOriginal();
-
-            // If account changed, restore balance to old account and deduct from new account
-            if ($original['account_id'] != $expenseTransaction->account_id) {
-                AccountsHelper::addBalance(Account::find($original['account_id']), $original['amount']);
-                AccountsHelper::removeBalance(Account::find($expenseTransaction->account_id), $expenseTransaction->amount);
-            }
-            // If amount changed on same account, adjust the difference
-            elseif ($original['amount'] != $expenseTransaction->amount) {
-                $difference = $expenseTransaction->amount - $original['amount'];
-                AccountsHelper::removeBalance(Account::find($expenseTransaction->account_id), $difference);
-            }
-        });
-
-        static::deleted(function ($expenseTransaction) {
-            AccountsHelper::addBalance(Account::find($expenseTransaction->account_id), $expenseTransaction->amount);
+        static::deleting(function (self $expenseTransaction) {
+            // Cascade soft-delete all payments; each payment's deleted hook restores its account balance.
+            $expenseTransaction->payments()->each(fn ($p) => $p->delete());
         });
     }
 }

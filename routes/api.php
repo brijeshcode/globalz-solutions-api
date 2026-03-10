@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Accounts\AccountAdjustsController;
 use App\Http\Controllers\Api\Accounts\IncomeTransactionsController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\LoginLogsController;
+use App\Http\Controllers\Api\FeatureFlagsController;
 use App\Http\Controllers\Api\HomePageController;
 use App\Http\Controllers\Api\Customers\CustomersController;
 use App\Http\Controllers\Api\Customers\CustomerCreditDebitNotesController;
@@ -47,6 +48,7 @@ use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
+use App\Http\Controllers\Api\Expenses\ExpensePaymentsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use App\Http\Controllers\Api\Employees\AdvanceLoansController;
 use App\Http\Controllers\Api\Employees\CommissionTargetsController;
@@ -103,6 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/features', [FeatureFlagsController::class, 'index'])->name('features.index');
     Route::post('/unlock-ip', [AuthController::class, 'unlockIp']);
     Route::post('/cache/invalidate', [CacheVersionController::class, 'invalidate'])->name('cache.invalidate');
 
@@ -887,6 +890,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
 
     });
+
+    // Expense Payments — standalone endpoints (no expense transaction in URL)
+    Route::get('expense-payments', [ExpensePaymentsController::class, 'listAll'])->name('expense-payments.index');
+    Route::put('expense-payments/{payment}', [ExpensePaymentsController::class, 'updatePayment'])->name('expense-payments.update');
+    Route::delete('expense-payments/{payment}', [ExpensePaymentsController::class, 'destroyPayment'])->name('expense-payments.destroy');
+
+    // Expense Payments (deferred / partial payment feature)
+    Route::controller(ExpensePaymentsController::class)
+        ->prefix('expense-transactions/{expenseTransaction}/payments')
+        ->name('expense-transactions.payments.')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{payment}', 'show')->name('show');
+            Route::put('{payment}', 'update')->name('update');
+            Route::delete('{payment}', 'destroy')->name('destroy');
+        });
 
     // income transactions controller
     Route::controller(IncomeTransactionsController::class)->prefix('income-transactions')->name('income-transactions.')->group(function () {
