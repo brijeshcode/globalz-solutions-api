@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\Authorable;
 use App\Traits\HasDocuments;
+use App\Traits\InvalidatesCacheVersion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -12,7 +13,9 @@ use Illuminate\Support\Facades\DB;
 
 class Setting extends Model
 {
-    use HasFactory, Authorable, HasDocuments;
+    use HasFactory, Authorable, HasDocuments, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'settings';
 
     protected $fillable = [
         'group_name',

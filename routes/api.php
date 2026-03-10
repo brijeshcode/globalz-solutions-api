@@ -72,6 +72,7 @@ use App\Http\Controllers\Api\Reports\Sales\CategorySalesReportController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
+use App\Http\Controllers\Api\Settings\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 // API Root - Health check / API info (no tenant required)
@@ -998,6 +999,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/', [InvoiceSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [InvoiceSettingsController::class, 'reset'])->name('reset');
         });
+
+        // All tenant settings (read-only)
+        Route::get('/all', [SettingsController::class, 'index'])->name('settings.all');
 
         // TODO: purchase, customer, system settings controllers
 
