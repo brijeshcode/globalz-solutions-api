@@ -126,7 +126,7 @@ class SupplierPaymentsController extends Controller
 
     public function destroy(SupplierPayment $supplierPayment): JsonResponse
     {
-        if (!RoleHelper::isSuperAdmin()) {
+        if (!RoleHelper::canSuperAdmin()) {
             return ApiResponse::customError('Only super administrators can delete supplier payments', 403);
         }
 
