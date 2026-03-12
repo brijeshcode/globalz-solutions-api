@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Landlord;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\AttachCacheVersion;
 use App\Http\Responses\ApiResponse;
 use App\Models\Landlord\TenantFeature;
 use App\Models\Setting;
@@ -174,6 +175,11 @@ class TenantCurrencyController extends Controller
                 } else {
                     $unchangedRates[] = $currentActiveRate;
                 }
+            }
+
+            if (!empty($updatedRates)) {
+                AttachCacheVersion::invalidate('currency_rate');
+                AttachCacheVersion::invalidate('currencies');
             }
         });
 
