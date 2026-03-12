@@ -277,10 +277,12 @@
                         <td>{{ $sale->value_date->format('Y-m-d') }}</td>
                     </tr>
                     @endif
+                    @if($invoiceSettings['is_multi_currency'])
                     <tr>
                         <td class="info-label">Currency:</td>
                         <td>{{ $sale->currency->code ?? 'N/A' }}</td>
                     </tr>
+                    @endif
                     @if($sale->salesperson)
                     <tr>
                         <td class="info-label">Salesperson:</td>

@@ -25,11 +25,11 @@ class CommonHelper {
     
     public static function invoiceNb1(): string
     {
-        return Setting::get('invoice', 'note_1', 'Payment in USD or Market Price.');
+        return Setting::get('invoice', 'note_1', '');
     }
 
     public static function invoiceNb2(): string
     {
-        return Setting::get('invoice', 'note_2', 'ملاحظة : ألضريبة على ألقيمة المضافة لا تسترد بعد ثلاثة أشهر من تاريخ إصدار ألفاتورة');
+        return Setting::get('invoice', 'note_2', '');
     }
 }

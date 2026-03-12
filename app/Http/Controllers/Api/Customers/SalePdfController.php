@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Helpers\FeatureHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Customers\Sale;
 use App\Helpers\SettingsHelper;
@@ -34,6 +35,7 @@ class SalePdfController extends Controller
             // Get company data from settings
             $companyData = $this->getCompanyData();
 
+            $isMultiCurrency = FeatureHelper::isMultiCurrency();
             // Calculate totals for items
             $totalVolume = $sale->items->sum('total_volume_cbm');
             $totalWeight = $sale->items->sum('total_weight_kg');
@@ -51,6 +53,7 @@ class SalePdfController extends Controller
                 'show_local_currency_total' => $notLocalCurrency && ($invoiceGroup['show_local_currency_total'] ?? false),
                 'show_note_1'               => $invoiceGroup['show_note_1'] ?? true,
                 'show_note_2'               => $invoiceGroup['show_note_2'] ?? true,
+                'is_multi_currency'   => $isMultiCurrency,
             ];
 
             // Prepare data for the view
@@ -62,7 +65,7 @@ class SalePdfController extends Controller
                 'invoiceSettings' => $invoiceSettings,
                 // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
-
+           
             // Render the Blade view to HTML
             $html = view('pdfs.sale-invoice', $data)->render();
 
