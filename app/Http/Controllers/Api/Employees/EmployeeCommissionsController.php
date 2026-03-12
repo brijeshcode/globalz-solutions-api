@@ -11,6 +11,7 @@ use App\Models\Customers\Sale;
 use App\Models\Employees\CommissionTargetRule;
 use App\Models\Employees\Employee;
 use App\Models\Employees\EmployeeCommissionTarget;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -85,8 +86,7 @@ class EmployeeCommissionsController extends Controller
         $saleIncludeType = $saleIncludeType ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
         $paymentIncludeType = $paymentIncludeType ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
 
-        $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
-        $lastDay = date('Y-m-t', strtotime($firstDay));
+        [$firstDay, $lastDay] = $this->getMonthDateRange($year, $month);
 
         // Fetch sales based on sale include_type
         $salesQuery = Sale::query()
@@ -250,8 +250,7 @@ class EmployeeCommissionsController extends Controller
             return [];
         }
 
-        $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
-        $lastDay = date('Y-m-t', strtotime($firstDay));
+        [$firstDay, $lastDay] = $this->getMonthDateRange($year, $month);
 
         // Get sales grouped by prefix
         $salesByPrefix = Sale::query()
@@ -386,8 +385,7 @@ class EmployeeCommissionsController extends Controller
      */
     private function getBusinessStatsByIncludeType(int $employeeId, int $month, int $year, string $includeType): array
     {
-        $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
-        $lastDay = date('Y-m-t', strtotime($firstDay));
+        [$firstDay, $lastDay] = $this->getMonthDateRange($year, $month);
 
         // Get sales grouped by prefix based on include_type
         $salesQuery = Sale::query()
@@ -531,8 +529,7 @@ class EmployeeCommissionsController extends Controller
      */
     private function getSalesAndReturnsStats(int $employeeId, int $month, int $year, string $includeType): array
     {
-        $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
-        $lastDay = date('Y-m-t', strtotime($firstDay));
+        [$firstDay, $lastDay] = $this->getMonthDateRange($year, $month);
 
         // Get sales based on include_type
         $salesQuery = Sale::query()
@@ -620,8 +617,7 @@ class EmployeeCommissionsController extends Controller
      */
     private function getPaymentsStats(int $employeeId, int $month, int $year, string $includeType): array
     {
-        $firstDay = "{$year}-" . str_pad($month, 2, '0', STR_PAD_LEFT) . "-01";
-        $lastDay = date('Y-m-t', strtotime($firstDay));
+        [$firstDay, $lastDay] = $this->getMonthDateRange($year, $month);
 
         // Get payments based on include_type
         $paymentsQuery = CustomerPayment::query()
@@ -670,6 +666,14 @@ class EmployeeCommissionsController extends Controller
      * Shared method to calculate commission data for an employee (optimized)
      * This method is used by both getMonthlyCommission and getEmployeeMonthlyCommission
      */
+    private function getMonthDateRange(int $year, int $month): array
+    {
+        $firstDay = Carbon::create($year, $month, 1)->startOfDay();
+        $lastDay  = $firstDay->copy()->endOfMonth()->endOfDay();
+
+        return [$firstDay, $lastDay];
+    }
+
     private function calculateEmployeeCommissionData(int $employeeId, int $month, int $year): array
     {
         // Get commission target for this employee
