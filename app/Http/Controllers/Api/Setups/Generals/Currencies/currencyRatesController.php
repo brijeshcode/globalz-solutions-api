@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Setups\Generals\Currencies;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\AttachCacheVersion;
 use App\Http\Resources\Api\Setups\Generals\Currencies\currencyRateResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setups\Generals\Currencies\currencyRate;
@@ -92,6 +93,9 @@ class currencyRatesController extends Controller
 
         $totalUpdated = count($updatedRates);
         $totalUnchanged = count($unchangedRates);
+
+        AttachCacheVersion::invalidate('currency_rate');
+        AttachCacheVersion::invalidate('currencies');
 
         return ApiResponse::update(
             "Currency rates updated successfully. {$totalUpdated} rates updated, {$totalUnchanged} rates unchanged.",
