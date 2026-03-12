@@ -3,10 +3,9 @@
 namespace App\Http\Requests\Api\Suppliers;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\FeatureHelper;
 use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 
 class SupplierPaymentsUpdateRequest extends FormRequest
 {
@@ -78,13 +77,12 @@ class SupplierPaymentsUpdateRequest extends FormRequest
         $validator->after(function ($validator) {
             $amount = $this->input('amount');
             $amountUsd = $this->input('amount_usd');
-            $currencyRate = $this->input('currency_rate');
+            $currencyRate = FeatureHelper::isMultiCurrency() ?  $this->input('currency_rate') : 1 ;
             $currencyId = $this->input('currency_id');
 
             if ($amount && $amountUsd && $currencyRate && $currencyId) {
                 $expectedAmountUsd = CurrencyHelper::toUsd($currencyId, $amount, $currencyRate);
                 $tolerance = 0.01;
-
                 if (abs($expectedAmountUsd - $amountUsd) > $tolerance) {
                     $validator->errors()->add('amount_usd', 'Amount USD does not match the calculated value based on currency rate');
                 }
