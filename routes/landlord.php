@@ -60,6 +60,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{tenant}/currencies', [TenantCurrencyController::class, 'store'])->name('currencies.store');
         Route::put('{tenant}/currencies/{code}', [TenantCurrencyController::class, 'update'])->name('currencies.update');
 
+        // ── Currency Rates ─────────────────────────────────────────────────
+        Route::get('{tenant}/currency-rates', [TenantCurrencyController::class, 'indexRates'])->name('currency-rates.index');
+        Route::post('{tenant}/currency-rates', [TenantCurrencyController::class, 'changeRate'])->name('currency-rates.change');
+
         // ── Users ──────────────────────────────────────────────────────────
         Route::get('{tenant}/users', [TenantUserController::class, 'index'])->name('users.index');
         Route::post('{tenant}/users', [TenantUserController::class, 'store'])->name('users.store');

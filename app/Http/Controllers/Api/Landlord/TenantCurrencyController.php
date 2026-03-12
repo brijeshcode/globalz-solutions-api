@@ -7,6 +7,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Landlord\TenantFeature;
 use App\Models\Setting;
 use App\Models\Setups\Generals\Currencies\Currency;
+use App\Models\Setups\Generals\Currencies\currencyRate;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,7 +58,7 @@ class TenantCurrencyController extends Controller
         $currencies = $tenant->execute(function () {
             self::seedUsdIfMissing();
 
-            return Currency::orderBy('name')->get();
+            return Currency::with('activeRate:id,currency_id,rate')->orderBy('name')->get();
         });
 
         return ApiResponse::index('Currencies retrieved successfully', $currencies);
@@ -119,6 +120,78 @@ class TenantCurrencyController extends Controller
             'tenant_name' => $tenant->name,
             'currency'    => $currency,
         ]);
+    }
+
+    /**
+     * List active currency rates for a tenant.
+     *
+     * GET /tenants/{tenant}/currency-rates
+     */
+    public function indexRates(Tenant $tenant): JsonResponse
+    {
+        $rates = $tenant->execute(function () {
+            return currencyRate::with('currency:id,name,code,symbol')
+                ->active()
+                ->get();
+        });
+
+        return ApiResponse::index('Currency rates retrieved successfully', $rates);
+    }
+
+    /**
+     * Update currency rates for a tenant.
+     *
+     * POST /tenants/{tenant}/currency-rates
+     */
+    public function changeRate(Request $request, Tenant $tenant): JsonResponse
+    {
+        $request->validate([
+            'rates'                => 'required|array',
+            'rates.*.currency_id'  => 'required|integer',
+            'rates.*.rate'         => 'required|numeric|min:0',
+        ]);
+
+        $updatedRates   = [];
+        $unchangedRates = [];
+
+        $tenant->execute(function () use ($request, &$updatedRates, &$unchangedRates) {
+            foreach ($request->rates as $rateData) {
+                $currencyId = $rateData['currency_id'];
+                $newRate    = $rateData['rate'];
+
+                $currentActiveRate    = currencyRate::where('currency_id', $currencyId)->where('is_active', true)->first();
+                $currentRateFormatted = $currentActiveRate ? number_format($currentActiveRate->rate, 11, '.', '') : null;
+                $newRateFormatted     = number_format((float) $newRate, 11, '.', '');
+
+                if (!$currentActiveRate || bccomp($currentRateFormatted, $newRateFormatted, 11) !== 0) {
+                    currencyRate::where('currency_id', $currencyId)->where('is_active', true)->update(['is_active' => false]);
+
+                    $updatedRates[] = currencyRate::create([
+                        'currency_id' => $currencyId,
+                        'rate'        => $newRate,
+                        'is_active'   => true,
+                    ]);
+                } else {
+                    $unchangedRates[] = $currentActiveRate;
+                }
+            }
+        });
+
+        $totalUpdated   = count($updatedRates);
+        $totalUnchanged = count($unchangedRates);
+
+        return ApiResponse::update(
+            "{$totalUpdated} rates updated, {$totalUnchanged} rates unchanged.",
+            [
+                'updated_rates'   => $updatedRates,
+                'unchanged_rates' => $unchangedRates,
+                'summary'         => [
+                    'total_updated'   => $totalUpdated,
+                    'total_unchanged' => $totalUnchanged,
+                    'total_processed' => $totalUpdated + $totalUnchanged,
+                ],
+            ]
+        );
     }
 
     /**
