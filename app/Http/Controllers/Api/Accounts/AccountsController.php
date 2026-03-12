@@ -10,6 +10,7 @@ use App\Http\Requests\Api\Accounts\AccountsUpdateRequest;
 use App\Http\Resources\Api\Accounts\AccountResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
+use App\Models\Landlord\TenantFeature;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,11 @@ class AccountsController extends Controller
     public function update(AccountsUpdateRequest $request, Account $account): JsonResponse
     {
         $data = $request->validated();
+
+        if (array_key_exists('opening_balance', $data)) {
+            $diff = ($data['opening_balance'] ?? 0) - ($account->opening_balance ?? 0);
+            $data['current_balance'] = $account->current_balance + $diff;
+        }
 
         $account->update($data);
 
@@ -159,61 +165,33 @@ class AccountsController extends Controller
 
     public function stats(Request $request): JsonResponse
     {
-        $query = $this->query($request);
-        $accounts =  (clone $query)->with('currency:id,code')->get();
+        $accounts = (clone $this->query($request))->with('currency:id,code')->get();
+        $isMultiCurrencyEnabled = TenantFeature::isEnabled('multi_currency');
 
-        // Separate private and non-private accounts
-        $privateAccounts = $accounts->where('is_private', true);
+        $privateAccounts    = $accounts->where('is_private', true);
         $nonPrivateAccounts = $accounts->where('is_private', false);
 
-        // Filter accounts that should be included in total (include_in_total = true)
-        $accountsForTotal = $nonPrivateAccounts->where('include_in_total', true);
-        $privateAccountsForTotal = $privateAccounts->where('include_in_total', true);
-
-        // Calculate total current balance in USD for non-private accounts (only those with include_in_total = true)
-        $totalCurrentBalanceUsd = 0;
-
-        foreach ($accountsForTotal as $account) {
-            $balance = $account->current_balance ?? 0;
-
-            // Skip conversion if currency is already USD
-            if ($account->currency && strtoupper($account->currency->code) === 'USD') {
-                $totalCurrentBalanceUsd += $balance;
-            } else {
-                $balanceUsd = CurrencyHelper::toUsd(
-                    $account->currency_id,
-                    $balance
-                );
-                $totalCurrentBalanceUsd += $balanceUsd;
-            }
-        }
-
-        // Calculate total current balance in USD for private accounts (only those with include_in_total = true)
-        $totalPrivateBalanceUsd = 0;
-
-        foreach ($privateAccountsForTotal as $account) {
-            $balance = $account->current_balance ?? 0;
-
-            // Skip conversion if currency is already USD
-            if ($account->currency && strtoupper($account->currency->code) === 'USD') {
-                $totalPrivateBalanceUsd += $balance;
-            } else {
-                $balanceUsd = CurrencyHelper::toUsd(
-                    $account->currency_id,
-                    $balance
-                );
-                $totalPrivateBalanceUsd += $balanceUsd;
-            }
-        }
-
         $stats = [
-            'total_accounts' => $nonPrivateAccounts->count(),
-            'total_current_balance_usd' => round($totalCurrentBalanceUsd, 2),
-            'total_private_accounts' => $privateAccounts->count(),
-            'total_private_balance_usd' => round($totalPrivateBalanceUsd, 2),
+            'total_accounts'            => $nonPrivateAccounts->count(),
+            'total_current_balance_usd' => round($this->sumBalanceInUsd($nonPrivateAccounts->where('include_in_total', true), $isMultiCurrencyEnabled), 2),
+            'total_private_accounts'    => $privateAccounts->count(),
+            'total_private_balance_usd' => round($this->sumBalanceInUsd($privateAccounts->where('include_in_total', true), $isMultiCurrencyEnabled), 2),
         ];
 
         return ApiResponse::show('Account statistics retrieved successfully', $stats);
+    }
+
+    private function sumBalanceInUsd($accounts, bool $convertCurrency): float
+    {
+        return $accounts->sum(function ($account) use ($convertCurrency) {
+            $balance = $account->current_balance ?? 0;
+
+            if (!$convertCurrency || ($account->currency && strtoupper($account->currency->code) === 'USD')) {
+                return $balance;
+            }
+
+            return CurrencyHelper::toUsd($account->currency_id, $balance);
+        });
     }
 
     private function query( Request $request)
