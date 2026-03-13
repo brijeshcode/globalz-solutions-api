@@ -363,7 +363,7 @@ class AccountStatementController extends Controller
         $this->applyDateAndSearchFilters($query, $request, $noteSearch);
 
         return $query->with([
-            'expenseTransaction:id,code,expense_category_id,subject',
+            'expenseTransaction:id,code,expense_category_id,subject,note',
             'expenseTransaction.expenseCategory:id,name',
             'createdBy:id,name',
         ])->get()->map(function ($item) use ($account, $featureEnabled) {
@@ -372,7 +372,7 @@ class AccountStatementController extends Controller
             $transactionNumber = $featureEnabled 
                 ? "{$expCode} / {$paymentCode}"
                 : $expCode;
-
+            $note = $featureEnabled ? $item->note : $item->expenseTransaction->note;
             return [
                 'id'                 => $item->expenseTransaction->id,
                 'transaction_number' => $transactionNumber,
@@ -384,7 +384,7 @@ class AccountStatementController extends Controller
                 'amount'           => -$item->amount,
                 'debit'            => $item->amount,
                 'credit'           => 0,
-                'note'             => $item->note ?? $item->expenseTransaction?->subject,
+                'note'             => $note,
                 'by'               => $item->createdBy?->name,
                 'expense_category' => [
                     'id'   => $item->expenseTransaction?->expenseCategory?->id,
