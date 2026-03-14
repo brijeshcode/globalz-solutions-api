@@ -56,8 +56,11 @@ class AttachCacheVersion
             $versions[$key] = ($versions[$key] ?? 0) + 1;
         }
 
-        // Save to DB
-        \App\Models\Setting::set('app', 'cache_versions', json_encode($versions), 'json', 'Cache version map for frontend cache invalidation');
+        // Save to DB — use withoutEvents to prevent Setting's InvalidatesCacheVersion
+        // from recursively calling invalidate('settings') and overwriting the versions
+        \App\Models\Setting::withoutEvents(fn () =>
+            \App\Models\Setting::set('app', 'cache_versions', json_encode($versions), 'json', 'Cache version map for frontend cache invalidation')
+        );
 
         // Clear the Laravel cache so next request picks up new versions
         Cache::forget(self::CACHE_KEY);
