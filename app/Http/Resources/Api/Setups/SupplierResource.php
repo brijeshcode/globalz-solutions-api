@@ -55,6 +55,12 @@ class SupplierResource extends JsonResource
                 'name' => $this->currency?->name,
                 'code' => $this->currency?->code,
                 'symbol' => $this->currency?->symbol,
+                'symbol_position' => $this->currency?->symbol_position,
+                'decimal_places' => $this->currency?->decimal_places,
+                'decimal_separator' => $this->currency?->decimal_separator,
+                'thousand_separator' => $this->currency?->thousand_separator,
+                'calculation_type' => $this->currency?->calculation_type,
+                'rate' => $this->currency?->activeRate?->rate,
             ],
             
             // Other Tab

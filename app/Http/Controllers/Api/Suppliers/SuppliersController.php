@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\Suppliers;
 
+use App\Helpers\CurrencyHelper;
+use App\Helpers\FeatureHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Setups\SuppliersStoreRequest;
 use App\Http\Requests\Api\Setups\SuppliersUpdateRequest;
@@ -18,52 +20,8 @@ class SuppliersController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Supplier::query()
-            ->with([
-                'supplierType:id,name',
-                'country:id,name,code',
-                'paymentTerm:id,name,days,type',
-                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'createdBy:id,name',
-                'updatedBy:id,name',
-                'documents'
-            ])
-            ->searchable($request)
-            ->sortable($request);
-
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        // Filter by supplier type
-        if ($request->has('supplier_type_id')) {
-            $query->where('supplier_type_id', $request->supplier_type_id);
-        }
-
-        // Filter by country
-        if ($request->has('country_id')) {
-            $query->where('country_id', $request->country_id);
-        }
-
-        // Filter by payment term
-        if ($request->has('payment_term_id')) {
-            $query->where('payment_term_id', $request->payment_term_id);
-        }
-
-        // Filter by currency
-        if ($request->has('currency_id')) {
-            $query->where('currency_id', $request->currency_id);
-        }
-
-        // Balance range filters
-        if ($request->has('min_balance')) {
-            $query->where('opening_balance', '>=', $request->min_balance);
-        }
-
-        if ($request->has('max_balance')) {
-            $query->where('opening_balance', '<=', $request->max_balance);
-        }
+        
+        $query = $this->supplierQuery($request);
 
         $suppliers = $this->applyPagination($query, $request);
 
@@ -96,6 +54,7 @@ class SuppliersController extends Controller
             'country:id,name,code',
             'paymentTerm:id,name,days,type',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'currency.activeRate:id,currency_id,rate',
             'createdBy:id,name',
             'updatedBy:id,name',
             'documents'
@@ -114,6 +73,7 @@ class SuppliersController extends Controller
             'country:id,name,code',
             'paymentTerm:id,name,days,type',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'currency.activeRate:id,currency_id,rate',
             'createdBy:id,name',
             'updatedBy:id,name',
             'documents'
@@ -143,6 +103,7 @@ class SuppliersController extends Controller
             'country:id,name,code',
             'paymentTerm:id,name,days,type',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'currency.activeRate:id,currency_id,rate',
             'createdBy:id,name',
             'updatedBy:id,name',
             'documents'
@@ -173,6 +134,7 @@ class SuppliersController extends Controller
                 'country:id,name,code',
                 'paymentTerm:id,name,days,type',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'currency.activeRate:id,currency_id,rate',
                 'createdBy:id,name',
                 'updatedBy:id,name',
                 'documents' => function($query) {
@@ -219,6 +181,7 @@ class SuppliersController extends Controller
             'country:id,name,code',
             'paymentTerm:id,name,days,type',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'currency.activeRate:id,currency_id,rate',
             'createdBy:id,name',
             'updatedBy:id,name',
             'documents'
@@ -277,27 +240,50 @@ class SuppliersController extends Controller
     /**
      * Get supplier statistics for dashboard
      */
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
+        $isMultiCurrencyEnabled = FeatureHelper::isMultiCurrency();
+        $query = $this->supplierQuery($request);
+
+        if ($isMultiCurrencyEnabled) {
+            $suppliers = (clone $query)->with('currency:id,code')->get();
+            $totalBalance = round($this->sumBalanceInUsd($suppliers, true), 2);
+        } else {
+            $totalBalance = round((clone $query)->sum('current_balance'), 2);
+        }
+
         $stats = [
-            'total_suppliers' => Supplier::count(),
-            'active_suppliers' => Supplier::where('is_active', true)->count(),
-            'inactive_suppliers' => Supplier::where('is_active', false)->count(),
-            'trashed_suppliers' => Supplier::onlyTrashed()->count(),
-            'total_opening_balance' => Supplier::sum('opening_balance'),
-            'suppliers_by_country' => Supplier::with('country:id,name')
-                ->selectRaw('country_id, count(*) as count')
-                ->groupBy('country_id')
-                ->having('count', '>', 0)
-                ->get(),
-            'suppliers_by_type' => Supplier::with('supplierType:id,name')
-                ->selectRaw('supplier_type_id, count(*) as count')
-                ->groupBy('supplier_type_id')
-                ->having('count', '>', 0)
-                ->get(),
+            // 'total_suppliers' => (clone $query)->count(),
+            // 'active_suppliers' => (clone $query)->where('is_active', true)->count(),
+            // 'inactive_suppliers' => (clone $query)->where('is_active', false)->count(),
+            // 'trashed_suppliers' => Supplier::onlyTrashed()->count(),
+            'total_supplier_balance_usd' => $totalBalance,
+            // 'suppliers_by_country' => (clone $query)->with('country:id,name')
+            //     ->selectRaw('country_id, count(*) as count')
+            //     ->groupBy('country_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
+            // 'suppliers_by_type' => (clone $query)->with('supplierType:id,name')
+            //     ->selectRaw('supplier_type_id, count(*) as count')
+            //     ->groupBy('supplier_type_id')
+            //     ->having('count', '>', 0)
+            //     ->get(),
         ];
 
         return ApiResponse::show('Supplier statistics retrieved successfully', $stats);
+    }
+
+    private function sumBalanceInUsd($suppliers, bool $convertCurrency): float
+    {
+        return $suppliers->sum(function ($supplier) use ($convertCurrency) {
+            $balance = $supplier->current_balance ?? 0;
+
+            if (!$convertCurrency || ($supplier->currency && strtoupper($supplier->currency->code) === 'USD')) {
+                return $balance;
+            }
+
+            return CurrencyHelper::toUsd($supplier->currency_id, $balance);
+        });
     }
 
     /**
@@ -310,6 +296,7 @@ class SuppliersController extends Controller
                 'supplierType:id,name',
                 'country:id,name,code',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'currency.activeRate:id,currency_id,rate',
             ])
             ->select(['id', 'code', 'name', 'opening_balance', 'supplier_type_id', 'country_id', 'currency_id', 'is_active']);
 
@@ -341,5 +328,57 @@ class SuppliersController extends Controller
         });
 
         return ApiResponse::show('Suppliers exported successfully', $exportData);
+    }
+
+    private function supplierQuery(Request $request) {
+        $query = Supplier::query()
+            ->with([
+                'supplierType:id,name',
+                'country:id,name,code',
+                'paymentTerm:id,name,days,type',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'currency.activeRate:id,currency_id,rate',
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'documents'
+            ])
+            ->searchable($request)
+            ->sortable($request);
+
+        // Filter by active status
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        // Filter by supplier type
+        if ($request->has('supplier_type_id')) {
+            $query->where('supplier_type_id', $request->supplier_type_id);
+        }
+
+        // Filter by country
+        if ($request->has('country_id')) {
+            $query->where('country_id', $request->country_id);
+        }
+
+        // Filter by payment term
+        if ($request->has('payment_term_id')) {
+            $query->where('payment_term_id', $request->payment_term_id);
+        }
+
+        // Filter by currency
+        if ($request->has('currency_id')) {
+            $query->where('currency_id', $request->currency_id);
+        }
+
+        // Balance range filters
+        if ($request->has('min_balance')) {
+            $query->where('opening_balance', '>=', $request->min_balance);
+        }
+
+        if ($request->has('max_balance')) {
+            $query->where('opening_balance', '<=', $request->max_balance);
+        }
+
+        return $query;
     }
 }

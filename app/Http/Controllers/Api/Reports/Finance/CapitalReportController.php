@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Reports\Finance;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\FeatureHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
@@ -43,6 +44,7 @@ class CapitalReportController extends Controller
 
     public function calculateCapitalReport(): array
     {
+        $isMultiCurrency = FeatureHelper::isMultiCurrency();
         // 1. Stock value from warehouses where include_in_total_stock = true
         $warehouseIds = Warehouse::includeInStockCount()->pluck('id');
 
@@ -100,7 +102,13 @@ class CapitalReportController extends Controller
         $supplierPaymentsTotal = (float) SupplierPayment::sum('amount_usd');
 
         // 7. Total supplier Balance made
-        $supplierBalance = (float) Supplier::sum('current_balance');
+        if($isMultiCurrency){
+            $supplierBalance = (float) Supplier::active()
+                ->get(['id', 'currency_id', 'current_balance'])
+                ->sum(fn ($supplier) => CurrencyHelper::toUsd($supplier->currency_id, $supplier->current_balance));
+        }else{
+            $supplierBalance = (float) Supplier::active()->sum('current_balance');
+        }
 
         // 8. Money from all active accounts (except "Do Not Include in Totals"), converted to USD
         $accountsBalance = (float) Account::active()
