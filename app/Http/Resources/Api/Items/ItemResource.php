@@ -180,6 +180,10 @@ class ItemResource extends JsonResource
             ] : null;
         });
 
+        $data['last_purchase_price'] = $this->whenLoaded('lastPurchaseItem', function () {
+            return $this->lastPurchaseItem ? (float) $this->lastPurchaseItem->price : 0;
+        }, 0);
+
         $data['tax_code'] = $this->whenLoaded('taxCode', function () {
             return [
                 'id' => $this->taxCode->id,

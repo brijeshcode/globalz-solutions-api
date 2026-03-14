@@ -495,12 +495,17 @@ class ItemsController extends Controller
         );
     }
 
-    public function getAllItems(array $files = [] , array $relations = ['tax_code']): JsonResponse
+    public function getAllItems(Request $request, array $files = [] , array $relations = ['tax_code']): JsonResponse
     {
         $defaultFields = ['id', 'description', 'code', 'short_name', 'item_unit_id'];
         $defaultRelations = ['itemUnit:id,name,short_name', 'itemPrice', 'inventories'];
 
         $fields = empty($files) ? $defaultFields : array_merge($defaultFields, $files);
+
+        // Merge relations from HTTP request (e.g. ?relations[]=last_purchase_price)
+        if ($request->has('relations')) {
+            $relations = array_unique(array_merge($relations, (array) $request->input('relations')));
+        }
 
         $with = $defaultRelations;
 
@@ -540,6 +545,9 @@ class ItemsController extends Controller
                         break;
                     case 'documents':
                         $with[] = 'documents';
+                        break;
+                    case 'last_purchase_price':
+                        $with[] = 'lastPurchaseItem';
                         break;
                 }
             }

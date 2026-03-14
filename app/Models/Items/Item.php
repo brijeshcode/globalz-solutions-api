@@ -161,6 +161,11 @@ class Item extends Model
         return $this->hasOne(\App\Models\Inventory\ItemPrice::class);
     }
 
+    public function lastPurchaseItem(): HasOne
+    {
+        return $this->hasOne(\App\Models\Suppliers\PurchaseItem::class)->latestOfMany('id');
+    }
+
     // Accessors & Mutators
     public function getIsLowStockAttribute(): bool
     {
