@@ -70,6 +70,7 @@ use App\Http\Controllers\Api\Employees\SalaryController;
 use App\Http\Controllers\Api\Items\PriceListBulkUpdateController;
 use App\Http\Controllers\Api\Reports\Customer\CustomerAgingReportController;
 use App\Http\Controllers\Api\Reports\Sales\CategorySalesReportController;
+use App\Http\Controllers\Api\Reports\Sales\ItemsSaleReportController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
@@ -965,6 +966,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Sales Reports
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::get('category-sales', [CategorySalesReportController::class, 'index'])->name('category-sales');
+            Route::get('items', [ItemsSaleReportController::class, 'index'])->name('items');
             Route::get('category/sale-items', [CategorySalesReportController::class, 'getSaleItemsDetail']);
             Route::get('category/return-items', [CategorySalesReportController::class, 'getReturnItemsDetail']);
         });

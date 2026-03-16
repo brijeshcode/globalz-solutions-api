@@ -60,6 +60,7 @@ class FeatureController extends Controller
         ['key' => 'report_warehouse',          'name' => 'Warehouse Report',            'description' => 'Inventory stock levels by warehouse.'],
         ['key' => 'report_sales_category',     'name' => 'Sales Category Report',       'description' => 'Sales performance broken down by category.'],
         ['key' => 'report_customer_aging',     'name' => 'Customer Aging Report',       'description' => 'Customer outstanding balance aging by last invoice and payment date.'],
+        ['key' => 'report_item_sales',     'name' => 'Item Sales Report',           'description' => 'Aggregated sales report per item showing quantity sold, sale amount, profit, and profit percentage.'],
 
         // System
         ['key' => 'activity_logs',             'name' => 'Activity Logs',               'description' => 'Full audit trail of all user actions.'],
