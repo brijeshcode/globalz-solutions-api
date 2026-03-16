@@ -68,6 +68,7 @@ use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
 use App\Http\Controllers\Api\Employees\SalaryController;
 use App\Http\Controllers\Api\Items\PriceListBulkUpdateController;
+use App\Http\Controllers\Api\Reports\Customer\CustomerAgingReportController;
 use App\Http\Controllers\Api\Reports\Sales\CategorySalesReportController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
@@ -978,6 +979,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('monthly-profit', [\App\Http\Controllers\Api\Reports\Finance\MontlyProfitReportController::class, 'index'])->name('monthly-profit');
             Route::get('expense', [\App\Http\Controllers\Api\Reports\Finance\ExpenseReportController::class, 'index'])->name('expense');
             Route::get('capital', [\App\Http\Controllers\Api\Reports\Finance\CapitalReportController::class, 'index'])->name('capital');
+        });
+
+        // Customer Reports
+        Route::prefix('customer')->name('customer.')->group(function () {
+            Route::get('aging', [CustomerAgingReportController::class, 'index'])->name('aging.index');
+            Route::get('aging/export', [CustomerAgingReportController::class, 'export'])->name('aging.export');
         });
 
         // Inventory Reports

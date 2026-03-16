@@ -16,6 +16,7 @@ use App\Models\Setups\Employees\Department;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -29,6 +30,14 @@ class CustomersController extends Controller
         $query->withSum(['sales' => function ($query) {
             $query->approved();
         }], 'total_usd');
+
+        $lastInvoiceSub = '(SELECT MAX(s.date) FROM sales s WHERE s.customer_id = customers.id AND s.approved_by IS NOT NULL AND s.deleted_at IS NULL)';
+        $lastPaymentSub = '(SELECT MAX(cp.date) FROM customer_payments cp WHERE cp.customer_id = customers.id AND cp.approved_by IS NOT NULL AND cp.deleted_at IS NULL)';
+
+        $query->addSelect(DB::raw("{$lastInvoiceSub} as last_invoice_date"))
+              ->addSelect(DB::raw("DATEDIFF(NOW(), {$lastInvoiceSub}) as invoice_age"))
+              ->addSelect(DB::raw("{$lastPaymentSub} as last_payment_date"))
+              ->addSelect(DB::raw("CASE WHEN customers.current_balance BETWEEN -2 AND 2 THEN 0 ELSE DATEDIFF(NOW(), {$lastPaymentSub}) END as payment_age"));
 
         $customers = $this->applyPagination($query, $request);
 
