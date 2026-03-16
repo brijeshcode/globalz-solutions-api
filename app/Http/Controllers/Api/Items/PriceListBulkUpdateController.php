@@ -197,7 +197,7 @@ class PriceListBulkUpdateController extends Controller
         }
 
         // Filters that go through the related item
-        if ($request->has('supplier_id') || $request->has('item_type_id') || $request->has('item_family_id') || $request->has('item_group_id') || $request->has('item_category_id')) {
+        if ($request->hasAny(['supplier_id', 'item_type_id', 'item_family_id', 'item_group_id', 'item_category_id', 'item_brand_id'])) {
             $query->whereHas('item', function ($q) use ($request) {
                 if ($request->has('supplier_id')) {
                     $q->where('supplier_id', $request->supplier_id);
@@ -213,6 +213,9 @@ class PriceListBulkUpdateController extends Controller
                 }
                 if ($request->has('item_category_id')) {
                     $q->where('item_category_id', $request->item_category_id);
+                }
+                if ($request->has('item_brand_id')) {
+                    $q->where('item_brand_id', $request->item_brand_id);
                 }
             });
         }
