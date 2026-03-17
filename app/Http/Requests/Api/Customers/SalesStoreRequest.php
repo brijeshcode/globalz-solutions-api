@@ -2,17 +2,31 @@
 
 namespace App\Http\Requests\Api\Customers;
 
+use App\Helpers\RoleHelper;
+use App\Helpers\SettingsHelper;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class SalesStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        /** @var \App\Models\User $user */
-        $user = \Illuminate\Support\Facades\Auth::user();
+        if (SettingsHelper::get('sale_settings', 'block_new_sale', false)) {
+            return false;
+        }
 
-        // Only admins can create direct approved sales
-        return $user && $user->isAdmin();
+        return RoleHelper::canAdmin();
+    }
+
+    public function failedAuthorization(): never
+    {
+        $message = SettingsHelper::get('sale_settings', 'block_new_sale', false)
+            ? 'Creating new sales is currently disabled by the administrator.'
+            : 'This action is unauthorized.';
+
+        throw new HttpResponseException(
+            response()->json(['message' => $message], 403)
+        );
     }
 
     public function rules(): array

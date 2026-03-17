@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Customers;
 use App\Helpers\ApiHelper;
 use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
+use App\Helpers\SettingsHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerReturnsStoreRequest;
 use App\Http\Requests\Api\Customers\CustomerReturnsUpdateRequest;
@@ -231,6 +232,10 @@ class CustomerReturnsController extends Controller
 
     public function markReceived(Request $request, CustomerReturn $customerReturn): JsonResponse
     {
+        if (SettingsHelper::get('sale_settings', 'block_return_sale_received', false)) {
+            return ApiResponse::customError('Marking returns as received is currently disabled by the administrator.', 403);
+        }
+
         /** @var \App\Models\User $user */
         $user = Auth::user();
 

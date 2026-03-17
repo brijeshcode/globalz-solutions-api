@@ -7,6 +7,7 @@ use App\Helpers\CommonHelper;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
+use App\Helpers\SettingsHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SaleOrdersStoreRequest;
 use App\Http\Requests\Api\Customers\SaleOrdersUpdateRequest;
@@ -536,6 +537,10 @@ class SaleOrdersController extends Controller
 
     public function destroy(Sale $sale): JsonResponse
     {
+        if (SettingsHelper::get('sale_settings', 'block_new_sale_order', false)) {
+            return ApiResponse::customError('Deleting sale orders is currently disabled by the administrator.', 403);
+        }
+
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
@@ -562,6 +567,10 @@ class SaleOrdersController extends Controller
 
     public function approve(Request $request, Sale $sale): JsonResponse
     {
+        if (SettingsHelper::get('sale_settings', 'block_new_sale_order', false)) {
+            return ApiResponse::customError('Approving sale orders is currently disabled by the administrator.', 403);
+        }
+
         /** @var \App\Models\User $user */
         $user = Auth::user();
 

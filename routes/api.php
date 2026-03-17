@@ -74,6 +74,7 @@ use App\Http\Controllers\Api\Reports\Sales\ItemsSaleReportController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
+use App\Http\Controllers\Api\Settings\SaleSettingsController;
 use App\Http\Controllers\Api\Settings\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -1007,6 +1008,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [InvoiceSettingsController::class, 'index'])->name('index');
             Route::put('/', [InvoiceSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [InvoiceSettingsController::class, 'reset'])->name('reset');
+        });
+
+        // Sale Settings
+        Route::prefix('sale')->name('settings.sale.')->group(function () {
+            Route::get('/', [SaleSettingsController::class, 'get'])->name('get');
+            Route::put('/', [SaleSettingsController::class, 'update'])->name('update');
+            Route::post('/reset', [SaleSettingsController::class, 'reset'])->name('reset');
         });
 
         // All tenant settings (read-only)

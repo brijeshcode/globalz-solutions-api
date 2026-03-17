@@ -4,16 +4,33 @@ namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\ApiHelper;
 use App\Helpers\RoleHelper;
+use App\Helpers\SettingsHelper;
 use App\Models\Customers\Customer;
 use App\Models\Setups\Warehouse;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
 
 class SaleOrdersStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        if (SettingsHelper::get('sale_settings', 'block_new_sale_order', false)) {
+            return false;
+        }
+
         return true;
+    }
+
+    public function failedAuthorization(): never
+    {
+        $message = SettingsHelper::get('sale_settings', 'block_new_sale_order', false)
+            ? 'Creating new sale orders is currently disabled by the administrator.'
+            : 'This action is unauthorized.';
+
+        throw new HttpResponseException(
+            response()->json(['message' => $message], 403)
+        );
     }
 
     public function rules(): array

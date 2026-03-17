@@ -6,6 +6,7 @@ use App\Helpers\CommonHelper;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
+use App\Helpers\SettingsHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\SalesStoreRequest;
 use App\Http\Requests\Api\Customers\SalesUpdateRequest;
@@ -454,6 +455,10 @@ class SalesController extends Controller
 
     public function destroy(Sale $sale): JsonResponse
     {
+        if (SettingsHelper::get('sale_settings', 'block_new_sale', false)) {
+            return ApiResponse::customError('Deleting sales is currently disabled by the administrator.', 403);
+        }
+
         if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Cannot delete an approved sales', 422);
         }
@@ -575,6 +580,10 @@ class SalesController extends Controller
 
     public function unapprove(Sale $sale): JsonResponse
     {
+        if (SettingsHelper::get('sale_settings', 'block_new_sale', false)) {
+            return ApiResponse::customError('Unapproving sales is currently disabled by the administrator.', 403);
+        }
+
         // Only admin can unapprove sales
         if (!RoleHelper::canAdmin()) {
             return ApiResponse::customError('Only admin users can unapprove sales.', 403);
