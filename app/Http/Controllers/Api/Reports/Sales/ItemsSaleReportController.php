@@ -52,7 +52,8 @@ class ItemsSaleReportController extends Controller
             ->when($request->filled('item_family_id'), fn($q) => $q->where('items.item_family_id', $request->get('item_family_id')))
             ->when($request->filled('item_group_id'), fn($q) => $q->where('items.item_group_id', $request->get('item_group_id')))
             ->when($request->filled('item_brand_id'), fn($q) => $q->where('items.item_brand_id', $request->get('item_brand_id')))
-            ->when($request->filled('item_supplier_id'), fn($q) => $q->where('items.supplier_id', $request->get('item_supplier_id')));
+            ->when($request->filled('item_supplier_id'), fn($q) => $q->where('items.supplier_id', $request->get('item_supplier_id')))
+            ->when($request->filled('item_type_id'), fn($q) => $q->where('items.item_type_id', $request->get('item_type_id')));
 
         $query->select([
                 'sale_items.item_id',
