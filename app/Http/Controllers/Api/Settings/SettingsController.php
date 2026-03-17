@@ -12,15 +12,48 @@ use Illuminate\Validation\Rule;
 class SettingsController extends Controller
 {
     /**
-     * Get all settings grouped by group_name
+     * Groups blocked from the frontend /settings/all endpoint.
+     * Add a group here when it has its own dedicated controller/endpoint.
+     * e.g. tenant_details → CompanyController, company → CompanyController
+     */
+    private const FRONTEND_BLOCKED_GROUPS = [
+        'tenant_details',
+        'company',
+    ];
+
+    /**
+     * Keys hidden from the frontend /settings/all endpoint by default.
+     * Add any key name here to block it across all groups.
+     *
+     * To expose a blocked key, pass it via ?expose_keys[]=code_counter in the request.
+     */
+    private const FRONTEND_BLOCKED_KEYS = [
+        'code_counter',
+        'cache_versions',
+    ];
+
+    /**
+     * Get all settings grouped by group_name.
+     * Blocked keys are hidden unless explicitly requested via ?expose_keys[]=key_name.
+     * Empty groups are omitted from the response.
      */
     public function index(Request $request): JsonResponse
     {
         $query = Setting::query();
 
+        // Always exclude blocked groups (they have dedicated controllers)
+        $query->whereNotIn('group_name', self::FRONTEND_BLOCKED_GROUPS);
+
         // Filter by group
         if ($request->has('group')) {
-            $query->where('group_name', $request->group);
+            $query->whereIn('group_name', (array) $request->group);
+        }
+
+        // Hide blocked keys unless the caller explicitly requests them
+        $exposedKeys = $request->input('expose_keys', []);
+        $stillBlocked = array_diff(self::FRONTEND_BLOCKED_KEYS, (array) $exposedKeys);
+        if (!empty($stillBlocked)) {
+            $query->whereNotIn('key_name', $stillBlocked);
         }
 
         // Filter by data type
@@ -41,20 +74,22 @@ class SettingsController extends Controller
                          ->orderBy('key_name')
                          ->get();
 
-        // Group settings by group_name
-        $groupedSettings = $settings->groupBy('group_name')->map(function ($groupSettings) {
-            return $groupSettings->mapWithKeys(function ($setting) {
-                return [
-                    $setting->key_name => [
-                        'value' => $setting->getCastValue(),
-                        'data_type' => $setting->data_type,
-                        'description' => $setting->description,
-                        'is_encrypted' => $setting->is_encrypted,
-                        'updated_at' => $setting->updated_at,
-                    ]
-                ];
-            });
-        });
+        // Group settings by group_name, omit groups that end up empty
+        $groupedSettings = $settings->groupBy('group_name')
+            ->map(function ($groupSettings) {
+                return $groupSettings->mapWithKeys(function ($setting) {
+                    return [
+                        $setting->key_name => [
+                            'value'        => $setting->getCastValue(),
+                            'data_type'    => $setting->data_type,
+                            'description'  => $setting->description,
+                            'is_encrypted' => $setting->is_encrypted,
+                            'updated_at'   => $setting->updated_at,
+                        ]
+                    ];
+                });
+            })
+            ->filter(fn($groupSettings) => $groupSettings->isNotEmpty());
 
         return ApiResponse::show('Settings retrieved successfully', $groupedSettings);
     }
