@@ -222,7 +222,7 @@ class SalesController extends Controller
             return ApiResponse::customError('Sale is not approved', 404);
         }
 
-        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name']);
+        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name', 'createdBy:id,name', 'updatedBy:id,name', 'approvedBy:id,name']);
 
         return ApiResponse::show(
             'Sale retrieved successfully',
@@ -739,7 +739,7 @@ class SalesController extends Controller
     private function saleQuery(Request $request)
     {
         $query = Sale::query()
-            ->with(['saleItems.item', 'warehouse', 'currency', 'customer', 'salesperson'])
+            ->with(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name', 'createdBy:id,name', 'updatedBy:id,name', 'approvedBy:id,name'])
             ->approved()
             ->searchable($request)
             ;

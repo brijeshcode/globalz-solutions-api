@@ -47,7 +47,7 @@ class SaleResource extends JsonResource
             'updated_at' => $this->updated_at,
             'created_by' => $this->created_by,
             'updated_by' => $this->updated_by,
-
+            
             // Shipping status
             'status' => $this->status,
             
@@ -70,6 +70,11 @@ class SaleResource extends JsonResource
             }),
             'salesperson' => $this->whenLoaded('salesperson'),
             'customer' => $this->whenLoaded('customer'),
+
+            'approved_at' => $this->approved_at,
+            'approved_by_user' => $this->whenLoaded('approvedBy', fn() => $this->approvedBy ? ['id' => $this->approvedBy->id, 'name' => $this->approvedBy->name] : null),
+            'created_by_user' => $this->whenLoaded('createdBy', fn() => $this->createdBy ? ['id' => $this->createdBy->id, 'name' => $this->createdBy->name] : null),
+            'updated_by_user' => $this->whenLoaded('updatedBy', fn() => $this->updatedBy ? ['id' => $this->updatedBy->id, 'name' => $this->updatedBy->name] : null),
         ];
     }
 }

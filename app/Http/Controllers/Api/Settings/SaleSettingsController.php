@@ -26,6 +26,10 @@ class SaleSettingsController extends Controller
     {
         $settings = Setting::getGroup(self::GROUP);
 
+        // Merge with defaults so every key is always present in the response
+        $defaults = array_map(fn($config) => $config['value'], self::DEFAULTS);
+        $settings = array_merge($defaults, $settings);
+
         return ApiResponse::show('Sale settings', $settings);
     }
 

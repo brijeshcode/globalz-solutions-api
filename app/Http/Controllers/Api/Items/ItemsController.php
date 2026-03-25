@@ -391,6 +391,110 @@ class ItemsController extends Controller
     }
 
     /**
+     * Export items as a downloadable file ready for re-import (update existing items)
+     */
+    public function exportForUpdate(Request $request)
+    {
+        $format = $request->query('format', 'xlsx');
+
+        $query = Item::query()
+            ->with([
+                'itemType:id,name',
+                'itemFamily:id,name',
+                'itemGroup:id,name',
+                'itemCategory:id,name',
+                'itemProfitMargin:id,name',
+                'itemBrand:id,name',
+                'itemUnit:id,name,short_name',
+                'supplier:id,code,name',
+                'taxCode:id,code,name',
+            ])
+            ->select([
+                'id', 'code', 'short_name', 'description',
+                'item_type_id', 'item_family_id', 'item_group_id', 'item_category_id',
+                'item_profit_margin_id', 'item_brand_id', 'item_unit_id',
+                'supplier_id', 'tax_code_id',
+                'volume', 'weight', 'barcode',
+                'base_cost', 'base_sell', 'starting_price', 'starting_quantity',
+                'low_quantity_alert', 'cost_calculation', 'notes', 'is_active',
+            ]);
+
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        if ($request->has('item_type_id')) {
+            $query->where('item_type_id', $request->item_type_id);
+        }
+
+        $items = $query->get();
+
+        $headers = [
+            'code', 'short_name', '*description',
+            '*item_type', 'item_family', 'item_group', 'item_category',
+            'item_brand', '*item_unit', 'item_profit_margin',
+            'supplier', '*tax_code',
+            'volume', 'weight', 'barcode',
+            'base_cost', 'base_sell', 'starting_price', 'starting_quantity',
+            'low_quantity_alert', 'cost_calculation', 'notes', 'is_active',
+        ];
+
+        $rows = $items->map(function ($item) {
+            return [
+                $item->code,
+                $item->short_name,
+                $item->description,
+                $item->itemType?->name,
+                $item->itemFamily?->name,
+                $item->itemGroup?->name,
+                $item->itemCategory?->name,
+                $item->itemBrand?->name,
+                $item->itemUnit?->name,
+                $item->itemProfitMargin?->name,
+                $item->supplier?->code,
+                $item->taxCode?->code,
+                $item->volume,
+                $item->weight,
+                $item->barcode,
+                $item->base_cost,
+                $item->base_sell,
+                $item->starting_price,
+                $item->starting_quantity,
+                $item->low_quantity_alert,
+                $item->cost_calculation,
+                $item->notes,
+                $item->is_active ? 1 : 0,
+            ];
+        })->toArray();
+
+        if ($format === 'csv') {
+            $callback = function () use ($headers, $rows) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, $headers);
+                foreach ($rows as $row) {
+                    fputcsv($file, $row);
+                }
+                fclose($file);
+            };
+
+            return response()->streamDownload($callback, 'items_update_import.csv', [
+                'Content-Type' => 'text/csv',
+            ]);
+        }
+
+        return Excel::download(
+            new class($headers, $rows) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings {
+                public function __construct(protected array $headers, protected array $data) {}
+
+                public function array(): array { return $this->data; }
+
+                public function headings(): array { return $this->headers; }
+            },
+            'items_update_import.xlsx'
+        );
+    }
+
+    /**
      * Export items for reports
      */
     public function export(Request $request): JsonResponse
@@ -701,16 +805,16 @@ class ItemsController extends Controller
         $headers = [
             'code',
             'short_name',
-            'description',
-            'item_type',
+            '*description',
+            '*item_type',
             'item_family',
             'item_group',
             'item_category',
             'item_brand',
-            'item_unit',
+            '*item_unit',
             'item_profit_margin',
             'supplier',
-            'tax_code',
+            '*tax_code',
             'volume',
             'weight',
             'barcode',
