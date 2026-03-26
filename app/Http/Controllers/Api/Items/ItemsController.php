@@ -431,7 +431,7 @@ class ItemsController extends Controller
 
         $headers = [
             'code', 'short_name', '*description',
-            '*item_type', 'item_family', 'item_group', 'item_category',
+            'item_type', 'item_family', 'item_group', '*item_category',
             'item_brand', '*item_unit', 'item_profit_margin',
             'supplier', '*tax_code',
             'volume', 'weight', 'barcode',
@@ -806,10 +806,10 @@ class ItemsController extends Controller
             'code',
             'short_name',
             '*description',
-            '*item_type',
+            'item_type',
             'item_family',
             'item_group',
-            'item_category',
+            '*item_category',
             'item_brand',
             '*item_unit',
             'item_profit_margin',
