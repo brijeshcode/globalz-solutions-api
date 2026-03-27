@@ -11,7 +11,7 @@ use App\Http\Resources\Api\Expenses\ExpenseTransactionResource;
 use App\Models\Accounts\Account;
 use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
-use App\Models\Landlord\TenantFeature;
+use App\Models\TenantFeature;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setups\Generals\Currencies\Currency;

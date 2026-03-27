@@ -10,7 +10,7 @@ use App\Http\Requests\Api\Accounts\AccountsUpdateRequest;
 use App\Http\Resources\Api\Accounts\AccountResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
-use App\Models\Landlord\TenantFeature;
+use App\Models\TenantFeature;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
-use App\Models\Landlord\TenantFeature;
+use App\Models\TenantFeature;
 use Illuminate\Http\JsonResponse;
 
 class FeatureFlagsController extends Controller

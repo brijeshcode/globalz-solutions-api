@@ -2,7 +2,7 @@
 
 namespace App\Helpers;
 
-use App\Models\Landlord\TenantFeature;
+use App\Models\TenantFeature;
 use App\Models\Setups\Generals\Currencies\Currency;
 use Illuminate\Support\Facades\Log;
 

@@ -2,7 +2,7 @@
 
 namespace App\Services\Currency;
 
-use App\Models\Landlord\TenantFeature;
+use App\Models\TenantFeature;
 use App\Models\Setting;
 
 class CurrencyModeService

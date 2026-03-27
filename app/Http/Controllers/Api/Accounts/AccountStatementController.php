@@ -15,7 +15,7 @@ use App\Models\Employees\AdvanceLoan;
 use App\Models\Employees\Salary;
 use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
-use App\Models\Landlord\TenantFeature;
+use App\Models\TenantFeature;
 use App\Models\Suppliers\SupplierPayment;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
