@@ -1,0 +1,1 @@
+import{b7 as e,bE as t}from"./index-BNKxjhae.js";function n(){let n=e(),r=e=>n.isFeatureEnabled(e),i=t(()=>r(`multi_currency`)),a=t(()=>r(`report_item_sales`));return{hasFeature:r,isMultiCurrency:i,reportSaleItems:a}}export{n as b};

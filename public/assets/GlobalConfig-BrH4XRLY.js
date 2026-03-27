@@ -1,0 +1,1 @@
+const e={appname:`Globalz Solutions`,debounceMs:700,cacheTimeout:14400*1e3,defaultExcludesfromUrl:[`sort_by`,`sort_direction`,`per_page`,`page`],defaultCurrency:{code:`USD`},commissionStartYear:2025},t={defaultPage:1,defaultPerPage:50,perPageOptions:[5,10,15,20,50,100,500,1e3,2e3],tdPaddingClass:`px-3 py-2`,thPaddingClass:`px-3 py-2`};export{e as b,t as c};
