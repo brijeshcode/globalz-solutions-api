@@ -153,9 +153,9 @@ class ExpensePaymentsController extends Controller
             ->where('id', '!=', $payment->id)
             ->sum('amount');
 
-        if ($otherPaid + (float) $data['amount'] > (float) $expenseTransaction->amount) {
+        if ($otherPaid + (float) $data['amount'] > $expenseTransaction->total_amount) {
             return ApiResponse::customError(
-                'Updated payment would exceed the total expense amount of ' . $expenseTransaction->amount,
+                'Updated payment would exceed the total expense amount of ' . $expenseTransaction->total_amount,
                 422
             );
         }
@@ -210,9 +210,9 @@ class ExpensePaymentsController extends Controller
             ->where('id', '!=', $payment->id)
             ->sum('amount');
 
-        if ($otherPaid + (float) $data['amount'] > (float) $expenseTransaction->amount) {
+        if ($otherPaid + (float) $data['amount'] > $expenseTransaction->total_amount) {
             return ApiResponse::customError(
-                'Updated payment would exceed the total expense amount of ' . $expenseTransaction->amount,
+                'Updated payment would exceed the total expense amount of ' . $expenseTransaction->total_amount,
                 422
             );
         }

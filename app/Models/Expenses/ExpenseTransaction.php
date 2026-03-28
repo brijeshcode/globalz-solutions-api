@@ -39,6 +39,8 @@ class ExpenseTransaction extends Model
         'check_number',
         'bank_ref_number',
         'note',
+        'vat_amount',
+        'vat_amount_usd',
     ];
 
     protected $casts = [
@@ -49,6 +51,8 @@ class ExpenseTransaction extends Model
         'amount_usd' => 'decimal:8',
         'currency_rate' => 'decimal:4',
         'expense_month' => 'date:Y-m-01',
+        'vat_amount' => 'decimal:2',
+        'vat_amount_usd' => 'decimal:8',
     ];
 
     protected $searchable = [
@@ -84,22 +88,32 @@ class ExpenseTransaction extends Model
         return $value ? self::PREFIX . $value : null;
     }
 
+    public function getTotalAmountAttribute(): float
+    {
+        return (float) $this->amount + (float) $this->vat_amount;
+    }
+
+    public function getTotalAmountUsdAttribute(): float
+    {
+        return (float) $this->amount_usd + (float) $this->vat_amount_usd;
+    }
+
     /**
      * How much is still owed. Derived — never stored.
      */
     public function getDueAmountAttribute(): float
     {
-        return max(0, (float) $this->amount - (float) $this->paid_amount);
+        return max(0, $this->total_amount - (float) $this->paid_amount);
     }
 
     /**
-     * Derived from paid_amount vs amount — no column stored.
+     * Derived from paid_amount vs total_amount — no column stored.
      * Returns: 'unpaid' | 'partial' | 'paid'
      */
     public function getPaymentStatusAttribute(): string
     {
         $paid  = (float) $this->paid_amount;
-        $total = (float) $this->amount;
+        $total = $this->total_amount;
 
         if ($paid <= 0) {
             return 'unpaid';
