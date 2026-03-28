@@ -33,6 +33,7 @@ class ExpenseTransactionsUpdateRequest extends FormRequest
             'check_number' => 'nullable|string|max:100',
             'bank_ref_number' => 'nullable|string|max:100',
             'note' => 'nullable|string|max:250',
+            'vat_amount' => 'nullable|numeric|min:0|max:999999999999.99',
         ];
     }
 

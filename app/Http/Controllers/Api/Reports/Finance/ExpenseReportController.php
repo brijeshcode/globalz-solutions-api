@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\Reports\Finance;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Employees\Salary;
-use App\Models\Expenses\ExpensePayment;
+use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Setups\Expenses\ExpenseCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,21 +41,19 @@ class ExpenseReportController extends Controller
 
     private function getExpenseReport(?string $fromDate, ?string $toDate, ?string $month, bool $excludedOnly): array
     {
-        // Get expense totals grouped by category via payments
-        $query = ExpensePayment::query()
-            ->join('expense_transactions', 'expense_payments.expense_transaction_id', '=', 'expense_transactions.id')
+        // Get expense totals grouped by category via transactions (includes VAT)
+        $query = ExpenseTransaction::query()
             ->join('expense_categories', 'expense_transactions.expense_category_id', '=', 'expense_categories.id')
             ->selectRaw('
                 expense_categories.id as category_id,
                 expense_categories.name as category_name,
                 expense_categories.parent_id,
-                SUM(expense_payments.amount) as total,
-                SUM(expense_payments.amount_usd) as total_usd
+                SUM(expense_transactions.amount + expense_transactions.vat_amount) as total,
+                SUM(expense_transactions.amount_usd + expense_transactions.vat_amount_usd) as total_usd
             ')
-            ->whereNull('expense_payments.deleted_at')
             ->whereNull('expense_transactions.deleted_at')
-            ->when($fromDate, fn($q) => $q->where('expense_payments.date', '>=', $fromDate))
-            ->when($toDate, fn($q) => $q->where('expense_payments.date', '<=', $toDate))
+            ->when($fromDate, fn($q) => $q->where('expense_transactions.date', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->where('expense_transactions.date', '<=', $toDate))
             ->when($month, fn($q) => $q->where('expense_transactions.expense_month', $month . '-01'))
             ->whereNull('expense_categories.deleted_at')
             ->groupBy(

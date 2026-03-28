@@ -75,20 +75,23 @@ class ExpenseTransactionsController extends Controller
             $data['currency_id']   = $account->currency_id;
             $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
             $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $data['amount'], $data['currency_rate']);
+            $data['vat_amount_usd'] = CurrencyHelper::toUsd($data['currency_id'], $data['vat_amount'] ?? 0, $data['currency_rate']);
         } else if ($multiCurrencyEnabled) {
             $currency = Currency::find($request->currency_id);
             $data['currency_id'] = $request->currency_id;
             $data['currency_rate'] = $currency->activeRate->rate ?? 1;
             $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $data['amount'], $data['currency_rate']);
+            $data['vat_amount_usd'] = CurrencyHelper::toUsd($data['currency_id'], $data['vat_amount'] ?? 0, $data['currency_rate']);
         } else {
             $data['currency_id'] = CurrencyService::getLocalCurrencyId();
             $data['amount_usd']  = $data['amount'];
+            $data['vat_amount_usd'] = $data['vat_amount'] ?? 0;
         }
 
-        // Legacy tenants: expense is instantly fully paid, so mirror amount into paid fields.
+        // Legacy tenants: expense is instantly fully paid, so mirror total_amount into paid fields.
         if ($hasAccount && !$featureEnabled) {
-            $data['paid_amount']     = $data['amount'];
-            $data['paid_amount_usd'] = $data['amount_usd'] ?? null;
+            $data['paid_amount']     = (float) $data['amount'] + (float) ($data['vat_amount'] ?? 0);
+            $data['paid_amount_usd'] = (float) ($data['amount_usd'] ?? 0) + (float) ($data['vat_amount_usd'] ?? 0);
         }
 
         $expenseTransaction = ExpenseTransaction::create($data);
@@ -99,8 +102,8 @@ class ExpenseTransactionsController extends Controller
             ExpensePayment::create([
                 'expense_transaction_id' => $expenseTransaction->id,
                 'account_id'             => $data['account_id'],
-                'amount'                 => $data['amount'],
-                'amount_usd'             => $data['amount_usd'] ?? null,
+                'amount'                 => $data['paid_amount'],
+                'amount_usd'             => $data['paid_amount_usd'] ?? null,
                 'currency_id'            => $data['currency_id'] ?? null,
                 'currency_rate'          => $data['currency_rate'] ?? null,
                 'date'                   => $data['date'],
@@ -190,17 +193,33 @@ class ExpenseTransactionsController extends Controller
                 $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
                 $amount                = $data['amount'] ?? $expenseTransaction->amount;
                 $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $amount, $data['currency_rate']);
+                $data['vat_amount_usd'] = CurrencyHelper::toUsd($data['currency_id'], $data['vat_amount'] ?? $expenseTransaction->vat_amount, $data['currency_rate']);
             } elseif (isset($data['amount']) && $data['amount'] != $expenseTransaction->amount) {
                 $data['amount_usd'] = CurrencyHelper::toUsd(
                     $expenseTransaction->currency_id,
                     $data['amount'],
                     $expenseTransaction->currency_rate
                 );
+                $data['vat_amount_usd'] = CurrencyHelper::toUsd(
+                    $expenseTransaction->currency_id,
+                    $data['vat_amount'] ?? $expenseTransaction->vat_amount,
+                    $expenseTransaction->currency_rate
+                );
+            } elseif (isset($data['vat_amount'])) {
+                $data['vat_amount_usd'] = CurrencyHelper::toUsd(
+                    $expenseTransaction->currency_id,
+                    $data['vat_amount'],
+                    $expenseTransaction->currency_rate
+                );
             }
 
-            // Expense is always fully paid in legacy mode; keep paid fields in sync.
-            $data['paid_amount']     = $data['amount']     ?? $expenseTransaction->amount;
-            $data['paid_amount_usd'] = $data['amount_usd'] ?? $expenseTransaction->amount_usd;
+            // Expense is always fully paid in legacy mode; keep paid fields in sync with total_amount.
+            $amount     = (float) ($data['amount']     ?? $expenseTransaction->amount);
+            $vatAmount  = (float) ($data['vat_amount'] ?? $expenseTransaction->vat_amount);
+            $amountUsd  = (float) ($data['amount_usd']     ?? $expenseTransaction->amount_usd);
+            $vatAmountUsd = (float) ($data['vat_amount_usd'] ?? $expenseTransaction->vat_amount_usd);
+            $data['paid_amount']     = $amount + $vatAmount;
+            $data['paid_amount_usd'] = $amountUsd + $vatAmountUsd;
         } else {
             // Feature tenants: recalculate amount_usd when amount or currency changes.
             if ($hasAccount) {
@@ -209,14 +228,17 @@ class ExpenseTransactionsController extends Controller
                 $data['currency_rate'] = $account->currency->activeRate->rate ?? 1;
                 $amount                = $data['amount'] ?? $expenseTransaction->amount;
                 $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $amount, $data['currency_rate']);
+                $data['vat_amount_usd'] = CurrencyHelper::toUsd($data['currency_id'], $data['vat_amount'] ?? $expenseTransaction->vat_amount, $data['currency_rate']);
             } elseif ($multiCurrencyEnabled) {
                 $currencyId   = $data['currency_id']   ?? $expenseTransaction->currency_id;
                 $currencyRate = $data['currency_rate'] ?? $expenseTransaction->currency_rate ?? 1;
                 $amount       = $data['amount']        ?? $expenseTransaction->amount;
                 $data['amount_usd'] = CurrencyHelper::toUsd($currencyId, $amount, $currencyRate);
+                $data['vat_amount_usd'] = CurrencyHelper::toUsd($currencyId, $data['vat_amount'] ?? $expenseTransaction->vat_amount, $currencyRate);
             } else {
                 $data['currency_id'] = CurrencyService::getLocalCurrencyId();
                 $data['amount_usd']  = $data['amount'] ?? $expenseTransaction->amount;
+                $data['vat_amount_usd'] = $data['vat_amount'] ?? $expenseTransaction->vat_amount;
             }
         }
 
