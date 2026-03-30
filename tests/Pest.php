@@ -43,6 +43,31 @@ uses(Tests\Feature\Customers\PaymentOrders\Concerns\HasCustomerPaymentOrderSetup
     ->group('api', 'customers', 'customer-payment-orders')
     ->in('Feature/Customers/PaymentOrders');
 
+// ─── Accounts ─────────────────────────────────────────────────────────────────
+uses(Tests\Feature\Accounts\Accounts\Concerns\HasAccountSetup::class)
+    ->group('api', 'accounts')
+    ->in('Feature/Accounts/Accounts');
+
+// ─── Account Adjusts ──────────────────────────────────────────────────────────
+uses(Tests\Feature\Accounts\AccountAdjusts\Concerns\HasAccountAdjustSetup::class)
+    ->group('api', 'accounts', 'account-adjusts')
+    ->in('Feature/Accounts/AccountAdjusts');
+
+// ─── Account Transfers ────────────────────────────────────────────────────────
+uses(Tests\Feature\Accounts\AccountTransfers\Concerns\HasAccountTransferSetup::class)
+    ->group('api', 'accounts', 'account-transfers')
+    ->in('Feature/Accounts/AccountTransfers');
+
+// ─── Expense Transactions ─────────────────────────────────────────────────────
+uses(Tests\Feature\Accounts\ExpenseTransactions\Concerns\HasExpenseTransactionSetup::class)
+    ->group('api', 'accounts', 'expense-transactions')
+    ->in('Feature/Accounts/ExpenseTransactions');
+
+// ─── Income Transactions ──────────────────────────────────────────────────────
+uses(Tests\Feature\Accounts\IncomeTransactions\Concerns\HasIncomeTransactionSetup::class)
+    ->group('api', 'accounts', 'income-transactions')
+    ->in('Feature/Accounts/IncomeTransactions');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations

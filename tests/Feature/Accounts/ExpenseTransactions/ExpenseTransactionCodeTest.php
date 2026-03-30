@@ -10,13 +10,19 @@ beforeEach(function () {
     $this->setUpExpenseTransactions();
 });
 
+// Strip the 'EXP' prefix before numeric comparison
+function expCodeInt(string $code): int
+{
+    return (int) str_replace(ExpenseTransaction::PREFIX, '', $code);
+}
+
 it('auto-generates code starting from counter value', function () {
     $this->postJson(route('expense-transactions.store'), $this->transactionPayload(['amount' => 750.00]))->assertCreated();
 
     $transaction = ExpenseTransaction::where('amount', 750.00)->first();
 
     expect($transaction->code)->not()->toBeNull()
-        ->and((int) $transaction->code)->toBeGreaterThanOrEqual(100);
+        ->and(expCodeInt($transaction->code))->toBeGreaterThanOrEqual(100);
 });
 
 it('ignores provided code and always generates a new one', function () {
@@ -25,7 +31,7 @@ it('ignores provided code and always generates a new one', function () {
     $transaction = ExpenseTransaction::where('amount', 999.00)->first();
 
     expect($transaction->code)->not()->toBe('99999')
-        ->and((int) $transaction->code)->toBeGreaterThanOrEqual(100);
+        ->and(expCodeInt($transaction->code))->toBeGreaterThanOrEqual(100);
 });
 
 it('returns next suggested code from current setting', function () {
@@ -39,7 +45,7 @@ it('uses counter value and increments after creation', function () {
 
     $response = $this->postJson(route('expense-transactions.store'), $this->transactionPayload())->assertCreated();
 
-    expect((int) $response->json('data.code'))->toBe(105);
+    expect(expCodeInt($response->json('data.code')))->toBe(105);
     expect((int) ExpenseTransaction::getNextSuggestedCode())->toBe(106);
 });
 
@@ -49,7 +55,7 @@ it('auto-creates code counter setting when missing', function () {
 
     $response = $this->postJson(route('expense-transactions.store'), $this->transactionPayload())->assertCreated();
 
-    expect((int) $response->json('data.code'))->toBe(100);
+    expect(expCodeInt($response->json('data.code')))->toBe(100);
 
     $setting = Setting::where('group_name', 'expense_transactions')->where('key_name', 'code_counter')->first();
     expect($setting)->not()->toBeNull()
@@ -63,8 +69,8 @@ it('generates sequential codes for consecutive transactions', function () {
     $response1 = $this->postJson(route('expense-transactions.store'), $this->transactionPayload(['amount' => 1000.00]))->assertCreated();
     $response2 = $this->postJson(route('expense-transactions.store'), $this->transactionPayload(['amount' => 2000.00]))->assertCreated();
 
-    $code1 = (int) $response1->json('data.code');
-    $code2 = (int) $response2->json('data.code');
+    $code1 = expCodeInt($response1->json('data.code'));
+    $code2 = expCodeInt($response2->json('data.code'));
 
     expect($code1)->toBeGreaterThanOrEqual(100)
         ->and($code2)->toBe($code1 + 1);
@@ -77,7 +83,7 @@ it('generates strictly increasing codes for concurrent transactions', function (
     }
 
     $codes = collect($transactions)
-        ->map(fn ($t) => (int) $t->code)
+        ->map(fn ($t) => expCodeInt($t->code))
         ->sort()
         ->values();
 

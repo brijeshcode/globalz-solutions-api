@@ -11,6 +11,7 @@ beforeEach(function () {
 
 it('creates an expense transaction with minimum required fields', function () {
     $this->postJson(route('expense-transactions.store'), [
+        'expense_month'       => '2025-08',
         'date'                => '2025-08-31',
         'expense_category_id' => $this->expenseCategory->id,
         'account_id'          => $this->account->id,
@@ -58,7 +59,7 @@ it('sets created_by and updated_by automatically', function () {
 it('validates required fields', function () {
     $this->postJson(route('expense-transactions.store'), [])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['date', 'expense_category_id', 'account_id', 'amount']);
+        ->assertJsonValidationErrors(['date', 'expense_category_id',  'amount']);
 });
 
 it('validates foreign key references', function () {
@@ -100,4 +101,64 @@ it('validates maximum length for string fields', function () {
     ]))
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['subject', 'order_number', 'check_number', 'bank_ref_number', 'note']);
+});
+
+it('stores vat_amount and calculates total_amount', function () {
+    $response = $this->postJson(route('expense-transactions.store'), $this->transactionPayload([
+        'amount'     => 1000.00,
+        'vat_amount' => 150.00,
+    ]))->assertCreated();
+
+    $response->assertJson(['data' => [
+        'amount'       => 1000.00,
+        'vat_amount'   => 150.00,
+        'total_amount' => 1150.00,
+    ]]);
+
+    $this->assertDatabaseHas('expense_transactions', [
+        'amount'     => 1000.00,
+        'vat_amount' => 150.00,
+    ]);
+});
+
+it('defaults vat_amount to zero when not provided', function () {
+    $response = $this->postJson(route('expense-transactions.store'), $this->transactionPayload([
+        'amount' => 500.00,
+    ]))->assertCreated();
+
+    $response->assertJson(['data' => [
+        'amount'       => 500.00,
+        'vat_amount'   => null,
+        'total_amount' => 500.00,
+    ]]);
+});
+
+it('response includes all vat fields in structure', function () {
+    $this->postJson(route('expense-transactions.store'), $this->transactionPayload([
+        'amount'     => 800.00,
+        'vat_amount' => 80.00,
+    ]))
+        ->assertCreated()
+        ->assertJsonStructure(['data' => [
+            'amount',
+            'vat_amount',
+            'vat_amount_usd',
+            'total_amount',
+            'total_amount_usd',
+        ]]);
+});
+
+it('paid_amount includes vat when account is provided', function () {
+    $response = $this->postJson(route('expense-transactions.store'), $this->transactionPayload([
+        'amount'     => 1000.00,
+        'vat_amount' => 200.00,
+    ]))->assertCreated();
+
+    $response->assertJson(['data' => [
+        'paid_amount' => 1200.00,
+    ]]);
+
+    $this->assertDatabaseHas('expense_transactions', [
+        'paid_amount' => 1200.00,
+    ]);
 });

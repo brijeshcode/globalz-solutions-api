@@ -15,7 +15,7 @@ trait HasExpenseTransactionSetup
 
     public function setUpExpenseTransactions(): void
     {
-        $this->admin = User::factory()->create();
+        $this->admin = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
         $this->actingAs($this->admin, 'sanctum');
 
         Setting::create([
@@ -34,6 +34,7 @@ trait HasExpenseTransactionSetup
     {
         return array_merge([
             'date'                => '2025-08-31',
+            'expense_month'       => '2025-08',
             'expense_category_id' => $this->expenseCategory->id,
             'account_id'          => $this->account->id,
             'subject'             => 'Test Expense',

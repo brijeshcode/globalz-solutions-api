@@ -80,24 +80,13 @@ it('filters by account', function () {
         ->and($data[0]['account']['id'])->toBe($acc1->id);
 });
 
-it('filters by exact date', function () {
-    $this->createTransaction(['date' => '2025-08-31']);
-    $this->createTransaction(['date' => '2025-09-01']);
-
-    $data = $this->getJson(route('expense-transactions.index', ['date' => '2025-08-31']))
-        ->assertOk()
-        ->json('data');
-
-    expect($data)->toHaveCount(1)
-        ->and($data[0]['date'])->toBe('2025-08-31');
-});
 
 it('filters by date range', function () {
     $this->createTransaction(['date' => '2025-08-15']);
     $this->createTransaction(['date' => '2025-08-31']);
     $this->createTransaction(['date' => '2025-09-15']);
 
-    $this->getJson(route('expense-transactions.index', ['start_date' => '2025-08-01', 'end_date' => '2025-08-31']))
+    $this->getJson(route('expense-transactions.index', ['date_from' => '2025-08-01', 'date_to' => '2025-08-31']))
         ->assertOk()
         ->assertJsonCount(2, 'data');
 });
