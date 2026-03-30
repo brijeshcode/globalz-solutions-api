@@ -195,22 +195,19 @@ class ExpenseTransactionsController extends Controller
                 $data['amount_usd']    = CurrencyHelper::toUsd($data['currency_id'], $amount, $data['currency_rate']);
                 $data['vat_amount_usd'] = CurrencyHelper::toUsd($data['currency_id'], $data['vat_amount'] ?? $expenseTransaction->vat_amount, $data['currency_rate']);
             } elseif (isset($data['amount']) && $data['amount'] != $expenseTransaction->amount) {
-                $data['amount_usd'] = CurrencyHelper::toUsd(
-                    $expenseTransaction->currency_id,
-                    $data['amount'],
-                    $expenseTransaction->currency_rate
-                );
-                $data['vat_amount_usd'] = CurrencyHelper::toUsd(
-                    $expenseTransaction->currency_id,
-                    $data['vat_amount'] ?? $expenseTransaction->vat_amount,
-                    $expenseTransaction->currency_rate
-                );
+                $currencyId = $expenseTransaction->currency_id;
+                if ($currencyId) {
+                    $data['amount_usd']     = CurrencyHelper::toUsd($currencyId, $data['amount'], $expenseTransaction->currency_rate);
+                    $data['vat_amount_usd'] = CurrencyHelper::toUsd($currencyId, $data['vat_amount'] ?? $expenseTransaction->vat_amount, $expenseTransaction->currency_rate);
+                } else {
+                    $data['amount_usd']     = $data['amount'];
+                    $data['vat_amount_usd'] = $data['vat_amount'] ?? $expenseTransaction->vat_amount;
+                }
             } elseif (isset($data['vat_amount'])) {
-                $data['vat_amount_usd'] = CurrencyHelper::toUsd(
-                    $expenseTransaction->currency_id,
-                    $data['vat_amount'],
-                    $expenseTransaction->currency_rate
-                );
+                $currencyId = $expenseTransaction->currency_id;
+                $data['vat_amount_usd'] = $currencyId
+                    ? CurrencyHelper::toUsd($currencyId, $data['vat_amount'], $expenseTransaction->currency_rate)
+                    : $data['vat_amount'];
             }
 
             // Expense is always fully paid in legacy mode; keep paid fields in sync with total_amount.
@@ -482,12 +479,15 @@ class ExpenseTransactionsController extends Controller
         return ApiResponse::show('Expense transaction statistics retrieved successfully', $stats);
     }
 
-    private function query(Request $request) 
+    private function query(Request $request)
     {
+        $search = $request->input('search');
+        if ($search && str_starts_with(strtoupper($search), ExpenseTransaction::PREFIX)) {
+            $request->merge(['search' => substr($search, strlen(ExpenseTransaction::PREFIX))]);
+        }
 
         $query = ExpenseTransaction::query()
-            ->searchable($request)
-            ;
+            ->searchable($request);
 
         if ($request->has('expense_category_id')) {
             $query->where('expense_category_id', $request->input('expense_category_id'));
