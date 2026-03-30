@@ -315,7 +315,7 @@ class PurchaseService
 
         if ($inventoryAfterReduction < 0) {
             $item = Item::find($itemId);
-            $itemName = $item ? $item->name : "Item #{$itemId}";
+            $itemName = $item ? $item->short_name : "Item #{$itemId}";
 
             // Calculate how many units have already been sold/used from this purchase
             $soldFromThisPurchase = $oldPurchaseQty - $currentInventory;
@@ -345,7 +345,7 @@ class PurchaseService
 
         if ($currentInventory < $purchaseQuantity) {
             $item = Item::find($itemId);
-            $itemName = $item ? $item->name : "Item #{$itemId}";
+            $itemName = $item ? $item->short_name : "Item #{$itemId}";
 
             // Calculate how many units have already been sold/used from this purchase
             $soldFromThisPurchase = $purchaseQuantity - $currentInventory;

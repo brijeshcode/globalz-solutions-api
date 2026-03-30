@@ -23,6 +23,7 @@ class EmployeeFactory extends Factory
             'phone' => $this->faker->phoneNumber(),
             'mobile' => $this->faker->phoneNumber(),
             'email' => $this->faker->unique()->safeEmail(),
+            'base_salary' => 0,
             'start_date' => $this->faker->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
             'department_id' => \App\Models\Setups\Employees\Department::factory(),
             'user_id' => null,

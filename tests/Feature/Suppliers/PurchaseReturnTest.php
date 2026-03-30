@@ -1,9 +1,6 @@
 <?php
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Suppliers\PurchaseReturn;
-use App\Models\Suppliers\PurchaseReturnItem;
-use App\Models\Suppliers\Purchase;
 use App\Models\Inventory\ItemPrice;
 use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Inventory\Inventory;
@@ -14,7 +11,7 @@ use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use App\Models\Setting;
 
-uses(RefreshDatabase::class)->group('api', 'suppliers', 'purchase-returns');
+uses()->group('api', 'suppliers', 'purchase-returns');
 
 beforeEach(function () {
     $this->user = User::factory()->create();

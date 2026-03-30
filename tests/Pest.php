@@ -12,8 +12,36 @@
 */
 
 pest()->extend(Tests\TestCase::class)
- // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->beforeEach(function () {
+        // Skip tenant-related middleware — tenant is already set via makeCurrent() in TestCase::setUpTenant()
+        $this->withoutMiddleware([
+            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+            \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+        ]);
+
+        // Reset static caches that persist across tests within the same process
+        \App\Helpers\CurrencyHelper::resetStaticCache();
+
+        // Reset Faker's unique generator so it doesn't carry over used values
+        // from previous tests (prevents duplicate entry errors on unique DB columns)
+        fake()->unique(true);
+    })
     ->in('Feature');
+
+// ─── Customer Credit/Debit Notes ──────────────────────────────────────────────
+uses(Tests\Feature\Customers\CreditDebitNotes\Concerns\HasCreditDebitNoteSetup::class)
+    ->group('api', 'customers', 'credit-debit-notes')
+    ->in('Feature/Customers/CreditDebitNotes');
+
+// ─── Supplier Credit/Debit Notes ──────────────────────────────────────────────
+uses(Tests\Feature\Suppliers\CreditDebitNotes\Concerns\HasSupplierCreditDebitNoteSetup::class)
+    ->group('api', 'suppliers', 'credit-debit-notes')
+    ->in('Feature/Suppliers/CreditDebitNotes');
+
+// ─── Customer Payment Orders ───────────────────────────────────────────────────
+uses(Tests\Feature\Customers\PaymentOrders\Concerns\HasCustomerPaymentOrderSetup::class)
+    ->group('api', 'customers', 'customer-payment-orders')
+    ->in('Feature/Customers/PaymentOrders');
 
 /*
 |--------------------------------------------------------------------------

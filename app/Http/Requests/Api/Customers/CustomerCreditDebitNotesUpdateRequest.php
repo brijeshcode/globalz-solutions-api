@@ -5,13 +5,12 @@ namespace App\Http\Requests\Api\Customers;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 
 class CustomerCreditDebitNotesUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::canAdmin();
     }
 
     public function rules(): array

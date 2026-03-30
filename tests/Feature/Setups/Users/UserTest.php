@@ -3,14 +3,12 @@
 use App\Models\Employees\Employee;
 use App\Models\Setups\Employees\Department;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
 uses()->group('api', 'setup', 'setup.users', 'users');
-uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
+    $this->user = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
     $this->actingAs($this->user, 'sanctum');
     
     $this->department = Department::factory()->create([

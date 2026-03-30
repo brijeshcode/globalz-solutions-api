@@ -26,8 +26,8 @@ class ItemFactory extends Factory
             'tax_code_id' => \App\Models\Setups\TaxCode::factory(),
             'base_cost' => fake()->randomFloat(2, 10, 1000),
             'base_sell' => fake()->randomFloat(2, 15, 1200),
-            'starting_price' => fake()->randomFloat(2, 12, 1100),
-            'starting_quantity' => fake()->randomFloat(2, 0, 100),
+            'starting_price' => 0,
+            'starting_quantity' => 0,
             'low_quantity_alert' => fake()->randomFloat(2, 1, 10),
             'cost_calculation' => fake()->randomElement(['weighted_average', 'last_cost']),
             'is_active' => fake()->boolean(80), // 80% chance of being active
