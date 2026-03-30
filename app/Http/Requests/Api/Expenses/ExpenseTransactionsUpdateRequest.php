@@ -26,7 +26,7 @@ class ExpenseTransactionsUpdateRequest extends FormRequest
             'date' => 'required|date',
             'expense_month' => 'required|date_format:Y-m',
             'expense_category_id' => 'required|integer|exists:expense_categories,id',
-            'account_id' => 'required|integer|exists:accounts,id',
+            'account_id' => 'nullable|integer|exists:accounts,id',
             'subject' => 'nullable|string|max:200',
             'amount' => 'required|numeric|min:0|max:999999999999.99',
             'order_number' => 'nullable|string|max:100',

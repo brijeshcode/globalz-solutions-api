@@ -61,6 +61,7 @@ class FeatureController extends Controller
         ['key' => 'report_sales_category',     'name' => 'Sales Category Report',       'description' => 'Sales performance broken down by category.'],
         ['key' => 'report_customer_aging',     'name' => 'Customer Aging Report',       'description' => 'Customer outstanding balance aging by last invoice and payment date.'],
         ['key' => 'report_item_sales',     'name' => 'Item Sales Report',           'description' => 'Aggregated sales report per item showing quantity sold, sale amount, profit, and profit percentage.'],
+        ['key' => 'report_vat',            'name' => 'VAT Report',                  'description' => 'VAT summary report showing collected VAT on sales, VAT returned on customer returns, VAT paid via purchases and expenses, and the net VAT difference.'],
 
         // System
         ['key' => 'activity_logs',             'name' => 'Activity Logs',               'description' => 'Full audit trail of all user actions.'],

@@ -35,9 +35,10 @@ class ExpenseCategoryFactory extends Factory
                 'Banking & Finance',
                 'Research & Development',
             ]),
-            'description' => $this->faker->optional(0.7)->sentence(10),
-            'is_active' => $this->faker->boolean(85),
-            'parent_id' => null, // Will be set explicitly when creating hierarchies
+            'description'      => $this->faker->optional(0.7)->sentence(10),
+            'is_active'        => $this->faker->boolean(85),
+            'is_vat_category'  => false,
+            'parent_id'        => null, // Will be set explicitly when creating hierarchies
         ];
     }
 
