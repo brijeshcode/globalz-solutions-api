@@ -25,11 +25,13 @@ class ExpenseCategory extends Model
         'description',
         'is_active',
         'exclude_from_profit',
+        'is_vat_category',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'is_active'          => 'boolean',
         'exclude_from_profit' => 'boolean',
+        'is_vat_category'    => 'boolean',
     ];
 
     protected $searchable = [

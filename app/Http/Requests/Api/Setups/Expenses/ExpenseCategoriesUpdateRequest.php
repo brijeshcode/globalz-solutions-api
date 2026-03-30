@@ -49,8 +49,9 @@ class ExpenseCategoriesUpdateRequest extends FormRequest
                     ->whereNull('deleted_at')
             ],
             'description' => 'nullable|string|max:500',
-            'is_active' => 'boolean',
+            'is_active'           => 'boolean',
             'exclude_from_profit' => 'boolean',
+            'is_vat_category'     => 'boolean',
         ];
     }
 
