@@ -68,6 +68,21 @@ uses(Tests\Feature\Accounts\IncomeTransactions\Concerns\HasIncomeTransactionSetu
     ->group('api', 'accounts', 'income-transactions')
     ->in('Feature/Accounts/IncomeTransactions');
 
+// ─── Purchases ────────────────────────────────────────────────────────────────
+uses(Tests\Feature\Suppliers\Purchases\Concerns\HasPurchaseSetup::class)
+    ->group('api', 'suppliers', 'purchases')
+    ->in('Feature/Suppliers/Purchases');
+
+// ─── Purchase Returns ─────────────────────────────────────────────────────────
+uses(Tests\Feature\Suppliers\PurchaseReturns\Concerns\HasPurchaseReturnSetup::class)
+    ->group('api', 'suppliers', 'purchase-returns')
+    ->in('Feature/Suppliers/PurchaseReturns');
+
+// ─── Supplier Payments ────────────────────────────────────────────────────────
+uses(Tests\Feature\Suppliers\SupplierPayments\Concerns\HasSupplierPaymentSetup::class)
+    ->group('api', 'suppliers', 'supplier-payments')
+    ->in('Feature/Suppliers/SupplierPayments');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations
