@@ -566,7 +566,7 @@ class SalesController extends Controller
             return ApiResponse::customError('Cannot change status off an un-approved sales order.', 422);
         }
 
-        if (! RoleHelper::isWarehouseManager()) {
+        if (! RoleHelper::canWarehouseManager()) {
             return ApiResponse::customError('Only warehouse manager can change the status.', 422);
         }
 
