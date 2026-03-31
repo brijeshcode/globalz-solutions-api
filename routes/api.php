@@ -898,6 +898,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(ExpenseTransactionsController::class)->prefix('expense-transactions')->name('expense-transactions.')->group(function () {
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('stats', 'stats')->name('stats');
+        Route::get('category-summary', 'categorySummary')->name('category-summary');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
         Route::get('{expenseTransaction}', 'show')->name('show');
