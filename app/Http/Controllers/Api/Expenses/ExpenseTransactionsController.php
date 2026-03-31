@@ -14,6 +14,7 @@ use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Landlord\TenantFeature;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
+use App\Models\Setups\Expenses\ExpenseCategory;
 use App\Models\Setups\Generals\Currencies\Currency;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -479,6 +480,71 @@ class ExpenseTransactionsController extends Controller
         return ApiResponse::show('Expense transaction statistics retrieved successfully', $stats);
     }
 
+    public function categorySummary(Request $request): JsonResponse
+    {
+        $aggregates = ExpenseTransaction::query()
+            ->searchable($request)
+            ->when($request->has('account_id'),          fn($q) => $q->where('account_id', $request->input('account_id')))
+            ->when($request->has('expense_category_id'), fn($q) => $q->where('expense_category_id', $request->input('expense_category_id')))
+            ->when($request->has('date_from'),           fn($q) => $q->fromDate($request->input('date_from')))
+            ->when($request->has('date_to'),             fn($q) => $q->toDate($request->input('date_to')))
+            ->selectRaw('expense_category_id, COUNT(*) as transactions_count, COALESCE(SUM(amount_usd), 0) as sum_amount_usd, COALESCE(SUM(paid_amount_usd), 0) as sum_paid_usd')
+            ->groupBy('expense_category_id')
+            ->get()
+            ->keyBy('expense_category_id');
+
+        $categories = ExpenseCategory::with('childrenRecursive')
+            ->whereNull('parent_id')
+            ->active()
+            ->get();
+
+        $summary = $categories
+            ->map(fn($cat) => $this->buildCategoryNode($cat, $aggregates))
+            ->filter(fn($node) => $node['total_amount_usd'] > 0)
+            ->values();
+
+        return ApiResponse::show('Expense category summary retrieved successfully', $summary);
+    }
+
+    private function buildCategoryNode(ExpenseCategory $category, $aggregates): array
+    {
+        $own       = $aggregates->get($category->id);
+        $ownAmount = (float) ($own->sum_amount_usd    ?? 0);
+        $ownPaid   = (float) ($own->sum_paid_usd      ?? 0);
+        $ownCount  = (int)   ($own->transactions_count ?? 0);
+
+        $children = $category->children
+            ->map(fn($child) => $this->buildCategoryNode($child, $aggregates))
+            ->filter(fn($child) => $child['total_amount_usd'] > 0)
+            ->values();
+
+        $totalAmount = $ownAmount + $children->sum('total_amount_usd');
+        $totalPaid   = $ownPaid   + $children->sum('total_paid_amount_usd');
+        $totalDue    = $totalAmount - $totalPaid;
+        $totalCount  = $ownCount  + $children->sum('total_transactions_count');
+
+        $ownDue = max(0, $ownAmount - $ownPaid);
+
+        $node = [
+            'id'                         => $category->id,
+            'name'                       => $category->name,
+            'own_transactions_count'     => $ownCount,
+            'own_amount_usd'             => round($ownAmount, 2),
+            'own_paid_amount_usd'        => round($ownPaid,   2),
+            'own_due_amount_usd'         => round($ownDue,    2),
+            'total_transactions_count'   => $totalCount,
+            'total_amount_usd'           => round($totalAmount, 2),
+            'total_paid_amount_usd'      => round($totalPaid,   2),
+            'total_due_amount_usd'       => round($totalDue,    2),
+        ];
+
+        if ($children->isNotEmpty()) {
+            $node['children'] = $children->values();
+        }
+
+        return $node;
+    }
+
     private function query(Request $request)
     {
         $search = $request->input('search');
@@ -511,4 +577,5 @@ class ExpenseTransactionsController extends Controller
         return $query;
 
     }
+    
 }
