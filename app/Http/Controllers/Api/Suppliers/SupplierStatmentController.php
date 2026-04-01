@@ -309,7 +309,6 @@ class SupplierStatmentController extends Controller
     private function getPurchases(Request $request, Supplier $supplier, ?string $noteSearch = null)
     {
         $query = Purchase::query()
-            ->where('status', 'Delivered')
             ->select('id', 'code', 'prefix', 'date', 'total', 'note', 'supplier_id', 'created_at');
 
         $this->applyFilters($query, $request, $supplier, $noteSearch);
