@@ -180,17 +180,13 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
             $data['cost_calculation'] = Item::COST_WEIGHTED_AVERAGE; // Default to weighted average
         }
 
-        // Lookup item type by name (REQUIRED)
+        // Lookup item type by name (optional, nullable)
         if (!empty($row['item_type']) || !empty($row['type'])) {
             $typeName = $row['item_type'] ?? $row['type'];
             $itemType = ItemType::where('name', $typeName)->first();
             if ($itemType) {
                 $data['item_type_id'] = $itemType->id;
-            } else {
-                return ['error' => "Item type '{$typeName}' not found. Please ensure the item type exists in the system."];
             }
-        } else {
-            return ['error' => 'Item type is required'];
         }
 
         // Lookup item unit by name or short_name (REQUIRED)
