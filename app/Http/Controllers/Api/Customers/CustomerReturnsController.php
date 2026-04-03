@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
-use App\Helpers\ApiHelper;
 use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
 use App\Helpers\SettingsHelper;
@@ -13,8 +12,6 @@ use App\Http\Resources\Api\Customers\CustomerReturnResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
-use App\Models\Customers\CustomerReturnItem;
-use App\Models\Customers\SaleItems;
 use App\Services\Customers\CustomerReturnService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -165,16 +162,19 @@ class CustomerReturnsController extends Controller
 
     public function update(CustomerReturnsUpdateRequest $request, CustomerReturn $customerReturn): JsonResponse
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+        $isReceived = $customerReturn->isReceived();
 
-        if ($customerReturn->isReceived()) {
-            return ApiResponse::customError('Cannot update returns that have been received', 422);
+        if ($isReceived && !RoleHelper::canSuperAdmin()) {
+            return ApiResponse::customError('Only super admins can update received returns', 403);
         }
 
         $data = $request->validated();
 
-        DB::transaction(function () use ($data, $customerReturn) {
+        // Capture old values before update for balance adjustment
+        $oldCustomerId = $customerReturn->customer_id;
+        $oldTotalUsd = (float) $customerReturn->total_usd;
+
+        DB::transaction(function () use ($data, $customerReturn, $isReceived, $oldCustomerId, $oldTotalUsd) {
             // Extract items data
             $itemsInput = $data['items'];
             $currencyRate = $data['currency_rate'] ?? $customerReturn->currency_rate;
@@ -194,6 +194,10 @@ class CustomerReturnsController extends Controller
                 $itemData = $this->customerReturnService->prepareReturnItemData($itemInput, $customerReturn->prefix, $currencyRate);
 
                 if (isset($itemInput['id']) && $itemInput['id']) {
+                    // When received, quantity is always locked
+                    if ($isReceived) {
+                        unset($itemData['quantity']);
+                    }
                     // Update existing item
                     $customerReturn->items()->where('id', $itemInput['id'])->update($itemData);
                 } else {
@@ -209,6 +213,17 @@ class CustomerReturnsController extends Controller
             $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
             $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
             $customerReturn->save();
+
+            // Adjust customer balance when updating a received return (super admin only)
+            if ($isReceived) {
+                $newTotalUsd = (float) $customerReturn->total_usd;
+                $newCustomerId = $customerReturn->customer_id;
+
+                // Reverse old balance from old customer
+                CustomersHelper::removeBalance(Customer::find($oldCustomerId), $oldTotalUsd);
+                // Apply new balance to new customer (handles customer change + amount change)
+                CustomersHelper::addBalance(Customer::find($newCustomerId), $newTotalUsd);
+            }
         });
 
         $customerReturn->load([
