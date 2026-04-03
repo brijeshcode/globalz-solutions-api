@@ -76,6 +76,7 @@ use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
 use App\Http\Controllers\Api\Settings\SaleSettingsController;
 use App\Http\Controllers\Api\Settings\SettingsController;
+use App\Http\Controllers\Api\Backup\BackupController;
 use Illuminate\Support\Facades\Route;
 
 // API Root - Health check / API info (no tenant required)
@@ -88,6 +89,7 @@ Route::get('/', function () {
     \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
     \Illuminate\Session\Middleware\StartSession::class
 ]);
+
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
@@ -117,6 +119,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/login-logs', [LoginLogsController::class, 'index'])->name('login-logs.index');
 
     Route::get('/homepage', [HomePageController::class, 'HomePage'])->name('homepage');
+
+    // Backup Management
+    Route::controller(BackupController::class)->prefix('backups')->name('backups.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/trigger', 'trigger')->name('trigger');
+        Route::get('/settings', 'getSettings')->name('settings');
+        Route::put('/settings', 'updateSettings')->name('settings.update');
+        Route::get('/{id}/download', 'download')->name('download');
+        Route::delete('/{id}', 'destroy')->name('destroy');
+    });
 
     Route::get('/list-data/{type}', [ListDataController::class, 'getList'])->name('getList');
     Route::get('/list-data/items-with-parameters', [ListDataController::class, 'itemWithParameter'])->name('itemWithParameter');
