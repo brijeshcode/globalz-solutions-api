@@ -50,21 +50,26 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
             $rowNumber = $index + 2; // +2 because of header row and 0-based index
 
             try {
+                $rowArray = $row->toArray();
+                $itemIdentifier = $this->resolveItemIdentifier($rowArray);
+
                 // Validate row data
-                $result = $this->validateRow($row->toArray(), $rowNumber);
+                $result = $this->validateRow($rowArray, $rowNumber);
 
                 if (isset($result['error'])) {
                     $this->results['skipped']++;
                     $this->results['errors'][] = [
                         'row' => $rowNumber,
+                        'item' => $itemIdentifier,
                         'error' => $result['error']
                     ];
 
                     // Log validation failure for debugging
                     Log::warning("Item import validation failed", [
                         'row' => $rowNumber,
+                        'item' => $itemIdentifier,
                         'error' => $result['error'],
-                        'data' => $row->toArray()
+                        'data' => $rowArray
                     ]);
 
                     continue;
@@ -85,9 +90,14 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
                 // Handle duplicate logic
                 if ($existingItem) {
                     if ($this->updateExisting) {
-                        // Update existing item
-                        // Don't update code as it's system generated
-                        $updateData = $validatedData;
+                        // Update existing item — re-validate as update (relaxed required fields)
+                        $result = $this->validateRow($rowArray, $rowNumber, true);
+                        if (isset($result['error'])) {
+                            $this->results['skipped']++;
+                            $this->results['errors'][] = ['row' => $rowNumber, 'item' => $itemIdentifier, 'error' => $result['error']];
+                            continue;
+                        }
+                        $updateData = $result['data'];
                         unset($updateData['code']);
                         $existingItem->update($updateData);
                         $this->results['updated']++;
@@ -98,6 +108,7 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
                         $barcode = $validatedData['barcode'] ?? 'N/A';
                         $this->results['errors'][] = [
                             'row' => $rowNumber,
+                            'item' => $itemIdentifier,
                             'error' => "Item already exists with code: {$code} or barcode: {$barcode}"
                         ];
                     }
@@ -126,6 +137,7 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
                 $this->results['skipped']++;
                 $this->results['errors'][] = [
                     'row' => $rowNumber,
+                    'item' => $itemIdentifier ?? null,
                     'error' => $e->getMessage()
                 ];
                 Log::error("Row {$rowNumber} processing failed", [
@@ -138,9 +150,22 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
     }
 
     /**
+     * Resolve a human-readable identifier from the raw row for error reporting
+     */
+    protected function resolveItemIdentifier(array $row): string
+    {
+        if (!empty($row['code'])) return $row['code'];
+        if (!empty($row['barcode'])) return $row['barcode'];
+        if (!empty($row['short_name'])) return $row['short_name'];
+        if (!empty($row['name'])) return $row['name'];
+        if (!empty($row['description'])) return $row['description'];
+        return 'unknown';
+    }
+
+    /**
      * Validate and transform row data
      */
-    protected function validateRow(array $row, int $rowNumber): array
+    protected function validateRow(array $row, int $rowNumber, bool $isUpdate = false): array
     {
         // Map column headers to expected fields
         $data = [
@@ -169,9 +194,8 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
             'is_active' => isset($row['is_active']) ? filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN) : true,
         ];
 
-        // Required field validation
-
-        if (empty($data['description'])) {
+        // Required field validation (skipped for updates — only provided fields are updated)
+        if (!$isUpdate && empty($data['description'])) {
             return ['error' => 'Item description is required'];
         }
 
@@ -189,7 +213,7 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
             }
         }
 
-        // Lookup item unit by name or short_name (REQUIRED)
+        // Lookup item unit by name or short_name (required on create, optional on update)
         if (!empty($row['item_unit']) || !empty($row['unit'])) {
             $unitName = $row['item_unit'] ?? $row['unit'];
             $itemUnit = ItemUnit::where('name', $unitName)
@@ -200,11 +224,11 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
             } else {
                 return ['error' => "Item unit '{$unitName}' not found. Please ensure the item unit exists in the system."];
             }
-        } else {
+        } elseif (!$isUpdate) {
             return ['error' => 'Item unit is required'];
         }
-        
-        // Lookup tax code by name (REQUIRED)
+
+        // Lookup tax code by name (required on create, optional on update)
         if (!empty($row['tax_code']) || !empty($row['tax'])) {
             $taxName = $row['tax_code'] ?? $row['tax'];
             $taxCode = TaxCode::where('code', $taxName)->first();
@@ -213,7 +237,7 @@ class ItemsImport implements ToCollection, WithHeadingRow, WithBatchInserts, Wit
             } else {
                 return ['error' => "Tax code '{$taxName}' not found. Please ensure the tax code exists in the system."];
             }
-        } else {
+        } elseif (!$isUpdate) {
             return ['error' => 'Tax code is required'];
         }
 
