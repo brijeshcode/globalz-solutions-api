@@ -137,17 +137,23 @@ class CustomerReturnsUpdateRequest extends FormRequest
                                 $existingReturnsQuery->where('id', '!=', $item['id']);
                             }
 
-                            $existingReturns = $existingReturnsQuery->sum('quantity');
-                            $requestedQuantity = $item['quantity'] ?? 0;
-                            $totalReturnQuantity = $existingReturns + $requestedQuantity;
+                            // Skip quantity validation for received returns — quantity is locked and ignored on update
+                            $customerReturn = $this->route('customerReturn');
+                            $isReceived = $customerReturn instanceof CustomerReturn && $customerReturn->isReceived();
 
-                            // Validate total return quantity doesn't exceed original sale quantity
-                            if ($totalReturnQuantity > $saleItem->quantity) {
-                                $availableQuantity = $saleItem->quantity - $existingReturns;
-                                $validator->errors()->add(
-                                    "items.{$index}.quantity",
-                                    "Return quantity cannot exceed available quantity. Original: {$saleItem->quantity}, Already returned/pending: {$existingReturns}, Available: {$availableQuantity}"
-                                );
+                            if (!$isReceived) {
+                                $existingReturns = $existingReturnsQuery->sum('quantity');
+                                $requestedQuantity = $item['quantity'] ?? 0;
+                                $totalReturnQuantity = $existingReturns + $requestedQuantity;
+
+                                // Validate total return quantity doesn't exceed original sale quantity
+                                if ($totalReturnQuantity > $saleItem->quantity) {
+                                    $availableQuantity = $saleItem->quantity - $existingReturns;
+                                    $validator->errors()->add(
+                                        "items.{$index}.quantity",
+                                        "Return quantity cannot exceed available quantity. Original: {$saleItem->quantity}, Already returned/pending: {$existingReturns}, Available: {$availableQuantity}"
+                                    );
+                                }
                             }
                         }
                     }
