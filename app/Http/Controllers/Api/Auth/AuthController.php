@@ -210,8 +210,8 @@ class AuthController extends Controller
         $loginLogsUpdated = 0;
         $tokensDeleted = 0;
 
-        // Get all users with their tokens using eager loading to avoid N+1 queries
-        $users = User::has('tokens')->with('tokens')->get();
+        // Get all users with their tokens, excluding developer accounts
+        $users = User::has('tokens')->with('tokens')->where('role', '!=', User::ROLE_DEVELOPER)->get();
 
         foreach ($users as $user) {
             foreach ($user->tokens as $token) {
