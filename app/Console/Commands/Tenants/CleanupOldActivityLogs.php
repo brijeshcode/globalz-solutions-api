@@ -3,19 +3,16 @@
 namespace App\Console\Commands\Tenants;
 
 use App\Models\ActivityLog\ActivityLog;
+use App\Models\Tenant;
 use Illuminate\Console\Command;
-use Spatie\Multitenancy\Commands\Concerns\TenantAware;
 
 class CleanupOldActivityLogs extends Command
 {
-    use TenantAware;
-
     protected $signature = 'activitylog:cleanup
-                            {--tenant=* : Tenant ID(s), defaults to all tenants}
                             {--days= : Number of days to retain (overrides config)}
                             {--force : Skip confirmation prompt}';
 
-    protected $description = 'Clean up old activity logs based on retention period';
+    protected $description = 'Clean up old activity logs based on retention period (runs per tenant)';
 
     public function handle()
     {
@@ -27,45 +24,53 @@ class CleanupOldActivityLogs extends Command
             return 0;
         }
 
-        $cutoffDate = now()->subDays($retentionDays);
+        $tenants = Tenant::on('mysql')->where('is_active', true)->get();
 
-        $count = ActivityLog::where('timestamp', '<', $cutoffDate)->count();
-
-        if ($count === 0) {
-            $this->info('No activity logs found older than ' . $retentionDays . ' days.');
+        if ($tenants->isEmpty()) {
+            $this->info('No active tenants found.');
             return 0;
         }
 
-        $this->info("Found {$count} activity logs older than {$retentionDays} days (before {$cutoffDate->format('Y-m-d H:i:s')}).");
+        $cutoffDate = now()->subDays($retentionDays);
+        $this->info("Cleaning logs older than {$retentionDays} days (before {$cutoffDate->format('Y-m-d H:i:s')}) across {$tenants->count()} tenant(s)...");
 
-        if (!$this->option('force')) {
-            if (!$this->confirm('Do you want to delete these logs?')) {
-                $this->info('Cleanup cancelled.');
-                return 0;
+        foreach ($tenants as $tenant) {
+            $this->info("Processing tenant: {$tenant->tenant_key}");
+
+            try {
+                $tenant->makeCurrent();
+
+                $count = ActivityLog::where('timestamp', '<', $cutoffDate)->count();
+
+                if ($count === 0) {
+                    $this->info('  No old logs found.');
+                    continue;
+                }
+
+                $this->info("  Found {$count} logs to delete.");
+
+                if (!$this->option('force') && !$this->confirm("  Delete {$count} logs for {$tenant->tenant_key}?")) {
+                    $this->info('  Skipped.');
+                    continue;
+                }
+
+                $deleted = 0;
+                ActivityLog::where('timestamp', '<', $cutoffDate)
+                    ->chunkById(100, function ($logs) use (&$deleted) {
+                        foreach ($logs as $log) {
+                            $log->details()->delete();
+                            $log->delete();
+                            $deleted++;
+                        }
+                    });
+
+                $this->info("  ✓ Deleted {$deleted} logs.");
+            } catch (\Throwable $e) {
+                $this->error("  ✗ Failed for tenant {$tenant->tenant_key}: {$e->getMessage()}");
+            } finally {
+                Tenant::forgetCurrent();
             }
         }
-
-        $this->info('Deleting old activity logs...');
-
-        $bar = $this->output->createProgressBar($count);
-        $bar->start();
-
-        $deleted = 0;
-
-        ActivityLog::where('timestamp', '<', $cutoffDate)
-            ->chunkById(100, function ($logs) use (&$deleted, $bar) {
-                foreach ($logs as $log) {
-                    $log->details()->delete();
-                    $log->delete();
-                    $deleted++;
-                    $bar->advance();
-                }
-            });
-
-        $bar->finish();
-        $this->newLine();
-
-        $this->info("Successfully deleted {$deleted} activity logs.");
 
         return 0;
     }
