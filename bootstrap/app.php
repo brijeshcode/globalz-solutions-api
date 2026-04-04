@@ -1,5 +1,7 @@
 <?php
 
+use App\Console\Commands\BackupAllTenantsCommand;
+use App\Console\Commands\BackupRetentionCleanupCommand;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use Illuminate\Foundation\Application;
@@ -102,6 +104,18 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->withoutOverlapping()
                 ->onOneServer();
         }
+
+        // Daily tenant backups at 02:00 — runs synchronously, no queue worker needed
+        $schedule->command(BackupAllTenantsCommand::class)
+            ->dailyAt('02:00')
+            ->name('backup-all-tenants')
+            ->withoutOverlapping();
+
+        // GFS retention cleanup at 03:00 — runs after backups complete
+        $schedule->command(BackupRetentionCleanupCommand::class)
+            ->dailyAt('03:00')
+            ->name('backup-retention-cleanup')
+            ->withoutOverlapping();
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
