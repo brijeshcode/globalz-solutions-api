@@ -53,4 +53,9 @@ class FeatureHelper {
     {
         return self::isEnabled('export_customers');
     }
+
+    public static function isDatabaseMirror(): bool
+    {
+        return self::isEnabled('database_mirror');
+    }
 }
