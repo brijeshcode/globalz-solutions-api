@@ -17,7 +17,7 @@ class CustomerPaymentsStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date' => 'required|date',
+            'date' => (RoleHelper::canSuperAdmin() ? 'required' : 'nullable') . '|date',
             'prefix' => 'required|in:RCT,RCX',
             'customer_id' => 'required|exists:customers,id',
             'customer_payment_term_id' => 'nullable|exists:customer_payment_terms,id',

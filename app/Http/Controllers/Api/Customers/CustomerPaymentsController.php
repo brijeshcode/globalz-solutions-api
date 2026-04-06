@@ -10,6 +10,7 @@ use App\Http\Requests\Api\Customers\CustomerPaymentsUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerPaymentResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerPayment;
+use App\Models\Setting;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,9 +47,13 @@ class CustomerPaymentsController extends Controller
     public function store(CustomerPaymentsStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
-        
+
+        if (!RoleHelper::canSuperAdmin() && Setting::get('employee_settings', 'disable_payment_date_change', false)) {
+            $data['date'] = now()->toDateTimeString();
+        }
+
         $user = Auth::user();
-        
+
         $data['approved_by'] = $user->id;
         $data['approved_at'] = now();
 
@@ -91,6 +96,10 @@ class CustomerPaymentsController extends Controller
     public function update(CustomerPaymentsUpdateRequest $request, CustomerPayment $customerPayment): JsonResponse
     {
         $data = $request->validated();
+
+        if (!RoleHelper::canSuperAdmin() && Setting::get('employee_settings', 'disable_payment_date_change', false)) {
+            $data['date'] = now()->toDateTimeString();
+        }
 
         $customerPayment->update($data);
 
