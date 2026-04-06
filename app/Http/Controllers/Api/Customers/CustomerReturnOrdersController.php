@@ -149,10 +149,6 @@ class CustomerReturnOrdersController extends Controller
             return ApiResponse::customError('Cannot update approved returns', 422);
         }
 
-        if ($customerReturn->isReceived()) {
-            return ApiResponse::customError('Cannot update returns that have been received', 422);
-        }
-
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $customerReturn) {
@@ -281,10 +277,6 @@ class CustomerReturnOrdersController extends Controller
      */
     public function updateDirectReturn(CustomerDirectReturnUpdateRequest $request, CustomerReturn $customerReturn): JsonResponse
     {
-        if ($customerReturn->isReceived()) {
-            return ApiResponse::customError('Cannot update returns that have been received', 422);
-        }
-
         if ($customerReturn->isApproved() && !RoleHelper::canAdmin()) {
             return ApiResponse::customError('Cannot update approved returns', 422);
         }
