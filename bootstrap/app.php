@@ -2,6 +2,7 @@
 
 use App\Console\Commands\BackupAllTenantsCommand;
 use App\Console\Commands\BackupRetentionCleanupCommand;
+use App\Console\Commands\MirrorAllTenantsCommand;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use Illuminate\Foundation\Application;
@@ -129,6 +130,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ->dailyAt('03:00')
             ->name('backup-retention-cleanup')
             ->withoutOverlapping();
+
+        // Mirror tenant databases to remote MySQL every 2 hours
+        $schedule->command(MirrorAllTenantsCommand::class)
+            ->everyTwoHours()
+            ->name('mirror-all-tenants')
+            ->withoutOverlapping()
+            ->runInBackground();
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
