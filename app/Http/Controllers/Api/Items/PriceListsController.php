@@ -528,10 +528,12 @@ class PriceListsController extends Controller
     public function changeCustomerPriceList(Request $request): JsonResponse
     {
         $request->validate([
-            'old_price_list_id_inv' => 'nullable|integer',
-            'new_price_list_id_inv' => 'nullable|integer|required_with:old_price_list_id_inv',
-            'old_price_list_id_inx' => 'nullable|integer',
-            'new_price_list_id_inx' => 'nullable|integer|required_with:old_price_list_id_inx',
+            'old_price_list_id_inv'  => 'nullable|integer',
+            'new_price_list_id_inv'  => 'nullable|integer|required_with:old_price_list_id_inv',
+            'old_price_list_id_inx'  => 'nullable|integer',
+            'new_price_list_id_inx'  => 'nullable|integer|required_with:old_price_list_id_inx',
+            'customer_group_id'      => 'nullable|integer',
+            'customer_type_id'       => 'nullable|integer',
         ]);
 
         $hasInvPair = $request->old_price_list_id_inv && $request->new_price_list_id_inv;
@@ -541,17 +543,25 @@ class PriceListsController extends Controller
             return ApiResponse::customError('At least one complete price list pair (old and new) is required', 422);
         }
 
-        if ($request->old_price_list_id_inv && $request->new_price_list_id_inv) {
-            Customer::where('price_list_id_INV', $request->old_price_list_id_inv)
+        $baseQuery = Customer::query()
+            ->when($request->customer_group_id, fn($q) => $q->where('customer_group_id', $request->customer_group_id))
+            ->when($request->customer_type_id,  fn($q) => $q->where('customer_type_id',  $request->customer_type_id));
+
+        $updatedCount = 0;
+
+        if ($hasInvPair) {
+            $updatedCount += (clone $baseQuery)
+                ->where('price_list_id_INV', $request->old_price_list_id_inv)
                 ->update(['price_list_id_INV' => $request->new_price_list_id_inv]);
         }
 
-        if ($request->old_price_list_id_inx && $request->new_price_list_id_inx) {
-            Customer::where('price_list_id_INX', $request->old_price_list_id_inx)
+        if ($hasInxPair) {
+            $updatedCount += (clone $baseQuery)
+                ->where('price_list_id_INX', $request->old_price_list_id_inx)
                 ->update(['price_list_id_INX' => $request->new_price_list_id_inx]);
         }
 
-        return ApiResponse::update('Customer price lists updated successfully');
+        return ApiResponse::update('Customer price lists updated successfully', ['updated_count' => $updatedCount]);
     }
 
     public function updateStatus(Request $request, PriceList $priceList)
