@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('mirror_logs', function (Blueprint $table) {
             $table->id();
-            $table->enum('status', ['pending', 'running', 'success', 'failed'])->default('pending');
+            $table->enum('status', ['pending', 'running', 'success', 'failed', 'skipped'])->default('pending');
             $table->unsignedBigInteger('triggered_by')->nullable()->comment('null = scheduler, user_id = manual');
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
