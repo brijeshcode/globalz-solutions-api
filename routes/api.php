@@ -77,6 +77,7 @@ use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
 use App\Http\Controllers\Api\Settings\SaleSettingsController;
 use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Backup\BackupController;
+use App\Http\Controllers\Api\Mirror\MirrorController;
 use Illuminate\Support\Facades\Route;
 
 // API Root - Health check / API info (no tenant required)
@@ -128,6 +129,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings', 'updateSettings')->name('settings.update');
         Route::get('/{id}/download', 'download')->name('download');
         Route::delete('/{id}', 'destroy')->name('destroy');
+    });
+
+    // Database Mirror
+    Route::controller(MirrorController::class)->prefix('mirrors')->name('mirrors.')->group(function () {
+        Route::get('/settings', 'getSettings')->name('settings');
+        Route::put('/settings', 'updateSettings')->name('settings.update');
+        Route::post('/trigger', 'trigger')->name('trigger');
+        Route::get('/logs', 'logs')->name('logs');
     });
 
     Route::get('/list-data/{type}', [ListDataController::class, 'getList'])->name('getList');
