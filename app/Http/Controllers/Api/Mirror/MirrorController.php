@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Mirror;
 
-use App\Helpers\FeatureHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
@@ -23,20 +22,11 @@ class MirrorController extends Controller
         }
     }
 
-    private function requireFeature(): void
-    {
-        if (!FeatureHelper::isDatabaseMirror()) {
-            abort(403, 'Database mirror feature is not enabled for this tenant.');
-        }
-    }
-
     /**
      * Get current mirror settings (password is never returned).
      */
     public function getSettings(): JsonResponse
     {
-        $this->requireFeature();
-
         return ApiResponse::show('Mirror settings retrieved successfully', [
             'enabled'       => Setting::get('mirror', 'enabled', false, false, Setting::TYPE_BOOLEAN),
             'db_type'       => Setting::get('mirror', 'db_type', 'mysql'),
@@ -55,8 +45,6 @@ class MirrorController extends Controller
      */
     public function updateSettings(Request $request, DatabaseMirrorService $mirrorService): JsonResponse
     {
-        $this->requireFeature();
-
         $request->validate([
             'enabled'       => 'sometimes|boolean',
             'db_type'       => 'sometimes|string|in:mysql',
@@ -114,8 +102,6 @@ class MirrorController extends Controller
      */
     public function trigger(DatabaseMirrorService $mirrorService): JsonResponse
     {
-        $this->requireFeature();
-
         $tenant = Tenant::current();
 
         if (!$tenant) {
@@ -144,8 +130,6 @@ class MirrorController extends Controller
      */
     public function logs(): JsonResponse
     {
-        $this->requireFeature();
-
         $limit = (int) Setting::get('mirror', 'display_limit', 25, false, Setting::TYPE_NUMBER);
         $logs  = MirrorLog::latestFirst()->limit($limit)->get();
 
