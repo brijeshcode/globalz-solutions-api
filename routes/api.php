@@ -132,7 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Database Mirror
-    Route::controller(MirrorController::class)->prefix('mirrors')->name('mirrors.')->group(function () {
+    Route::controller(MirrorController::class)->prefix('mirrors')->name('mirrors.')->middleware('feature:database_mirror')->group(function () {
         Route::get('/settings', 'getSettings')->name('settings');
         Route::put('/settings', 'updateSettings')->name('settings.update');
         Route::post('/trigger', 'trigger')->name('trigger');
