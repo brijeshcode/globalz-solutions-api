@@ -73,6 +73,7 @@ use App\Http\Controllers\Api\Reports\Sales\CategorySalesReportController;
 use App\Http\Controllers\Api\Reports\Sales\ItemsSaleReportController;
 use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
+use App\Http\Controllers\Api\Settings\EmployeeSettingsController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
 use App\Http\Controllers\Api\Settings\SaleSettingsController;
 use App\Http\Controllers\Api\Settings\SettingsController;
@@ -1039,6 +1040,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [SaleSettingsController::class, 'get'])->name('get');
             Route::put('/', [SaleSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [SaleSettingsController::class, 'reset'])->name('reset');
+        });
+
+        // Employee Settings
+        Route::prefix('employee')->name('settings.employee.')->group(function () {
+            Route::get('/', [EmployeeSettingsController::class, 'get'])->name('get');
+            Route::put('/', [EmployeeSettingsController::class, 'update'])->name('update');
+            Route::post('/reset', [EmployeeSettingsController::class, 'reset'])->name('reset');
         });
 
         // All tenant settings (read-only)

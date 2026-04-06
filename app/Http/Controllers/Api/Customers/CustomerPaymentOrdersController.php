@@ -8,6 +8,7 @@ use App\Http\Requests\Api\Customers\CustomerPaymentOrdersUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerPaymentOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerPayment;
+use App\Models\Setting;
 use App\Traits\HasPagination;
 use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
@@ -36,6 +37,10 @@ class CustomerPaymentOrdersController extends Controller
     public function store(CustomerPaymentOrdersStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
+
+        if (!RoleHelper::canSuperAdmin() && Setting::get('employee_settings', 'disable_payment_order_date_change', false)) {
+            $data['date'] = now()->toDateTimeString();
+        }
 
         $payment = CustomerPayment::create($data);
 
@@ -90,6 +95,10 @@ class CustomerPaymentOrdersController extends Controller
         }
 
         $data = $request->validated();
+
+        if (!RoleHelper::canSuperAdmin() && Setting::get('employee_settings', 'disable_payment_order_date_change', false)) {
+            $data['date'] = now()->toDateTimeString();
+        }
 
         $customerPayment->update($data);
 
