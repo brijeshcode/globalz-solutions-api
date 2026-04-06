@@ -48,4 +48,9 @@ class FeatureHelper {
     {
         return self::isEnabled('multi_currency');
     }
+
+    public static function isExportCustomers(): bool
+    {
+        return self::isEnabled('export_customers');
+    }
 }

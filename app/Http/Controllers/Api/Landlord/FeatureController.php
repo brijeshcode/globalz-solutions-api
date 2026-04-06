@@ -63,6 +63,9 @@ class FeatureController extends Controller
         ['key' => 'report_item_sales',     'name' => 'Item Sales Report',           'description' => 'Aggregated sales report per item showing quantity sold, sale amount, profit, and profit percentage.'],
         ['key' => 'report_vat',            'name' => 'VAT Report',                  'description' => 'VAT summary report showing collected VAT on sales, VAT returned on customer returns, VAT paid via purchases and expenses, and the net VAT difference.'],
 
+        // Exports
+        ['key' => 'export_customers',      'name' => 'Export Customers',            'description' => 'Allow exporting the customer list to an Excel file.'],
+
         // System
         ['key' => 'activity_logs',             'name' => 'Activity Logs',               'description' => 'Full audit trail of all user actions.'],
         ['key' => 'tax_codes',                 'name' => 'Tax Codes',                   'description' => 'Manage tax codes and apply them to invoices.'],

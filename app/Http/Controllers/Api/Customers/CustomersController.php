@@ -9,6 +9,7 @@ use App\Http\Requests\Api\Customers\CustomersUpdateRequest;
 use App\Http\Requests\Api\Customers\CustomersImportRequest;
 use App\Http\Resources\Api\Customers\CustomerResource;
 use App\Http\Responses\ApiResponse;
+use App\Exports\CustomersExport;
 use App\Imports\CustomersImport;
 use App\Models\Customers\Customer;
 use App\Models\Items\PriceList;
@@ -357,6 +358,18 @@ class CustomersController extends Controller
         ];
 
         return ApiResponse::show('Customer statistics retrieved successfully', $stats);
+    }
+
+    /**
+     * Export customers to Excel
+     */
+    public function export(Request $request)
+    {
+        $query = $this->customerQuery($request);
+
+        $filename = 'customers_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new CustomersExport($query), $filename);
     }
 
     /**
