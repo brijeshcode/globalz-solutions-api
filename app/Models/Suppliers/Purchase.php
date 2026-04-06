@@ -293,15 +293,16 @@ class Purchase extends Model
 
         static::updated(function ($purchase) {
             $original = $purchase->getOriginal();
+            $originalTotalUsd = $original['total_usd'] ?? 0;
 
             // Case 1: Supplier changed - move balance from old to new supplier
             if ($original['supplier_id'] != $purchase->supplier_id) {
-                SuppliersHelper::removeBalance(Supplier::find($original['supplier_id']), $original['total_usd']);
+                SuppliersHelper::removeBalance(Supplier::find($original['supplier_id']), $originalTotalUsd);
                 SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $purchase->total_usd);
             }
             // Case 2: Amount changed on same supplier
-            elseif ($original['total_usd'] != $purchase->total_usd) {
-                $difference = $purchase->total_usd - $original['total_usd'];
+            elseif ($originalTotalUsd != $purchase->total_usd) {
+                $difference = $purchase->total_usd - $originalTotalUsd;
                 SuppliersHelper::addBalance(Supplier::find($purchase->supplier_id), $difference);
             }
         });
