@@ -140,6 +140,7 @@ class BackupController extends Controller
             'ftp_host'        => Setting::get('backup', 'ftp_host'),
             'ftp_user'        => Setting::get('backup', 'ftp_user'),
             'ftp_port'        => Setting::get('backup', 'ftp_port', 21),
+            'ftp_root'        => Setting::get('backup', 'ftp_root', '/'),
         ];
 
         return ApiResponse::show('Backup settings retrieved successfully', $settings);
@@ -162,6 +163,7 @@ class BackupController extends Controller
             'ftp_user'          => 'sometimes|string|max:255',
             'ftp_password'      => 'sometimes|string|max:255',
             'ftp_port'          => 'sometimes|integer|min:1|max:65535',
+            'ftp_root'          => 'sometimes|string|max:500',
             'dropbox_token'     => 'sometimes|string|max:500',
         ]);
 
@@ -172,7 +174,7 @@ class BackupController extends Controller
         }
 
         // Plain (non-sensitive) settings
-        foreach (['s3_bucket', 's3_region', 'ftp_host', 'ftp_user', 'ftp_port'] as $key) {
+        foreach (['s3_bucket', 's3_region', 'ftp_host', 'ftp_user', 'ftp_port', 'ftp_root'] as $key) {
             if ($request->has($key)) {
                 Setting::set('backup', $key, $request->input($key));
             }
@@ -196,4 +198,13 @@ class BackupController extends Controller
             'storage_drivers' => Setting::get('backup', 'storage_drivers', ['local'], false, Setting::TYPE_JSON),
         ]);
     }
+
+    // TODO: Implement testConnection(Request $request): JsonResponse
+    // Test if a remote storage driver (ftp, s3, dropbox) is reachable and writable.
+    // Steps:
+    //   1. Accept a driver name (ftp, s3, dropbox) in the request
+    //   2. Build the disk using BackupStorageService::buildDisk()
+    //   3. Write a small temp file (e.g. ".connection-test"), then delete it
+    //   4. Return success/failure with a descriptive message
+    // Route: POST /backups/settings/test-connection
 }
