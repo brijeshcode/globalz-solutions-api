@@ -26,7 +26,7 @@ class Customer extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDocuments, Searchable, Sortable;
 
-    protected $fillable = [
+    protected array $fillable = [
         'parent_id',
         'code',
         'name',
@@ -42,6 +42,7 @@ class Customer extends Model
         'telephone',
         'mobile',
         'url',
+        'google_map',
         'email',
         'contact_name',
         'gps_coordinates',
@@ -56,7 +57,7 @@ class Customer extends Model
         'is_active',
     ];
 
-    protected $casts = [
+    protected array $casts = [
         'is_active' => 'boolean',
         // 'opening_balance' => 'decimal:4',
         'current_balance' => 'decimal:4',
@@ -64,7 +65,7 @@ class Customer extends Model
         'credit_limit' => 'decimal:4',
     ];
 
-    protected $searchable = [
+    protected array $searchable = [
         'code',
         'name',
         // 'email',
@@ -77,7 +78,7 @@ class Customer extends Model
         // 'notes',
     ];
 
-    protected $sortable = [
+    protected array $sortable = [
         'id',
         'code',
         'name',
@@ -97,8 +98,8 @@ class Customer extends Model
         'updated_at',
     ];
 
-    protected $defaultSortField = 'id';
-    protected $defaultSortDirection = 'desc';
+    protected string $defaultSortField = 'id';
+    protected string $defaultSortDirection = 'desc';
 
     // Relationships
     public function parent(): BelongsTo

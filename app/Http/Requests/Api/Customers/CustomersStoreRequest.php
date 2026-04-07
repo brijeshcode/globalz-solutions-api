@@ -45,6 +45,7 @@ class CustomersStoreRequest extends FormRequest
             'telephone' => 'nullable|string|max:20',
             'mobile' => 'required|string|max:20',
             'url' => 'nullable|url|max:255',
+            'google_map' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'contact_name' => 'nullable|string|max:255',
             'gps_coordinates' => [

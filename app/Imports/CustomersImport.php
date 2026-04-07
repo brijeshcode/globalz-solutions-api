@@ -141,7 +141,8 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             'city' => $row['city'] ?? null,
             'telephone' => $row['telephone'] ?? $row['phone'] ?? null,
             'mobile' => $row['mobile'] ?? $row['mobile_number'] ?? null,
-            'url' => $row['url'] ?? $row['website'] ?? null,
+            'url' => $row['website'] ?? $row['url'] ?? null,
+            'google_map' => $row['google_map_link'] ?? $row['google_map'] ?? null,
             'email' => $row['email'] ?? null,
             'contact_name' => $row['contact_name'] ?? $row['contact'] ?? null,
             'gps_coordinates' => $row['gps_coordinates'] ?? $row['gps'] ?? null,
@@ -163,6 +164,14 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             return ['error' => 'Customer name is required'];
         }
 
+        if (empty($data['city'])) {
+            return ['error' => 'City is required'];
+        }
+
+        if (empty($data['mobile'])) {
+            return ['error' => 'Mobile is required'];
+        }
+
         // Lookup customer type by name or code
         if (!empty($row['customer_type']) || !empty($row['type'])) {
             $typeName = $row['customer_type'] ?? $row['type'];
@@ -171,6 +180,10 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             if ($customerType) {
                 $data['customer_type_id'] = $customerType->id;
             }
+        }
+
+        if (empty($data['customer_type_id'])) {
+            return ['error' => 'Customer type is required and must match an existing type'];
         }
 
         // Lookup customer group by name or code
@@ -212,6 +225,10 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             }
         }
 
+        if (empty($data['salesperson_id'])) {
+            return ['error' => 'Salesperson is required and must match an existing employee'];
+        }
+
         // Lookup payment term by name or days
         if (!empty($row['payment_term']) || !empty($row['payment_terms'])) {
             $paymentTermName = $row['payment_term'] ?? $row['payment_terms'];
@@ -232,6 +249,10 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             }
         }
 
+        if (empty($data['price_list_id_INV'])) {
+            return ['error' => 'Price list INV code is required and must match an existing price list'];
+        }
+
         // Lookup price list INX by code
         if (!empty($row['price_list_inx_code']) || !empty($row['price_list_code_inx'])) {
             $priceListCode = $row['price_list_inx_code'] ?? $row['price_list_code_inx'];
@@ -239,6 +260,10 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             if ($priceList) {
                 $data['price_list_id_INX'] = $priceList->id;
             }
+        }
+
+        if (empty($data['price_list_id_INX'])) {
+            return ['error' => 'Price list INX code is required and must match an existing price list'];
         }
 
         // Validate email format if provided
