@@ -26,7 +26,7 @@ class Customer extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDocuments, Searchable, Sortable;
 
-    protected array $fillable = [
+    protected $fillable = [
         'parent_id',
         'code',
         'name',
@@ -57,7 +57,7 @@ class Customer extends Model
         'is_active',
     ];
 
-    protected array $casts = [
+    protected $casts = [
         'is_active' => 'boolean',
         // 'opening_balance' => 'decimal:4',
         'current_balance' => 'decimal:4',
