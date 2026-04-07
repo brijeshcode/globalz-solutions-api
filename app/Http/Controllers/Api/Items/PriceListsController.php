@@ -529,18 +529,18 @@ class PriceListsController extends Controller
     {
         $request->validate([
             'old_price_list_id_inv'  => 'nullable|integer',
-            'new_price_list_id_inv'  => 'nullable|integer|required_with:old_price_list_id_inv',
+            'new_price_list_id_inv'  => 'nullable|integer',
             'old_price_list_id_inx'  => 'nullable|integer',
-            'new_price_list_id_inx'  => 'nullable|integer|required_with:old_price_list_id_inx',
+            'new_price_list_id_inx'  => 'nullable|integer',
             'customer_group_id'      => 'nullable|integer',
             'customer_type_id'       => 'nullable|integer',
         ]);
 
-        $hasInvPair = $request->old_price_list_id_inv && $request->new_price_list_id_inv;
-        $hasInxPair = $request->old_price_list_id_inx && $request->new_price_list_id_inx;
+        $hasInvUpdate = $request->filled('new_price_list_id_inv');
+        $hasInxUpdate = $request->filled('new_price_list_id_inx');
 
-        if (!$hasInvPair && !$hasInxPair) {
-            return ApiResponse::customError('At least one complete price list pair (old and new) is required', 422);
+        if (!$hasInvUpdate && !$hasInxUpdate) {
+            return ApiResponse::customError('At least one new price list (inv or inx) is required', 422);
         }
 
         $baseQuery = Customer::query()
@@ -549,15 +549,15 @@ class PriceListsController extends Controller
 
         $updatedCount = 0;
 
-        if ($hasInvPair) {
+        if ($hasInvUpdate) {
             $updatedCount += (clone $baseQuery)
-                ->where('price_list_id_INV', $request->old_price_list_id_inv)
+                ->when($request->filled('old_price_list_id_inv'), fn($q) => $q->where('price_list_id_INV', $request->old_price_list_id_inv))
                 ->update(['price_list_id_INV' => $request->new_price_list_id_inv]);
         }
 
-        if ($hasInxPair) {
+        if ($hasInxUpdate) {
             $updatedCount += (clone $baseQuery)
-                ->where('price_list_id_INX', $request->old_price_list_id_inx)
+                ->when($request->filled('old_price_list_id_inx'), fn($q) => $q->where('price_list_id_INX', $request->old_price_list_id_inx))
                 ->update(['price_list_id_INX' => $request->new_price_list_id_inx]);
         }
 
