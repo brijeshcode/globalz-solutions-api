@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "endroid/qr-code": "^6.0",
         "ifsnop/mysqldump-php": "^2.12",
         "jenssegers/agent": "^2.6",
         "laravel/framework": "^12.0",

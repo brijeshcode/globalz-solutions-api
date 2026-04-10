@@ -8,6 +8,8 @@ use App\Models\Customers\Sale;
 use App\Helpers\SettingsHelper;
 use App\Models\Setting;
 use App\Services\Currency\CurrencyService;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Response;
 use Mpdf\Mpdf;
 
@@ -56,13 +58,44 @@ class SalePdfController extends Controller
                 'is_multi_currency'   => $isMultiCurrency,
             ];
 
+            // Generate catalog QR code if enabled in invoice settings and catalog link is set
+            $catalogQrCodeBase64 = null;
+            $catalogGroup        = [];
+            if (!empty($invoiceGroup['show_catalog_qrcode'])) {
+                $catalogGroup = Setting::getGroup('item_catalog');
+                $catalogLink  = $catalogGroup['catalog_link'] ?? null;
+                if (!empty($catalogLink)) {
+                    $result              = (new PngWriter())->write(new QrCode($catalogLink));
+                    $catalogQrCodeBase64 = base64_encode($result->getString());
+                }
+            }
+
+            // Generate QR code for customer Google Maps location
+            $qrCodeBase64 = null;
+            $mapsUrl = null;
+            if (!empty($sale->customer->google_map)) {
+                $mapsUrl = $sale->customer->google_map;
+            } elseif (!empty($sale->customer->gps_coordinates)) {
+                $coords = array_map('trim', explode(',', $sale->customer->gps_coordinates));
+                if (count($coords) === 2 && is_numeric($coords[0]) && is_numeric($coords[1])) {
+                    $mapsUrl = 'https://www.google.com/maps?q=' . $coords[0] . ',' . $coords[1];
+                }
+            }
+            if ($mapsUrl) {
+                $result       = (new PngWriter())->write(new QrCode($mapsUrl));
+                $qrCodeBase64 = base64_encode($result->getString());
+            }
+
             // Prepare data for the view
             $data = [
-                'sale'            => $sale,
-                'company'         => $companyData,
-                'totalVolume'     => $totalVolume,
-                'totalWeight'     => $totalWeight,
-                'invoiceSettings' => $invoiceSettings,
+                'sale'                => $sale,
+                'company'             => $companyData,
+                'totalVolume'         => $totalVolume,
+                'totalWeight'         => $totalWeight,
+                'invoiceSettings'     => $invoiceSettings,
+                'qrCodeBase64'        => $qrCodeBase64,
+                'catalogQrCodeBase64' => $catalogQrCodeBase64,
+                'catalogLabel'        => $catalogGroup['catalog_label'] ?? null,
                 // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
            

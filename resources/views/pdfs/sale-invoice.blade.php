@@ -231,6 +231,13 @@
             <div class="header-right">
                 <div class="invoice-title">SALES INVOICE</div>
                 <div class="invoice-code">{{ $sale->prefix }}-{{ $sale->code }}</div>
+                @if(!empty($qrCodeBase64))
+                    <div style="margin-top: 6px;">
+                        <img src="data:image/png;base64,{{ $qrCodeBase64 }}"
+                             style="width: 70px; height: 70px;"
+                             alt="Customer Location">
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -426,6 +433,18 @@
                 {{ $sale->invoice_nb2 }}
             @endif
         </div>
+
+        <!-- Catalog QR Code - bottom right of last page -->
+        @if(!empty($catalogQrCodeBase64))
+        <div style="text-align: right; margin-top: 15px;">
+            @if(!empty($catalogLabel))
+            <div style="font-size: 8pt; margin-bottom: 3px;">{{ $catalogLabel }}</div>
+            @endif
+            <img src="data:image/png;base64,{{ $catalogQrCodeBase64 }}"
+                 style="width: 80px; height: 80px;"
+                 alt="Item Catalog">
+        </div>
+        @endif
 
         <!-- Footer is rendered via mPDF SetFooter in SalePdfController -->
     </div>

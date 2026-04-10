@@ -75,6 +75,7 @@ use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use App\Http\Controllers\Api\Settings\EmployeeSettingsController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
+use App\Http\Controllers\Api\Settings\Items\ItemCatalogSettingsController;
 use App\Http\Controllers\Api\Settings\SaleSettingsController;
 use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Backup\BackupController;
@@ -1045,6 +1046,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [EmployeeSettingsController::class, 'get'])->name('get');
             Route::put('/', [EmployeeSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [EmployeeSettingsController::class, 'reset'])->name('reset');
+        });
+
+        // Item Catalog Settings
+        Route::prefix('item-catalog')->name('settings.item-catalog.')->group(function () {
+            Route::get('/', [ItemCatalogSettingsController::class, 'index'])->name('index');
+            Route::put('/', [ItemCatalogSettingsController::class, 'update'])->name('update');
+            Route::post('/reset', [ItemCatalogSettingsController::class, 'reset'])->name('reset');
         });
 
         // All tenant settings (read-only)
