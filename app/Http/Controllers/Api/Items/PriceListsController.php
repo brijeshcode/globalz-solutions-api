@@ -25,6 +25,10 @@ class PriceListsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        if (RoleHelper::isSalesman()) {
+            return $this->indexForSalesman($request);
+        }
+
         $query = PriceList::query()
             ->with(['items.item', 'createdBy:id,name', 'updatedBy:id,name'])
             ->withCount(['customersInv', 'customersInx'])
@@ -41,18 +45,55 @@ class PriceListsController extends Controller
 
         if ($request->has('date_from')) {
             $query->fromDate($request->date_from, 'created_at');
-        } 
-        
+        }
+
         if ($request->has('date_to')) {
             $query->toDate( $request->date_to, 'created_at');
         }
-        
+
         $priceLists = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
             'Price lists retrieved successfully',
             $priceLists,
             PriceListResource::class
+        );
+    }
+
+    private function indexForSalesman(Request $request): JsonResponse
+    {
+        $employee = RoleHelper::getSalesmanEmployee();
+
+        $allowedIds = PriceList::where('is_default_inv', true)
+            ->orWhere('is_default_inx', true)
+            ->pluck('id')
+            ->toArray();
+
+        if ($employee) {
+            $customerPriceListIds = Customer::where('salesperson_id', $employee->id)
+                ->get(['price_list_id_INV', 'price_list_id_INX'])
+                ->flatMap(fn($c) => [$c->price_list_id_INV, $c->price_list_id_INX])
+                ->filter()
+                ->unique()
+                ->toArray();
+
+            $allowedIds = array_unique(array_merge($allowedIds, $customerPriceListIds));
+        }
+
+        $query = PriceList::whereIn('id', $allowedIds)
+            ->select(['id', 'description', 'created_at']);
+
+        $priceLists = $this->applyPagination($query, $request);
+
+        $priceLists->through(fn($pl) => [
+            'id'   => $pl->id,
+            'name' => $pl->description,
+            'created_at' => $pl->created_at,
+        ]);
+
+        return ApiResponse::paginated(
+            'Price lists retrieved successfully',
+            $priceLists,
         );
     }
 
