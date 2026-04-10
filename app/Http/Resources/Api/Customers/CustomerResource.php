@@ -80,6 +80,7 @@ class CustomerResource extends JsonResource
             'telephone' => $this->telephone,
             'mobile' => $this->mobile,
             'url' => $this->url,
+            'google_map' => $this->google_map,
             'email' => $this->email,
             'contact_name' => $this->contact_name,
             'gps_coordinates' => $this->gps_coordinates,
