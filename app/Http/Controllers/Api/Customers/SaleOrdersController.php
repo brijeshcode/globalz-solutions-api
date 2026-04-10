@@ -268,6 +268,7 @@ class SaleOrdersController extends Controller
 
         $sale->load([
             'customer:id,name,code',
+            'priceList:id,code,description',
             'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name',
             'salesperson:id,name',
@@ -295,7 +296,8 @@ class SaleOrdersController extends Controller
         }
 
         $sale->load([
-            'customer:id,name,code,address,city,mobile,mof_tax_number,price_list_id_INV,price_list_id_INX',
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
+            'priceList:id,code,description',
             'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name,address_line_1',
             'salesperson:id,name',
@@ -522,6 +524,7 @@ class SaleOrdersController extends Controller
 
         $sale->load([
             'customer:id,name,code',
+            'priceList:id,code,description',
             'currency:id,name,code,symbol,decimal_places,decimal_separator,thousand_separator',
             'warehouse:id,name',
             'salesperson:id,name',

@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\Api\Customers;
 
-use App\Models\Customers\Sale;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -63,7 +62,11 @@ class SaleOrderResource extends JsonResource
             'updated_by' => $this->updated_by,
 
             // price list
-            'price_list' => $this->priceList(),
+            'price_list' => $this->whenLoaded('priceList', fn() => [
+                'id' => $this->priceList->id,
+                'name' => $this->priceList->description,
+                'code' => $this->priceList->code,
+            ]),
             // Relationships
             'customer' => $this->whenLoaded('customer', function () {
                 return [
@@ -184,24 +187,4 @@ class SaleOrderResource extends JsonResource
         ];
     }
 
-    private function priceList()
-    {
-        $priceList = null;
-
-        if ($this->prefix === Sale::TAXPREFIX) {
-            $priceList = $this->customer->priceListINV;
-        } else {
-            $priceList = $this->customer->priceListINX;
-        }
-
-        if (!$priceList) {
-            return null;
-        }
-
-        return [
-            'id' => $priceList->id,
-            'name' => $priceList->description,
-            'code' => $priceList->code,
-        ];
-    }
 }
