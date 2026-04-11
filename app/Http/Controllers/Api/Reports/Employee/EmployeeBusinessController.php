@@ -47,13 +47,15 @@ class EmployeeBusinessController extends Controller
         $paymentsQuery = DB::table('customer_payments')
             ->join('customers', 'customer_payments.customer_id', '=', 'customers.id')
             ->join('employees', 'customers.salesperson_id', '=', 'employees.id')
-            ->selectRaw('
+            ->selectRaw("
                 employees.id as employee_id,
                 employees.name as employee_name,
                 MONTH(customer_payments.date) as month,
                 YEAR(customer_payments.date) as year,
+                SUM(CASE WHEN customer_payments.prefix = 'RCX' THEN customer_payments.amount_usd ELSE 0 END) as total_payments_tax_free,
+                SUM(CASE WHEN customer_payments.prefix = 'RCT' THEN customer_payments.amount_usd ELSE 0 END) as total_payments_with_tax,
                 SUM(customer_payments.amount_usd) as total_payments
-            ')
+            ")
             ->whereYear('customer_payments.date', $year)
             ->whereNull('customer_payments.deleted_at')
             ->whereNotNull('customer_payments.approved_by')
@@ -99,6 +101,8 @@ class EmployeeBusinessController extends Controller
         $yearTotals = [
             'total_sales' => 0,
             'total_sale_tax' => 0,
+            'total_payments_tax_free' => 0,
+            'total_payments_with_tax' => 0,
             'total_payments' => 0,
             'total_returns' => 0,
             'total_return_tax' => 0,
@@ -114,6 +118,8 @@ class EmployeeBusinessController extends Controller
             $employeeTotals = [
                 'total_sales' => 0,
                 'total_sale_tax' => 0,
+                'total_payments_tax_free' => 0,
+                'total_payments_with_tax' => 0,
                 'total_payments' => 0,
                 'total_returns' => 0,
                 'total_return_tax' => 0,
@@ -129,6 +135,8 @@ class EmployeeBusinessController extends Controller
 
                 $totalSales = $sales ? (float)$sales->total_sales : 0.00;
                 $totalSaleTax = $sales ? (float)$sales->total_sale_tax : 0.00;
+                $totalPaymentsTaxFree = $payments ? (float)$payments->total_payments_tax_free : 0.00;
+                $totalPaymentsWithTax = $payments ? (float)$payments->total_payments_with_tax : 0.00;
                 $totalPayments = $payments ? (float)$payments->total_payments : 0.00;
                 $totalReturns = $returns ? (float)$returns->total_returns : 0.00;
                 $totalReturnTax = $returns ? (float)$returns->total_return_tax : 0.00;
@@ -139,6 +147,8 @@ class EmployeeBusinessController extends Controller
                     'year' => $year,
                     'total_sales' => round($totalSales, 2),
                     'total_sale_tax' => round($totalSaleTax, 2),
+                    'total_payments_tax_free' => round($totalPaymentsTaxFree, 2),
+                    'total_payments_with_tax' => round($totalPaymentsWithTax, 2),
                     'total_payments' => round($totalPayments, 2),
                     'total_returns' => round($totalReturns, 2),
                     'total_return_tax' => round($totalReturnTax, 2),
@@ -147,6 +157,8 @@ class EmployeeBusinessController extends Controller
                 // Add to employee totals
                 $employeeTotals['total_sales'] += $totalSales;
                 $employeeTotals['total_sale_tax'] += $totalSaleTax;
+                $employeeTotals['total_payments_tax_free'] += $totalPaymentsTaxFree;
+                $employeeTotals['total_payments_with_tax'] += $totalPaymentsWithTax;
                 $employeeTotals['total_payments'] += $totalPayments;
                 $employeeTotals['total_returns'] += $totalReturns;
                 $employeeTotals['total_return_tax'] += $totalReturnTax;
@@ -167,6 +179,8 @@ class EmployeeBusinessController extends Controller
             // Add to year totals
             $yearTotals['total_sales'] += $employeeTotals['total_sales'];
             $yearTotals['total_sale_tax'] += $employeeTotals['total_sale_tax'];
+            $yearTotals['total_payments_tax_free'] += $employeeTotals['total_payments_tax_free'];
+            $yearTotals['total_payments_with_tax'] += $employeeTotals['total_payments_with_tax'];
             $yearTotals['total_payments'] += $employeeTotals['total_payments'];
             $yearTotals['total_returns'] += $employeeTotals['total_returns'];
             $yearTotals['total_return_tax'] += $employeeTotals['total_return_tax'];
