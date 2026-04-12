@@ -23,12 +23,18 @@
         }
 
         .header-left {
-            width: 50%;
+            width: 40%;
             float: left;
         }
 
+        .header-center {
+            width: 30%;
+            float: left;
+            text-align: center;
+        }
+
         .header-right {
-            width: 50%;
+            width: 30%;
             float: right;
             text-align: right;
         }
@@ -228,15 +234,17 @@
                 @endif
             </div>
 
-            <div class="header-right">
+            <div class="header-center">
                 <div class="invoice-title">SALES INVOICE</div>
                 <div class="invoice-code">{{ $sale->prefix }}-{{ $sale->code }}</div>
+            </div>
+
+            <div class="header-right">
                 @if(!empty($qrCodeBase64))
-                    <div style="margin-top: 6px;">
-                        <img src="data:image/png;base64,{{ $qrCodeBase64 }}"
-                             style="width: 70px; height: 70px;"
-                             alt="Customer Location">
-                    </div>
+                    <div style="font-size: 8pt; margin-bottom: 2px;">Google Map</div>
+                    <img src="data:image/png;base64,{{ $qrCodeBase64 }}"
+                         style="width: 70px; height: 70px;"
+                         alt="Customer Location">
                 @endif
             </div>
         </div>
