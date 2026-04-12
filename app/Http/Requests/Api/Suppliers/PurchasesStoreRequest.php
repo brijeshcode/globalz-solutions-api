@@ -44,7 +44,7 @@ class PurchasesStoreRequest extends FormRequest
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required_with:items|integer|exists:items,id',
             'items.*.price' => 'required_with:items|numeric|min:0|max:999999.999999',
-            'items.*.quantity' => 'required_with:items|numeric|min:0.0001|max:999999.999999',
+            'items.*.quantity' => 'required_with:items|integer|min:1|max:100000000',
             'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'items.*.discount_amount' => 'nullable|numeric|min:0|max:999999.999999',
             'items.*.note' => 'nullable|string|max:1000',
