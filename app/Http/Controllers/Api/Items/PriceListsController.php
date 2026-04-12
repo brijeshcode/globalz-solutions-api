@@ -80,15 +80,25 @@ class PriceListsController extends Controller
             $allowedIds = array_unique(array_merge($allowedIds, $customerPriceListIds));
         }
 
+        $salesmanId = $employee?->id;
+
         $query = PriceList::whereIn('id', $allowedIds)
-            ->select(['id', 'description', 'created_at']);
+            ->select(['id', 'description', 'code', 'created_at'])
+            ->withCount([
+                'customersInv' => fn($q) => $q->where('is_active', true)
+                    ->when($salesmanId, fn($q) => $q->where('salesperson_id', $salesmanId)),
+                'customersInx' => fn($q) => $q->where('is_active', true)
+                    ->when($salesmanId, fn($q) => $q->where('salesperson_id', $salesmanId)),
+            ]);
 
         $priceLists = $this->applyPagination($query, $request);
 
         $priceLists->through(fn($pl) => [
             'id'   => $pl->id,
-            'name' => $pl->description,
+            'code' => $pl->code,
             'created_at' => $pl->created_at,
+            'customers_inv_count' => $pl->customers_inv_count,
+            'customers_inx_count' => $pl->customers_inx_count,
         ]);
 
         return ApiResponse::paginated(
