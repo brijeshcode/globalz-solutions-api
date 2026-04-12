@@ -66,7 +66,7 @@ class BackupController extends Controller
 
     /**
      * Manually trigger a backup for the current tenant (runs synchronously).
-     * Returns the result immediately — no queue worker needed.
+     * Bypasses all schedule rules — always runs immediately.
      */
     public function trigger(BackupService $backupService, BackupStorageService $storageService): JsonResponse
     {
@@ -128,12 +128,13 @@ class BackupController extends Controller
     }
 
     /**
-     * Get the current tenant's backup storage settings.
+     * Get all backup settings including schedule and retention config.
      * Credentials (keys, secrets, tokens) are not returned for security.
      */
     public function getSettings(): JsonResponse
     {
         $settings = [
+            // Storage destinations
             'storage_drivers' => Setting::get('backup', 'storage_drivers', ['local'], false, Setting::TYPE_JSON),
             's3_bucket'       => Setting::get('backup', 's3_bucket'),
             's3_region'       => Setting::get('backup', 's3_region'),
@@ -141,18 +142,26 @@ class BackupController extends Controller
             'ftp_user'        => Setting::get('backup', 'ftp_user'),
             'ftp_port'        => Setting::get('backup', 'ftp_port', 21),
             'ftp_root'        => Setting::get('backup', 'ftp_root', '/'),
+            // Schedule
+            'frequency_hours'   => (int)  Setting::get('backup', 'frequency_hours',   24,   false, Setting::TYPE_NUMBER),
+            'preferred_hour'    => (int)  Setting::get('backup', 'preferred_hour',    2,    false, Setting::TYPE_NUMBER),
+            'skip_if_unchanged' => (bool) Setting::get('backup', 'skip_if_unchanged', true, false, Setting::TYPE_BOOLEAN),
+            // Retention
+            'retention_type'  => Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING),
+            'retention_value' => (int) Setting::get('backup', 'retention_value', 60,   false, Setting::TYPE_NUMBER),
         ];
 
         return ApiResponse::show('Backup settings retrieved successfully', $settings);
     }
 
     /**
-     * Save the current tenant's backup storage settings.
+     * Save backup settings (storage, schedule, and retention).
      * Local driver is always enforced — cannot be removed.
      */
     public function updateSettings(Request $request): JsonResponse
     {
         $request->validate([
+            // Storage
             'storage_drivers'   => 'sometimes|array',
             'storage_drivers.*' => 'string|in:local,s3,ftp,dropbox',
             's3_key'            => 'sometimes|string|max:255',
@@ -165,22 +174,26 @@ class BackupController extends Controller
             'ftp_port'          => 'sometimes|integer|min:1|max:65535',
             'ftp_root'          => 'sometimes|string|max:500',
             'dropbox_token'     => 'sometimes|string|max:500',
+            // Schedule
+            'frequency_hours'   => 'sometimes|integer|min:1|max:8760',
+            'preferred_hour'    => 'sometimes|integer|min:0|max:23',
+            'skip_if_unchanged' => 'sometimes|boolean',
+            // Retention
+            'retention_type'  => 'sometimes|string|in:by_count,by_days',
+            'retention_value' => 'sometimes|integer|min:1|max:9999',
         ]);
 
         if ($request->has('storage_drivers')) {
-            // Enforce local is always present
             $drivers = array_unique(array_merge(['local'], $request->storage_drivers));
             Setting::set('backup', 'storage_drivers', json_encode(array_values($drivers)), Setting::TYPE_JSON, 'Backup storage destinations');
         }
 
-        // Plain (non-sensitive) settings
         foreach (['s3_bucket', 's3_region', 'ftp_host', 'ftp_user', 'ftp_port', 'ftp_root'] as $key) {
             if ($request->has($key)) {
                 Setting::set('backup', $key, $request->input($key));
             }
         }
 
-        // Encrypted settings — store with is_encrypted = true
         foreach (['s3_key', 's3_secret', 'ftp_password', 'dropbox_token'] as $key) {
             if ($request->has($key)) {
                 $setting = Setting::firstOrNew(
@@ -194,8 +207,114 @@ class BackupController extends Controller
             }
         }
 
+        if ($request->has('frequency_hours')) {
+            Setting::set('backup', 'frequency_hours', $request->frequency_hours, Setting::TYPE_NUMBER, 'Hours between scheduled backups');
+        }
+
+        if ($request->has('preferred_hour')) {
+            Setting::set('backup', 'preferred_hour', $request->preferred_hour, Setting::TYPE_NUMBER, 'Hour of day (0-23) to run backups when frequency >= 24h');
+        }
+
+        if ($request->has('skip_if_unchanged')) {
+            Setting::set('backup', 'skip_if_unchanged', $request->boolean('skip_if_unchanged') ? '1' : '0', Setting::TYPE_BOOLEAN, 'Skip backup if no data changed since last backup');
+        }
+
+        if ($request->has('retention_type')) {
+            Setting::set('backup', 'retention_type', $request->retention_type, Setting::TYPE_STRING, 'Retention strategy: by_count or by_days');
+        }
+
+        if ($request->has('retention_value')) {
+            Setting::set('backup', 'retention_value', $request->retention_value, Setting::TYPE_NUMBER, 'Number of backups to keep (by_count) or days to retain (by_days)');
+        }
+
         return ApiResponse::update('Backup settings updated successfully', [
-            'storage_drivers' => Setting::get('backup', 'storage_drivers', ['local'], false, Setting::TYPE_JSON),
+            'storage_drivers'   => Setting::get('backup', 'storage_drivers',   ['local'], false, Setting::TYPE_JSON),
+            'frequency_hours'   => (int)  Setting::get('backup', 'frequency_hours',   24,   false, Setting::TYPE_NUMBER),
+            'preferred_hour'    => (int)  Setting::get('backup', 'preferred_hour',    2,    false, Setting::TYPE_NUMBER),
+            'skip_if_unchanged' => (bool) Setting::get('backup', 'skip_if_unchanged', true, false, Setting::TYPE_BOOLEAN),
+            'retention_type'    => Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING),
+            'retention_value'   => (int)  Setting::get('backup', 'retention_value', 60,   false, Setting::TYPE_NUMBER),
+        ]);
+    }
+
+    /**
+     * Show what the scheduler would do right now for this tenant.
+     * Use this to verify that your schedule and retention settings are correct
+     * without actually running a backup.
+     */
+    public function scheduleStatus(BackupService $backupService): JsonResponse
+    {
+        $tenant = Tenant::current();
+
+        if (!$tenant) {
+            return ApiResponse::customError('No active tenant found', 400);
+        }
+
+        $frequencyHours  = (int)  Setting::get('backup', 'frequency_hours',   24,   false, Setting::TYPE_NUMBER);
+        $preferredHour   = (int)  Setting::get('backup', 'preferred_hour',    2,    false, Setting::TYPE_NUMBER);
+        $skipIfUnchanged = (bool) Setting::get('backup', 'skip_if_unchanged', true, false, Setting::TYPE_BOOLEAN);
+        $retentionType   = Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING);
+        $retentionValue  = (int)  Setting::get('backup', 'retention_value', 60,   false, Setting::TYPE_NUMBER);
+
+        $lastBackup = BackupLog::on('mysql')
+            ->forTenant($tenant->id)
+            ->successful()
+            ->latest()
+            ->first();
+
+        $wouldRun    = true;
+        $skipReasons = [];
+
+        if ($frequencyHours >= 24 && now()->hour !== $preferredHour) {
+            $wouldRun      = false;
+            $skipReasons[] = 'Not preferred hour: current is ' . now()->hour . ':00, preferred is ' . $preferredHour . ':00';
+        }
+
+        if ($lastBackup) {
+            $elapsed = (int) $lastBackup->created_at->diffInHours(now());
+            if ($elapsed < $frequencyHours) {
+                $wouldRun      = false;
+                $skipReasons[] = "Frequency not reached: {$elapsed}h elapsed, need {$frequencyHours}h";
+            }
+        }
+
+        $dataChanged = null;
+        if ($skipIfUnchanged && $lastBackup) {
+            $dataChanged = $backupService->hasDataChangedSince($tenant, $lastBackup->created_at);
+            if (!$dataChanged) {
+                $wouldRun      = false;
+                $skipReasons[] = 'No data changes since last backup';
+            }
+        }
+
+        // Next expected run: last backup time + frequency, snapped to preferred hour when >= 24h
+        $nextExpectedAt = null;
+        if ($lastBackup) {
+            $next = $lastBackup->created_at->copy()->addHours($frequencyHours);
+            if ($frequencyHours >= 24) {
+                $next->setHour($preferredHour)->setMinute(0)->setSecond(0);
+                if ($next->isPast()) {
+                    $next->addDay();
+                }
+            }
+            $nextExpectedAt = $next->toDateTimeString();
+        }
+
+        return ApiResponse::show('Backup schedule status', [
+            'would_run_now'                => $wouldRun,
+            'skip_reasons'                 => $skipReasons,
+            'data_changed_since_last_backup' => $dataChanged,
+            'last_backup_at'               => $lastBackup?->created_at?->toDateTimeString(),
+            'last_backup_file'             => $lastBackup?->file_name,
+            'next_expected_at'             => $nextExpectedAt,
+            'current_server_hour'          => now()->hour,
+            'settings' => [
+                'frequency_hours'   => $frequencyHours,
+                'preferred_hour'    => $preferredHour,
+                'skip_if_unchanged' => $skipIfUnchanged,
+                'retention_type'    => $retentionType,
+                'retention_value'   => $retentionValue,
+            ],
         ]);
     }
 

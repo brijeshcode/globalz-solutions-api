@@ -129,6 +129,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/trigger', 'trigger')->name('trigger');
         Route::get('/settings', 'getSettings')->name('settings');
         Route::put('/settings', 'updateSettings')->name('settings.update');
+        Route::get('/schedule-status', 'scheduleStatus')->name('schedule.status');
         Route::get('/{id}/download', 'download')->name('download');
         Route::delete('/{id}', 'destroy')->name('destroy');
     });

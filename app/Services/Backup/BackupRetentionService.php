@@ -3,105 +3,68 @@
 namespace App\Services\Backup;
 
 use App\Models\BackupLog;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Storage;
 
 class BackupRetentionService
 {
     /**
-     * Run the full GFS retention cycle for one tenant.
+     * Run retention cleanup for one tenant.
+     * Reads per-tenant settings:
+     *   backup.retention_type  — 'by_count' (default) or 'by_days'
+     *   backup.retention_value — number of backups to keep (default 60) or days
+     * Tenant must already be current when this is called.
      */
     public function runForTenant(int $tenantId): void
     {
-        $this->promoteDailyToWeekly($tenantId);
-        $this->promoteWeeklyToMonthly($tenantId);
-        $this->promoteMonthlyToYearly($tenantId);
-        // yearly → never deleted
-    }
+        $type  = Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING);
+        $value = (int) Setting::get('backup', 'retention_value', 60,   false, Setting::TYPE_NUMBER);
 
-    /**
-     * Daily backups older than 30 days:
-     * keep the FIRST (oldest) backup of each ISO week → promote to weekly.
-     * Delete all other daily backups in that week (file + record).
-     */
-    protected function promoteDailyToWeekly(int $tenantId): void
-    {
-        $cutoff = now()->subDays(30);
-
-        $backups = BackupLog::forTenant($tenantId)
-            ->byTier(BackupLog::TIER_DAILY)
-            ->successful()
-            ->where('created_at', '<', $cutoff)
-            ->orderBy('created_at')
-            ->get();
-
-        // Group by ISO year+week (e.g. "202614")
-        $byWeek = $backups->groupBy(fn($log) => $log->created_at->format('oW'));
-
-        foreach ($byWeek as $logs) {
-            $keep = $logs->first();
-            $keep->update(['tier' => BackupLog::TIER_WEEKLY]);
-
-            foreach ($logs->slice(1) as $log) {
-                $this->deleteBackup($log);
-            }
+        if ($type === 'by_days') {
+            $this->pruneByDays($tenantId, $value);
+        } else {
+            $this->pruneByCount($tenantId, $value);
         }
     }
 
     /**
-     * Weekly backups older than 26 weeks:
-     * keep the FIRST of each calendar month → promote to monthly.
-     * Delete all other weekly backups in that month.
+     * Keep only the N most recent successful backups; delete the rest.
      */
-    protected function promoteWeeklyToMonthly(int $tenantId): void
+    protected function pruneByCount(int $tenantId, int $keep): void
     {
-        $cutoff = now()->subWeeks(26);
-
-        $backups = BackupLog::forTenant($tenantId)
-            ->byTier(BackupLog::TIER_WEEKLY)
+        $keepIds = BackupLog::on('mysql')
+            ->forTenant($tenantId)
             ->successful()
-            ->where('created_at', '<', $cutoff)
-            ->orderBy('created_at')
+            ->orderByDesc('created_at')
+            ->limit($keep)
+            ->pluck('id');
+
+        $toDelete = BackupLog::on('mysql')
+            ->forTenant($tenantId)
+            ->successful()
+            ->whereNotIn('id', $keepIds)
             ->get();
 
-        // Group by year+month (e.g. "202601")
-        $byMonth = $backups->groupBy(fn($log) => $log->created_at->format('Ym'));
-
-        foreach ($byMonth as $logs) {
-            $keep = $logs->first();
-            $keep->update(['tier' => BackupLog::TIER_MONTHLY]);
-
-            foreach ($logs->slice(1) as $log) {
-                $this->deleteBackup($log);
-            }
+        foreach ($toDelete as $log) {
+            $this->deleteBackup($log);
         }
     }
 
     /**
-     * Monthly backups older than 120 months (10 years):
-     * keep the FIRST of each calendar year → promote to yearly.
-     * Delete all other monthly backups in that year.
+     * Delete successful backups older than $days days.
      */
-    protected function promoteMonthlyToYearly(int $tenantId): void
+    protected function pruneByDays(int $tenantId, int $days): void
     {
-        $cutoff = now()->subMonths(120);
+        $cutoff = now()->subDays($days);
 
-        $backups = BackupLog::forTenant($tenantId)
-            ->byTier(BackupLog::TIER_MONTHLY)
+        $toDelete = BackupLog::on('mysql')
+            ->forTenant($tenantId)
             ->successful()
             ->where('created_at', '<', $cutoff)
-            ->orderBy('created_at')
             ->get();
 
-        // Group by year (e.g. "2016")
-        $byYear = $backups->groupBy(fn($log) => $log->created_at->format('Y'));
-
-        foreach ($byYear as $logs) {
-            $keep = $logs->first();
-            $keep->update(['tier' => BackupLog::TIER_YEARLY]);
-
-            foreach ($logs->slice(1) as $log) {
-                $this->deleteBackup($log);
-            }
+        foreach ($toDelete as $log) {
+            $this->deleteBackup($log);
         }
     }
 

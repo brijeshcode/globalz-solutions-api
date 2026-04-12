@@ -127,15 +127,16 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->onOneServer();
         }
 
-        // Daily tenant backups at 02:00 — runs synchronously, no queue worker needed
+        // Backup scheduler runs every hour. Each tenant's frequency, preferred hour,
+        // and skip-if-unchanged rules are evaluated inside the command per tenant.
         $schedule->command(BackupAllTenantsCommand::class)
-            ->dailyAt('02:00')
+            ->hourly()
             ->name('backup-all-tenants')
             ->withoutOverlapping();
 
-        // GFS retention cleanup at 03:00 — runs after backups complete
+        // Retention cleanup runs hourly too, 30 min after the backup window.
         $schedule->command(BackupRetentionCleanupCommand::class)
-            ->dailyAt('03:00')
+            ->hourlyAt(30)
             ->name('backup-retention-cleanup')
             ->withoutOverlapping();
 
