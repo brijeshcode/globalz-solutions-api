@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 class BackupRetentionCleanupCommand extends Command
 {
     protected $signature   = 'backup:retention-cleanup';
-    protected $description = 'Run GFS retention cleanup for all tenants (runs synchronously — no queue worker needed)';
+    protected $description = 'Run retention cleanup for all tenants (runs synchronously — no queue worker needed)';
 
     public function handle(BackupRetentionService $retentionService): int
     {
@@ -24,10 +24,14 @@ class BackupRetentionCleanupCommand extends Command
 
         foreach ($tenants as $tenant) {
             try {
+                // Must be current so Setting::get() reads from the correct tenant DB
+                $tenant->makeCurrent();
                 $retentionService->runForTenant($tenant->id);
                 $this->info("  ✓ Cleaned up: {$tenant->tenant_key}");
             } catch (\Throwable $e) {
                 $this->error("  ✗ Failed for tenant {$tenant->tenant_key}: {$e->getMessage()}");
+            } finally {
+                Tenant::forgetCurrent();
             }
         }
 

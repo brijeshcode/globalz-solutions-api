@@ -4,7 +4,9 @@ namespace App\Services\Backup;
 
 use App\Models\BackupLog;
 use App\Models\Tenant;
+use Carbon\Carbon;
 use Ifsnop\Mysqldump\Mysqldump;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class BackupService
@@ -129,6 +131,30 @@ class BackupService
         if (is_resource($stream)) {
             fclose($stream);
         }
+    }
+
+    /**
+     * Check if any data in the tenant database has changed since the given timestamp.
+     * Queries all tables that have an updated_at column and returns true if any record
+     * is newer than $since. Returns true when there is no previous backup (first run).
+     */
+    public function hasDataChangedSince(Tenant $tenant, Carbon $since): bool
+    {
+        $dbName = $tenant->getDatabaseConfig()['database'];
+
+        $tables = DB::select(
+            'SELECT DISTINCT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = ? AND COLUMN_NAME = ?',
+            [$dbName, 'updated_at']
+        );
+
+        foreach ($tables as $table) {
+            if (DB::table($table->TABLE_NAME)->where('updated_at', '>', $since)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
