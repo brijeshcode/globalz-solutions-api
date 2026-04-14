@@ -13,8 +13,12 @@ class ItemCatalogSettingsController extends Controller
     private const GROUP = 'item_catalog';
 
     private const DEFAULTS = [
-        'catalog_link'  => ['value' => null, 'type' => Setting::TYPE_STRING],
-        'catalog_label' => ['value' => null, 'type' => Setting::TYPE_STRING],
+        'inv_show_qrcode'   => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'inv_catalog_link'  => ['value' => null,  'type' => Setting::TYPE_STRING],
+        'inv_catalog_label' => ['value' => null,  'type' => Setting::TYPE_STRING],
+        'inx_show_qrcode'   => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'inx_catalog_link'  => ['value' => null,  'type' => Setting::TYPE_STRING],
+        'inx_catalog_label' => ['value' => null,  'type' => Setting::TYPE_STRING],
     ];
 
     public function index(): JsonResponse

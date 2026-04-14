@@ -15,8 +15,12 @@ class ItemCatalogSettingsUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'catalog_link'  => 'sometimes|nullable|string|max:500',
-            'catalog_label' => 'sometimes|nullable|string|max:255',
+            'inv_show_qrcode'   => 'sometimes|boolean',
+            'inv_catalog_link'  => 'sometimes|nullable|string|max:500',
+            'inv_catalog_label' => 'sometimes|nullable|string|max:255',
+            'inx_show_qrcode'   => 'sometimes|boolean',
+            'inx_catalog_link'  => 'sometimes|nullable|string|max:500',
+            'inx_catalog_label' => 'sometimes|nullable|string|max:255',
         ];
     }
 }

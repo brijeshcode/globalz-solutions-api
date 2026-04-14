@@ -58,12 +58,14 @@ class SalePdfController extends Controller
                 'is_multi_currency'   => $isMultiCurrency,
             ];
 
-            // Generate catalog QR code if enabled in invoice settings and catalog link is set
+            // Generate catalog QR code based on per-prefix show setting and catalog link
             $catalogQrCodeBase64 = null;
-            $catalogGroup        = [];
-            if (!empty($invoiceGroup['show_catalog_qrcode'])) {
-                $catalogGroup = Setting::getGroup('item_catalog');
-                $catalogLink  = $catalogGroup['catalog_link'] ?? null;
+            $catalogGroup        = Setting::getGroup('item_catalog');
+            $isInv               = $sale->prefix === Sale::TAXPREFIX;
+            $showKey             = $isInv ? 'inv_show_qrcode' : 'inx_show_qrcode';
+            $linkKey             = $isInv ? 'inv_catalog_link' : 'inx_catalog_link';
+            if (!empty($catalogGroup[$showKey])) {
+                $catalogLink = $catalogGroup[$linkKey] ?? null;
                 if (!empty($catalogLink)) {
                     $result              = (new PngWriter())->write(new QrCode($catalogLink));
                     $catalogQrCodeBase64 = base64_encode($result->getString());
@@ -95,7 +97,7 @@ class SalePdfController extends Controller
                 'invoiceSettings'     => $invoiceSettings,
                 'qrCodeBase64'        => $qrCodeBase64,
                 'catalogQrCodeBase64' => $catalogQrCodeBase64,
-                'catalogLabel'        => $catalogGroup['catalog_label'] ?? null,
+                'catalogLabel'        => $catalogGroup[$isInv ? 'inv_catalog_label' : 'inx_catalog_label'] ?? null,
                 // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
            
@@ -137,7 +139,7 @@ class SalePdfController extends Controller
 
             // For INV with company details: define a named last-page footer and switch to it
             // at the very end of the HTML content so it only applies to the last page
-            if ($sale->prefix === 'INV' && !empty($companyFooterLine)) {
+            if ($sale->prefix === Sale::TAXPREFIX && !empty($companyFooterLine)) {
                 $lastPageFooterHtml =
                     '<div style="text-align: center; font-size: 8pt; border-top: 2px solid #000000; padding-top: 4px; margin-bottom: 4px;">'
                     . $companyFooterLine .
