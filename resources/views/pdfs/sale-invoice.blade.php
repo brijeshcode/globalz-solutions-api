@@ -182,7 +182,7 @@
 
         .signature-line {
             border-top: 1px solid #000000;
-            margin-top: 30px;
+            margin-top: 45px;
             padding-top: 5px;
         }
 

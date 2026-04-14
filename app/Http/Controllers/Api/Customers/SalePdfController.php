@@ -123,21 +123,34 @@ class SalePdfController extends Controller
             if (!empty($companyData['website'])) $companyFooterParts[] = $companyData['website'];
             $companyFooterLine = htmlspecialchars(implode(' | ', $companyFooterParts));
 
-            $companyFooterHtml = '';
-            if ($sale->prefix === 'INV' && !empty($companyFooterLine)) {
-                $companyFooterHtml = '<div style="text-align: center; font-size: 8pt; border-top: 2px solid #000000; padding-top: 4px; margin-bottom: 4px;">' . $companyFooterLine . '</div>';
-            }
-
-            $mpdf->SetHTMLFooter('
-                ' . $companyFooterHtml . '
+            $pageNumberRowHtml = '
                 <table width="100%" style="font-size: 9pt; border-top: 1px solid #000000; padding-top: 5px;">
                     <tr>
                         <td width="33%" style="text-align: left;">' . $invoiceCode . '</td>
                         <td width="33%" style="text-align: center;">Page {PAGENO} of {nbpg}</td>
                         <td width="33%" style="text-align: right;">' . date('Y-m-d') . '</td>
                     </tr>
-                </table>
-            ');
+                </table>';
+
+            // Regular footer (all pages): page number row only
+            $mpdf->SetHTMLFooter($pageNumberRowHtml);
+
+            // For INV with company details: define a named last-page footer and switch to it
+            // at the very end of the HTML content so it only applies to the last page
+            if ($sale->prefix === 'INV' && !empty($companyFooterLine)) {
+                $lastPageFooterHtml =
+                    '<div style="text-align: center; font-size: 8pt; border-top: 2px solid #000000; padding-top: 4px; margin-bottom: 4px;">'
+                    . $companyFooterLine .
+                    '</div>'
+                    . $pageNumberRowHtml;
+
+                // Define named footer at start, switch to it at end of content
+                $defineFooter = '<!--mpdf <htmlpagefooter name="lastpagefooter">' . $lastPageFooterHtml . '</htmlpagefooter> mpdf-->';
+                $switchFooter = '<!--mpdf <sethtmlpagefooter name="lastpagefooter" page="ALL" value="1" /> mpdf-->';
+
+                $html = str_replace('<body>', '<body>' . $defineFooter, $html);
+                $html = str_replace('</body>', $switchFooter . '</body>', $html);
+            }
 
             // Write HTML to PDF
             $mpdf->WriteHTML($html);
