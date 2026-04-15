@@ -119,10 +119,12 @@ class EmployeeBusinessController extends Controller
             $retRow    = $this->toMonthlyRow($returnsData->get($empId),  'RTN', 'RTX');
             $creditRow = $this->toMonthlyRow($creditData->get($empId),   'CRN', 'CRX');
 
+            $balTax     = round(($payRow['tax']      + $retRow['tax']      + $creditRow['tax'])      - $saleRow['tax'],      2);
+            $balTaxFree = round(($payRow['tax_free'] + $retRow['tax_free'] + $creditRow['tax_free']) - $saleRow['tax_free'], 2);
             $balRow = [
-                'tax'      => round($saleRow['tax']      - $retRow['tax']      + $payRow['tax']      + $creditRow['tax'],      2),
-                'tax_free' => round($saleRow['tax_free'] - $retRow['tax_free'] + $payRow['tax_free'] + $creditRow['tax_free'], 2),
-                'total'    => round($saleRow['total']    - $retRow['total']    + $payRow['total']    + $creditRow['total'],    2),
+                'tax'      => $balTax,
+                'tax_free' => $balTaxFree,
+                'total'    => round($balTax + $balTaxFree, 2),
             ];
 
             $name = $salesData->get($empId)?->employee_name
