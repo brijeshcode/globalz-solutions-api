@@ -55,7 +55,8 @@ class FeatureController extends Controller
         // Reports
         ['key' => 'report_capital',            'name' => 'Capital Report',              'description' => 'Business capital tracker report.'],
         ['key' => 'report_profit',             'name' => 'Monthly Profit Report',       'description' => 'Monthly profit and loss report.'],
-        ['key' => 'report_employee_sales',     'name' => 'Employee Sales Report',       'description' => 'Monthly employee sales report.'],
+        ['key' => 'report_employee_yearly_sales',     'name' => 'Employee Yearly Sales Report',       'description' => 'Yearly employee sales report.'],
+        ['key' => 'report_employee_monthly_sales',     'name' => 'Employee Monthly Sales Report',       'description' => 'Monthly employee sales report.'],
         ['key' => 'report_expense_analysis',   'name' => 'Expense Analysis Report',     'description' => 'Detailed expense breakdown and analysis.'],
         ['key' => 'report_warehouse',          'name' => 'Warehouse Report',            'description' => 'Inventory stock levels by warehouse.'],
         ['key' => 'report_sales_category',     'name' => 'Sales Category Report',       'description' => 'Sales performance broken down by category.'],
