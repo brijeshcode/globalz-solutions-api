@@ -7,6 +7,8 @@ use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
 use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\PurchaseItem;
+use App\Models\Suppliers\SupplierItemPrice;
+use App\Services\Suppliers\SupplierItemPriceService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -536,6 +538,64 @@ class PriceService
                 ? "Cannot change starting price. This item has {$totalTransactions} transaction(s) that would be affected."
                 : null
         ];
+    }
+
+    /**
+     * Temp: scan and fix stale item_prices and supplier_item_prices
+     * caused by purchase items deleted before the deletion bug was fixed.
+     */
+    public static function reindexPurchasePrices(): array
+    {
+        $fixed = ['item_prices' => [], 'supplier_item_prices' => []];
+
+        // Fix item_prices: sync each item's current price to latest price history
+        $itemPrices = ItemPrice::all();
+        foreach ($itemPrices as $itemPrice) {
+            $latestHistory = ItemPriceHistory::where('item_id', $itemPrice->item_id)
+                ->orderBy('effective_date', 'desc')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if ($latestHistory && (float) $latestHistory->price_usd !== (float) $itemPrice->price_usd) {
+                $itemPrice->update([
+                    'price_usd'      => $latestHistory->price_usd,
+                    'effective_date' => $latestHistory->effective_date,
+                ]);
+                $fixed['item_prices'][] = $itemPrice->item_id;
+            }
+        }
+
+        // Fix supplier_item_prices: soft-delete orphaned records where the
+        // linked purchase no longer contains that item, then restore previous
+        $supplierPrices = SupplierItemPrice::whereNotNull('last_purchase_id')->get();
+        foreach ($supplierPrices as $supplierPrice) {
+            $itemStillInPurchase = PurchaseItem::where('item_id', $supplierPrice->item_id)
+                ->where('purchase_id', $supplierPrice->last_purchase_id)
+                ->exists();
+
+            if (!$itemStillInPurchase) {
+                $supplierPrice->delete();
+
+                $previous = SupplierItemPrice::where('supplier_id', $supplierPrice->supplier_id)
+                    ->where('item_id', $supplierPrice->item_id)
+                    ->orderBy('last_purchase_date', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($previous) {
+                    SupplierItemPriceService::markOthersAsNotCurrent(
+                        $supplierPrice->supplier_id,
+                        $supplierPrice->item_id,
+                        $previous->id
+                    );
+                    $previous->update(['is_current' => true]);
+                }
+
+                $fixed['supplier_item_prices'][] = $supplierPrice->id;
+            }
+        }
+
+        return $fixed;
     }
 
 }
