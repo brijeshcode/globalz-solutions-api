@@ -402,7 +402,7 @@ class PurchaseService
      */
     private function handlePurchaseItemDeletion(Purchase $purchase, PurchaseItem $purchaseItem): void
     {
-        // Only adjust inventory if purchase is already delivered
+        // Only adjust inventory and prices if purchase is already delivered
         if ($purchase->status === 'Delivered') {
             // Validate: Removing item shouldn't cause negative inventory
             $this->validateInventoryBeforeDeletion(
@@ -417,9 +417,13 @@ class PurchaseService
                 $purchase->warehouse_id,
                 $purchaseItem->quantity
             );
-        }
 
-        // Note: We don't remove supplier prices or item price history as they are historical records
+            // Clean up item price history and restore previous item price
+            PriceService::deleteFromPurchase($purchase, $purchaseItem);
+
+            // Clean up supplier price and restore previous supplier price
+            SupplierItemPriceService::deleteFromPurchase($purchase, $purchaseItem);
+        }
     }
 
     /**
@@ -483,8 +487,11 @@ class PurchaseService
                             $purchaseItem->quantity
                         );
 
-                        // Clean up price history and restore previous price
+                        // Clean up item price history and restore previous item price
                         PriceService::deleteFromPurchase($purchase, $purchaseItem);
+
+                        // Clean up supplier price and restore previous supplier price
+                        SupplierItemPriceService::deleteFromPurchase($purchase, $purchaseItem);
                     }
                 }
 
