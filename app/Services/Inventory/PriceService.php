@@ -540,8 +540,13 @@ class PriceService
     }
 
     /**
-     * Temp: scan and fix stale item_prices and supplier_item_prices
-     * caused by purchase items deleted before the deletion bug was fixed.
+     * One-time repair: fixes stale item_prices and supplier_item_prices caused by
+     * purchase items deleted before the price-cleanup bug was fixed.
+     *
+     * Usage: call once from any controller action, then remove the call.
+     * Example: PriceService::reindexPurchasePrices();
+     *
+     * Returns array of fixed item_ids and supplier_item_price ids for verification.
      */
     public static function reindexPurchasePrices(): array
     {

@@ -8,7 +8,6 @@ use App\Http\Requests\Api\Suppliers\PurchasesStoreRequest;
 use App\Http\Requests\Api\Suppliers\PurchasesUpdateRequest;
 use App\Http\Resources\Api\Suppliers\PurchaseResource;
 use App\Models\Suppliers\Purchase;
-use App\Services\Inventory\PriceService;
 use App\Services\Suppliers\PurchaseService;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
@@ -31,9 +30,6 @@ class PurchasesController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // TEMP: reindex stale item prices and supplier prices — remove after running once
-        PriceService::reindexPurchasePrices();
-
         $query = $this->purchaseQuery($request);
 
         $purchases = $this->applyPagination($query, $request);
