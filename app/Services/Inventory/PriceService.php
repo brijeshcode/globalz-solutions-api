@@ -10,7 +10,6 @@ use App\Models\Suppliers\PurchaseItem;
 use App\Models\Suppliers\SupplierItemPrice;
 use App\Services\Suppliers\SupplierItemPriceService;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
 
 /**
  * Item Price Calculation Service
@@ -449,7 +448,7 @@ class PriceService
             ->first();
 
         if ($latestPriceHistory) {
-            $currentItemPrice = self::getCurrentPrice($itemId = $purchaseItem->item_id);
+            $currentItemPrice = self::getCurrentPrice($purchaseItem->item_id);
             if ($currentItemPrice) {
                 $currentItemPrice->update([
                     'price_usd' => $latestPriceHistory->price_usd,
@@ -478,7 +477,7 @@ class PriceService
             ->first();
 
         if ($latestPriceHistory) {
-            $currentItemPrice = self::getCurrentPrice($itemId = $purchaseReturnItem->item_id);
+            $currentItemPrice = self::getCurrentPrice($purchaseReturnItem->item_id);
             if ($currentItemPrice) {
                 $currentItemPrice->update([
                     'price_usd' => $latestPriceHistory->price_usd,
@@ -560,6 +559,13 @@ class PriceService
                 $itemPrice->update([
                     'price_usd'      => $latestHistory->price_usd,
                     'effective_date' => $latestHistory->effective_date,
+                ]);
+                $fixed['item_prices'][] = $itemPrice->item_id;
+            } elseif (!$latestHistory && (float) $itemPrice->price_usd !== 0.0) {
+                // No price history left — reset price to zero
+                $itemPrice->update([
+                    'price_usd'      => 0,
+                    'effective_date' => now()->toDateString(),
                 ]);
                 $fixed['item_prices'][] = $itemPrice->item_id;
             }
