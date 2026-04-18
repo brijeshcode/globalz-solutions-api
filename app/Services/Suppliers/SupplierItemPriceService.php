@@ -216,6 +216,35 @@ class SupplierItemPriceService
     }
 
     /**
+     * Clean up supplier price record and restore previous price when a purchase (or purchase item) is deleted
+     */
+    public static function deleteFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): void
+    {
+        $priceForThisPurchase = SupplierItemPrice::where('supplier_id', $purchase->supplier_id)
+            ->where('item_id', $purchaseItem->item_id)
+            ->where('last_purchase_id', $purchase->id)
+            ->first();
+
+        if (!$priceForThisPurchase) {
+            return;
+        }
+
+        $priceForThisPurchase->delete();
+
+        // Restore the most recent remaining price as current
+        $previousPrice = SupplierItemPrice::where('supplier_id', $purchase->supplier_id)
+            ->where('item_id', $purchaseItem->item_id)
+            ->orderBy('last_purchase_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($previousPrice) {
+            self::markOthersAsNotCurrent($purchase->supplier_id, $purchaseItem->item_id, $previousPrice->id);
+            $previousPrice->update(['is_current' => true]);
+        }
+    }
+
+    /**
      * Initialize missing supplier prices from item base costs
      */
     public static function initializeMissingPrices(int $supplierId, ?int $currencyId = null, ?float $currencyRate = null): array
