@@ -748,6 +748,14 @@ class CustomersController extends Controller
             $query->where('customer_zone_id', $request->customer_zone_id);
         }
 
+        // Exclude customers of disabled salespersons unless explicitly requested
+        if (!$request->boolean('include_disabled_salespersons')) {
+            $query->where(function ($q) {
+                $q->whereNull('salesperson_id')
+                  ->orWhereHas('salesperson', fn ($q) => $q->where('is_active', true));
+            });
+        }
+
         // Filter by salesperson
         if ($request->has('salesperson_id')) {
             $query->where('salesperson_id', $request->salesperson_id);
