@@ -121,127 +121,192 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
     }
 
     /**
-     * Validate and transform row data
+     * Validate and transform row data.
+     * Only mandatory fields (*) are required. Optional fields are included only when present and non-empty.
      */
     protected function validateRow(array $row, int $rowNumber): array
     {
-        // Extract starting balance (if provided)
-        $startingBalance = $row['starting_balance'] ?? $row['opening_balance'] ?? null;
-        $startingBalance = $this->cleanNumeric($startingBalance);
+        // Extract starting balance separately — not stored as a column
+        $startingBalance = $this->cleanNumeric($row['starting_balance'] ?? $row['opening_balance'] ?? null);
 
-        // Map column headers to expected fields
+        // ── Mandatory fields ────────────────────────────────────────────────
         $data = [
-            'code' => $row['code'] ?? $row['customer_code'] ?? null,
-            'name' => $row['name'] ?? $row['customer_name'] ?? null,
-            'customer_type_id' => null,
-            'customer_group_id' => null,
-            'customer_province_id' => null,
-            'customer_zone_id' => null,
-            'current_balance' => 0, // Don't set from CSV, will be calculated via credit/debit notes
-            'address' => $row['address'] ?? null,
-            'city' => $row['city'] ?? null,
-            'telephone' => $row['telephone'] ?? $row['phone'] ?? null,
-            'mobile' => $row['mobile'] ?? $row['mobile_number'] ?? null,
-            'url' => $row['website'] ?? $row['url'] ?? null,
-            'google_map' => $row['google_map_link'] ?? $row['google_map'] ?? null,
-            'email' => $row['email'] ?? null,
-            'contact_name' => $row['contact_name'] ?? $row['contact'] ?? null,
-            'gps_coordinates' => $row['gps_coordinates'] ?? $row['gps'] ?? null,
-            'mof_tax_number' => $row['mof_tax_number'] ?? $row['tax_number'] ?? null,
-            'salesperson_id' => null,
-            'customer_payment_term_id' => null,
-            'price_list_id_INV' => null,
-            'price_list_id_INX' => null,
-            'credit_limit' => $this->cleanNumeric($row['credit_limit'] ?? null),
-            'notes' => $row['notes'] ?? $row['remarks'] ?? null,
-            'created_at' => $this->parseDate($row['created_at'] ?? null),
+            'current_balance' => 0, // always 0 on create; stripped on update
         ];
 
-        if (array_key_exists('is_active', $row)) {
+        $name = $row['name'] ?? $row['customer_name'] ?? null;
+        if (empty($name)) {
+            return ['error' => 'Customer name is required'];
+        }
+        $data['name'] = $name;
+
+        $city = $row['city'] ?? null;
+        if (empty($city)) {
+            return ['error' => 'City is required'];
+        }
+        $data['city'] = $city;
+
+        $mobile = $row['mobile'] ?? $row['mobile_number'] ?? null;
+        if (empty($mobile)) {
+            return ['error' => 'Mobile is required'];
+        }
+        $data['mobile'] = $mobile;
+
+        // customer_type (mandatory lookup)
+        $typeName = $row['customer_type'] ?? $row['type'] ?? null;
+        if (empty($typeName)) {
+            return ['error' => 'Customer type is required'];
+        }
+        $customerType = CustomerType::where('name', $typeName)->first();
+        if (!$customerType) {
+            return ['error' => "Customer type '{$typeName}' not found"];
+        }
+        $data['customer_type_id'] = $customerType->id;
+
+        // salesperson (mandatory lookup)
+        $salespersonIdentifier = $row['salesperson'] ?? $row['salesperson_code'] ?? null;
+        if (empty($salespersonIdentifier)) {
+            return ['error' => 'Salesperson is required'];
+        }
+        $salesperson = Employee::where('code', $salespersonIdentifier)
+            ->orWhere('name', $salespersonIdentifier)
+            ->first();
+        if (!$salesperson) {
+            return ['error' => "Salesperson '{$salespersonIdentifier}' not found"];
+        }
+        $data['salesperson_id'] = $salesperson->id;
+
+        // price_list_inv_code (mandatory lookup)
+        $priceListInvCode = $row['price_list_inv_code'] ?? $row['price_list_code_inv'] ?? null;
+        if (empty($priceListInvCode)) {
+            return ['error' => 'Price list INV code is required'];
+        }
+        $priceListInv = PriceList::where('code', $priceListInvCode)->first();
+        if (!$priceListInv) {
+            return ['error' => "Price list INV '{$priceListInvCode}' not found"];
+        }
+        $data['price_list_id_INV'] = $priceListInv->id;
+
+        // price_list_inx_code (mandatory lookup)
+        $priceListInxCode = $row['price_list_inx_code'] ?? $row['price_list_code_inx'] ?? null;
+        if (empty($priceListInxCode)) {
+            return ['error' => 'Price list INX code is required'];
+        }
+        $priceListInx = PriceList::where('code', $priceListInxCode)->first();
+        if (!$priceListInx) {
+            return ['error' => "Price list INX '{$priceListInxCode}' not found"];
+        }
+        $data['price_list_id_INX'] = $priceListInx->id;
+
+        // ── Optional fields — only included when present and non-empty ──────
+
+        $code = $row['code'] ?? $row['customer_code'] ?? null;
+        if (!empty($code)) {
+            $data['code'] = $code;
+        }
+
+        $address = $row['address'] ?? null;
+        if (!empty($address)) {
+            $data['address'] = $address;
+        }
+
+        $telephone = $row['telephone'] ?? $row['phone'] ?? null;
+        if (!empty($telephone)) {
+            $data['telephone'] = $telephone;
+        }
+
+        $url = $row['website'] ?? $row['url'] ?? null;
+        if (!empty($url)) {
+            if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                return ['error' => 'Invalid URL format'];
+            }
+            $data['url'] = $url;
+        }
+
+        $googleMap = $row['google_map_link'] ?? $row['google_map'] ?? null;
+        if (!empty($googleMap)) {
+            $data['google_map'] = $googleMap;
+        }
+
+        $email = $row['email'] ?? null;
+        if (!empty($email)) {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return ['error' => 'Invalid email format'];
+            }
+            $data['email'] = $email;
+        }
+
+        $contactName = $row['contact_name'] ?? $row['contact'] ?? null;
+        if (!empty($contactName)) {
+            $data['contact_name'] = $contactName;
+        }
+
+        $gps = $row['gps_coordinates'] ?? $row['gps'] ?? null;
+        if (!empty($gps)) {
+            $data['gps_coordinates'] = $gps;
+        }
+
+        $mofTax = $row['mof_tax_number'] ?? $row['tax_number'] ?? null;
+        if (!empty($mofTax)) {
+            $data['mof_tax_number'] = $mofTax;
+        }
+
+        $notes = $row['notes'] ?? $row['remarks'] ?? null;
+        if (!empty($notes)) {
+            $data['notes'] = $notes;
+        }
+
+        $createdAt = $this->parseDate($row['created_at'] ?? null);
+        if ($createdAt !== null) {
+            $data['created_at'] = $createdAt;
+        }
+
+        $creditLimit = $this->cleanNumeric($row['credit_limit'] ?? null);
+        if ($creditLimit !== null) {
+            $data['credit_limit'] = $creditLimit;
+        }
+
+        $discount = $this->cleanNumeric($row['discount_percentage'] ?? $row['discount'] ?? null);
+        if ($discount !== null) {
+            $data['discount_percentage'] = $discount;
+        }
+
+        $totalOldSales = $this->cleanNumeric($row['total_old_sales'] ?? null);
+        if ($totalOldSales !== null) {
+            $data['total_old_sales'] = $totalOldSales;
+        }
+
+        if (isset($row['is_active']) && $row['is_active'] !== '' && $row['is_active'] !== null) {
             $data['is_active'] = filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN);
         }
 
-        if (array_key_exists('discount_percentage', $row) || array_key_exists('discount', $row)) {
-            $data['discount_percentage'] = $this->cleanNumeric($row['discount_percentage'] ?? $row['discount']);
-        }
-
-        if (array_key_exists('total_old_sales', $row)) {
-            $data['total_old_sales'] = $this->cleanNumeric($row['total_old_sales']);
-        }
-
-        // Required field validation
-        if (empty($data['name'])) {
-            return ['error' => 'Customer name is required'];
-        }
-
-        if (empty($data['city'])) {
-            return ['error' => 'City is required'];
-        }
-
-        if (empty($data['mobile'])) {
-            return ['error' => 'Mobile is required'];
-        }
-
-        // Lookup customer type by name or code
-        if (!empty($row['customer_type']) || !empty($row['type'])) {
-            $typeName = $row['customer_type'] ?? $row['type'];
-            $customerType = CustomerType::where('name', $typeName)
-                ->first();
-            if ($customerType) {
-                $data['customer_type_id'] = $customerType->id;
-            }
-        }
-
-        if (empty($data['customer_type_id'])) {
-            return ['error' => 'Customer type is required and must match an existing type'];
-        }
-
-        // Lookup customer group by name or code
-        if (!empty($row['customer_group']) || !empty($row['group'])) {
-            $groupName = $row['customer_group'] ?? $row['group'];
-            $customerGroup = CustomerGroup::where('name', $groupName)
-                ->first();
+        // Optional lookups — skipped if column is absent or empty
+        $groupName = $row['customer_group'] ?? $row['group'] ?? null;
+        if (!empty($groupName)) {
+            $customerGroup = CustomerGroup::where('name', $groupName)->first();
             if ($customerGroup) {
                 $data['customer_group_id'] = $customerGroup->id;
             }
         }
 
-        // Lookup customer province by name
-        if (!empty($row['customer_province']) || !empty($row['province'])) {
-            $provinceName = $row['customer_province'] ?? $row['province'];
+        $provinceName = $row['customer_province'] ?? $row['province'] ?? null;
+        if (!empty($provinceName)) {
             $customerProvince = CustomerProvince::where('name', $provinceName)->first();
             if ($customerProvince) {
                 $data['customer_province_id'] = $customerProvince->id;
             }
         }
 
-        // Lookup customer zone by name
-        if (!empty($row['customer_zone']) || !empty($row['zone'])) {
-            $zoneName = $row['customer_zone'] ?? $row['zone'];
+        $zoneName = $row['customer_zone'] ?? $row['zone'] ?? null;
+        if (!empty($zoneName)) {
             $customerZone = CustomerZone::where('name', $zoneName)->first();
             if ($customerZone) {
                 $data['customer_zone_id'] = $customerZone->id;
             }
         }
 
-        // Lookup salesperson by code or name
-        if (!empty($row['salesperson']) || !empty($row['salesperson_code'])) {
-            $salespersonIdentifier = $row['salesperson'] ?? $row['salesperson_code'];
-            $salesperson = Employee::where('code', $salespersonIdentifier)
-                ->orWhere('name', $salespersonIdentifier)
-                ->first();
-            if ($salesperson) {
-                $data['salesperson_id'] = $salesperson->id;
-            }
-        }
-
-        if (empty($data['salesperson_id'])) {
-            return ['error' => 'Salesperson is required and must match an existing employee'];
-        }
-
-        // Lookup payment term by name or days
-        if (!empty($row['payment_term']) || !empty($row['payment_terms'])) {
-            $paymentTermName = $row['payment_term'] ?? $row['payment_terms'];
+        $paymentTermName = $row['payment_term'] ?? $row['payment_terms'] ?? null;
+        if (!empty($paymentTermName)) {
             $paymentTerm = CustomerPaymentTerm::where('name', $paymentTermName)
                 ->orWhere('days', $paymentTermName)
                 ->first();
@@ -250,50 +315,9 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             }
         }
 
-        // Lookup price list INV by code
-        if (!empty($row['price_list_inv_code']) || !empty($row['price_list_code_inv'])) {
-            $priceListCode = $row['price_list_inv_code'] ?? $row['price_list_code_inv'];
-            $priceList = PriceList::where('code', $priceListCode)->first();
-            if ($priceList) {
-                $data['price_list_id_INV'] = $priceList->id;
-            }
-        }
-
-        if (empty($data['price_list_id_INV'])) {
-            return ['error' => 'Price list INV code is required and must match an existing price list'];
-        }
-
-        // Lookup price list INX by code
-        if (!empty($row['price_list_inx_code']) || !empty($row['price_list_code_inx'])) {
-            $priceListCode = $row['price_list_inx_code'] ?? $row['price_list_code_inx'];
-            $priceList = PriceList::where('code', $priceListCode)->first();
-            if ($priceList) {
-                $data['price_list_id_INX'] = $priceList->id;
-            }
-        }
-
-        if (empty($data['price_list_id_INX'])) {
-            return ['error' => 'Price list INX code is required and must match an existing price list'];
-        }
-
-        // Validate email format if provided
-        if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            return ['error' => 'Invalid email format'];
-        }
-
-        // Validate URL format if provided
-        if (!empty($data['url']) && !filter_var($data['url'], FILTER_VALIDATE_URL)) {
-            return ['error' => 'Invalid URL format'];
-        }
-
-        // Clean up null values
-        $data = array_filter($data, function($value) {
-            return $value !== null && $value !== '';
-        });
-
         return [
             'data' => $data,
-            'starting_balance' => $startingBalance
+            'starting_balance' => $startingBalance,
         ];
     }
 
