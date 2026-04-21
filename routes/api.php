@@ -1057,6 +1057,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [ItemCatalogSettingsController::class, 'index'])->name('index');
             Route::put('/', [ItemCatalogSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [ItemCatalogSettingsController::class, 'reset'])->name('reset');
+            Route::post('/upload', [ItemCatalogSettingsController::class, 'uploadCatalog'])->name('upload');
+            Route::delete('/upload', [ItemCatalogSettingsController::class, 'deleteCatalog'])->name('upload.delete');
         });
 
         // All tenant settings (read-only)
