@@ -75,7 +75,8 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
                 // Handle duplicate logic
                 if ($existingCustomer) {
                     if ($this->updateExisting) {
-                        // Update existing customer
+                        // Update existing customer — never overwrite system-calculated fields
+                        unset($validatedData['current_balance']);
                         $existingCustomer->update($validatedData);
                         $this->results['updated']++;
 
@@ -151,13 +152,22 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             'customer_payment_term_id' => null,
             'price_list_id_INV' => null,
             'price_list_id_INX' => null,
-            'discount_percentage' => $this->cleanNumeric($row['discount_percentage'] ?? $row['discount'] ?? 0),
             'credit_limit' => $this->cleanNumeric($row['credit_limit'] ?? null),
             'notes' => $row['notes'] ?? $row['remarks'] ?? null,
-            'is_active' => isset($row['is_active']) ? filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN) : true,
             'created_at' => $this->parseDate($row['created_at'] ?? null),
-            'total_old_sales' => $this->cleanNumeric($row['total_old_sales'] ?? 0),
         ];
+
+        if (array_key_exists('is_active', $row)) {
+            $data['is_active'] = filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (array_key_exists('discount_percentage', $row) || array_key_exists('discount', $row)) {
+            $data['discount_percentage'] = $this->cleanNumeric($row['discount_percentage'] ?? $row['discount']);
+        }
+
+        if (array_key_exists('total_old_sales', $row)) {
+            $data['total_old_sales'] = $this->cleanNumeric($row['total_old_sales']);
+        }
 
         // Required field validation
         if (empty($data['name'])) {
