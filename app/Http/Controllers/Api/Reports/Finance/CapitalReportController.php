@@ -102,6 +102,8 @@ class CapitalReportController extends Controller
         $supplierPaymentsTotal = (float) SupplierPayment::sum('amount_usd');
 
         // 7. Total supplier Balance made
+        // Negated: supplier balance is stored from supplier's perspective;
+        // negative = we paid in advance (our asset), so we flip the sign.
         if($isMultiCurrency){
             $supplierBalance = (float) Supplier::active()
                 ->get(['id', 'currency_id', 'current_balance'])
@@ -109,6 +111,7 @@ class CapitalReportController extends Controller
         }else{
             $supplierBalance = (float) Supplier::active()->sum('current_balance');
         }
+        $supplierBalance = -$supplierBalance;
 
         // 8. Money from all active accounts (except "Do Not Include in Totals"), converted to USD
         $accountsBalance = (float) Account::active()
