@@ -72,20 +72,23 @@ class SalePdfController extends Controller
                 }
             }
 
-            // Generate QR code for customer Google Maps location
+            // Generate QR code for customer Google Maps location (controlled per prefix)
             $qrCodeBase64 = null;
-            $mapsUrl = null;
-            if (!empty($sale->customer->google_map)) {
-                $mapsUrl = $sale->customer->google_map;
-            } elseif (!empty($sale->customer->gps_coordinates)) {
-                $coords = array_map('trim', explode(',', $sale->customer->gps_coordinates));
-                if (count($coords) === 2 && is_numeric($coords[0]) && is_numeric($coords[1])) {
-                    $mapsUrl = 'https://www.google.com/maps?q=' . $coords[0] . ',' . $coords[1];
+            $googleMapQrKey = $isInv ? 'inv_show_google_map_qrcode' : 'inx_show_google_map_qrcode';
+            if (!empty($invoiceGroup[$googleMapQrKey])) {
+                $mapsUrl = null;
+                if (!empty($sale->customer->google_map)) {
+                    $mapsUrl = $sale->customer->google_map;
+                } elseif (!empty($sale->customer->gps_coordinates)) {
+                    $coords = array_map('trim', explode(',', $sale->customer->gps_coordinates));
+                    if (count($coords) === 2 && is_numeric($coords[0]) && is_numeric($coords[1])) {
+                        $mapsUrl = 'https://www.google.com/maps?q=' . $coords[0] . ',' . $coords[1];
+                    }
                 }
-            }
-            if ($mapsUrl) {
-                $result       = (new PngWriter())->write(new QrCode($mapsUrl));
-                $qrCodeBase64 = base64_encode($result->getString());
+                if ($mapsUrl) {
+                    $result       = (new PngWriter())->write(new QrCode($mapsUrl));
+                    $qrCodeBase64 = base64_encode($result->getString());
+                }
             }
 
             // Prepare data for the view
