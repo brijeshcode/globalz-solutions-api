@@ -30,6 +30,8 @@ class CustomerInvoiceSettingsUpdateRequest extends FormRequest
             'show_local_currency_tax'       => 'sometimes|boolean',
             'show_local_currency_total'     => 'sometimes|boolean',
             'default_invoice_currency_id'   => 'sometimes|nullable|integer|exists:currencies,id',
+            'inx_show_google_map_qrcode'    => 'sometimes|boolean',
+            'inv_show_google_map_qrcode'    => 'sometimes|boolean',
         ];
     }
 }

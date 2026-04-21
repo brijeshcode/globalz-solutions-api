@@ -30,6 +30,8 @@ class InvoiceSettingsController extends Controller
         'show_local_currency_tax'        => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
         'show_local_currency_total'      => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
         'default_invoice_currency_id'    => ['value' => null,  'type' => Setting::TYPE_STRING],
+        'inx_show_google_map_qrcode'     => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'inv_show_google_map_qrcode'     => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
     ];
 
     /**
