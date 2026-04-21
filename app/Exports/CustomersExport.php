@@ -73,7 +73,7 @@ class CustomersExport implements FromQuery, WithHeadings, WithMapping, WithStyle
             $customer->customerGroup?->name,
             $customer->customerProvince?->name,
             $customer->customerZone?->name,
-            (float) ($customer->current_balance ?? 0),
+            (float) ($customer->starting_balance ?? 0),
             $customer->address,
             $customer->city,
             $customer->telephone,
