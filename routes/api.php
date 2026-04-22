@@ -1054,7 +1054,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Item Catalog Settings
         Route::prefix('item-catalog')->name('settings.item-catalog.')->group(function () {
-            Route::get('/', [ItemCatalogSettingsController::class, 'index'])->name('index');
+            Route::get('/', [ItemCatalogSettingsController::class, 'index'])->name('index')->withoutMiddleware('auth:sanctum');
             Route::put('/', [ItemCatalogSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [ItemCatalogSettingsController::class, 'reset'])->name('reset');
             Route::post('/upload', [ItemCatalogSettingsController::class, 'uploadCatalog'])->name('upload');
