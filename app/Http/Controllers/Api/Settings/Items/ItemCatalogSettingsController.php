@@ -17,14 +17,18 @@ class ItemCatalogSettingsController extends Controller
     private const GROUP = 'item_catalog';
 
     private const DEFAULTS = [
-        'inv_show_qrcode'   => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
-        'inv_catalog_link'  => ['value' => null,  'type' => Setting::TYPE_STRING],
-        'inv_catalog_label' => ['value' => null,  'type' => Setting::TYPE_STRING],
-        'inv_catalog_file'  => ['value' => null,  'type' => Setting::TYPE_STRING],
-        'inx_show_qrcode'   => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
-        'inx_catalog_link'  => ['value' => null,  'type' => Setting::TYPE_STRING],
-        'inx_catalog_label' => ['value' => null,  'type' => Setting::TYPE_STRING],
-        'inx_catalog_file'  => ['value' => null,  'type' => Setting::TYPE_STRING],
+        'inv_show_qrcode'   => ['value' => false,      'type' => Setting::TYPE_BOOLEAN],
+        'inv_external_link' => ['value' => null,       'type' => Setting::TYPE_STRING],
+        'inv_internal_link' => ['value' => null,       'type' => Setting::TYPE_STRING],
+        'inv_active_link'   => ['value' => 'internal', 'type' => Setting::TYPE_STRING],
+        'inv_label'         => ['value' => null,       'type' => Setting::TYPE_STRING],
+        'inv_file'          => ['value' => null,       'type' => Setting::TYPE_STRING],
+        'inx_show_qrcode'   => ['value' => false,      'type' => Setting::TYPE_BOOLEAN],
+        'inx_external_link' => ['value' => null,       'type' => Setting::TYPE_STRING],
+        'inx_internal_link' => ['value' => null,       'type' => Setting::TYPE_STRING],
+        'inx_active_link'   => ['value' => 'internal', 'type' => Setting::TYPE_STRING],
+        'inx_label'         => ['value' => null,       'type' => Setting::TYPE_STRING],
+        'inx_file'          => ['value' => null,       'type' => Setting::TYPE_STRING],
     ];
 
     public function index(): JsonResponse
@@ -70,10 +74,9 @@ class ItemCatalogSettingsController extends Controller
             'file' => 'required|file|mimes:pdf,jpg,jpeg,png,gif,webp|max:20480',
         ]);
 
-        $type      = $request->input('type');
-        $file      = $request->file('file');
-        $extension = $file->getClientOriginalExtension();
-        $fileName  = "{$type}_catalog.{$extension}";
+        $type     = $request->input('type');
+        $file     = $request->file('file');
+        $fileName = $file->getClientOriginalName();
         $folder    = $this->getCatalogFolder();
         $filePath  = "{$folder}/{$fileName}";
         $linkKey   = "{$type}_catalog_file";

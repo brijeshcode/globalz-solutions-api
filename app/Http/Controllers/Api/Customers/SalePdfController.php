@@ -62,10 +62,10 @@ class SalePdfController extends Controller
             $catalogQrCodeBase64 = null;
             $catalogGroup        = Setting::getGroup('item_catalog');
             $isInv               = $sale->prefix === Sale::TAXPREFIX;
-            $showKey             = $isInv ? 'inv_show_qrcode' : 'inx_show_qrcode';
-            $linkKey             = $isInv ? 'inv_catalog_link' : 'inx_catalog_link';
-            if (!empty($catalogGroup[$showKey])) {
-                $catalogLink = $catalogGroup[$linkKey] ?? null;
+            $prefix              = $isInv ? 'inv' : 'inx';
+            if (!empty($catalogGroup["{$prefix}_show_qrcode"])) {
+                $activeLink  = $catalogGroup["{$prefix}_active_link"] ?? 'internal';
+                $catalogLink = $catalogGroup["{$prefix}_{$activeLink}_link"] ?? null;
                 if (!empty($catalogLink)) {
                     $result              = (new PngWriter())->write(new QrCode($catalogLink));
                     $catalogQrCodeBase64 = base64_encode($result->getString());
@@ -100,7 +100,7 @@ class SalePdfController extends Controller
                 'invoiceSettings'     => $invoiceSettings,
                 'qrCodeBase64'        => $qrCodeBase64,
                 'catalogQrCodeBase64' => $catalogQrCodeBase64,
-                'catalogLabel'        => $catalogGroup[$isInv ? 'inv_catalog_label' : 'inx_catalog_label'] ?? null,
+                'catalogLabel'        => $catalogGroup["{$prefix}_label"] ?? null,
                 // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
            

@@ -16,11 +16,15 @@ class ItemCatalogSettingsUpdateRequest extends FormRequest
     {
         return [
             'inv_show_qrcode'   => 'sometimes|boolean',
-            'inv_catalog_link'  => 'sometimes|nullable|string|max:500',
-            'inv_catalog_label' => 'sometimes|nullable|string|max:255',
+            'inv_external_link' => 'sometimes|nullable|string|max:500',
+            'inv_internal_link' => 'sometimes|nullable|string|max:500',
+            'inv_active_link'   => 'sometimes|nullable|string|in:internal,external',
+            'inv_label'         => 'sometimes|nullable|string|max:255',
             'inx_show_qrcode'   => 'sometimes|boolean',
-            'inx_catalog_link'  => 'sometimes|nullable|string|max:500',
-            'inx_catalog_label' => 'sometimes|nullable|string|max:255',
+            'inx_external_link' => 'sometimes|nullable|string|max:500',
+            'inx_internal_link' => 'sometimes|nullable|string|max:500',
+            'inx_active_link'   => 'sometimes|nullable|string|in:internal,external',
+            'inx_label'         => 'sometimes|nullable|string|max:255',
         ];
     }
 }
