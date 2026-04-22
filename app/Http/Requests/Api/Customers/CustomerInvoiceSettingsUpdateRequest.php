@@ -32,6 +32,8 @@ class CustomerInvoiceSettingsUpdateRequest extends FormRequest
             'default_invoice_currency_id'   => 'sometimes|nullable|integer|exists:currencies,id',
             'inx_show_google_map_qrcode'    => 'sometimes|boolean',
             'inv_show_google_map_qrcode'    => 'sometimes|boolean',
+            'template'                      => 'sometimes|string|in:template-1,template-2,template-3,template-4',
+            'language'                      => 'sometimes|string|in:en,fr,ar',
         ];
     }
 }

@@ -11,6 +11,7 @@ use App\Services\Currency\CurrencyService;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Mpdf\Mpdf;
 
 class SalePdfController extends Controller
@@ -47,6 +48,9 @@ class SalePdfController extends Controller
             $localCurrency    = CurrencyService::getLocalCurrency();
             $invoiceGroup     = Setting::getGroup('invoice');
             $notLocalCurrency = ($sale->currency->code ?? '') !== ($localCurrency?->code ?? '');
+            $template = $invoiceGroup['template'] ?? 'template-1';
+            $language = $invoiceGroup['language'] ?? 'en';
+
             $invoiceSettings  = [
                 'local_currency_code'       => $localCurrency?->code,
                 'local_currency_symbol'     => $localCurrency?->symbol,
@@ -55,7 +59,7 @@ class SalePdfController extends Controller
                 'show_local_currency_total' => $notLocalCurrency && ($invoiceGroup['show_local_currency_total'] ?? false),
                 'show_note_1'               => $invoiceGroup['show_note_1'] ?? true,
                 'show_note_2'               => $invoiceGroup['show_note_2'] ?? true,
-                'is_multi_currency'   => $isMultiCurrency,
+                'is_multi_currency'         => $isMultiCurrency,
             ];
 
             // Generate catalog QR code based on per-prefix show setting and catalog link
@@ -104,8 +108,19 @@ class SalePdfController extends Controller
                 // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
            
-            // Render the Blade view to HTML
-            $html = view('pdfs.sale-invoice', $data)->render();
+            // Resolve template and locale, then render
+            $viewName = "pdfs.sale-invoice-{$template}";
+            if (!view()->exists($viewName)) {
+                Log::warning("Invoice template '{$viewName}' not found, falling back to template-1", [
+                    'tenant' => \App\Models\Tenant::current()?->getKey(),
+                ]);
+                $viewName = 'pdfs.sale-invoice-template-1';
+            }
+
+            $previousLocale = app()->getLocale();
+            app()->setLocale($language);
+            $html = view($viewName, $data)->render();
+            app()->setLocale($previousLocale);
 
             // Create mPDF instance with optimized margins
             $mpdf = new Mpdf([

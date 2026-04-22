@@ -13,6 +13,16 @@ class InvoiceSettingsController extends Controller
 {
     private const GROUP = 'invoice';
 
+    private const AVAILABLE_TEMPLATES = [
+        ['id' => 'template-1', 'name' => 'Standard',      'description' => 'Default layout'],
+        ['id' => 'template-2', 'name' => 'French Style',  'description' => 'Bilingual header with ICE number'],
+    ];
+
+    private const AVAILABLE_LANGUAGES = [
+        ['id' => 'en', 'name' => 'English'],
+        ['id' => 'fr', 'name' => 'French'],
+    ];
+
     /**
      * Default invoice settings with their data types.
      */
@@ -32,6 +42,8 @@ class InvoiceSettingsController extends Controller
         'default_invoice_currency_id'    => ['value' => null,  'type' => Setting::TYPE_STRING],
         'inx_show_google_map_qrcode'     => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
         'inv_show_google_map_qrcode'     => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'template'                       => ['value' => 'template-1', 'type' => Setting::TYPE_STRING],
+        'language'                       => ['value' => 'en',         'type' => Setting::TYPE_STRING],
     ];
 
     /**
@@ -40,6 +52,9 @@ class InvoiceSettingsController extends Controller
     public function index(): JsonResponse
     {
         $settings = Setting::getGroup(self::GROUP);
+
+        $settings['available_templates'] = self::AVAILABLE_TEMPLATES;
+        $settings['available_languages'] = self::AVAILABLE_LANGUAGES;
 
         return ApiResponse::show('Invoice settings retrieved successfully', $settings);
     }
