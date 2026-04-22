@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\MirrorLog;
 use App\Models\Setting;
+use App\Jobs\MirrorTenantJob;
 use App\Models\Tenant;
 use App\Services\Mirror\DatabaseMirrorService;
 use Illuminate\Http\JsonResponse;
@@ -98,31 +99,21 @@ class MirrorController extends Controller
     }
 
     /**
-     * Manually trigger a mirror for the current tenant (synchronous).
+     * Manually trigger a mirror for the current tenant.
+     * Dispatches a background job — returns immediately with the job queued status.
+     * Frontend should poll GET /mirrors/logs to track progress.
      */
-    public function trigger(DatabaseMirrorService $mirrorService): JsonResponse
+    public function trigger(): JsonResponse
     {
         $tenant = Tenant::current();
 
         if (!$tenant) {
             return ApiResponse::customError('No active tenant found', 400);
         }
+        
+        MirrorTenantJob::dispatch($tenant->id, Auth::id());
 
-        $log = $mirrorService->run($tenant, Auth::id());
-
-        if ($log === null) {
-            return ApiResponse::show('Mirror skipped — no changes detected since last mirror.');
-        }
-
-        return ApiResponse::show('Mirror completed', [
-            'id'               => $log->id,
-            'status'           => $log->status,
-            'started_at'       => $log->started_at,
-            'completed_at'     => $log->completed_at,
-            'duration_seconds' => $log->duration_seconds,
-            'remote_host'      => $log->remote_host,
-            'error_message'    => $log->error_message,
-        ]);
+        return ApiResponse::show('Mirror job queued — check logs for progress.');
     }
 
     /**

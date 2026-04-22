@@ -41,6 +41,11 @@ class DatabaseMirrorService
      */
     public function run(Tenant $tenant, ?int $triggeredBy = null): ?MirrorLog
     {
+        // Respect the tenant's own on/off toggle — blocks both scheduler and manual trigger
+        if (!Setting::get('mirror', 'enabled', false, false, Setting::TYPE_BOOLEAN)) {
+            return $this->createSkippedLog($triggeredBy, 'Mirror is disabled.');
+        }
+
         $host           = Setting::get('mirror', 'host');
         $port           = (int) Setting::get('mirror', 'port', 3306, false, Setting::TYPE_NUMBER);
         $database       = Setting::get('mirror', 'database');
@@ -52,7 +57,7 @@ class DatabaseMirrorService
 
         // Skip if nothing changed since last mirror
         if ($lastMirroredAt && !$this->hasChangedSince($tenant, $lastMirroredAt)) {
-            return null;
+            return $this->createSkippedLog($triggeredBy, 'No changes detected since last mirror.');
         }
 
         $log = MirrorLog::create([
@@ -137,7 +142,7 @@ class DatabaseMirrorService
             'compress'           => Mysqldump::NONE,
             'single-transaction' => true,
             'add-drop-table'     => true,
-            'skip-triggers'      => false,
+            'skip-triggers'      => true,  // triggers contain DEFINER= which requires SUPER privilege on remote
             'add-locks'          => true,
         ]);
 
@@ -172,6 +177,9 @@ class DatabaseMirrorService
                 continue;
             }
 
+            // Strip DEFINER clauses — remote user won't have SUPER/SET USER privilege
+            $line = preg_replace('/\s+DEFINER\s*=\s*`[^`]+`\s*@\s*`[^`]+`/', '', $line);
+
             $statement .= $line;
 
             if (str_ends_with(rtrim($line), ';')) {
@@ -181,6 +189,17 @@ class DatabaseMirrorService
         }
 
         fclose($handle);
+    }
+
+    protected function createSkippedLog(?int $triggeredBy, string $reason): MirrorLog
+    {
+        return MirrorLog::create([
+            'status'        => MirrorLog::STATUS_SKIPPED,
+            'triggered_by'  => $triggeredBy,
+            'started_at'    => now(),
+            'completed_at'  => now(),
+            'error_message' => $reason,
+        ]);
     }
 
     /**

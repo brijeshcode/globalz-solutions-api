@@ -41,6 +41,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
+        // Process queued jobs every minute. withoutOverlapping() ensures only one
+        // worker runs at a time. --stop-when-empty exits after draining the queue
+        // instead of running as a daemon — safe for shared hosting cron.
+        $schedule->command('queue:work --stop-when-empty')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // Auto logout all users daily at 1:00 AM — runs per tenant
         $schedule->call(function () {
             $tenants = \App\Models\Tenant::on('mysql')->where('is_active', true)->get();
@@ -121,7 +129,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Mirror tenant databases to remote MySQL every 2 hours
         $schedule->command(MirrorAllTenantsCommand::class)
-            ->everyTwoHours()
+            ->everyThirtyMinutes()
             ->name('mirror-all-tenants')
             ->withoutOverlapping()
             ->runInBackground();
