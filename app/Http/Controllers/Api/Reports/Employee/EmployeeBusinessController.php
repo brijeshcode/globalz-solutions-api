@@ -10,6 +10,16 @@ use Illuminate\Support\Facades\DB;
 
 class EmployeeBusinessController extends Controller
 {
+    public function monthly(Request $request): JsonResponse
+    {
+        $year  = (int) $request->get('year',  now()->year);
+        $month = (int) $request->get('month', now()->month);
+
+        $data = $this->getMonthlyData($year, $month);
+
+        return ApiResponse::send('Monthly employee business report retrieved successfully', 200, $data);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $year = $request->get('year', now()->year);
@@ -17,6 +27,165 @@ class EmployeeBusinessController extends Controller
         $reportData = $this->getEmployeeBusinessData($year);
 
         return ApiResponse::send('Employee business report retrieved successfully', 200, $reportData);
+    }
+
+    private function getMonthlyData(int $year, int $month): array
+    {
+        // Sales: INV (tax), INX (tax-free)
+        $salesData = DB::table('sales')
+            ->join('employees', 'sales.salesperson_id', '=', 'employees.id')
+            ->selectRaw("
+                employees.id as employee_id,
+                employees.name as employee_name,
+                SUM(CASE WHEN sales.prefix = 'INV' THEN sales.total_usd ELSE 0 END) as tax,
+                SUM(CASE WHEN sales.prefix = 'INX' THEN sales.total_usd ELSE 0 END) as tax_free
+            ")
+            ->whereYear('sales.date', $year)
+            ->whereMonth('sales.date', $month)
+            ->whereNull('sales.deleted_at')
+            ->whereNotNull('sales.approved_by')
+            ->groupBy('employees.id', 'employees.name')
+            ->get()
+            ->keyBy('employee_id');
+
+        // Payments: RCT (tax), RCX (tax-free)
+        $paymentsData = DB::table('customer_payments')
+            ->join('customers', 'customer_payments.customer_id', '=', 'customers.id')
+            ->join('employees', 'customers.salesperson_id', '=', 'employees.id')
+            ->selectRaw("
+                employees.id as employee_id,
+                employees.name as employee_name,
+                SUM(CASE WHEN customer_payments.prefix = 'RCT' THEN customer_payments.amount_usd ELSE 0 END) as tax,
+                SUM(CASE WHEN customer_payments.prefix = 'RCX' THEN customer_payments.amount_usd ELSE 0 END) as tax_free
+            ")
+            ->whereYear('customer_payments.date', $year)
+            ->whereMonth('customer_payments.date', $month)
+            ->whereNull('customer_payments.deleted_at')
+            ->whereNotNull('customer_payments.approved_by')
+            ->groupBy('employees.id', 'employees.name')
+            ->get()
+            ->keyBy('employee_id');
+
+        // Returns: RTN (tax), RTX (tax-free)
+        $returnsData = DB::table('customer_returns')
+            ->join('employees', 'customer_returns.salesperson_id', '=', 'employees.id')
+            ->selectRaw("
+                employees.id as employee_id,
+                employees.name as employee_name,
+                SUM(CASE WHEN customer_returns.prefix = 'RTN' THEN customer_returns.total_usd ELSE 0 END) as tax,
+                SUM(CASE WHEN customer_returns.prefix = 'RTX' THEN customer_returns.total_usd ELSE 0 END) as tax_free
+            ")
+            ->whereYear('customer_returns.date', $year)
+            ->whereMonth('customer_returns.date', $month)
+            ->whereNull('customer_returns.deleted_at')
+            ->whereNotNull('customer_returns.return_received_by')
+            ->groupBy('employees.id', 'employees.name')
+            ->get()
+            ->keyBy('employee_id');
+
+        // Credit notes: CRN (tax), CRX (tax-free) — credit type only, no debit
+        $creditData = DB::table('customer_credit_debit_notes')
+            ->join('customers', 'customer_credit_debit_notes.customer_id', '=', 'customers.id')
+            ->join('employees', 'customers.salesperson_id', '=', 'employees.id')
+            ->selectRaw("
+                employees.id as employee_id,
+                employees.name as employee_name,
+                SUM(CASE WHEN customer_credit_debit_notes.prefix = 'CRN' THEN customer_credit_debit_notes.amount_usd ELSE 0 END) as tax,
+                SUM(CASE WHEN customer_credit_debit_notes.prefix = 'CRX' THEN customer_credit_debit_notes.amount_usd ELSE 0 END) as tax_free
+            ")
+            ->whereYear('customer_credit_debit_notes.date', $year)
+            ->whereMonth('customer_credit_debit_notes.date', $month)
+            ->whereNull('customer_credit_debit_notes.deleted_at')
+            ->where('customer_credit_debit_notes.type', 'credit')
+            ->groupBy('employees.id', 'employees.name')
+            ->get()
+            ->keyBy('employee_id');
+
+        $employeeIds = collect()
+            ->merge($salesData->keys())
+            ->merge($paymentsData->keys())
+            ->merge($returnsData->keys())
+            ->merge($creditData->keys())
+            ->unique()
+            ->sort()
+            ->values();
+
+        $employees   = [];
+        $grandTotals = $this->emptyMonthlyTotals();
+
+        foreach ($employeeIds as $empId) {
+            $saleRow   = $this->toMonthlyRow($salesData->get($empId),   'INV', 'INX');
+            $payRow    = $this->toMonthlyRow($paymentsData->get($empId), 'RCT', 'RCX');
+            $retRow    = $this->toMonthlyRow($returnsData->get($empId),  'RTN', 'RTX');
+            $creditRow = $this->toMonthlyRow($creditData->get($empId),   'CRN', 'CRX');
+
+            $balRow = [
+                'tax'      => round($saleRow['tax']      - $retRow['tax']      + $payRow['tax']      + $creditRow['tax'],      2),
+                'tax_free' => round($saleRow['tax_free'] - $retRow['tax_free'] + $payRow['tax_free'] + $creditRow['tax_free'], 2),
+                'total'    => round($saleRow['total']    - $retRow['total']    + $payRow['total']    + $creditRow['total'],    2),
+            ];
+
+            $name = $salesData->get($empId)?->employee_name
+                ?? $paymentsData->get($empId)?->employee_name
+                ?? $returnsData->get($empId)?->employee_name
+                ?? $creditData->get($empId)?->employee_name;
+
+            $employees[] = [
+                'employee_id'   => $empId,
+                'employee_name' => $name,
+                'sale'          => $saleRow,
+                'payment'       => $payRow,
+                'returns'       => $retRow,
+                'credit_note'   => $creditRow,
+                'balance'       => $balRow,
+            ];
+
+            foreach (['sale' => $saleRow, 'payment' => $payRow, 'returns' => $retRow, 'credit_note' => $creditRow, 'balance' => $balRow] as $metric => $row) {
+                $grandTotals[$metric]['tax']      += $row['tax'];
+                $grandTotals[$metric]['tax_free'] += $row['tax_free'];
+                $grandTotals[$metric]['total']    += $row['total'];
+            }
+        }
+
+        foreach ($grandTotals as &$metric) {
+            $metric = array_map(fn($v) => round($v, 2), $metric);
+        }
+        unset($metric);
+
+        return [
+            'year'         => $year,
+            'month'        => $month,
+            'month_name'   => date('F', mktime(0, 0, 0, $month, 1)),
+            'employees'    => $employees,
+            'grand_totals' => $grandTotals,
+        ];
+    }
+
+    private function toMonthlyRow(?object $row, string $taxPrefix = '', string $taxFreePrefix = ''): array
+    {
+        $tax      = $row ? (float) $row->tax      : 0.0;
+        $tax_free = $row ? (float) $row->tax_free : 0.0;
+
+        return [
+            'tax_prefix'      => $taxPrefix,
+            'tax'             => round($tax, 2),
+            'tax_free_prefix' => $taxFreePrefix,
+            'tax_free'        => round($tax_free, 2),
+            'total'           => round($tax + $tax_free, 2),
+        ];
+    }
+
+    private function emptyMonthlyTotals(): array
+    {
+        $zero = ['tax' => 0.0, 'tax_free' => 0.0, 'total' => 0.0];
+
+        return [
+            'sale'        => $zero,
+            'payment'     => $zero,
+            'returns'     => $zero,
+            'credit_note' => $zero,
+            'balance'     => $zero,
+        ];
     }
 
     private function getEmployeeBusinessData(int $year): array
