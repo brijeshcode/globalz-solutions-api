@@ -79,11 +79,16 @@ class BackupAllTenantsCommand extends Command
             return "not preferred hour ({$preferredHour}:00)";
         }
 
-        // Check that enough time has elapsed since the last backup
+        // Check that enough time has elapsed since the last backup.
+        // Use a 5-minute grace window to absorb cron scheduling variance — without it,
+        // a cron that fires even 1 second late produces 59m59s elapsed which truncates
+        // to 59 minutes, causing a skip and doubling the effective interval.
         if ($lastBackup) {
-            $elapsed = (int) $lastBackup->created_at->diffInHours(now());
-            if ($elapsed < $frequencyHours) {
-                return "frequency not reached ({$elapsed}h elapsed, need {$frequencyHours}h)";
+            $elapsedMinutes = $lastBackup->created_at->diffInMinutes(now());
+            $thresholdMinutes = ($frequencyHours * 60) - 5;
+            if ($elapsedMinutes < $thresholdMinutes) {
+                $elapsedHours = round($elapsedMinutes / 60, 1);
+                return "frequency not reached ({$elapsedHours}h elapsed, need {$frequencyHours}h)";
             }
         }
 
