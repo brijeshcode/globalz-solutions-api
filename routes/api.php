@@ -854,6 +854,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Price List Bulk Updates Controller
         Route::controller(PriceListBulkUpdateController::class)->prefix('price-list-bulk-updates')->name('price-list-bulk-updates.')->group(function () {
             Route::get('filter-by-items', 'filterByItems')->name('filterByItems');
+            Route::post('add-items', 'addItemsToPricelists')->name('addItemsToPricelists');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{bulkUpdate}', 'show')->name('show');
