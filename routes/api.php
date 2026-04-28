@@ -52,6 +52,7 @@ use App\Http\Controllers\Api\Expenses\ExpensePaymentsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use App\Http\Controllers\Api\Employees\AdvanceLoansController;
 use App\Http\Controllers\Api\Employees\CommissionTargetsController;
+use App\Http\Controllers\Api\Employees\EmployeeCreditDebitNotesController;
 use App\Http\Controllers\Api\ListDataController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
 use App\Http\Controllers\Api\Setups\Generals\CompanyController;
@@ -203,6 +204,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{commissionTarget}', 'show')->name('show');
         Route::put('{commissionTarget}', 'update')->name('update');
         Route::delete('{commissionTarget}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
+
+    // Employee Credit/Debit Notes Controller
+    Route::controller(EmployeeCreditDebitNotesController::class)->prefix('employee-credit-debit-notes')->name('employee-credit-debit-notes.')->group(function () {
+        Route::get('stats', 'stats')->name('stats');
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{employeeCreditDebitNote}', 'show')->name('show');
+        Route::put('{employeeCreditDebitNote}', 'update')->name('update');
+        Route::delete('{employeeCreditDebitNote}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });
