@@ -54,8 +54,8 @@
             vertical-align: top;
         }
         .col-date    { width: 20%; }
-        .col-code    { width: 11%; }
-        .col-desc    { width: 41%; }
+        .col-code    { width: 20%; }
+        .col-desc    { width: 21%; }
         .col-amount  { width: 14%; text-align: right; color: #222222; }
         .col-subtotal{ width: 14%; text-align: right; font-weight: bold; color: #111111; }
 
