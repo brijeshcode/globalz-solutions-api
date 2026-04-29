@@ -177,11 +177,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Salaries Controller
     Route::controller(SalaryController::class)->prefix('salaries')->name('salaries.')->group(function () {
         Route::get('stats', 'stats')->name('stats');
+        Route::post('backfill-items', 'backfillSalaryItems')->name('backfill-items');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('pending-loans/{employeeId}', 'getPendingLoans')->name('pendingLoans');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
         Route::get('my', 'mySalaries')->name('mySalaries');
+        Route::get('{salary}/pdf', 'downloadPdf')->name('pdf');
         Route::get('{salary}', 'show')->name('show');
         Route::get('my/show/{salary}', 'mySalaryDetail')->name('mySalaryDetail');
         Route::put('{salary}', 'update')->name('update');
