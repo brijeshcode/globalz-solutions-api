@@ -31,7 +31,7 @@ class SalaryController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        // $this->backfillSalaryItems();
+        $this->backfillSalaryItems();
         $this->updateExistingSalariesCurrency();
         $query = $this->salaryQuery($request);
 
