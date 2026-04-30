@@ -187,24 +187,16 @@
                 </tr>
             @endif
 
-            {{-- Credit Notes --}}
-            @if($creditNotes->isNotEmpty())
+
+            {{-- Other (positive → earning) --}}
+            @if(!empty($salary->other) && $salary->other > 0)
                 <tr class="sub-header">
-                    <td colspan="5" >Credit Notes</td>
+                    <td class="col-date">Other</td>
+                    <td class="col-code"></td>
+                    <td class="col-desc">{{ $salary->other_note }}</td>
+                    <td class="col-amount"></td>
+                    <td class="col-subtotal">{{ number_format($salary->other, 2) }}</td>
                 </tr>
-                @foreach($creditNotes as $note)
-                    <tr class="item-row">
-                        <td class="col-date">{{ $note->date->format('d/m/Y') }}</td>
-                        <td class="col-code">{{ $note->note_code }}</td>
-                        <td class="col-desc">{{ $note->note }}</td>
-                        <td class="col-amount">{{ number_format($note->amount, 2) }}</td>
-                        <td class="col-subtotal">
-                            @if($loop->last)
-                                {{ number_format($creditNotes->sum('amount'), 2) }}
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
             @endif
 
             <tr>
@@ -247,25 +239,17 @@
                 </tr>
             @endif
 
-            {{-- Debit Notes --}}
-            @if($debitNotes->isNotEmpty())
+            {{-- Other (negative → deduction) --}}
+            @if(!empty($salary->other) && $salary->other < 0)
                 <tr class="sub-header">
-                    <td colspan="5">Debit Notes</td>
+                    <td class="col-date">Other</td>
+                    <td class="col-code"></td>
+                    <td class="col-desc">{{ $salary->other_note }}</td>
+                    <td class="col-amount"></td>
+                    <td class="col-subtotal">{{ number_format($salary->other, 2) }}</td>
                 </tr>
-                @foreach($debitNotes as $note)
-                    <tr class="item-row">
-                        <td class="col-date">{{ $note->date->format('d/m/Y') }}</td>
-                        <td class="col-code">{{ $note->note_code }}</td>
-                        <td class="col-desc">{{ $note->note }}</td>
-                        <td class="col-amount">{{ number_format(-$note->amount, 2) }}</td>
-                        <td class="col-subtotal">
-                            @if($loop->last)
-                                {{ number_format(-$debitNotes->sum('amount'), 2) }}
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
             @endif
+
 
             {{-- ══ NET AMOUNT ══ --}}
             <tr class="net-row">
