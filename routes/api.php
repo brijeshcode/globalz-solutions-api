@@ -212,6 +212,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Employee Credit/Debit Notes Controller
     Route::controller(EmployeeCreditDebitNotesController::class)->prefix('employee-credit-debit-notes')->name('employee-credit-debit-notes.')->group(function () {
+        Route::get('balance', 'balance')->name('balance');
         Route::get('stats', 'stats')->name('stats');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('/', 'index')->name('index');

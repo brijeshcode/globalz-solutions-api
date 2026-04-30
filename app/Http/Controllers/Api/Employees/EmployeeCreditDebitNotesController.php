@@ -20,7 +20,12 @@ class EmployeeCreditDebitNotesController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = $this->query($request);
+        $query = $this->query($request)->with([
+            'employee:id,name,code',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
 
         $notes = $this->applyPagination($query, $request);
 
@@ -194,6 +199,20 @@ class EmployeeCreditDebitNotesController extends Controller
         return ApiResponse::delete('Employee credit/debit note permanently deleted successfully');
     }
 
+    public function balance(Request $request): JsonResponse
+    {
+        $query = $this->query($request);
+
+        $totalCredit = (clone $query)->credit()->sum('amount_usd');
+        $totalDebit  = (clone $query)->debit()->sum('amount_usd');
+
+        return ApiResponse::show('Employee balance retrieved successfully', [
+            'total_credit_usd' => (float) $totalCredit,
+            'total_debit_usd'  => (float) $totalDebit,
+            'balance_usd'      => (float) ($totalCredit - $totalDebit),
+        ]);
+    }
+
     public function stats(Request $request): JsonResponse
     {
         $query = $this->query($request);
@@ -209,12 +228,6 @@ class EmployeeCreditDebitNotesController extends Controller
     private function query(Request $request)
     {
         $query = EmployeeCreditDebitNote::query()
-            ->with([
-                'employee:id,name,code',
-                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'createdBy:id,name',
-                'updatedBy:id,name'
-            ])
             ->searchable($request)
             ->sortable($request);
 
