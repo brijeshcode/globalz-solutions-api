@@ -300,10 +300,8 @@ class CustomerReturnsController extends Controller
 
     public function destroy(CustomerReturn $customerReturn): JsonResponse
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
 
-        if (!$user->isAdmin()) {
+        if (!RoleHelper::canSuperAdmin()) {
             return ApiResponse::customError('Only admins can delete returns', 403);
         }
 

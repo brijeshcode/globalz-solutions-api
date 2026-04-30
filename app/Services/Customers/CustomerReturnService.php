@@ -3,6 +3,8 @@
 namespace App\Services\Customers;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\CustomersHelper;
+use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\CustomerReturnItem;
 use App\Models\Customers\SaleItems;
@@ -326,8 +328,7 @@ class CustomerReturnService
                 $returnItems = $customerReturn->items;
                 $wasReceived = $customerReturn->isReceived();
 
-                // If the return was received, we need to subtract inventory
-                // (canceling a received return means items go back out of stock)
+                // If the return was received, reverse inventory and customer balance
                 if ($wasReceived) {
                     foreach ($returnItems as $returnItem) {
                         if ($returnItem->item_id && $returnItem->quantity > 0) {
@@ -338,6 +339,11 @@ class CustomerReturnService
                             );
                         }
                     }
+
+                    CustomersHelper::removeBalance(
+                        Customer::find($customerReturn->customer_id),
+                        (float) $customerReturn->total_usd
+                    );
                 }
 
                 // Delete the customer return
