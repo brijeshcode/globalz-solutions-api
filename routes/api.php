@@ -67,6 +67,7 @@ use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\CacheVersionController;
 use App\Http\Controllers\Api\ClearDataController;
 use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
+use App\Http\Controllers\Api\Employees\EmployeeStatmentsController;
 use App\Http\Controllers\Api\Employees\SalaryController;
 use App\Http\Controllers\Api\Items\PriceListBulkUpdateController;
 use App\Http\Controllers\Api\Reports\Customer\CustomerAgingReportController;
@@ -222,6 +223,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('{employeeCreditDebitNote}', 'destroy')->name('destroy');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
+
+    // Employee Statements Controller
+    Route::controller(EmployeeStatmentsController::class)->prefix('employee-statements')->name('employee-statements.')->group(function () {
+        Route::get('/', 'statements')->name('index');
+        Route::get('{employee}', 'employeeStatements')->name('employee');
     });
 
     Route::prefix('customers')->name('customers.')->group(function () {
