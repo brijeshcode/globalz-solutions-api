@@ -219,7 +219,7 @@
             </tr>
 
             {{-- Advance Loan --}}
-            @if($advanceLoans->isNotEmpty())
+            {{-- @if($advanceLoans->isNotEmpty())
                 <tr class="sub-header">
                     <td colspan="5">Advance Loan</td>
                 </tr>
@@ -236,6 +236,15 @@
                         </td>
                     </tr>
                 @endforeach
+            @endif --}}
+            @if($salary->advance_payment != 0)
+                <tr class="sub-header">
+                    <td class="col-date">Advance Loan Payment</td>
+                    <td class="col-code"></td>
+                    <td class="col-desc"></td>
+                    <td class="col-amount"></td>
+                    <td class="col-subtotal">{{ number_format(-$salary->advance_payment, 2) }}</td>
+                </tr>
             @endif
 
             {{-- Debit Notes --}}
