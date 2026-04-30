@@ -188,14 +188,14 @@
             @endif
 
 
-            {{-- Other (positive → earning) --}}
-            @if(!empty($salary->other) && $salary->other > 0)
+            {{-- Others (positive → earning) --}}
+            @if(!empty($salary->others) && $salary->others > 0)
                 <tr class="sub-header">
                     <td class="col-date">Other</td>
                     <td class="col-code"></td>
-                    <td class="col-desc">{{ $salary->other_note }}</td>
+                    <td class="col-desc">{{ $salary->others_note }}</td>
                     <td class="col-amount"></td>
-                    <td class="col-subtotal">{{ number_format($salary->other, 2) }}</td>
+                    <td class="col-subtotal">{{ number_format($salary->others, 2) }}</td>
                 </tr>
             @endif
 
@@ -239,14 +239,14 @@
                 </tr>
             @endif
 
-            {{-- Other (negative → deduction) --}}
-            @if(!empty($salary->other) && $salary->other < 0)
+            {{-- Others (negative → deduction) --}}
+            @if(!empty($salary->others) && $salary->others < 0)
                 <tr class="sub-header">
                     <td class="col-date">Other</td>
                     <td class="col-code"></td>
-                    <td class="col-desc">{{ $salary->other_note }}</td>
+                    <td class="col-desc">{{ $salary->others_note }}</td>
                     <td class="col-amount"></td>
-                    <td class="col-subtotal">{{ number_format($salary->other, 2) }}</td>
+                    <td class="col-subtotal">{{ number_format($salary->others, 2) }}</td>
                 </tr>
             @endif
 
