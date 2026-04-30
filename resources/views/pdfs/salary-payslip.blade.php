@@ -160,11 +160,12 @@
             </tr>
 
             {{-- Commission --}}
-            @if($commissionItems->isNotEmpty())
+            @php $visibleCommissionItems = $commissionItems->filter(fn($item) => !empty($item->label)); @endphp
+            @if($visibleCommissionItems->isNotEmpty())
                 <tr class="sub-header">
                     <td colspan="5">Commission</td>
                 </tr>
-                @foreach($commissionItems as $item)
+                @foreach($visibleCommissionItems as $item)
                     <tr class="item-row">
                         <td class="col-date"></td>
                         <td class="col-code">{{ $item->label }}</td>
@@ -177,14 +178,6 @@
                         </td>
                     </tr>
                 @endforeach
-            @else
-                <tr class="sub-header">
-                    <td class="col-date"></td>
-                    <td class="col-code"></td>
-                    <td class="col-desc">Commission</td>
-                    <td class="col-amount"></td>
-                    <td class="col-subtotal">{{ number_format($salary->sub_total, 2) }}</td>
-                </tr>
             @endif
 
 
