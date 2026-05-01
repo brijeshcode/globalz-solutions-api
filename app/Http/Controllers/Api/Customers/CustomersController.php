@@ -56,17 +56,6 @@ class CustomersController extends Controller
         // Auto-generate customer code (system generated only)
         $data['code'] = Customer::reserveNextCode();
 
-        // Set default price lists if not provided
-        // $defaultPriceList = PriceList::getDefault();
-        // if ($defaultPriceList) {
-        //     if (empty($data['price_list_id_INV'])) {
-        //         $data['price_list_id_INV'] = $defaultPriceList->id;
-        //     }
-        //     if (empty($data['price_list_id_INX'])) {
-        //         $data['price_list_id_INX'] = $defaultPriceList->id;
-        //     }
-        // }
-
         // Create customer
         $customer = Customer::create($data);
 
