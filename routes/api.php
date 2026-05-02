@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerReturnsController;
 use App\Http\Controllers\Api\Customers\CustomerReturnOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerStatmentController;
+use App\Http\Controllers\Api\Customers\CustomerStatementPdfController;
 use App\Http\Controllers\Api\Customers\SalesController;
 use App\Http\Controllers\Api\Customers\SalePdfController;
 use App\Http\Controllers\Api\Customers\SaleOrdersController;
@@ -237,6 +238,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::controller(CustomerStatmentController::class)->prefix('statements')->name('statements.')->group(function () {
             Route::get('/', 'statements')->name('index');
             Route::get('{customer}', 'customerStatements')->name('customer');
+        });
+
+        // Customer Statement PDF Routes
+        Route::controller(CustomerStatementPdfController::class)->prefix('statements')->name('statements.')->group(function () {
+            Route::get('{customer}/pdf/{type}/download', 'generate')->defaults('action', 'download')->name('pdf.download');
+            Route::get('{customer}/pdf/{type}/stream', 'generate')->defaults('action', 'stream')->name('pdf.stream');
         });
 
         // Sales Controller (for approved sales) - Must be defined BEFORE {customer} routes to avoid conflicts
