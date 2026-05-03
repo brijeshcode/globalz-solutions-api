@@ -463,18 +463,18 @@ class ExpenseTransactionsController extends Controller
 
         $stats = [
             'total_transactions'      => (clone $query)->count(),
-            'total_amount_usd'        => (clone $query)->sum('amount_usd'),
+            'total_amount_usd'        => (clone $query)->selectRaw('COALESCE(SUM(amount_usd + vat_amount_usd), 0) as total')->value('total'),
             'this_month_transactions' => (clone $query)->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
                 ->count(),
             'this_month_amount_usd'   => (clone $query)->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
-                ->sum('amount_usd'),
+                ->selectRaw('COALESCE(SUM(amount_usd + vat_amount_usd), 0) as total')->value('total'),
         ];
 
         if ($featureEnabled) {
             $stats['total_paid'] = (clone $query)->sum('paid_amount_usd');
-            $stats['total_due']      = (clone $query)->selectRaw('COALESCE(SUM(amount_usd - paid_amount_usd), 0) as due')->value('due');
+            $stats['total_due']      = (clone $query)->selectRaw('COALESCE(SUM((amount_usd + vat_amount_usd) - paid_amount_usd), 0) as due')->value('due');
         }
 
         return ApiResponse::show('Expense transaction statistics retrieved successfully', $stats);
@@ -488,7 +488,7 @@ class ExpenseTransactionsController extends Controller
             ->when($request->has('expense_category_id'), fn($q) => $q->where('expense_category_id', $request->input('expense_category_id')))
             ->when($request->has('date_from'),           fn($q) => $q->fromDate($request->input('date_from')))
             ->when($request->has('date_to'),             fn($q) => $q->toDate($request->input('date_to')))
-            ->selectRaw('expense_category_id, COUNT(*) as transactions_count, COALESCE(SUM(amount_usd), 0) as sum_amount_usd, COALESCE(SUM(paid_amount_usd), 0) as sum_paid_usd')
+            ->selectRaw('expense_category_id, COUNT(*) as transactions_count, COALESCE(SUM(amount_usd + vat_amount_usd), 0) as sum_amount_usd, COALESCE(SUM(paid_amount_usd), 0) as sum_paid_usd')
             ->groupBy('expense_category_id')
             ->get()
             ->keyBy('expense_category_id');
