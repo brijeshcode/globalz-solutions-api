@@ -39,7 +39,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 10px;
-            font-size: 9pt;
+            font-size: 8pt;
         }
         .transactions-table th {
             background-color: #E0E0E0;
@@ -149,13 +149,13 @@
     <table class="transactions-table">
         <thead>
             <tr>
-                <th class="text-left" style="width: 13%;">Date</th>
-                <th class="text-left" style="width: 13%;">Type</th>
-                <th class="text-left" style="width: 14%;">Transaction ID</th>
-                <th class="text-left" style="width: 28%;">Note</th>
-                <th class="text-right" style="width: 10%;">Debit</th>
-                <th class="text-right" style="width: 10%;">Credit</th>
-                <th class="text-right" style="width: 12%;">Balance</th>
+                <th class="text-left" style="width: 12%;">Date</th>
+                <th class="text-left" style="width: 12%;">Type</th>
+                <th class="text-left" style="width: 13%;">Transaction ID</th>
+                <th class="text-left" style="width: 20%;">Note</th>
+                <th class="text-right" style="width: 14%;">Debit</th>
+                <th class="text-right" style="width: 14%;">Credit</th>
+                <th class="text-right" style="width: 15%;">Balance</th>
             </tr>
         </thead>
         <tbody>
