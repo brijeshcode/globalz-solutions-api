@@ -467,6 +467,16 @@ class SalaryController extends Controller
 
     public function downloadPdf(Salary $salary)
     {
+        return $this->generatePdf($salary, 'download');
+    }
+
+    public function streamPdf(Salary $salary)
+    {
+        return $this->generatePdf($salary, 'stream');
+    }
+
+    private function generatePdf(Salary $salary, string $action = 'download')
+    {
         try {
             $salary->load([
                 'employee:id,name,code',
@@ -533,7 +543,7 @@ class SalaryController extends Controller
                 'margin_footer' => 8,
             ]);
 
-            $salaryCode        = $salary->prefix . $salary->code;
+            $salaryCode = $salary->prefix . $salary->code;
             $mpdf->SetHTMLFooter('
                 <table width="100%" style="font-size: 9pt; border-top: 1px solid #000; padding-top: 5px;">
                     <tr>
@@ -547,9 +557,16 @@ class SalaryController extends Controller
 
             $filename = 'payslip-' . $salaryCode . '.pdf';
 
-            return response()->streamDownload(function () use ($mpdf) {
-                echo $mpdf->Output('', 'S');
-            }, $filename, ['Content-Type' => 'application/pdf']);
+            if ($action === 'download') {
+                return response()->streamDownload(function () use ($mpdf) {
+                    echo $mpdf->Output('', 'S');
+                }, $filename, ['Content-Type' => 'application/pdf']);
+            }
+
+            return response($mpdf->Output('', 'S'), 200, [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            ]);
 
         } catch (\Exception $e) {
             return response()->json([

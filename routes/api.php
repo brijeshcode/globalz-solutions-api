@@ -186,6 +186,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', 'store')->name('store');
         Route::get('my', 'mySalaries')->name('mySalaries');
         Route::get('{salary}/pdf', 'downloadPdf')->name('pdf');
+        Route::get('{salary}/pdf/stream', 'streamPdf')->name('pdf.stream');
         Route::get('{salary}', 'show')->name('show');
         Route::get('my/show/{salary}', 'mySalaryDetail')->name('mySalaryDetail');
         Route::put('{salary}', 'update')->name('update');
