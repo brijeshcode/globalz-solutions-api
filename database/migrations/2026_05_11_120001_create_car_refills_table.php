@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('car_refills', function (Blueprint $table) {
             $table->id();
             $table->datetime('date');
-            $table->string('code', 50)->unique()->index();
+            $table->string('code', 50)->unique();
 
             $table->foreignId('car_id')->constrained('cars')->onDelete('restrict');
             $table->foreignId('gas_station_id')->constrained('gas_stations')->onDelete('restrict');

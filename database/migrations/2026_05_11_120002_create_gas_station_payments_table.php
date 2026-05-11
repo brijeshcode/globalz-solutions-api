@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('gas_station_payments', function (Blueprint $table) {
             $table->id();
             $table->datetime('date');
-            $table->string('code', 50)->unique()->index();
+            $table->string('code', 50)->unique();
 
             $table->foreignId('gas_station_id')->constrained('gas_stations')->onDelete('restrict');
             $table->foreignId('account_id')->constrained('accounts')->onDelete('restrict');
