@@ -150,6 +150,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Employees Controller
     Route::controller(EmployeesController::class)->prefix('employees')->name('employees.')->group(function () {
+        Route::post('refresh-balances', 'refreshBalances')->name('refresh-balances');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');

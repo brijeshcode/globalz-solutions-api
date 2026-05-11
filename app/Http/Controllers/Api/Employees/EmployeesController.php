@@ -175,6 +175,33 @@ class EmployeesController extends Controller
         return ApiResponse::store('commission set completed successfull');
     }
 
+    public function refreshBalances(): JsonResponse
+    {
+        if (!RoleHelper::canAdmin()) {
+            return ApiResponse::unauthorized('Only admins can refresh employee balances.');
+        }
+
+        $total = 0;
+        $updated = 0;
+
+        Employee::active()->chunk(100, function ($employees) use (&$total, &$updated) {
+            foreach ($employees as $employee) {
+                $old = $employee->current_balance;
+                $employee->recalculateBalance();
+                $total++;
+                if ($employee->fresh()->current_balance != $old) {
+                    $updated++;
+                }
+            }
+        });
+
+        return ApiResponse::show("Balance recalculation completed. {$updated} employee(s) updated out of {$total} active employees.", [
+            'total_employees' => $total,
+            'updated_count' => $updated,
+            'unchanged_count' => $total - $updated,
+        ]);
+    }
+
     public function getEmployeeCommissionTarget(Request $request): JsonResponse
     {
         $query = EmployeeCommissionTarget::query()->with('commissionTarget:id,name')

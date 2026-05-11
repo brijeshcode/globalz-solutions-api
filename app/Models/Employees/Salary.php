@@ -173,6 +173,7 @@ class Salary extends Model
         static::created(function ($salary) {
             // Salary payment removes balance from account (money going out)
             AccountsHelper::removeBalance(Account::find($salary->account_id), $salary->final_total);
+            $salary->employee->recalculateBalance();
         });
 
         static::updated(function ($salary) {
@@ -192,11 +193,13 @@ class Salary extends Model
                 // If amount increased, remove more; if decreased, add back
                 AccountsHelper::removeBalance(Account::find($salary->account_id), $difference);
             }
+            $salary->employee->recalculateBalance();
         });
 
         static::deleted(function ($salary) {
             // Add balance back to account when salary is deleted
             AccountsHelper::addBalance(Account::find($salary->account_id), $salary->final_total);
+            $salary->employee->recalculateBalance();
         });
     }
 }

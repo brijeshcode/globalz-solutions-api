@@ -23,6 +23,7 @@ class EmployeeStatmentsController extends Controller
 
         $allTransactions = $this->getTransactions($request, $employee, $search);
         $stats = $this->calculateStats($allTransactions);
+        $this->canUpdateBalance($request, $employee, $stats['balance']);
 
         if ($request->boolean('withPage')) {
             $paginatedTransactions = DataHelper::customPaginate(
@@ -89,6 +90,24 @@ class EmployeeStatmentsController extends Controller
         }
 
         return ApiResponse::index('Statements retrieved successfully', $allTransactions, $stats);
+    }
+
+    private function canUpdateBalance(Request $request, Employee $employee, float $balance): void
+    {
+        $hasFilters = $request->has('from_date')
+            || $request->has('to_date')
+            || $request->has('search')
+            || $request->has('transaction_type');
+
+        if ($hasFilters) {
+            return;
+        }
+
+        if ($employee->current_balance == $balance) {
+            return;
+        }
+
+        $employee->update(['current_balance' => $balance]);
     }
 
     private function getTransactions(Request $request, Employee $employee, ?string $noteSearch = null)

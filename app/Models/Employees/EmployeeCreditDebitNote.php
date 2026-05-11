@@ -151,5 +151,9 @@ class EmployeeCreditDebitNote extends Model
                 $note->setNoteCode();
             }
         });
+
+        static::created(fn ($note) => $note->employee->recalculateBalance());
+        static::updated(fn ($note) => $note->employee->recalculateBalance());
+        static::deleted(fn ($note) => $note->employee->recalculateBalance());
     }
 }
