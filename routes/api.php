@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
+use App\Http\Controllers\Api\Setups\Vehicle\CarsController;
 use App\Http\Controllers\Api\Setups\Vehicle\GasStationsController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Expenses\ExpensePaymentsController;
@@ -949,6 +950,18 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('{gasStation}', 'show')->name('show');
                 Route::put('{gasStation}', 'update')->name('update');
                 Route::delete('{gasStation}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            // Cars
+            Route::controller(CarsController::class)->prefix('cars')->name('cars.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{car}', 'show')->name('show');
+                Route::put('{car}', 'update')->name('update');
+                Route::delete('{car}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
