@@ -14,12 +14,13 @@ class GasStation extends Model
 {
     use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
 
-    protected $fillable = ['name', 'balance', 'address', 'note'];
+    protected $fillable = ['name', 'balance', 'address', 'note', 'is_active'];
 
     protected $searchable = ['name', 'address', 'note'];
 
     protected $casts = [
-        'balance' => 'decimal:4',
+        'balance'   => 'decimal:4',
+        'is_active' => 'boolean',
     ];
 
     protected static function newFactory(): GasStationFactory

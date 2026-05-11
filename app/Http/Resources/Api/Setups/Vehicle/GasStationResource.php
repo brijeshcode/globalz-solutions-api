@@ -15,6 +15,7 @@ class GasStationResource extends JsonResource
             'balance'    => $this->balance,
             'address'    => $this->address,
             'note'       => $this->note,
+            'is_active'  => $this->is_active,
             'created_by' => [
                 'id'   => $this->createdBy?->id,
                 'name' => $this->createdBy?->name,

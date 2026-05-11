@@ -16,7 +16,8 @@ class GasStationsStoreRequest extends FormRequest
         return [
             'name'    => 'required|string|max:200|unique:gas_stations,name',
             'address' => 'required|string',
-            'note'    => 'nullable|string',
+            'note'      => 'nullable|string',
+            'is_active' => 'boolean',
         ];
     }
 }
