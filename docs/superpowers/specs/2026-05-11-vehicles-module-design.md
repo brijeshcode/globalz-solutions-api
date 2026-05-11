@@ -19,6 +19,7 @@ A module to track delivery car movement, mileage, fuel consumption, and gas stat
 | balance | decimal(15,4) | default 0 — debt owed to station |
 | address | text | |
 | note | text | nullable |
+| is_active | boolean | default true |
 | created_by | foreignId → users | nullable |
 | updated_by | foreignId → users | nullable |
 | timestamps, softDeletes | | |
