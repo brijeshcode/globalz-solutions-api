@@ -14,8 +14,26 @@ class GasStation extends Model
 {
     use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
 
+    protected $fillable = ['name', 'balance', 'address', 'note'];
+
+    protected $searchable = ['name', 'address', 'note'];
+
+    protected $casts = [
+        'balance' => 'decimal:4',
+    ];
+
     protected static function newFactory(): GasStationFactory
     {
         return GasStationFactory::new();
+    }
+
+    public function refills()
+    {
+        return $this->hasMany(CarRefill::class, 'gas_station_id');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(GasStationPayment::class, 'gas_station_id');
     }
 }

@@ -11,6 +11,16 @@ class GasStationFactory extends Factory
 
     public function definition(): array
     {
-        return [];
+        return [
+            'name'    => $this->faker->company() . ' Gas Station',
+            'balance' => 0,
+            'address' => $this->faker->address(),
+            'note'    => $this->faker->optional()->sentence(),
+        ];
+    }
+
+    public function withBalance(float $balance): static
+    {
+        return $this->state(['balance' => $balance]);
     }
 }

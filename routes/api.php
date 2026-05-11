@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
+use App\Http\Controllers\Api\Setups\Vehicle\GasStationsController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Expenses\ExpensePaymentsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
@@ -917,7 +918,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         
         Route::prefix('expenses')->name('expenses.')->group(function() {
-            
+
             // Expense Categories Controller
             Route::controller(ExpenseCategoriesController::class)->prefix('categories')->name('categories.')->group(function () {
                 Route::get('roots', 'roots')->name('roots');
@@ -935,6 +936,23 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
+        });
+
+        // Vehicles
+        Route::prefix('vehicles')->name('vehicles.')->group(function () {
+
+            // Gas Stations
+            Route::controller(GasStationsController::class)->prefix('gas-stations')->name('gas-stations.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{gasStation}', 'show')->name('show');
+                Route::put('{gasStation}', 'update')->name('update');
+                Route::delete('{gasStation}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
         });
     });
 
