@@ -33,4 +33,8 @@ class Car extends Model
         return CarFactory::new();
     }
 
+    public function refills()
+    {
+        return $this->hasMany(CarRefill::class, 'car_id');
+    }
 }
