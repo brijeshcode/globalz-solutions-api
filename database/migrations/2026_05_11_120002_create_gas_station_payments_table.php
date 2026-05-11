@@ -17,6 +17,9 @@ return new class extends Migration
             $table->foreignId('account_id')->constrained('accounts')->onDelete('restrict');
 
             $table->decimal('amount', 15, 4);
+            $table->decimal('amount_usd', 20, 8)->default(0);
+            $table->unsignedBigInteger('currency_id')->nullable();
+            $table->decimal('currency_rate', 10, 4)->default(0);
             $table->text('note')->nullable();
 
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');

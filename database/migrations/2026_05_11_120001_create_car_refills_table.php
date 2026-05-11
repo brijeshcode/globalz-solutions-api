@@ -20,6 +20,9 @@ return new class extends Migration
             $table->decimal('odometer', 10, 2);
             $table->decimal('km_driven', 10, 2)->default(0);
             $table->decimal('amount', 15, 4);
+            $table->decimal('amount_usd', 20, 8)->default(0);
+            $table->unsignedBigInteger('currency_id')->nullable();
+            $table->decimal('currency_rate', 10, 4)->default(0);
             $table->integer('invoices_count')->nullable();
             $table->text('note')->nullable();
 
