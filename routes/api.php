@@ -50,6 +50,7 @@ use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
 use App\Http\Controllers\Api\Setups\Vehicle\CarRefillsController;
 use App\Http\Controllers\Api\Setups\Vehicle\CarsController;
+use App\Http\Controllers\Api\Setups\Vehicle\GasStationPaymentsController;
 use App\Http\Controllers\Api\Setups\Vehicle\GasStationsController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Expenses\ExpensePaymentsController;
@@ -975,6 +976,18 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('{carRefill}', 'show')->name('show');
                 Route::put('{carRefill}', 'update')->name('update');
                 Route::delete('{carRefill}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            // Gas Station Payments
+            Route::controller(GasStationPaymentsController::class)->prefix('gas-station-payments')->name('gas-station-payments.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{gasStationPayment}', 'show')->name('show');
+                Route::put('{gasStationPayment}', 'update')->name('update');
+                Route::delete('{gasStationPayment}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
