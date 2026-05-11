@@ -86,4 +86,63 @@ class GasStationsController extends Controller
 
         return ApiResponse::delete('Gas station permanently deleted successfully');
     }
+
+    public function transactions(int $id): JsonResponse
+    {
+        GasStation::findOrFail($id);
+
+        $refills = \App\Models\Setups\Vehicle\CarRefill::where('gas_station_id', $id)
+            ->with(['car:id,name', 'driver:id,name', 'createdBy:id,name'])
+            ->orderBy('date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn($r) => [
+                'type'           => 'refill',
+                'id'             => $r->id,
+                'code'           => $r->code,
+                'date'           => $r->date?->format('Y-m-d H:i:s'),
+                'amount'         => $r->amount,
+                'car'            => $r->car ? ['id' => $r->car->id, 'name' => $r->car->name] : null,
+                'driver'         => $r->driver ? ['id' => $r->driver->id, 'name' => $r->driver->name] : null,
+                'odometer'       => $r->odometer,
+                'km_driven'      => $r->km_driven,
+                'km_cost'        => ($r->km_driven > 0) ? round($r->amount / $r->km_driven, 4) : null,
+                'invoices_count' => $r->invoices_count,
+                'created_by'     => $r->createdBy?->name,
+                'balance'        => null,
+            ]);
+
+        $payments = \App\Models\Setups\Vehicle\GasStationPayment::where('gas_station_id', $id)
+            ->with(['account:id,name', 'createdBy:id,name'])
+            ->orderBy('date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn($p) => [
+                'type'       => 'payment',
+                'id'         => $p->id,
+                'code'       => $p->code,
+                'date'       => $p->date?->format('Y-m-d H:i:s'),
+                'amount'     => $p->amount,
+                'account'    => $p->account ? ['id' => $p->account->id, 'name' => $p->account->name] : null,
+                'created_by' => $p->createdBy?->name,
+                'balance'    => null,
+            ]);
+
+        $combined = $refills->concat($payments)
+            ->sortBy([['date', 'asc'], ['id', 'asc']])
+            ->values();
+
+        $runningBalance = '0.0000';
+        $result = $combined->map(function ($item) use (&$runningBalance) {
+            if ($item['type'] === 'refill') {
+                $runningBalance = bcadd($runningBalance, (string) $item['amount'], 4);
+            } else {
+                $runningBalance = bcsub($runningBalance, (string) $item['amount'], 4);
+            }
+            $item['balance'] = $runningBalance;
+            return $item;
+        });
+
+        return ApiResponse::show('Gas station transactions retrieved successfully', $result);
+    }
 }

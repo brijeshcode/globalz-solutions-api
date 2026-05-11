@@ -37,6 +37,8 @@ class PruneOrphanedSettings extends Command
         'account_transfers',
         'account_adjusts',
         'suppliers',
+        'car_refills',
+        'gas_station_payments',
     ];
 
     /**
