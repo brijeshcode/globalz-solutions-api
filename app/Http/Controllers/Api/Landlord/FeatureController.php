@@ -67,6 +67,9 @@ class FeatureController extends Controller
         // Exports
         ['key' => 'export_customers',      'name' => 'Export Customers',            'description' => 'Allow exporting the customer list to an Excel file.'],
 
+        // Vehicles
+        ['key' => 'vehicle_module',            'name' => 'Vehicle Module',              'description' => 'Enable vehicle fleet management including cars, gas stations, refills, and payments.'],
+
         // System
         ['key' => 'activity_logs',             'name' => 'Activity Logs',               'description' => 'Full audit trail of all user actions.'],
         ['key' => 'tax_codes',                 'name' => 'Tax Codes',                   'description' => 'Manage tax codes and apply them to invoices.'],

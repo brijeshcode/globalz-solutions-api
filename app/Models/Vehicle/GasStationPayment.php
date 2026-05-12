@@ -30,6 +30,16 @@ class GasStationPayment extends Model
         'currency_rate' => 'decimal:4',
     ];
 
+    protected $sortable = [
+        'id',
+        'date',
+        'created_at',
+        'updated_at',
+    ];
+
+    protected $defaultSortField = 'date';
+    protected $defaultSortDirection = 'desc';
+    
     protected static function newFactory(): GasStationPaymentFactory
     {
         return GasStationPaymentFactory::new();

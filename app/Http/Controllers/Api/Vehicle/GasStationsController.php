@@ -145,6 +145,6 @@ class GasStationsController extends Controller
             return $item;
         });
 
-        return ApiResponse::show('Gas station transactions retrieved successfully', $result);
+        return ApiResponse::show('Gas station transactions retrieved successfully', $result->reverse()->values());
     }
 }

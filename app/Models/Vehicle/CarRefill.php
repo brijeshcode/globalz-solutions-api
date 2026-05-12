@@ -34,6 +34,17 @@ class CarRefill extends Model
         'invoices_count' => 'integer',
     ];
 
+    protected $sortable = [
+        'id',
+        'date',
+        'created_at',
+        'updated_at',
+    ];
+
+    protected $defaultSortField = 'date';
+    protected $defaultSortDirection = 'desc';
+
+
     protected static function newFactory(): CarRefillFactory
     {
         return CarRefillFactory::new();
