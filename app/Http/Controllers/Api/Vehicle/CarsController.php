@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api\Setups\Vehicle;
+namespace App\Http\Controllers\Api\Vehicle;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Setups\Vehicle\CarsStoreRequest;
-use App\Http\Requests\Api\Setups\Vehicle\CarsUpdateRequest;
-use App\Http\Resources\Api\Setups\Vehicle\CarResource;
+use App\Http\Requests\Api\Vehicle\CarsStoreRequest;
+use App\Http\Requests\Api\Vehicle\CarsUpdateRequest;
+use App\Http\Resources\Api\Vehicle\CarResource;
 use App\Http\Responses\ApiResponse;
-use App\Models\Setups\Vehicle\Car;
+use App\Models\Vehicle\Car;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

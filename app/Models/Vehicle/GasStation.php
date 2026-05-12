@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Setups\Vehicle;
+namespace App\Models\Vehicle;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
-use Database\Factories\Setups\Vehicle\GasStationFactory;
+use Database\Factories\Vehicle\GasStationFactory;
 
 class GasStation extends Model
 {

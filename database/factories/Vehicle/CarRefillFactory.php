@@ -1,11 +1,11 @@
 <?php
 
-namespace Database\Factories\Setups\Vehicle;
+namespace Database\Factories\Vehicle;
 
 use App\Models\Employees\Employee;
-use App\Models\Setups\Vehicle\Car;
-use App\Models\Setups\Vehicle\CarRefill;
-use App\Models\Setups\Vehicle\GasStation;
+use App\Models\Vehicle\Car;
+use App\Models\Vehicle\CarRefill;
+use App\Models\Vehicle\GasStation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CarRefillFactory extends Factory

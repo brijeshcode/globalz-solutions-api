@@ -1,13 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Api\Setups\Vehicle;
+namespace App\Http\Controllers\Api\Vehicle;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Setups\Vehicle\GasStationsStoreRequest;
-use App\Http\Requests\Api\Setups\Vehicle\GasStationsUpdateRequest;
-use App\Http\Resources\Api\Setups\Vehicle\GasStationResource;
+use App\Http\Requests\Api\Vehicle\GasStationsStoreRequest;
+use App\Http\Requests\Api\Vehicle\GasStationsUpdateRequest;
+use App\Http\Resources\Api\Vehicle\GasStationResource;
 use App\Http\Responses\ApiResponse;
-use App\Models\Setups\Vehicle\GasStation;
+use App\Models\Vehicle\CarRefill;
+use App\Models\Vehicle\GasStation;
+use App\Models\Vehicle\GasStationPayment;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -91,7 +93,7 @@ class GasStationsController extends Controller
     {
         GasStation::findOrFail($id);
 
-        $refills = \App\Models\Setups\Vehicle\CarRefill::where('gas_station_id', $id)
+        $refills = CarRefill::where('gas_station_id', $id)
             ->with(['car:id,name', 'driver:id,name', 'createdBy:id,name'])
             ->orderBy('date')
             ->orderBy('id')
@@ -112,7 +114,7 @@ class GasStationsController extends Controller
                 'balance'        => null,
             ]);
 
-        $payments = \App\Models\Setups\Vehicle\GasStationPayment::where('gas_station_id', $id)
+        $payments = GasStationPayment::where('gas_station_id', $id)
             ->with(['account:id,name', 'createdBy:id,name'])
             ->orderBy('date')
             ->orderBy('id')

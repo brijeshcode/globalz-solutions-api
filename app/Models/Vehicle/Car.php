@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Models\Setups\Vehicle;
+namespace App\Models\Vehicle;
 
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
-use Database\Factories\Setups\Vehicle\CarFactory;
+use Database\Factories\Vehicle\CarFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Api\Setups\Vehicle;
+namespace App\Http\Requests\Api\Vehicle;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class CarRefillsUpdateRequest extends FormRequest
+class GasStationPaymentsStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,15 +15,12 @@ class CarRefillsUpdateRequest extends FormRequest
     {
         return [
             'date'           => 'required|date',
-            'car_id'         => 'required|integer|exists:cars,id',
             'gas_station_id' => 'required|integer|exists:gas_stations,id',
-            'driver_id'      => 'required|integer|exists:employees,id',
-            'odometer'       => 'required|numeric|min:0',
+            'account_id'     => 'required|integer|exists:accounts,id',
             'amount'         => 'required|numeric|min:0',
             'amount_usd'     => 'nullable|numeric|min:0',
             'currency_id'    => 'nullable|integer|exists:currencies,id',
             'currency_rate'  => 'nullable|numeric|min:0',
-            'invoices_count' => 'nullable|integer|min:0',
             'note'           => 'nullable|string',
         ];
     }

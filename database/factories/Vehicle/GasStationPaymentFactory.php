@@ -1,10 +1,10 @@
 <?php
 
-namespace Database\Factories\Setups\Vehicle;
+namespace Database\Factories\Vehicle;
 
 use App\Models\Accounts\Account;
-use App\Models\Setups\Vehicle\GasStation;
-use App\Models\Setups\Vehicle\GasStationPayment;
+use App\Models\Vehicle\GasStation;
+use App\Models\Vehicle\GasStationPayment;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class GasStationPaymentFactory extends Factory

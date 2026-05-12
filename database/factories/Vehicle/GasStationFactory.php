@@ -1,8 +1,8 @@
 <?php
 
-namespace Database\Factories\Setups\Vehicle;
+namespace Database\Factories\Vehicle;
 
-use App\Models\Setups\Vehicle\GasStation;
+use App\Models\Vehicle\GasStation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class GasStationFactory extends Factory

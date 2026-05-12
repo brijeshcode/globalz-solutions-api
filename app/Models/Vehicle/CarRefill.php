@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Models\Setups\Vehicle;
+namespace App\Models\Vehicle;
 
 use App\Models\Employees\Employee;
 use App\Models\Setting;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
-use Database\Factories\Setups\Vehicle\CarRefillFactory;
+use Database\Factories\Vehicle\CarRefillFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;

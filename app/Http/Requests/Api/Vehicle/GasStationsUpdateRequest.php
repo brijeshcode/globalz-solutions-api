@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Api\Setups\Vehicle;
+namespace App\Http\Requests\Api\Vehicle;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -16,8 +16,8 @@ class GasStationsUpdateRequest extends FormRequest
         $id = $this->route('gasStation')?->id;
 
         return [
-            'name'    => "required|string|max:200|unique:gas_stations,name,{$id}",
-            'address' => 'nullable|string',
+            'name'      => "required|string|max:200|unique:gas_stations,name,{$id}",
+            'address'   => 'nullable|string',
             'note'      => 'nullable|string',
             'is_active' => 'boolean',
         ];

@@ -1,8 +1,8 @@
 <?php
 
-namespace Database\Factories\Setups\Vehicle;
+namespace Database\Factories\Vehicle;
 
-use App\Models\Setups\Vehicle\Car;
+use App\Models\Vehicle\Car;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CarFactory extends Factory
