@@ -110,7 +110,7 @@ class GasStationsController extends Controller
                 'km_driven'      => $r->km_driven,
                 'km_cost'        => ($r->km_driven > 0) ? round($r->amount / $r->km_driven, 4) : null,
                 'invoices_count' => $r->invoices_count,
-                'created_by'     => $r->createdBy?->name,
+                'created_by'     => $r->createdBy ? ['name' => $r->createdBy->name, 'at' => $r->created_at?->format('Y-m-d H:i:s')] : null,
                 'balance'        => null,
             ]);
 
@@ -126,7 +126,7 @@ class GasStationsController extends Controller
                 'date'       => $p->date?->format('Y-m-d H:i:s'),
                 'amount'     => $p->amount,
                 'account'    => $p->account ? ['id' => $p->account->id, 'name' => $p->account->name] : null,
-                'created_by' => $p->createdBy?->name,
+                'created_by' => $p->createdBy ? ['name' => $p->createdBy->name, 'at' => $p->created_at?->format('Y-m-d H:i:s')] : null,
                 'balance'    => null,
             ]);
 
