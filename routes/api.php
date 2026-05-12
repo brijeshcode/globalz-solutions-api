@@ -941,59 +941,60 @@ Route::middleware('auth:sanctum')->group(function () {
             });
         });
 
-        // Vehicles
-        Route::prefix('vehicles')->name('vehicles.')->group(function () {
+    });
 
-            // Gas Stations
-            Route::controller(GasStationsController::class)->prefix('gas-stations')->name('gas-stations.')->group(function () {
-                Route::get('trashed', 'trashed')->name('trashed');
-                Route::get('/', 'index')->name('index');
-                Route::post('/', 'store')->name('store');
-                Route::get('{gasStation}', 'show')->name('show');
-                Route::put('{gasStation}', 'update')->name('update');
-                Route::delete('{gasStation}', 'destroy')->name('destroy');
-                Route::patch('{id}/restore', 'restore')->name('restore');
-                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
-                Route::get('{id}/transactions', 'transactions')->name('transactions');
-            });
+    // Vehicles
+    Route::prefix('vehicles')->name('vehicles.')->group(function () {
 
-            // Cars
-            Route::controller(CarsController::class)->prefix('cars')->name('cars.')->group(function () {
-                Route::get('trashed', 'trashed')->name('trashed');
-                Route::get('/', 'index')->name('index');
-                Route::post('/', 'store')->name('store');
-                Route::get('{car}', 'show')->name('show');
-                Route::put('{car}', 'update')->name('update');
-                Route::delete('{car}', 'destroy')->name('destroy');
-                Route::patch('{id}/restore', 'restore')->name('restore');
-                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
-            });
-
-            // Car Refills
-            Route::controller(CarRefillsController::class)->prefix('car-refills')->name('car-refills.')->group(function () {
-                Route::get('trashed', 'trashed')->name('trashed');
-                Route::get('/', 'index')->name('index');
-                Route::post('/', 'store')->name('store');
-                Route::get('{carRefill}', 'show')->name('show');
-                Route::put('{carRefill}', 'update')->name('update');
-                Route::delete('{carRefill}', 'destroy')->name('destroy');
-                Route::patch('{id}/restore', 'restore')->name('restore');
-                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
-            });
-
-            // Gas Station Payments
-            Route::controller(GasStationPaymentsController::class)->prefix('gas-station-payments')->name('gas-station-payments.')->group(function () {
-                Route::get('trashed', 'trashed')->name('trashed');
-                Route::get('/', 'index')->name('index');
-                Route::post('/', 'store')->name('store');
-                Route::get('{gasStationPayment}', 'show')->name('show');
-                Route::put('{gasStationPayment}', 'update')->name('update');
-                Route::delete('{gasStationPayment}', 'destroy')->name('destroy');
-                Route::patch('{id}/restore', 'restore')->name('restore');
-                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
-            });
-
+        // Gas Stations
+        Route::controller(GasStationsController::class)->prefix('gas-stations')->name('gas-stations.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{gasStation}', 'show')->name('show');
+            Route::put('{gasStation}', 'update')->name('update');
+            Route::delete('{gasStation}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::get('{id}/transactions', 'transactions')->name('transactions');
         });
+
+        // Cars
+        Route::controller(CarsController::class)->prefix('cars')->name('cars.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{car}', 'show')->name('show');
+            Route::put('{car}', 'update')->name('update');
+            Route::delete('{car}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Car Refills
+        Route::controller(CarRefillsController::class)->prefix('car-refills')->name('car-refills.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{carRefill}', 'show')->name('show');
+            Route::put('{carRefill}', 'update')->name('update');
+            Route::delete('{carRefill}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Gas Station Payments
+        Route::controller(GasStationPaymentsController::class)->prefix('gas-station-payments')->name('gas-station-payments.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{gasStationPayment}', 'show')->name('show');
+            Route::put('{gasStationPayment}', 'update')->name('update');
+            Route::delete('{gasStationPayment}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
     });
 
     // Expense Transactions Controller
