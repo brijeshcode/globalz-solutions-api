@@ -137,7 +137,7 @@ class Employee extends Model
                 ->where('type', 'credit')->sum('amount_usd')
             + Salary::where('employee_id', $this->id)->where('advance_payment', '>', 0)->sum('advance_payment');
 
-        $balance = $totalDebit - $totalCredit;
+        $balance = $totalCredit - $totalDebit;
 
         if ($this->current_balance != $balance) {
             $this->update(['current_balance' => $balance]);
