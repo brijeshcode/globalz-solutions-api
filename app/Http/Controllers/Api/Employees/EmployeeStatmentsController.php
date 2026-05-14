@@ -138,7 +138,7 @@ class EmployeeStatmentsController extends Controller
 
         $balance = 0;
         $transactionsWithBalance = $sortedByDateAsc->map(function ($transaction) use (&$balance) {
-            $balance += $transaction['debit'] - $transaction['credit'];
+            $balance += $transaction['credit'] - $transaction['debit'];
             $transaction['balance'] = $balance;
             return $transaction;
         });
@@ -250,7 +250,7 @@ class EmployeeStatmentsController extends Controller
         return [
             'total_debit' => $totalDebit,
             'total_credit' => $totalCredit,
-            'balance' => $totalDebit - $totalCredit,
+            'balance' => $totalCredit - $totalDebit,
         ];
     }
 
