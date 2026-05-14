@@ -17,6 +17,7 @@ use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Landlord\TenantFeature;
 use App\Models\Suppliers\SupplierPayment;
+use App\Models\Vehicle\GasStationPayment;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -216,6 +217,12 @@ class AccountStatementController extends Controller
         if (!$transactionType || $transactionType === 'account_adjust') {
             $allTransactions = $allTransactions->concat(
                 $this->getAccountAdjusts($request, $account, $noteSearch)
+            );
+        }
+
+        if (!$transactionType || $transactionType === 'gas_station_payment') {
+            $allTransactions = $allTransactions->concat(
+                $this->getGasStationPayments($request, $account, $noteSearch)
             );
         }
 
@@ -583,6 +590,42 @@ class AccountStatementController extends Controller
                 'transaction_type' => 'account_adjust',
                 'source_table' => 'account_adjusts',
                 'timestamp' => $item->date->timestamp,
+            ];
+        });
+    }
+
+    private function getGasStationPayments(Request $request, Account $account, ?string $noteSearch = null)
+    {
+        $query = GasStationPayment::query()
+            ->select('id', 'code', 'date', 'amount', 'note', 'gas_station_id', 'account_id', 'created_by', 'created_at');
+
+        $this->applyFilters($query, $request, $account, $noteSearch);
+
+        return $query->with(['gasStation:id,name', 'createdBy:id,name'])->get()->map(function ($item) use ($account) {
+            return [
+                'id'                 => $item->id,
+                'transaction_number' => $item->code,
+                'code'               => $item->code,
+                'prefix'             => '',
+                'type'               => 'Gas Station Payment',
+                'name'               => $item->gasStation->name,
+                'date'               => $item->date->format('Y-m-d'),
+                'amount'             => -$item->amount,
+                'debit'              => $item->amount,
+                'credit'             => 0,
+                'note'               => $item->note,
+                'by'                 => $item->createdBy?->name,
+                'gas_station'        => [
+                    'id'   => $item->gasStation->id,
+                    'name' => $item->gasStation->name,
+                ],
+                'account'            => [
+                    'id'   => $account->id,
+                    'name' => $account->name,
+                ],
+                'transaction_type'   => 'gas_station_payment',
+                'source_table'       => 'gas_station_payments',
+                'timestamp'          => $item->date->timestamp,
             ];
         });
     }

@@ -58,27 +58,7 @@ class GasStationPaymentsController extends Controller
 
     public function update(GasStationPaymentsUpdateRequest $request, GasStationPayment $gasStationPayment): JsonResponse
     {
-        $validated    = $request->validated();
-        $oldAmount    = (float) $gasStationPayment->amount;
-        $oldStationId = $gasStationPayment->gas_station_id;
-        $newStationId = $validated['gas_station_id'];
-
-        if ($oldStationId !== $newStationId) {
-            $gasStationPayment->gasStation()->increment('balance', $oldAmount);
-        }
-
-        $gasStationPayment->update($validated);
-
-        $newAmount = (float) $gasStationPayment->amount;
-
-        if ($oldStationId !== $newStationId) {
-            $gasStationPayment->gasStation()->decrement('balance', $newAmount);
-        } else {
-            $diff = $newAmount - $oldAmount;
-            if ($diff !== 0.0) {
-                $gasStationPayment->gasStation()->decrement('balance', $diff);
-            }
-        }
+        $gasStationPayment->update($request->validated());
 
         $gasStationPayment->load(['gasStation', 'account', 'createdBy:id,name', 'updatedBy:id,name']);
 

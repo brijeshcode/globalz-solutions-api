@@ -58,4 +58,9 @@ class FeatureHelper {
     {
         return self::isEnabled('database_mirror');
     }
+
+    public static function isVehicleModule(): bool
+    {
+        return self::isEnabled('vehicle_module');
+    }
 }

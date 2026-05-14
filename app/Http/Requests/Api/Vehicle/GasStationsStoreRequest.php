@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests\Api\Vehicle;
 
+use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class GasStationsStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return RoleHelper::canAdmin();
     }
 
     public function rules(): array

@@ -2,8 +2,10 @@
 
 namespace App\Models\Vehicle;
 
+use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
+use App\Models\Vehicle\GasStation;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -79,14 +81,39 @@ class GasStationPayment extends Model
 
         static::created(function (GasStationPayment $payment) {
             $payment->gasStation()->decrement('balance', $payment->amount);
+            AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount);
+        });
+
+        static::updated(function (GasStationPayment $payment) {
+            $original = $payment->getOriginal();
+
+            // Gas station balance
+            if ($original['gas_station_id'] !== $payment->gas_station_id) {
+                $payment->gasStation()->decrement('balance', $payment->amount);
+                GasStation::find($original['gas_station_id'])?->increment('balance', $original['amount']);
+            } elseif ($original['amount'] != $payment->amount) {
+                $diff = $payment->amount - $original['amount'];
+                $payment->gasStation()->decrement('balance', $diff);
+            }
+
+            // Account balance
+            if ($original['account_id'] !== $payment->account_id) {
+                AccountsHelper::addBalance(Account::find($original['account_id']), $original['amount']);
+                AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount);
+            } elseif ($original['amount'] != $payment->amount) {
+                $diff = $payment->amount - $original['amount'];
+                AccountsHelper::removeBalance(Account::find($payment->account_id), $diff);
+            }
         });
 
         static::deleted(function (GasStationPayment $payment) {
             $payment->gasStation()->increment('balance', $payment->amount);
+            AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount);
         });
 
         static::restored(function (GasStationPayment $payment) {
             $payment->gasStation()->decrement('balance', $payment->amount);
+            AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount);
         });
     }
 }
