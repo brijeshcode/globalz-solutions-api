@@ -81,6 +81,13 @@ class Employee extends Model
         });
     }
 
+    public function scopeIsDriverDepartment($query)
+    {
+        return $query->whereHas('department', function ($q) {
+            $q->where('name', 'Drivers');
+        });
+    }
+
     public function scopeIsWarehouseDepartment($query)
     {
         return $query->whereHas('department', function ($q) {

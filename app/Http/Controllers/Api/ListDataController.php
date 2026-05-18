@@ -87,6 +87,7 @@ class ListDataController extends Controller
             'employees' => $this->employees(),
             'commissionTargets' => $this->commissionTargets(),
             'all-sales-employees' => $this->salesEmployee(),
+            'all-driver-employees' => $this->driverEmployee(),
             'departments' => $this->departments(),
 
             // generals
@@ -387,6 +388,11 @@ class ListDataController extends Controller
     private function salesEmployee()
     {
         return Employee::isSaleDepartment()->orderBy('name')->get(['id', 'name', 'email', 'phone', 'is_active']);
+    }
+
+    private function driverEmployee()
+    {
+        return Employee::isDriverDepartment()->orderBy('name')->get(['id', 'name', 'email', 'phone', 'is_active']);
     }
 
     private function departments()

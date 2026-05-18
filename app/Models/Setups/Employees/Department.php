@@ -19,17 +19,11 @@ class Department extends Model
 
     protected static string $cacheVersionKey = 'department';
 
-    public const FIXDEPARTMENTS = [ 'Warehouse', 'Sales', 'Accounting', 'Administration', 'Shipping'];
+    public const FIXDEPARTMENTS = [ 'Warehouse', 'Sales', 'Accounting', 'Administration', 'Shipping', 'Drivers'];
 
     public static function getDefaultDepartments(): array
     {
-        return config('app.default_departments', [
-            'Sales',
-            'Accounting',
-            'Shipping',
-            'Administration',
-            'Warehouse'
-        ]);
+        return self::FIXDEPARTMENTS;
     }
     
     protected $fillable = [
