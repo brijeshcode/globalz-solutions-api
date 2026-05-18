@@ -2,7 +2,6 @@
 
 namespace App\Helpers;
 
-use App\Models\Accounts\Account;
 use App\Models\Landlord\TenantFeature;
 
 class FeatureHelper {
@@ -62,5 +61,10 @@ class FeatureHelper {
     public static function isVehicleModule(): bool
     {
         return self::isEnabled('vehicle_module');
+    }
+
+    public static function isBugLock(): bool
+    {
+        return self::isEnabled('bug_lock');
     }
 }

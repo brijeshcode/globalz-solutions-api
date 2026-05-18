@@ -116,7 +116,14 @@ Route::get('/cache-versions', [CacheVersionController::class, 'index'])
     ->name('cache-versions.index');
 
 // Protected routes (authentication required)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
+
+    // Bug Lock Management
+    Route::controller(\App\Http\Controllers\Api\BugLockController::class)->prefix('bug-lock')->name('bug-lock.')->group(function () {
+        Route::get('/status', 'status')->name('status');
+        Route::post('/enable', 'enable')->name('enable');
+        Route::post('/disable', 'disable')->name('disable');
+    });
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);

@@ -74,6 +74,7 @@ class FeatureController extends Controller
         ['key' => 'activity_logs',             'name' => 'Activity Logs',               'description' => 'Full audit trail of all user actions.'],
         ['key' => 'tax_codes',                 'name' => 'Tax Codes',                   'description' => 'Manage tax codes and apply them to invoices.'],
         ['key' => 'database_mirror',           'name' => 'Database Mirror',             'description' => 'Mirror tenant database to a remote MySQL server automatically every 30 minutes or on demand.'],
+        ['key' => 'bug_lock',                  'name' => 'Bug Lock',                    'description' => 'Allow admins to temporarily lock the system with a maintenance error message, blocking all non-login requests.'],
     ];
 
     public function seedDefaultFeatures(): JsonResponse

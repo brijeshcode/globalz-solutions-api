@@ -247,6 +247,30 @@ class SettingsHelper
     }
 
     /**
+     * Bug lock helpers
+     */
+    public static function isBugLockEnabled(): bool
+    {
+        return (bool) self::get('system', 'bug_lock', false);
+    }
+
+    public static function getBugLockMessage(): string
+    {
+        return (string) self::get('system', 'bug_lock_message', \App\Http\Controllers\Api\BugLockController::DEFAULT_MESSAGE);
+    }
+
+    public static function enableBugLock(string $message): void
+    {
+        self::set('system', 'bug_lock', true, Setting::TYPE_BOOLEAN, 'Bug lock toggle');
+        self::set('system', 'bug_lock_message', $message, Setting::TYPE_STRING, 'Bug lock message shown to users');
+    }
+
+    public static function disableBugLock(): void
+    {
+        self::set('system', 'bug_lock', false, Setting::TYPE_BOOLEAN, 'Bug lock toggle');
+    }
+
+    /**
      * Feature flags / toggles
      */
     public static function isFeatureEnabled(string $feature): bool
