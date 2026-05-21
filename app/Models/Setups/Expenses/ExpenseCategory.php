@@ -26,12 +26,14 @@ class ExpenseCategory extends Model
         'is_active',
         'exclude_from_profit',
         'is_vat_category',
+        'is_system',
     ];
 
     protected $casts = [
         'is_active'          => 'boolean',
         'exclude_from_profit' => 'boolean',
         'is_vat_category'    => 'boolean',
+        'is_system'          => 'boolean',
     ];
 
     protected $searchable = [
@@ -74,6 +76,21 @@ class ExpenseCategory extends Model
     public function scopeRootCategories($query)
     {
         return $query->whereNull('parent_id');
+    }
+
+    public function scopeSystem($query)
+    {
+        return $query->where('is_system', true);
+    }
+
+    public function scopeNonSystem($query)
+    {
+        return $query->where('is_system', false);
+    }
+
+    public static function getPurchaseExpenseParentId(): ?int
+    {
+        return static::where('name', 'Purchase Expenses')->where('is_system', true)->value('id');
     }
 
     public function getIsRootAttribute(): bool

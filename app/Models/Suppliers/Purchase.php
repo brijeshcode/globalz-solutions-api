@@ -4,6 +4,7 @@ namespace App\Models\Suppliers;
 
 use App\Helpers\AccountsHelper;
 use App\Helpers\SuppliersHelper;
+use App\Models\Suppliers\PurchaseExpense;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Items\Item;
@@ -42,20 +43,13 @@ class Purchase extends Model
         // 'account_id',
         'supplier_invoice_number',
         'currency_rate',
-        'shipping_fee_usd',
-        'customs_fee_usd',
-        'other_fee_usd',
-        'tax_usd',
-        'shipping_fee_usd_percent',
-        'customs_fee_usd_percent',
-        'other_fee_usd_percent',
-        'tax_usd_percent',
         'sub_total',
         'sub_total_usd',
         'discount_amount',
         'discount_amount_usd',
         'total',
         'total_usd',
+        'total_expense_usd',
         'final_total',
         'final_total_usd',
         'note',
@@ -64,20 +58,13 @@ class Purchase extends Model
     protected $casts = [
         'date' => 'date',
         'currency_rate' => 'decimal:6',
-        'shipping_fee_usd' => 'decimal:4',
-        'customs_fee_usd' => 'decimal:4',
-        'other_fee_usd' => 'decimal:4',
-        'tax_usd' => 'decimal:4',
-        'shipping_fee_usd_percent' => 'decimal:2',
-        'customs_fee_usd_percent' => 'decimal:2',
-        'other_fee_usd_percent' => 'decimal:2',
-        'tax_usd_percent' => 'decimal:2',
         'sub_total' => 'decimal:4',
         'sub_total_usd' => 'decimal:4',
         'discount_amount' => 'decimal:4',
         'discount_amount_usd' => 'decimal:4',
         'total' => 'decimal:4',
         'total_usd' => 'decimal:4',
+        'total_expense_usd' => 'decimal:4',
         'final_total' => 'decimal:4',
         'final_total_usd' => 'decimal:4',
     ];
@@ -100,6 +87,7 @@ class Purchase extends Model
         'currency_id',
         'supplier_invoice_number',
         'sub_total_usd',
+        'total_expense_usd',
         'final_total_usd',
         'created_at',
         'updated_at',
@@ -137,6 +125,11 @@ class Purchase extends Model
     public function purchaseItems(): HasMany
     {
         return $this->hasMany(PurchaseItem::class);
+    }
+
+    public function purchaseExpenses(): HasMany
+    {
+        return $this->hasMany(PurchaseExpense::class);
     }
 
     public function createdBy(): BelongsTo
