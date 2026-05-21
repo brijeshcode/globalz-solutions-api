@@ -32,14 +32,6 @@ class PurchasesUpdateRequest extends FormRequest
             // - total, total_usd
             // - final_total, final_total_usd
 
-            'shipping_fee_usd' => 'nullable|numeric|min:0|max:999999.9999',
-            'customs_fee_usd' => 'nullable|numeric|min:0|max:999999.9999',
-            'other_fee_usd' => 'nullable|numeric|min:0|max:999999.9999',
-            'tax_usd' => 'nullable|numeric|min:0|max:999999.9999',
-            'shipping_fee_usd_percent' => 'nullable|numeric|min:0|max:100',
-            'customs_fee_usd_percent' => 'nullable|numeric|min:0|max:100',
-            'other_fee_usd_percent' => 'nullable|numeric|min:0|max:100',
-            'tax_usd_percent' => 'nullable|numeric|min:0|max:100',
             'discount_amount' => 'nullable|numeric|min:0|max:999999.9999',
             'discount_amount_usd' => 'nullable|numeric|min:0|max:999999.9999',
             'note' => 'nullable|string|max:1000',
@@ -57,6 +49,19 @@ class PurchasesUpdateRequest extends FormRequest
             'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'items.*.discount_amount' => 'nullable|numeric|min:0|max:999999.999999',
             'items.*.note' => 'nullable|string|max:1000',
+
+            // Purchase expenses
+            'expenses'                               => 'nullable|array',
+            'expenses.*.id'                          => 'nullable|integer',
+            'expenses.*.expense_category_id'         => 'required_with:expenses|integer|exists:expense_categories,id',
+            'expenses.*.amount'                      => 'required_with:expenses|numeric|min:0',
+            'expenses.*.amount_usd'                  => 'required_with:expenses|numeric|min:0',
+            'expenses.*.currency_id'                 => 'required_with:expenses|integer|exists:currencies,id',
+            'expenses.*.currency_rate'               => 'required_with:expenses|numeric|min:0.000001',
+            'expenses.*.exclude_from_item_cost'      => 'nullable|boolean',
+            'expenses.*.is_paid'                     => 'nullable|boolean',
+            'expenses.*.account_id'                  => 'required_if:expenses.*.is_paid,true|nullable|integer|exists:accounts,id',
+            'expenses.*.payment_note'                => 'nullable|string|max:1000',
 
             // Documents
             'documents' => 'nullable|array|max:15',
@@ -80,9 +85,6 @@ class PurchasesUpdateRequest extends FormRequest
             'items.*.quantity.min' => 'Quantity must be greater than 0.',
             'items.required' => 'At least one item is required for the purchase.',
             'items.min' => 'At least one item is required for the purchase.',
-            'shipping_fee_usd_percent.max' => 'Shipping fee percentage cannot exceed 100%.',
-            'customs_fee_usd_percent.max' => 'Customs fee percentage cannot exceed 100%.',
-            'other_fee_usd_percent.max' => 'Other fee percentage cannot exceed 100%.',
             'documents.*.max' => 'Each document must not exceed 10MB.',
             'documents.*.mimes' => 'Documents must be of type: jpg, jpeg, png, gif, bmp, webp, pdf, doc, docx, txt.',
         ];
@@ -90,28 +92,15 @@ class PurchasesUpdateRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        // Only set defaults for fields that are being updated
         $mergeData = [];
-        
-        if ($this->has('shipping_fee_usd') && $this->shipping_fee_usd === null) {
-            $mergeData['shipping_fee_usd'] = 0;
-        }
-        if ($this->has('customs_fee_usd') && $this->customs_fee_usd === null) {
-            $mergeData['customs_fee_usd'] = 0;
-        }
-        if ($this->has('other_fee_usd') && $this->other_fee_usd === null) {
-            $mergeData['other_fee_usd'] = 0;
-        }
-        if ($this->has('tax_usd') && $this->tax_usd === null) {
-            $mergeData['tax_usd'] = 0;
-        }
+
         if ($this->has('discount_amount') && $this->discount_amount === null) {
             $mergeData['discount_amount'] = 0;
         }
         if ($this->has('discount_amount_usd') && $this->discount_amount_usd === null) {
             $mergeData['discount_amount_usd'] = 0;
         }
-        
+
         if (!empty($mergeData)) {
             $this->merge($mergeData);
         }
