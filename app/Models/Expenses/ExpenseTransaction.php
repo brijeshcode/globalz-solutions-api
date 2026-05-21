@@ -151,6 +151,11 @@ class ExpenseTransaction extends Model
         return $this->hasMany(ExpensePayment::class);
     }
 
+    public function purchaseExpense(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\Suppliers\PurchaseExpense::class);
+    }
+
     // ─── Scopes ───────────────────────────────────────────────────────────────
 
     public function scopeByDateRange($query, $startDate, $endDate)

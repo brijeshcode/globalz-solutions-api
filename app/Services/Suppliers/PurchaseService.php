@@ -4,23 +4,29 @@ namespace App\Services\Suppliers;
 
 use App\Helpers\CurrencyHelper;
 use App\Models\Suppliers\Purchase;
+use App\Models\Suppliers\PurchaseExpense;
 use App\Models\Suppliers\PurchaseItem;
 use App\Models\Items\Item;
 use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\PriceService;
+use App\Services\Suppliers\PurchaseExpenseService;
 use App\Services\Suppliers\SupplierItemPriceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PurchaseService
 {
+    public function __construct(
+        private PurchaseExpenseService $purchaseExpenseService = new PurchaseExpenseService()
+    ) {}
+
     /**
      * Create a new purchase with items and all related data
      */
-    public function createPurchaseWithItems(array $purchaseData, array $items = []): Purchase
+    public function createPurchaseWithItems(array $purchaseData, array $items = [], array $expenses = []): Purchase
     {
         try {
-            return DB::transaction(function () use ($purchaseData, $items) {
+            return DB::transaction(function () use ($purchaseData, $items, $expenses) {
                 // Create the purchase
                 $purchase = Purchase::create($purchaseData);
 
@@ -31,6 +37,11 @@ class PurchaseService
 
                 // Recalculate purchase totals
                 $this->recalculatePurchaseTotals($purchase);
+
+                // Sync expense lines and recalculate with expense totals
+                $this->purchaseExpenseService->syncExpenseLines($purchase, $expenses);
+                $this->recalculatePurchaseTotals($purchase);
+                $this->purchaseExpenseService->recalculateItemCosts($purchase);
 
                 return $purchase->fresh();
             });
@@ -66,19 +77,22 @@ class PurchaseService
     /**
      * Update purchase with items
      */
-    public function updatePurchaseWithItems(Purchase $purchase, array $purchaseData, array $items = []): Purchase
+    public function updatePurchaseWithItems(Purchase $purchase, array $purchaseData, array $items = [], array $expenses = []): Purchase
     {
         try {
-            return DB::transaction(function () use ($purchase, $purchaseData, $items) {
+            return DB::transaction(function () use ($purchase, $purchaseData, $items, $expenses) {
                 // Update purchase data (exclude items from purchaseData)
-
-
                 $purchase->update($purchaseData);
 
                 $this->updatePurchaseItems($purchase, $items);
 
                 // Recalculate purchase totals
                 $this->recalculatePurchaseTotals($purchase);
+
+                // Sync expense lines and recalculate with expense totals
+                $this->purchaseExpenseService->syncExpenseLines($purchase, $expenses);
+                $this->recalculatePurchaseTotals($purchase);
+                $this->purchaseExpenseService->recalculateItemCosts($purchase);
 
                 return $purchase->fresh();
             });
@@ -158,29 +172,25 @@ class PurchaseService
                     $totalBeforeDiscount = $price * $quantity;
                     $totalPrice = $totalBeforeDiscount - $discountAmount;
                     
+                    $newTotalPriceUsd = CurrencyHelper::toUsd($purchase->currency_id, $totalPrice, $purchase->currency_rate);
+                    $finalTotalCostUsd = $newTotalPriceUsd; // expenses distributed separately
+                    $costPerItemUsd    = $quantity > 0 ? ($finalTotalCostUsd / $quantity) : 0;
+
                     $purchaseItem->update([
-                        'price' => $price,
-                        'quantity' => $quantity,
-                        'discount_percent' => $discountPercent,
-                        'discount_amount' => $discountAmount, // Store total line discount
-                        'total_price' => $totalPrice,
-                        'total_price_usd' => CurrencyHelper::toUsd($purchase->currency_id, $totalPrice, $purchase->currency_rate),
-                        'note' => $itemData['note'] ?? $purchaseItem->note,
+                        'price'                => $price,
+                        'quantity'             => $quantity,
+                        'discount_percent'     => $discountPercent,
+                        'discount_amount'      => $discountAmount,
+                        'total_price'          => $totalPrice,
+                        'total_price_usd'      => $newTotalPriceUsd,
+                        'final_total_cost_usd' => $finalTotalCostUsd,
+                        'cost_per_item_usd'    => $costPerItemUsd,
+                        'note'                 => $itemData['note'] ?? $purchaseItem->note,
                     ]);
 
                     // Refresh purchase to get updated totals from the saved event
                     $purchase->refresh();
 
-                    // Recalculate derived fields
-                    $updatedData = $this->preparePurchaseItemData($purchase, $itemData);
-                    $purchaseItem->update([
-                        'total_shipping_usd' => $updatedData['total_shipping_usd'],
-                        'total_customs_usd' => $updatedData['total_customs_usd'],
-                        'total_other_usd' => $updatedData['total_other_usd'],
-                        'final_total_cost_usd' => $updatedData['final_total_cost_usd'],
-                        'cost_per_item_usd' => $updatedData['cost_per_item_usd'],
-                    ]);
-                    
                     // Update related data if cost or quantity changed
                     if ($oldCostPerItemUsd != $purchaseItem->cost_per_item_usd || (float)$oldQuantity != (float)$purchaseItem->quantity) {
                         $this->processPurchaseItemRelatedData($purchase, $purchaseItem, true, (float)$oldQuantity, $oldCostPerItemUsd);
@@ -238,52 +248,26 @@ class PurchaseService
         
         $totalBeforeDiscount = $price * $quantity;
         $totalPrice = $totalBeforeDiscount - $discountAmount;
-        $totalPriceUsd = CurrencyHelper::toUsd($purchase->currency_id, $totalPrice, $purchase->currency_rate) ;
-        
-        // Calculate proportional fees based on purchase totals
-        $totalShippingUsd = $this->calculateProportionalFee($totalPriceUsd, $purchase, 'shipping_fee_usd', 'shipping_fee_usd_percent');
-        $totalCustomsUsd = $this->calculateProportionalFee($totalPriceUsd, $purchase, 'customs_fee_usd', 'customs_fee_usd_percent');
-        $totalOtherUsd = $this->calculateProportionalFee($totalPriceUsd, $purchase, 'other_fee_usd', 'other_fee_usd_percent');
-        
-        $finalTotalCostUsd = $totalPriceUsd + $totalShippingUsd + $totalCustomsUsd + $totalOtherUsd;
-        $costPerItemUsd = $quantity > 0 ? ($finalTotalCostUsd / $quantity) : 0;
-        
-        return [
-            'purchase_id' => $purchase->id,
-            'item_id' => $itemData['item_id'],
-            'item_code' => $item->code,
-            'price' => $price,
-            'quantity' => $quantity,
-            'discount_percent' => $discountPercent,
-            'discount_amount' => $discountAmount,
-            'total_price' => $totalPrice,
-            'total_price_usd' => $totalPriceUsd,
-            'total_shipping_usd' => $totalShippingUsd,
-            'total_customs_usd' => $totalCustomsUsd,
-            'total_other_usd' => $totalOtherUsd,
-            'final_total_cost_usd' => $finalTotalCostUsd,
-            'cost_per_item_usd' => $costPerItemUsd,
-            'note' => $itemData['note'] ?? null,
-        ];
-    }
+        $totalPriceUsd = CurrencyHelper::toUsd($purchase->currency_id, $totalPrice, $purchase->currency_rate);
 
-    /**
-     * Calculate proportional fees for purchase item
-     */
-    private function calculateProportionalFee(float $itemTotalUsd, Purchase $purchase, string $feeField, string $percentField): float
-    {
-        // If percentage is set, calculate based on item total
-        if ($purchase->{$percentField} > 0) {
-            return ($itemTotalUsd * $purchase->{$percentField}) / 100;
-        }
-        
-        // If fixed amount is set, calculate proportional share
-        if ($purchase->{$feeField} > 0) {
-            $totalPurchaseUsd = $purchase->sub_total_usd > 0 ? $purchase->sub_total_usd : 1;
-            return ($purchase->{$feeField} * $itemTotalUsd) / $totalPurchaseUsd;
-        }
-        
-        return 0;
+        $finalTotalCostUsd = $totalPriceUsd; // expenses distributed separately by PurchaseExpenseService
+        $costPerItemUsd = $quantity > 0 ? ($finalTotalCostUsd / $quantity) : 0;
+
+        return [
+            'purchase_id'          => $purchase->id,
+            'item_id'              => $itemData['item_id'],
+            'item_code'            => $item->code,
+            'price'                => $price,
+            'quantity'             => $quantity,
+            'discount_percent'     => $discountPercent,
+            'discount_amount'      => $discountAmount,
+            'total_price'          => $totalPrice,
+            'total_price_usd'      => $totalPriceUsd,
+            'total_expense_usd'    => 0,
+            'final_total_cost_usd' => $finalTotalCostUsd,
+            'cost_per_item_usd'    => $costPerItemUsd,
+            'note'                 => $itemData['note'] ?? null,
+        ];
     }
 
     /**
@@ -427,33 +411,33 @@ class PurchaseService
     }
 
     /**
-     * Recalculate purchase totals from items
+     * Recalculate purchase totals from items and expenses
      */
     private function recalculatePurchaseTotals(Purchase $purchase): void
     {
-        $items = $purchase->purchaseItems;
+        $items = $purchase->purchaseItems()->get();
 
-        $subTotal = $items->sum('total_price');
+        $subTotal    = $items->sum('total_price');
         $subTotalUsd = $items->sum('total_price_usd');
-        $total = $subTotal - $purchase->discount_amount + CurrencyHelper::fromUsd($purchase->currency_id, $purchase->tax_usd);
-        $totalUsd = $subTotalUsd - $purchase->discount_amount_usd + $purchase->tax_usd;
+        $total       = $subTotal - (float) $purchase->discount_amount;
+        $totalUsd    = $subTotalUsd - (float) $purchase->discount_amount_usd;
 
+        $totalExpenseUsd = (float) PurchaseExpense::where('purchase_id', $purchase->id)
+            ->join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
+            ->whereNull('expense_transactions.deleted_at')
+            ->sum('expense_transactions.amount_usd');
 
-        // final total usd = total + shipping + customs + other fees (tax already included in totalUsd)
-        $finalTotalUsd = $totalUsd + $purchase->shipping_fee_usd + $purchase->customs_fee_usd
-        + $purchase->other_fee_usd;
+        $finalTotalUsd = $totalUsd + $totalExpenseUsd;
+        $finalTotal    = CurrencyHelper::fromUsd($purchase->currency_id, $finalTotalUsd);
 
-        // final total = convert final_total_usd to purchase currency
-
-        $finalTotal = CurrencyHelper::fromUsd($purchase->currency_id, $finalTotalUsd);
-
-        $purchase->update([
-            'sub_total' => $subTotal,
-            'sub_total_usd' => $subTotalUsd,
-            'total' => $total,
-            'total_usd' => $totalUsd,
-            'final_total' => $finalTotal,
-            'final_total_usd' => $finalTotalUsd,
+        $purchase->updateQuietly([
+            'sub_total'         => $subTotal,
+            'sub_total_usd'     => $subTotalUsd,
+            'total'             => $total,
+            'total_usd'         => $totalUsd,
+            'total_expense_usd' => $totalExpenseUsd,
+            'final_total'       => $finalTotal,
+            'final_total_usd'   => $finalTotalUsd,
         ]);
     }
 
