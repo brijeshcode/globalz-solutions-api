@@ -12,6 +12,7 @@ use App\Models\Accounts\Account;
 use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Landlord\TenantFeature;
+use App\Models\Suppliers\PurchaseExpense;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setups\Expenses\ExpenseCategory;
@@ -178,8 +179,31 @@ class ExpenseTransactionsController extends Controller
     /**
      * Update the specified resource in storage.
      */
+    private function guardIfPurchaseLinked(ExpenseTransaction $expenseTransaction): ?JsonResponse
+    {
+        $pe = PurchaseExpense::where('expense_transaction_id', $expenseTransaction->id)->first();
+
+        if (!$pe) {
+            return null;
+        }
+
+        $purchaseCode = \DB::table('purchases')
+            ->where('id', $pe->purchase_id)
+            ->selectRaw("CONCAT(prefix, code) as purchase_code")
+            ->value('purchase_code');
+
+        return ApiResponse::customError(
+            "This expense is linked to purchase {$purchaseCode} and can only be edited from there.",
+            403
+        );
+    }
+
     public function update(ExpenseTransactionsUpdateRequest $request, ExpenseTransaction $expenseTransaction): JsonResponse
     {
+        if ($guard = $this->guardIfPurchaseLinked($expenseTransaction)) {
+            return $guard;
+        }
+
         $data           = $request->validated();
         $featureEnabled = TenantFeature::isEnabled('expense_deferred_payment');
 
@@ -295,6 +319,10 @@ class ExpenseTransactionsController extends Controller
      */
     public function destroy(ExpenseTransaction $expenseTransaction): JsonResponse
     {
+        if ($guard = $this->guardIfPurchaseLinked($expenseTransaction)) {
+            return $guard;
+        }
+
         $expenseTransaction->delete();
 
         return ApiResponse::delete('Expense transaction deleted successfully');
@@ -331,6 +359,11 @@ class ExpenseTransactionsController extends Controller
     public function restore(int $id): JsonResponse
     {
         $expenseTransaction = ExpenseTransaction::onlyTrashed()->findOrFail($id);
+
+        if ($guard = $this->guardIfPurchaseLinked($expenseTransaction)) {
+            return $guard;
+        }
+
         $expenseTransaction->restore();
 
         return ApiResponse::update('Expense transaction restored successfully');
@@ -342,6 +375,11 @@ class ExpenseTransactionsController extends Controller
     public function forceDelete(int $id): JsonResponse
     {
         $expenseTransaction = ExpenseTransaction::onlyTrashed()->findOrFail($id);
+
+        if ($guard = $this->guardIfPurchaseLinked($expenseTransaction)) {
+            return $guard;
+        }
+
         $expenseTransaction->forceDelete();
 
         return ApiResponse::delete('Expense transaction permanently deleted successfully');

@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
+use App\Http\Controllers\Api\Setups\Expenses\PurchaseExpenseSubcategoryController;
 use App\Http\Controllers\Api\Vehicle\CarRefillsController;
 use App\Http\Controllers\Api\Vehicle\CarsController;
 use App\Http\Controllers\Api\Vehicle\GasStationPaymentsController;
@@ -928,6 +929,16 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
         });
         
         Route::prefix('expenses')->name('expenses.')->group(function() {
+
+            // Purchase expense subcategories — must be registered before categories/{expenseCategory} catch-all
+            Route::prefix('categories/purchase-expense-subcategories')
+                ->name('purchase-expense-subcategories.')
+                ->group(function () {
+                    Route::get('/', [PurchaseExpenseSubcategoryController::class, 'index'])->name('index');
+                    Route::post('/', [PurchaseExpenseSubcategoryController::class, 'store'])->name('store');
+                    Route::put('/{purchaseExpenseSubcategory}', [PurchaseExpenseSubcategoryController::class, 'update'])->name('update');
+                    Route::delete('/{purchaseExpenseSubcategory}', [PurchaseExpenseSubcategoryController::class, 'destroy'])->name('destroy');
+                });
 
             // Expense Categories Controller
             Route::controller(ExpenseCategoriesController::class)->prefix('categories')->name('categories.')->group(function () {
