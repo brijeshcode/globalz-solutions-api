@@ -23,20 +23,13 @@ class PurchaseResource extends JsonResource
             'currency_rate' => $this->currency_rate,
             
             // Financial fields
-            'shipping_fee_usd' => $this->shipping_fee_usd,
-            'customs_fee_usd' => $this->customs_fee_usd,
-            'other_fee_usd' => $this->other_fee_usd,
-            'tax_usd' => $this->tax_usd,
-            'shipping_fee_usd_percent' => $this->shipping_fee_usd_percent,
-            'customs_fee_usd_percent' => $this->customs_fee_usd_percent,
-            'other_fee_usd_percent' => $this->other_fee_usd_percent,
-            'tax_usd_percent' => $this->tax_usd_percent,
             'sub_total' => $this->sub_total,
             'sub_total_usd' => $this->sub_total_usd,
             'discount_amount' => $this->discount_amount,
             'discount_amount_usd' => $this->discount_amount_usd,
             'total' => $this->total,
             'total_usd' => $this->total_usd,
+            'total_expense_usd' => $this->total_expense_usd,
             'final_total' => $this->final_total,
             'final_total_usd' => $this->final_total_usd,
             
@@ -105,9 +98,7 @@ class PurchaseResource extends JsonResource
                         'discount_amount' => $item->discount_amount,
                         'total_price' => $item->total_price,
                         'total_price_usd' => $item->total_price_usd,
-                        'total_shipping_usd' => $item->total_shipping_usd,
-                        'total_customs_usd' => $item->total_customs_usd,
-                        'total_other_usd' => $item->total_other_usd,
+                        'total_expense_usd' => $item->total_expense_usd,
                         'final_total_cost_usd' => $item->final_total_cost_usd,
                         'cost_per_item_usd' => $item->cost_per_item_usd,
                         'note' => $item->note,
@@ -132,6 +123,29 @@ class PurchaseResource extends JsonResource
                 });
             }),
             
+            'purchase_expenses' => $this->whenLoaded('purchaseExpenses', function () {
+                return $this->purchaseExpenses->map(function ($pe) {
+                    $tx = $pe->expenseTransaction;
+                    return [
+                        'id'                     => $pe->id,
+                        'exclude_from_item_cost' => $pe->exclude_from_item_cost,
+                        'expense_transaction'    => $tx ? [
+                            'id'                   => $tx->id,
+                            'amount'               => $tx->amount,
+                            'amount_usd'           => $tx->amount_usd,
+                            'currency_id'          => $tx->currency_id,
+                            'currency_rate'        => $tx->currency_rate,
+                            'account_id'           => $tx->account_id,
+                            'payment_note'         => $tx->payment_note,
+                            'expense_category'     => $tx->relationLoaded('expenseCategory') ? [
+                                'id'   => $tx->expenseCategory->id,
+                                'name' => $tx->expenseCategory->name,
+                            ] : null,
+                        ] : null,
+                    ];
+                });
+            }),
+
             // Shipping status
             'status' => $this->status,
             

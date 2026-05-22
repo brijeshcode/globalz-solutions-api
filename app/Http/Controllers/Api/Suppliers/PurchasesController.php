@@ -115,7 +115,6 @@ class PurchasesController extends Controller
             'supplier:id,code,name',
             'warehouse:id,name',
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-            // 'account:id,name',
             'purchaseItems.item:id,code,short_name',
             'purchaseExpenses.expenseTransaction.expenseCategory:id,name',
             'documents'
