@@ -79,11 +79,13 @@ class PurchaseExpenseService
         $category = ExpenseCategory::findOrFail($data['expense_category_id']);
         $subject  = "{$category->name} — Purchase {$purchase->purchase_code}";
 
+        $isPaid = $data['is_paid'] ?? false;
+
         $expenseTx = ExpenseTransaction::create([
             'date'                => $purchase->date,
             'expense_month'       => $purchase->date->format('Y-m'),
             'expense_category_id' => $data['expense_category_id'],
-            'account_id'          => null,
+            'account_id'          => $isPaid ? ($data['account_id'] ?? null) : null,
             'subject'             => $subject,
             'note'                => $subject,
             'amount'              => $data['amount'],
@@ -102,7 +104,7 @@ class PurchaseExpenseService
             'exclude_from_item_cost' => $data['exclude_from_item_cost'] ?? false,
         ]);
 
-        if ($data['is_paid'] ?? false) {
+        if ($isPaid) {
             ExpensePayment::create([
                 'expense_transaction_id' => $expenseTx->id,
                 'account_id'             => $data['account_id'],
@@ -127,10 +129,13 @@ class PurchaseExpenseService
         $category  = ExpenseCategory::findOrFail($data['expense_category_id']);
         $subject   = "{$category->name} — Purchase {$purchase->purchase_code}";
 
+        $isPaid = $data['is_paid'] ?? false;
+
         $expenseTx->updateQuietly([
             'date'                => $purchase->date,
             'expense_month'       => $purchase->date->format('Y-m'),
             'expense_category_id' => $data['expense_category_id'],
+            'account_id'          => $isPaid ? ($data['account_id'] ?? null) : null,
             'subject'             => $subject,
             'note'                => $subject,
             'amount'              => $data['amount'],
@@ -145,7 +150,7 @@ class PurchaseExpenseService
 
         $existingPayment = $expenseTx->payments()->first();
 
-        if ($data['is_paid'] ?? false) {
+        if ($isPaid) {
             if ($existingPayment) {
                 $existingPayment->update([
                     'account_id'    => $data['account_id'],
