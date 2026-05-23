@@ -7,6 +7,8 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Employees\Salary;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Setups\Expenses\ExpenseCategory;
+use App\Models\Vehicle\GasStationPayment;
+use App\Helpers\FeatureHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -28,15 +30,20 @@ class ExpenseReportController extends Controller
         $expenseReport = $this->getExpenseReport($fromDate, $toDate, $month, false);
         $excludedCategoryReport = $this->getExpenseReport($fromDate, $toDate, $month, true);
         $salaryReport = $this->getSalaryReport($fromDate, $toDate, $month);
-
-        return ApiResponse::send('Expense report retrieved successfully', 200, [
+        $data = [
             'from_date' => $fromDate,
             'to_date' => $toDate,
             'month' => $month,
             'expense_report' => $expenseReport,
             'excluded_category_report' => $excludedCategoryReport,
             'salary_report' => $salaryReport,
-        ]);
+        ];
+
+        if (FeatureHelper::isVehicleModule()) {
+            $data['gas_station_report'] = $this->getGasStationPaymentReport($fromDate, $toDate, $month);
+        }
+
+        return ApiResponse::send('Expense report retrieved successfully', 200, $data);
     }
 
     private function getExpenseReport(?string $fromDate, ?string $toDate, ?string $month, bool $excludedOnly): array
@@ -185,6 +192,52 @@ class ExpenseReportController extends Controller
 
         return [
             'categories' => $result,
+            'totals' => [
+                'total' => round($grandTotal, 2),
+                'total_usd' => round($grandTotalUsd, 8),
+            ],
+        ];
+    }
+
+    private function getGasStationPaymentReport(?string $fromDate, ?string $toDate, ?string $month): array
+    {
+        $payments = GasStationPayment::query()
+            ->join('gas_stations', 'gas_station_payments.gas_station_id', '=', 'gas_stations.id')
+            ->selectRaw('
+                gas_stations.id as gas_station_id,
+                gas_stations.name as gas_station_name,
+                SUM(gas_station_payments.amount) as total,
+                SUM(gas_station_payments.amount_usd) as total_usd
+            ')
+            ->whereNull('gas_station_payments.deleted_at')
+            ->when($fromDate, fn($q) => $q->where('gas_station_payments.date', '>=', $fromDate))
+            ->when($toDate, fn($q) => $q->where('gas_station_payments.date', '<=', $toDate))
+            ->when($month, fn($q) => $q->whereRaw("DATE_FORMAT(gas_station_payments.date, '%Y-%m') = ?", [$month]))
+            ->whereNull('gas_stations.deleted_at')
+            ->groupBy('gas_stations.id', 'gas_stations.name')
+            ->orderBy('gas_stations.name')
+            ->get();
+
+        $grandTotal = 0;
+        $grandTotalUsd = 0;
+
+        $stations = $payments->map(function ($payment) use (&$grandTotal, &$grandTotalUsd) {
+            $total = round((float) $payment->total, 2);
+            $totalUsd = round((float) $payment->total_usd, 8);
+
+            $grandTotal += $total;
+            $grandTotalUsd += $totalUsd;
+
+            return [
+                'gas_station_id' => $payment->gas_station_id,
+                'gas_station_name' => $payment->gas_station_name,
+                'total' => $total,
+                'total_usd' => $totalUsd,
+            ];
+        })->toArray();
+
+        return [
+            'gas_stations' => $stations,
             'totals' => [
                 'total' => round($grandTotal, 2),
                 'total_usd' => round($grandTotalUsd, 8),
