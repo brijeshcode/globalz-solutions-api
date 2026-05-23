@@ -610,8 +610,17 @@ class ExpenseTransactionsController extends Controller
         } 
         
         if ($request->has('date_to')) {
-            $query->toDate( $request->date_to);
+            $query->toDate($request->date_to);
         }
+
+        if ($request->has('min_amount')) {
+            $query->where('amount', '>=', $request->input('min_amount'));
+        }
+
+        if ($request->has('max_amount')) {
+            $query->where('amount', '<=', $request->input('max_amount'));
+        }
+
         return $query;
 
     }
