@@ -60,11 +60,11 @@ class MontlyProfitReportController extends Controller
         $expensesQuery = DB::table('expense_transactions')
             ->leftJoin('expense_categories', 'expense_transactions.expense_category_id', '=', 'expense_categories.id')
             ->selectRaw('
-                MONTH(expense_transactions.date) as month,
-                YEAR(expense_transactions.date) as year,
+                MONTH(expense_transactions.expense_month) as month,
+                YEAR(expense_transactions.expense_month) as year,
                 SUM(expense_transactions.amount_usd) as total_expenses
             ')
-            ->whereYear('expense_transactions.date', $year)
+            ->whereYear('expense_transactions.expense_month', $year)
             ->whereNull('expense_transactions.deleted_at')
             ->where(function ($query) {
                 $query->whereNull('expense_categories.exclude_from_profit')
