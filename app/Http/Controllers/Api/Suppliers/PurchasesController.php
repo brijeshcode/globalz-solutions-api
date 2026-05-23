@@ -88,6 +88,7 @@ class PurchasesController extends Controller
                 // 'account:id,name',
                 'purchaseItems.item:id,code,short_name',
                 'purchaseExpenses.expenseTransaction.expenseCategory:id,name',
+                'purchaseExpenses.expenseTransaction.payments',
                 'documents'
             ]);
 
@@ -117,6 +118,7 @@ class PurchasesController extends Controller
             'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
             'purchaseItems.item:id,code,short_name',
             'purchaseExpenses.expenseTransaction.expenseCategory:id,name',
+            'purchaseExpenses.expenseTransaction.payments',
             'documents'
         ]);
 
@@ -172,6 +174,7 @@ class PurchasesController extends Controller
                 // 'account:id,name',
                 'purchaseItems.item:id,code,short_name',
                 'purchaseExpenses.expenseTransaction.expenseCategory:id,name',
+                'purchaseExpenses.expenseTransaction.payments',
                 'documents'
             ]);
 
@@ -252,6 +255,8 @@ class PurchasesController extends Controller
                     'warehouse:id,name',
                     'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
                     'purchaseItems.item:id,code,short_name',
+                    'purchaseExpenses.expenseTransaction.expenseCategory:id,name',
+                    'purchaseExpenses.expenseTransaction.payments',
                     'documents'
                 ]);
 

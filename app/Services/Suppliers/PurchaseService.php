@@ -482,6 +482,13 @@ class PurchaseService
                 // Delete all purchase items
                 $purchase->purchaseItems()->delete();
 
+                // Delete purchase expenses and their expense transactions (cascade-deletes payments via boot hook)
+                $purchase->purchaseExpenses()->with('expenseTransaction')->get()
+                    ->each(function ($pe) {
+                        $pe->expenseTransaction?->delete();
+                        $pe->delete();
+                    });
+
                 // Delete the purchase (this will trigger model events for supplier balance)
                 $purchase->delete();
             });

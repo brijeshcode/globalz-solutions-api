@@ -136,7 +136,9 @@ class PurchaseResource extends JsonResource
                             'currency_id'          => $tx->currency_id,
                             'currency_rate'        => $tx->currency_rate,
                             'account_id'           => $tx->account_id,
-                            'payment_note'         => $tx->payment_note,
+                            'payment_status'       => $tx->payment_status,
+                            'is_paid'              => $tx->payment_status === 'paid',
+                            'payment_note'         => $tx->relationLoaded('payments') ? $tx->payments->first()?->note : null,
                             'expense_category'     => $tx->relationLoaded('expenseCategory') ? [
                                 'id'   => $tx->expenseCategory->id,
                                 'name' => $tx->expenseCategory->name,
