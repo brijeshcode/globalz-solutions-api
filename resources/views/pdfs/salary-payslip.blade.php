@@ -115,6 +115,7 @@
     </div>
     <div class="header-title-row">
         <div class="doc-title">Employee Pay Summary</div>
+        <div class="doc-id-value">ID#{{ $salary->prefix }}{{ $salary->code }}</div>
     </div>
 
     {{-- ── Employee Info ── --}}
