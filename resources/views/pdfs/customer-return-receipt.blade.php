@@ -132,7 +132,7 @@
             width: 100%;
             display: block;
         }
-        .meta-row { width: 100%; border-collapse: collapse; margin-bottom: 1px; }
+        .meta-row { width: 100%; border-collapse: collapse; margin-bottom: 1px; margin-top: 14px; }
         .meta-row td { padding: 1px 0; font-size: 7.5pt; }
         .meta-label { color: #555555; }
         .meta-value { text-align: left; font-weight: bold; color: #111111; }
