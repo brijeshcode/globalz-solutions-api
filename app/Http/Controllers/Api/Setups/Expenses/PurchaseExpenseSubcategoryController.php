@@ -35,13 +35,20 @@ class PurchaseExpenseSubcategoryController extends Controller
     {
         abort_unless(RoleHelper::canAdmin(), 403);
 
-        $data = $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'is_active'   => 'nullable|boolean',
-        ]);
-
         $parent = $this->getParent();
+
+        $data = $request->validate([
+            'name' => [
+                'required', 'string', 'max:255',
+                \Illuminate\Validation\Rule::unique('expense_categories', 'name')
+                    ->where('parent_id', $parent->id)
+                    ->whereNull('deleted_at'),
+            ],
+            'description'         => 'nullable|string|max:500',
+            'is_active'           => 'boolean',
+            'exclude_from_profit' => 'boolean',
+            'is_vat_category'     => 'boolean',
+        ]);
 
         $category = ExpenseCategory::create(array_merge($data, [
             'parent_id' => $parent->id,
@@ -60,9 +67,17 @@ class PurchaseExpenseSubcategoryController extends Controller
         }
 
         $data = $request->validate([
-            'name'        => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'is_active'   => 'nullable|boolean',
+            'name' => [
+                'required', 'string', 'max:255',
+                \Illuminate\Validation\Rule::unique('expense_categories', 'name')
+                    ->where('parent_id', $purchaseExpenseSubcategory->parent_id)
+                    ->ignore($purchaseExpenseSubcategory)
+                    ->whereNull('deleted_at'),
+            ],
+            'description'         => 'nullable|string|max:500',
+            'is_active'           => 'boolean',
+            'exclude_from_profit' => 'boolean',
+            'is_vat_category'     => 'boolean',
         ]);
 
         $purchaseExpenseSubcategory->update($data);

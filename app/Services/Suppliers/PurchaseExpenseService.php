@@ -40,7 +40,10 @@ class PurchaseExpenseService
      * Distribute expenses proportionally to purchase items.
      * Only expenses with exclude_from_item_cost = false are distributed.
      */
-    public function recalculateItemCosts(Purchase $purchase): void
+    /**
+     * Returns array of ['item' => PurchaseItem, 'old_cost' => float] for items whose cost changed.
+     */
+    public function recalculateItemCosts(Purchase $purchase): array
     {
         $purchase->refresh();
 
@@ -53,6 +56,7 @@ class PurchaseExpenseService
         $items       = $purchase->purchaseItems()->get();
         $subTotalUsd = (float) $purchase->sub_total_usd;
         $itemCount   = $items->count();
+        $changedItems = [];
 
         foreach ($items as $item) {
             if ($subTotalUsd > 0) {
@@ -66,12 +70,20 @@ class PurchaseExpenseService
             $finalTotalCostUsd = (float) $item->total_price_usd + $itemShare;
             $costPerItemUsd    = $item->quantity > 0 ? $finalTotalCostUsd / $item->quantity : 0;
 
+            $oldCostPerItemUsd = (float) $item->cost_per_item_usd;
+
             $item->updateQuietly([
                 'total_expense_usd'    => $itemShare,
                 'final_total_cost_usd' => $finalTotalCostUsd,
                 'cost_per_item_usd'    => $costPerItemUsd,
             ]);
+
+            if (abs($oldCostPerItemUsd - $costPerItemUsd) > 0.0001) {
+                $changedItems[] = ['item' => $item->fresh(), 'old_cost' => $oldCostPerItemUsd];
+            }
         }
+
+        return $changedItems;
     }
 
     private function createExpenseLine(Purchase $purchase, array $data): void
@@ -80,10 +92,11 @@ class PurchaseExpenseService
         $subject  = "{$category->name} — Purchase {$purchase->purchase_code}";
 
         $isPaid = $data['is_paid'] ?? false;
+        $date   = isset($data['date']) ? \Carbon\Carbon::parse($data['date']) : $purchase->date;
 
         $expenseTx = ExpenseTransaction::create([
-            'date'                => $purchase->date,
-            'expense_month'       => $purchase->date->format('Y-m'),
+            'date'                => $date,
+            'expense_month'       => $date->format('Y-m'),
             'expense_category_id' => $data['expense_category_id'],
             'account_id'          => $isPaid ? ($data['account_id'] ?? null) : null,
             'subject'             => $subject,
@@ -112,7 +125,7 @@ class PurchaseExpenseService
                 'amount_usd'             => $data['amount_usd'],
                 'currency_id'            => $data['currency_id'],
                 'currency_rate'          => $data['currency_rate'],
-                'date'                   => $purchase->date,
+                'date'                   => $date,
                 'note'                   => $data['payment_note'] ?? null,
             ]);
             // Model boot hook fires: AccountsHelper::removeBalance + syncExpensePaidAmount
@@ -130,10 +143,11 @@ class PurchaseExpenseService
         $subject   = "{$category->name} — Purchase {$purchase->purchase_code}";
 
         $isPaid = $data['is_paid'] ?? false;
+        $date   = isset($data['date']) ? \Carbon\Carbon::parse($data['date']) : $purchase->date;
 
         $expenseTx->updateQuietly([
-            'date'                => $purchase->date,
-            'expense_month'       => $purchase->date->format('Y-m'),
+            'date'                => $date,
+            'expense_month'       => $date->format('Y-m'),
             'expense_category_id' => $data['expense_category_id'],
             'account_id'          => $isPaid ? ($data['account_id'] ?? null) : null,
             'subject'             => $subject,
@@ -169,7 +183,7 @@ class PurchaseExpenseService
                     'amount_usd'             => $data['amount_usd'],
                     'currency_id'            => $data['currency_id'],
                     'currency_rate'          => $data['currency_rate'],
-                    'date'                   => $purchase->date,
+                    'date'                   => $date,
                     'note'                   => $data['payment_note'] ?? null,
                 ]);
             }

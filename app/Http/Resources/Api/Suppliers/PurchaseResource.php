@@ -136,12 +136,23 @@ class PurchaseResource extends JsonResource
                             'currency_id'          => $tx->currency_id,
                             'currency_rate'        => $tx->currency_rate,
                             'account_id'           => $tx->account_id,
+                            'account'              => $tx->relationLoaded('account') && $tx->account ? [
+                                'id'   => $tx->account->id,
+                                'name' => $tx->account->name,
+                            ] : null,
+                            'date'                 => $tx->date,
                             'payment_status'       => $tx->payment_status,
                             'is_paid'              => $tx->payment_status === 'paid',
                             'payment_note'         => $tx->relationLoaded('payments') ? $tx->payments->first()?->note : null,
-                            'expense_category'     => $tx->relationLoaded('expenseCategory') ? [
-                                'id'   => $tx->expenseCategory->id,
-                                'name' => $tx->expenseCategory->name,
+                            'expense_category'     => $tx->relationLoaded('expenseCategory') && $tx->expenseCategory ? [
+                                'id'                  => $tx->expenseCategory->id,
+                                'parent_id'           => $tx->expenseCategory->parent_id,
+                                'name'                => $tx->expenseCategory->name,
+                                'description'         => $tx->expenseCategory->description,
+                                'is_active'           => $tx->expenseCategory->is_active,
+                                'exclude_from_profit' => $tx->expenseCategory->exclude_from_profit,
+                                'is_vat_category'     => $tx->expenseCategory->is_vat_category,
+                                'is_system'           => $tx->expenseCategory->is_system,
                             ] : null,
                         ] : null,
                     ];

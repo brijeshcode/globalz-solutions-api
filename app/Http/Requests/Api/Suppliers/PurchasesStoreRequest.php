@@ -48,6 +48,7 @@ class PurchasesStoreRequest extends FormRequest
             'expenses.*.amount_usd'                  => 'required_with:expenses|numeric|min:0',
             'expenses.*.currency_id'                 => 'required_with:expenses|integer|exists:currencies,id',
             'expenses.*.currency_rate'               => 'required_with:expenses|numeric|min:0.000001',
+            'expenses.*.date'                        => 'nullable|date',
             'expenses.*.exclude_from_item_cost'      => 'nullable|boolean',
             'expenses.*.is_paid'                     => 'nullable|boolean',
             'expenses.*.account_id'                  => 'required_if:expenses.*.is_paid,true|nullable|integer|exists:accounts,id',

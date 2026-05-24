@@ -21,7 +21,13 @@ class ExpenseCategoriesController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $purchaseExpenseParentId = ExpenseCategory::getPurchaseExpenseParentId();
+
         $query = ExpenseCategory::query()
+            ->when($purchaseExpenseParentId, fn($q) => $q
+                ->where('id', '!=', $purchaseExpenseParentId)
+                ->where('parent_id', '!=', $purchaseExpenseParentId)
+            )
             ->with(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name'])
             ->searchable($request)
             ->sortable($request);

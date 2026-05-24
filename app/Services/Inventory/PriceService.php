@@ -31,7 +31,7 @@ class PriceService
     /**
      * Update item price based on purchase
      */
-    public static function updateFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, ?float $oldCostPerItemUsd = null, ?int $oldQuantity = null): void
+    public static function updateFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, ?float $oldCostPerItemUsd = null, ?int $oldQuantity = null, ?string $customNote = null, string $sourceType = 'purchase'): void
     {
         $item = $purchaseItem->item;
         $newPriceUsd = $purchaseItem->cost_per_item_usd;
@@ -52,14 +52,13 @@ class PriceService
             $priceDifference = abs($newPriceUsd - $oldPriceUsd);
 
             if ($priceDifference > 0) {
-                // Build descriptive note
-                $note = self::buildPurchaseUpdateNote($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
+                $note = $customNote ?? self::buildPurchaseUpdateNote($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
 
-                self::updatePrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $oldPriceUsd, $note, 'purchase', $purchase->id);
+                self::updatePrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $oldPriceUsd, $note, $sourceType, $purchase->id);
             }
         } else {
-            $note = "Initial price from Purchase #{$purchase->id}";
-            self::createPrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $note, 'purchase', $purchase->id);
+            $note = $customNote ?? "Initial price from Purchase #{$purchase->id}";
+            self::createPrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $note, $sourceType, $purchase->id);
         }
     }
 

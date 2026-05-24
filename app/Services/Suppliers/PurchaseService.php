@@ -92,7 +92,15 @@ class PurchaseService
                 // Sync expense lines and recalculate with expense totals
                 $this->purchaseExpenseService->syncExpenseLines($purchase, $expenses);
                 $this->recalculatePurchaseTotals($purchase);
-                $this->purchaseExpenseService->recalculateItemCosts($purchase);
+                $changedItems = $this->purchaseExpenseService->recalculateItemCosts($purchase);
+
+                // Update ItemPrice and ItemPriceHistory for items whose cost changed due to expense changes
+                if ($purchase->status === 'Delivered') {
+                    foreach ($changedItems as $changed) {
+                        $note = "Purchase #{$purchase->purchase_code} — expense adjustment (cost/unit: \${$changed['old_cost']} → \${$changed['item']->cost_per_item_usd})";
+                        PriceService::updateFromPurchase($purchase, $changed['item'], true, $changed['old_cost'], $changed['item']->quantity, $note, 'purchase_expense');
+                    }
+                }
 
                 return $purchase->fresh();
             });
