@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Customers\CustomerReturnsController;
 use App\Http\Controllers\Api\Customers\CustomerReturnOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use App\Http\Controllers\Api\Customers\CustomerStatementPdfController;
+use App\Http\Controllers\Api\Customers\CustomerReturnPdfController;
 use App\Http\Controllers\Api\Customers\SalesController;
 use App\Http\Controllers\Api\Customers\SalePdfController;
 use App\Http\Controllers\Api\Customers\SaleOrdersController;
@@ -341,7 +342,7 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             Route::patch('{customerReturn}/mark-received', 'markReceived')->name('markReceived');
-
+            Route::get('{customerReturn}/pdf/{action}', [CustomerReturnPdfController::class, 'generate'])->name('pdf');
         });
 
         // Customer Return Orders Controller (for pending return orders) - Must be defined BEFORE {customer} routes to avoid conflicts
