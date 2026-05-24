@@ -447,6 +447,10 @@ class PurchasesController extends Controller
             $query->byCode($request->input('code'));
         }
 
+        if ($request->has('prefix')) {
+            $query->byPrefix($request->prefix);
+        }
+
         if ($request->has('supplier_invoice_number')) {
             $query->bySupplierInvoiceNumber($request->input('supplier_invoice_number'));
         }

@@ -784,6 +784,10 @@ class SalesController extends Controller
             $query->byWarehouse($request->warehouse_id);
         }
 
+        if ($request->has('prefix')) {
+            $query->where('prefix', $request->prefix);
+        }
+
         if ($request->has('warehouse_id')) {
             $query->byWarehouse($request->warehouse_id);
         }

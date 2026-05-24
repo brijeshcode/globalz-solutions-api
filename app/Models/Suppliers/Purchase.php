@@ -178,6 +178,11 @@ class Purchase extends Model
         return $query->where('supplier_invoice_number', $supplierInvoiceNumber);
     }
 
+    public function scopeByPrefix($query, $prefix)
+    {
+        return $query->where('prefix', $prefix);
+    }
+
     // Accessors & Mutators
     public function getTotalItemsCountAttribute(): int
     {
