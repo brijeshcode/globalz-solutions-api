@@ -79,7 +79,7 @@ class MontlyProfitReportController extends Controller
             ->selectRaw('
                 month,
                 year,
-                SUM(amount_usd) as total_salaries
+                SUM(net_salary_usd) as total_salaries
             ')
             ->where('year', $year)
             ->whereNull('deleted_at')
