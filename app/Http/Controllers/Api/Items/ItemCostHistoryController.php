@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Items;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
+use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
-use App\Models\Suppliers\PurchaseItem;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,122 +14,70 @@ class ItemCostHistoryController extends Controller
 {
     use HasPagination;
 
-    /**
-     * Get item cost history from purchases
-     *
-     * Filters: item_id, search (item code/name), from_date, to_date
-     * Columns: purchase date, purchase transaction code with prefix, item cost price, item_cost_price_usd
-     */
     public function index(Request $request): JsonResponse
     {
         $itemId = $request->get('item_id');
         $search = $request->get('search');
 
-        // Find item by ID or search term if provided
-        $item = null;
-        if ($itemId) {
-            $item = Item::find($itemId);
-        } elseif ($search) {
-            $item = Item::where('code', $search)
-                ->orWhere('description', 'like', "%{$search}%")
-                ->first();
-        }
+        $rows = ItemPriceHistory::where('item_id', $itemId)
+            ->whereIn('source_type', ['purchase', 'initial'])
+            ->orderBy('id', 'desc')
+            ->with([
+                'source' => fn($morphTo) => $morphTo->morphWith([
+                    \App\Models\Suppliers\Purchase::class => [
+                        'currency',
+                        'items' => fn($q) => $q->where('item_id', $itemId),
+                    ],
+                    \App\Models\Items\Item::class => [],
+                ]),
+            ])
+            ->get();
 
-        // Return empty if no item specified
-        if (!$item) {
-            if ($request->boolean('withPage')) {
-                return ApiResponse::paginated(
-                    'Item cost history retrieved successfully',
-                    new \Illuminate\Pagination\LengthAwarePaginator([], 0, $this->getPerPage($request))
-                );
-            }
-            return ApiResponse::index('Item cost history retrieved successfully', []);
-        }
+        // return ApiResponse::index('Item cost history retrieved successfully', $rows->toArray());
 
-        // Build query with only necessary columns
-        $query = PurchaseItem::query()
-            ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
-            ->join('currencies', 'purchases.currency_id', '=', 'currencies.id')
-            ->select(
-                'purchase_items.id',
-                'purchase_items.purchase_id',
-                'purchase_items.price as cost_price',
-                'purchase_items.cost_per_item_usd',
-                'purchases.date as purchase_date',
-                'purchases.prefix as purchase_prefix',
-                'purchases.code as purchase_code',
-                'currencies.id as currency_id',
-                'currencies.symbol as currency_symbol',
-                'currencies.symbol_position as currency_symbol_position',
-                'currencies.decimal_places as currency_decimal_places',
-                'currencies.decimal_separator as currency_decimal_separator',
-                'currencies.thousand_separator as currency_thousand_separator'
-            );
+        $transformedItems = $rows->map(fn($row) => $this->transformRow($row));
 
-        // Apply item filter
-        if ($item) {
-            $query->where('purchase_items.item_id', $item->id);
-        }
+        
 
-        // Apply date range filter
-        if ($request->has('from_date')) {
-            // $query->where('purchases.date', '>=', $request->get('from_date'));
-            $query->fromDate( $request->get('from_date'), 'purchases.date');
-        }
-        if ($request->has('to_date')) {
-            // $query->where('purchases.date', '<=', $request->get('to_date'));
-            $query->toDate( $request->get('to_date'), 'purchases.date');
-        }
-
-        // Order by purchase date descending (latest on top)
-        $query->orderBy('purchases.date', 'desc');
-
-        // Check if pagination is requested
-        if ($request->boolean('withPage')) {
-            $paginated = $query->paginate($this->getPerPage($request));
-
-            // Transform paginated data
-            $transformedData = $paginated->through(function ($purchaseItem) {
-                return $this->transformPurchaseItem($purchaseItem);
-            });
-
-            return ApiResponse::paginated(
-                'Item cost history retrieved successfully',
-                $transformedData
-            );
-        }
-
-        // Get all results
-        $purchaseItems = $query->get();
-        $transformedItems = $purchaseItems->map(fn($pi) => $this->transformPurchaseItem($pi))->toArray();
-
-        return ApiResponse::index(
-            'Item cost history retrieved successfully',
-            $transformedItems
-        );
+        return ApiResponse::index('Item cost history retrieved successfully', $transformedItems->toArray());
     }
 
-    /**
-     * Transform purchase item for response
-     */
-    private function transformPurchaseItem($purchaseItem): array
+    private function transformRow(ItemPriceHistory $history): array
     {
+        $isPurchase = $history->source_type === 'purchase';
+
+        $purchase     = $isPurchase ? $history->source : null;
+        $purchaseItem = $purchase?->items->first();
+        $currency     = $purchase?->currency;
+
         return [
-            'id' => $purchaseItem->id,
-            'purchase_id' => $purchaseItem->purchase_id,
-            'purchase_date' => $purchaseItem->purchase_date,
-            'purchase_prefix' => $purchaseItem->purchase_prefix,
-            'purchase_code' => $purchaseItem->purchase_code,
-            'cost_price' => $purchaseItem->cost_price,
-            'cost_price_usd' => $purchaseItem->cost_per_item_usd,
-            'currency' => [
-                'id' => $purchaseItem->currency_id,
-                'symbol' => $purchaseItem->currency_symbol,
-                'symbol_position' => $purchaseItem->currency_symbol_position,
-                'decimal_places' => $purchaseItem->currency_decimal_places,
-                'decimal_separator' => $purchaseItem->currency_decimal_separator,
-                'thousand_separator' => $purchaseItem->currency_thousand_separator,
-            ],
+            'id'              => $history->id,
+            'source_type'     => $history->source_type,
+            'effective_date'  => $history->effective_date,
+            'source_id'       => $purchase?->id,
+            'source_date'     => $history->created_at,
+            'source_prefix'   => $purchase?->prefix,
+            'source_code'     => $isPurchase ? $purchase?->code : $history->source_type,
+            'cost_price'      => $isPurchase ? $purchaseItem?->price : $history->price_usd,
+            'price_usd'       => $history->price_usd,
+            'discount_percent' => $isPurchase ? $purchaseItem?->discount_percent : 0,
+            'currency_rate'   => $isPurchase ? $purchase?->currency_rate : 1,
+            'exp_share'       => $isPurchase && $purchaseItem?->quantity > 0
+                                    ? round($purchaseItem->total_expense_usd / $purchaseItem->quantity, 4)
+                                    : 0,
+            'exp_share_total' => $isPurchase ? $purchaseItem?->total_expense_usd : 0,
+            'exp_pct'         => $isPurchase && $purchaseItem?->final_total_cost_usd > 0
+                                    ? round(($purchaseItem->total_expense_usd / $purchaseItem->final_total_cost_usd) * 100, 2)
+                                    : 0,
+            'remark'          => $history->note,
+            'currency'        => $currency ? [
+                'id'                 => $currency->id,
+                'symbol'             => $currency->symbol,
+                'symbol_position'    => $currency->symbol_position,
+                'decimal_places'     => $currency->decimal_places,
+                'decimal_separator'  => $currency->decimal_separator,
+                'thousand_separator' => $currency->thousand_separator,
+            ] : null,
         ];
     }
 }

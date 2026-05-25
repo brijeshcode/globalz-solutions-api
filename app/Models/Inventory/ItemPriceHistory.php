@@ -5,6 +5,7 @@ namespace App\Models\Inventory;
 use App\Models\Items\Item;
 use App\Models\Suppliers\Purchase;
 use App\Traits\HasBooleanFilters;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -57,6 +58,11 @@ class ItemPriceHistory extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
+    }
+
+    public function source(): MorphTo
+    {
+        return $this->morphTo(__FUNCTION__, 'source_type', 'source_id');
     }
 
 

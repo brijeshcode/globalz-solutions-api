@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Items\Item;
+use App\Models\Suppliers\Purchase;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
@@ -21,6 +24,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Relation::morphMap([
+            'purchase' => Purchase::class,
+            'initial'  => Item::class,
+        ]);
+
         DB::listen(function ($query) {
             if ($query->time > 100) {
                 Log::channel('slow_queries')->warning('Slow query detected', [
