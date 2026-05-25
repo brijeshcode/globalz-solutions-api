@@ -65,19 +65,26 @@ class CustomerStatementPdfController extends Controller
                 'margin_footer' => 8,
             ]);
 
-            $customerLabel    = $customer->code . ' - ' . htmlspecialchars($customer->name);
             $pageNumberRowHtml = '
                 <table width="100%" style="font-size: 9pt; border-top: 1px solid #000000; padding-top: 5px;">
                     <tr>
-                        <td width="33%" style="text-align: left;">' . $customerLabel . '</td>
-                        <td width="33%" style="text-align: center;">Page {PAGENO} of {nbpg}</td>
-                        <td width="33%" style="text-align: right;">' . date('Y-m-d') . '</td>
+                        <td style="text-align: center;">Page {PAGENO} of {nbpg}</td>
                     </tr>
                 </table>';
 
             $mpdf->SetHTMLFooter($pageNumberRowHtml);
 
             if ($type === 'tax') {
+                $customerLabel      = $customer->code . ' - ' . htmlspecialchars($customer->name);
+                $taxPageNumberRow   = '
+                    <table width="100%" style="font-size: 9pt; border-top: 1px solid #000000; padding-top: 5px;">
+                        <tr>
+                            <td width="33%" style="text-align: left;">' . $customerLabel . '</td>
+                            <td width="33%" style="text-align: center;">Page {PAGENO} of {nbpg}</td>
+                            <td width="33%" style="text-align: right;">' . date('Y-m-d') . '</td>
+                        </tr>
+                    </table>';
+
                 $companyFooterParts = [];
                 if (!empty($companyData['address'])) $companyFooterParts[] = $companyData['address'];
                 if (!empty($companyData['phone']))   $companyFooterParts[] = $companyData['phone'];
@@ -85,19 +92,15 @@ class CustomerStatementPdfController extends Controller
                 if (!empty($companyData['website'])) $companyFooterParts[] = $companyData['website'];
                 $companyFooterLine = htmlspecialchars(implode(' | ', $companyFooterParts));
 
-                if (!empty($companyFooterLine)) {
-                    $lastPageFooterHtml =
-                        '<div style="text-align: center; font-size: 8pt; border-top: 2px solid #000000; padding-top: 4px; margin-bottom: 4px;">'
-                        . $companyFooterLine .
-                        '</div>'
-                        . $pageNumberRowHtml;
+                $lastPageFooterHtml = (!empty($companyFooterLine)
+                    ? '<div style="text-align: center; font-size: 8pt; border-top: 2px solid #000000; padding-top: 4px; margin-bottom: 4px;">' . $companyFooterLine . '</div>'
+                    : '') . $taxPageNumberRow;
 
-                    $defineFooter = '<!--mpdf <htmlpagefooter name="lastpagefooter">' . $lastPageFooterHtml . '</htmlpagefooter> mpdf-->';
-                    $switchFooter = '<!--mpdf <sethtmlpagefooter name="lastpagefooter" page="ALL" value="1" /> mpdf-->';
+                $defineFooter = '<!--mpdf <htmlpagefooter name="taxfooter">' . $lastPageFooterHtml . '</htmlpagefooter> mpdf-->';
+                $switchFooter = '<!--mpdf <sethtmlpagefooter name="taxfooter" page="ALL" value="1" /> mpdf-->';
 
-                    $html = str_replace('<body>', '<body>' . $defineFooter, $html);
-                    $html = str_replace('</body>', $switchFooter . '</body>', $html);
-                }
+                $html = str_replace('<body>', '<body>' . $defineFooter, $html);
+                $html = str_replace('</body>', $switchFooter . '</body>', $html);
             }
 
             $mpdf->WriteHTML($html);

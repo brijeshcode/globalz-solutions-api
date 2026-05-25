@@ -70,6 +70,8 @@
 <body>
 <div class="container">
 
+    @if($type === 'tax')
+
     <div class="header-row clearfix">
         <div class="header-left">
             @if($showCompanyHeader)
@@ -81,7 +83,7 @@
                     <div class="company-name">{{ $company['name'] }}</div>
                 @endif
                 @if(!empty($company['tax_number']))
-                    <div style="margin-top: 5px; font-weight: bold;">TVA: {{ $company['tax_number'] }}</div>
+                    <div style="margin-top: 5px; font-weight: bold;">{{ $company['tax_number'] }}</div>
                 @endif
             @endif
         </div>
@@ -146,13 +148,42 @@
         </div>
     </div>
 
+    @else
+
+    <div class="header-row" style="text-align: center;">
+        <div class="statement-title">SOA</div>
+    </div>
+
+    <div class="info-section">
+        <table class="info-table">
+            <tr>
+                <td class="info-label">Client:</td>
+                <td>{{ $customer->name }}</td>
+            </tr>
+            @if(!empty($customer->address) || !empty($customer->city))
+            <tr>
+                <td class="info-label">Address:</td>
+                <td>{{ collect([$customer->address, $customer->city])->filter()->implode(', ') }}</td>
+            </tr>
+            @endif
+            @if(!empty($customer->mobile))
+            <tr>
+                <td class="info-label">Tel:</td>
+                <td>{{ $customer->mobile }}</td>
+            </tr>
+            @endif
+        </table>
+    </div>
+
+    @endif
+
     <table class="transactions-table">
         <thead>
             <tr>
                 <th class="text-left" style="width: 12%;">Date</th>
-                <th class="text-left" style="width: 12%;">Type</th>
-                <th class="text-left" style="width: 13%;">Transaction ID</th>
-                <th class="text-left" style="width: 20%;">Note</th>
+                <th class="text-left" style="width: 12%;">TRANS</th>
+                <th class="text-left" style="width: 13%;">REF</th>
+                <th class="text-left" style="width: 20%;">INFO</th>
                 <th class="text-right" style="width: 14%;">Debit</th>
                 <th class="text-right" style="width: 14%;">Credit</th>
                 <th class="text-right" style="width: 15%;">Balance</th>
@@ -173,6 +204,7 @@
             </tr>
             @endforeach
         </tbody>
+        @if($type === 'tax')
         <tfoot>
             <tr class="total-row">
                 <td colspan="4" class="text-left">Total</td>
@@ -183,8 +215,10 @@
                 </td>
             </tr>
         </tfoot>
+        @endif
     </table>
 
+    @if($type === 'tax')
     <div class="signature-section clearfix">
         <div class="signature-box">
             <div><strong>Received By</strong></div>
@@ -195,6 +229,7 @@
             <div class="signature-line"></div>
         </div>
     </div>
+    @endif
 
 </div>
 </body>
