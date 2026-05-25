@@ -17,7 +17,7 @@
         </tr>
         @if($sale->prefix !== 'INX')
         <tr>
-            <td class="info-label">{{ __('invoice.label_tax') }}:</td>
+            <td class="info-label"></td>
             <td>{{ $sale->customer->mof_tax_number ?? '' }}</td>
         </tr>
         @endif
