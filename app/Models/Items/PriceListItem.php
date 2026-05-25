@@ -21,12 +21,14 @@ class PriceListItem extends Model
         'item_id',
         'item_description',
         'sell_price',
+        'sort_order',
     ];
 
     protected $casts = [
-        'sell_price' => 'decimal:2',
-        'price_list_id' => 'integer',
-        'item_id' => 'integer',
+        'sell_price'     => 'decimal:2',
+        'price_list_id'  => 'integer',
+        'item_id'        => 'integer',
+        'sort_order'     => 'integer',
     ];
 
     protected $searchable = [
@@ -39,12 +41,13 @@ class PriceListItem extends Model
         'item_code',
         'item_id',
         'sell_price',
+        'sort_order',
         'created_at',
         'updated_at',
     ];
 
-    protected $defaultSortField = 'id';
-    protected $defaultSortDirection = 'desc';
+    protected $defaultSortField = 'sort_order';
+    protected $defaultSortDirection = 'asc';
 
     // Relationships
     public function priceList(): BelongsTo
@@ -79,13 +82,16 @@ class PriceListItem extends Model
         parent::boot();
 
         static::creating(function ($priceListItem) {
-            // Automatically populate item_description and item_code from item if available
             if ($priceListItem->item_id) {
                 $item = Item::find($priceListItem->item_id);
                 if ($item) {
-                    $priceListItem->item_code = $priceListItem->item_code ?? $item->code;
+                    $priceListItem->item_code        = $priceListItem->item_code ?? $item->code;
                     $priceListItem->item_description = $priceListItem->item_description ?? $item->description;
                 }
+            }
+
+            if (is_null($priceListItem->sort_order)) {
+                $priceListItem->sort_order = static::where('price_list_id', $priceListItem->price_list_id)->max('sort_order') + 1;
             }
         });
 

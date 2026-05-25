@@ -895,6 +895,7 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::post('{priceList}/items', 'addItem')->name('items.store');
             Route::put('{priceList}/items/{priceListItem}', 'updateItem')->name('items.update');
             Route::delete('items/{priceListItem}', 'deleteItem')->name('items.delete');
+            Route::post('{priceList}/items/reorder', 'reorderItems')->name('items.reorder');
         });
 
         // Price List Bulk Updates Controller

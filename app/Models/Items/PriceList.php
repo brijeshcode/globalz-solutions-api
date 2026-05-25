@@ -55,7 +55,7 @@ class PriceList extends Model
     // Relationships
     public function items(): HasMany
     {
-        return $this->hasMany(PriceListItem::class);
+        return $this->hasMany(PriceListItem::class)->orderBy('sort_order');
     }
 
     public function priceListItems(): HasMany

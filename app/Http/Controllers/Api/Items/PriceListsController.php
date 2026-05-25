@@ -527,6 +527,33 @@ class PriceListsController extends Controller
     }
 
     /**
+     * Reorder items within a price list.
+     * Accepts: { "ids": [3, 1, 2] } — ordered array of price list item IDs.
+     */
+    public function reorderItems(Request $request, PriceList $priceList): JsonResponse
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'required|integer|exists:price_list_items,id',
+        ]);
+
+        $ids = $request->input('ids');
+
+        $belongsToList = $priceList->items()->whereIn('id', $ids)->count();
+        if ($belongsToList !== count($ids)) {
+            return ApiResponse::customError('Some items do not belong to this price list', 422);
+        }
+
+        DB::transaction(function () use ($ids) {
+            foreach ($ids as $position => $id) {
+                PriceListItem::where('id', $id)->update(['sort_order' => $position + 1]);
+            }
+        });
+
+        return ApiResponse::update('Price list items reordered successfully');
+    }
+
+    /**
      * Delete a specific price list item
      */
     public function deleteItem(PriceListItem $priceListItem): JsonResponse
