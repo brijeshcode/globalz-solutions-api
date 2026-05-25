@@ -1,5 +1,7 @@
 <div class="info-right">
+    @if($sale->prefix !== 'INX')
     <div class="info-title">{{ __('invoice.invoice_details') }}</div>
+    @endif
     <table class="info-table">
         <tr>
             <td class="info-label">{{ __('invoice.label_date') }}:</td>
@@ -17,7 +19,7 @@
             <td>{{ $sale->currency->code ?? 'N/A' }}</td>
         </tr>
         @endif
-        @if($sale->salesperson)
+        @if($sale->salesperson && $sale->prefix !== 'INX')
         <tr>
             <td class="info-label">{{ __('invoice.label_salesperson') }}:</td>
             <td>{{ $sale->salesperson->name ?? 'Not assigned' }}</td>

@@ -2,7 +2,7 @@
     <thead>
         <tr>
             <th style="width: 5%;">{{ __('invoice.col_num') }}</th>
-            <th style="width: 11%;">{{ __('invoice.col_item_code') }}</th>
+            <th style="width: 11%;">{{ $sale->prefix === 'INX' ? 'Ref' : __('invoice.col_item_code') }}</th>
             <th style="width: 32%;">{{ __('invoice.col_description') }}</th>
             <th style="width: 9%;">{{ __('invoice.col_price') }}</th>
             <th style="width: 7%;">{{ __('invoice.col_discount') }}</th>
@@ -17,7 +17,7 @@
         @foreach($sale->items as $index => $item)
         <tr>
             <td class="text-center">{{ $index + 1 }}</td>
-            <td>{{ $item->item_code ?? '' }}</td>
+            <td class="text-center">{{ $item->item_code ?? '' }}</td>
             <td>{{ $item->item->description ?? 'Unknown Item' }}</td>
             <td class="text-center">{{ number_format($item->price, 2) }}</td>
             <td class="text-center">{{ number_format($item->discount_percent, 2) }}%</td>

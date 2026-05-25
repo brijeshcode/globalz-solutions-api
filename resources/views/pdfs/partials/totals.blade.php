@@ -1,5 +1,6 @@
 <table class="items-table" style="margin-top: -1px;">
     <tbody>
+        @if($sale->prefix !== 'INX')
         <tr class="totals-row first-total">
             <td colspan="4" style="width: 45%; border: none;">
                 <div style="font-size: 8pt;">
@@ -27,6 +28,7 @@
             <td class="font-bold" style="width: {{ $sale->prefix === 'INV' ? 13 : 18 }}%; white-space: nowrap;">{{ __('invoice.amount_discount') }}</td>
             <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->discount_amount, 2) }}</td>
         </tr>
+        @endif
 
         @if($sale->prefix === 'INV')
         <tr class="totals-row">

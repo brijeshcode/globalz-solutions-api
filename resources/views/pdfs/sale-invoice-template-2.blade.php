@@ -96,7 +96,9 @@
             </div>
 
             <div class="header-center">
+                @if($sale->prefix !== 'INX')
                 <div class="invoice-title">{{ __('invoice.title') }}</div>
+                @endif
                 <div class="invoice-code">{{ $sale->prefix }}-{{ $sale->code }}</div>
             </div>
 
