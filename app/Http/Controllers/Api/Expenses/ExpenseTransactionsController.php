@@ -621,6 +621,14 @@ class ExpenseTransactionsController extends Controller
             $query->where('amount', '<=', $request->input('max_amount'));
         }
 
+        if ($request->has('payment_status')) {
+            if ($request->input('payment_status') === 'paid') {
+                $query->whereNotNull('account_id');
+            } elseif ($request->input('payment_status') === 'unpaid') {
+                $query->whereNull('account_id');
+            }
+        }
+
         return $query;
 
     }
