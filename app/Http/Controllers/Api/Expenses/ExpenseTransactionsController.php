@@ -583,6 +583,16 @@ class ExpenseTransactionsController extends Controller
         return $node;
     }
 
+    private function resolveDescendantCategoryIds(int $categoryId): array
+    {
+        $ids = [$categoryId];
+        $children = ExpenseCategory::where('parent_id', $categoryId)->pluck('id')->toArray();
+        foreach ($children as $childId) {
+            $ids = array_merge($ids, $this->resolveDescendantCategoryIds($childId));
+        }
+        return $ids;
+    }
+
     private function query(Request $request)
     {
         $search = $request->input('search');
@@ -594,7 +604,9 @@ class ExpenseTransactionsController extends Controller
             ->searchable($request);
 
         if ($request->has('expense_category_id')) {
-            $query->where('expense_category_id', $request->input('expense_category_id'));
+            $categoryId  = (int) $request->input('expense_category_id');
+            $categoryIds = $this->resolveDescendantCategoryIds($categoryId);
+            $query->whereIn('expense_category_id', $categoryIds);
         }
 
         if ($request->has('account_id')) {

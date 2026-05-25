@@ -28,6 +28,8 @@ class PurchasesStoreRequest extends FormRequest
             // - total_usd
             // - final_total_usd
 
+            'tax_usd' => 'nullable|numeric|min:0|max:999999.9999',
+            'tax_usd_percent' => 'nullable|numeric|min:0|max:100',
             'discount_amount' => 'nullable|numeric|min:0|max:999999.9999',
             'discount_amount_usd' => 'nullable|numeric|min:0|max:999999.9999',
             'note' => 'nullable|string|max:1000',

@@ -29,6 +29,8 @@ class PurchaseResource extends JsonResource
             'discount_amount_usd' => $this->discount_amount_usd,
             'total' => $this->total,
             'total_usd' => $this->total_usd,
+            'tax_usd' => $this->tax_usd,
+            'tax_usd_percent' => $this->tax_usd_percent,
             'total_expense_usd' => $this->total_expense_usd,
             'final_total' => $this->final_total,
             'final_total_usd' => $this->final_total_usd,
