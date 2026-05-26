@@ -79,22 +79,36 @@ class PurchaseService
      */
     public function updatePurchaseWithItems(Purchase $purchase, array $purchaseData, array $items = [], array $expenses = []): Purchase
     {
+        // Pre-validate inventory for items that will be removed, BEFORE acquiring any transaction lock.
+        // This lets us fail fast with a clear error without holding the purchases row lock.
+        if ($purchase->status === 'Delivered') {
+            $incomingIds = collect($items)->pluck('id')->filter()->values()->toArray();
+            $toBeRemoved = $purchase->purchaseItems()
+                ->when(!empty($incomingIds), fn($q) => $q->whereNotIn('id', $incomingIds))
+                ->get();
+
+            foreach ($toBeRemoved as $item) {
+                $this->validateInventoryBeforeDeletion($item->item_id, $purchase->warehouse_id, $item->quantity);
+            }
+        }
+
+        $removedItems = collect();
+
         try {
-            return DB::transaction(function () use ($purchase, $purchaseData, $items, $expenses) {
-                // Update purchase data (exclude items from purchaseData)
+            // Short transaction: only data record updates (purchases + purchase_items).
+            // Inventory and price side-effects for removed items are handled AFTER this
+            // transaction commits so the purchases row lock is released quickly.
+            $updatedPurchase = DB::transaction(function () use ($purchase, $purchaseData, $items, $expenses, &$removedItems) {
                 $purchase->update($purchaseData);
 
-                $this->updatePurchaseItems($purchase, $items);
+                $removedItems = collect($this->updatePurchaseItems($purchase, $items));
 
-                // Recalculate purchase totals
                 $this->recalculatePurchaseTotals($purchase);
 
-                // Sync expense lines and recalculate with expense totals
                 $this->purchaseExpenseService->syncExpenseLines($purchase, $expenses);
                 $this->recalculatePurchaseTotals($purchase);
                 $changedItems = $this->purchaseExpenseService->recalculateItemCosts($purchase);
 
-                // Update ItemPrice and ItemPriceHistory for items whose cost changed due to expense changes
                 if ($purchase->status === 'Delivered') {
                     foreach ($changedItems as $changed) {
                         $note = "Purchase #{$purchase->purchase_code} — expense adjustment (cost/unit: \${$changed['old_cost']} → \${$changed['item']->cost_per_item_usd})";
@@ -104,19 +118,27 @@ class PurchaseService
 
                 return $purchase->fresh();
             });
+
+            // Post-transaction: adjust inventory and clean up prices for removed items.
+            // This runs after the purchases lock has been released.
+            if ($updatedPurchase->status === 'Delivered' && $removedItems->isNotEmpty()) {
+                foreach ($removedItems as $removedItem) {
+                    InventoryService::subtract($removedItem->item_id, $updatedPurchase->warehouse_id, $removedItem->quantity);
+                    PriceService::deleteFromPurchase($updatedPurchase, $removedItem);
+                    SupplierItemPriceService::deleteFromPurchase($updatedPurchase, $removedItem);
+                }
+            }
+
+            return $updatedPurchase;
         } catch (\InvalidArgumentException $e) {
-            // Validation errors are already user-friendly, just log and re-throw
             Log::warning('Purchase update validation failed', [
                 'error' => $e->getMessage(),
                 'purchase_id' => $purchase->id,
                 'purchase_code' => $purchase->code ?? 'N/A',
                 'items_count' => count($items),
             ]);
-
-            // Re-throw validation errors as-is (already have clear messages)
             throw $e;
         } catch (\Exception $e) {
-            // System/unexpected errors need context and user-friendly wrapping
             Log::error('Failed to update purchase with items', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -124,8 +146,6 @@ class PurchaseService
                 'purchase_code' => $purchase->code ?? 'N/A',
                 'items_count' => count($items),
             ]);
-
-            // Re-throw with user-friendly message
             throw new \RuntimeException(
                 "Failed to update purchase #{$purchase->id}: " . $e->getMessage() .
                 ". All changes have been rolled back.",
@@ -149,9 +169,10 @@ class PurchaseService
     }
 
     /**
-     * Update purchase items individually
+     * Update purchase items individually. Returns soft-deleted removed items
+     * so the caller can handle inventory/price side-effects after the transaction.
      */
-    private function updatePurchaseItems(Purchase $purchase, array $items): void
+    private function updatePurchaseItems(Purchase $purchase, array $items): array
     {
         $processedItemIds = [];
         foreach ($items as $itemData) {
@@ -160,26 +181,26 @@ class PurchaseService
                 $purchaseItem = PurchaseItem::where('id', $itemData['id'])
                     ->where('purchase_id', $purchase->id)
                     ->first();
-                
+
                 if ($purchaseItem) {
-                    
+
                     $oldCostPerItemUsd = $purchaseItem->cost_per_item_usd;
                     $oldQuantity = $purchaseItem->quantity;
-                    
+
                     // Update only the fields that can change, preserve timestamps
                     $price = $itemData['price'];
                     $quantity = $itemData['quantity'];
                     $discountAmount = $itemData['discount_amount'] ?? 0; // This is total line discount
                     $discountPercent = $itemData['discount_percent'] ?? 0;
-                    
+
                     // Calculate discount amount if discount percent is provided
                     if ($discountPercent > 0) {
                         $discountAmount = ($price * $quantity * $discountPercent) / 100;
                     }
-                    
+
                     $totalBeforeDiscount = $price * $quantity;
                     $totalPrice = $totalBeforeDiscount - $discountAmount;
-                    
+
                     $newTotalPriceUsd = CurrencyHelper::toUsd($purchase->currency_id, $totalPrice, $purchase->currency_rate);
                     $finalTotalCostUsd = $newTotalPriceUsd; // expenses distributed separately
                     $costPerItemUsd    = $quantity > 0 ? ($finalTotalCostUsd / $quantity) : 0;
@@ -212,19 +233,20 @@ class PurchaseService
                 $processedItemIds[] = $purchaseItem->id;
             }
         }
-        
-        // Handle removed items - items that exist in DB but not in the update list
+
+        // Collect removed items BEFORE soft-deleting so the caller can handle
+        // inventory/price side-effects after the transaction commits.
         $removedItems = $purchase->purchaseItems()
             ->whereNotIn('id', $processedItemIds)
-            ->get();
-        foreach ($removedItems as $removedItem) {
-            $this->handlePurchaseItemDeletion($purchase, $removedItem);
-        }
-        
-        // Delete the removed items from database
+            ->get()
+            ->all();
+
+        // Soft-delete removed items from the database
         $purchase->purchaseItems()
             ->whereNotIn('id', $processedItemIds)
             ->delete();
+
+        return $removedItems;
     }
 
     /**
