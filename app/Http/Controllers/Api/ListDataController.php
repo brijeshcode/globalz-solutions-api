@@ -47,7 +47,7 @@ class ListDataController extends Controller
             'warehouses' => $this->warehouses(),
             'currencies' => $this->currencies(),
             'users' => $this->users(),
-            
+
             'customers' => $this->customers(),
             'customerPaymentTerms'  => $this->customerPaymentTerms(),
             'customerGroups'  => $this->customerGroups(),
@@ -126,7 +126,7 @@ class ListDataController extends Controller
     // suppliers
     private function suppliers()
     {
-        return Supplier::active()->orderby('name')->get(['id', 'code', 'name', 'currency_id']);
+        return Supplier::active()->orderBy('name')->get(['id', 'code', 'name', 'currency_id']);
     }
 
     //customers
@@ -255,7 +255,7 @@ class ListDataController extends Controller
     private function items()
     {
         $with = ['itemUnit:id,name,short_name', 'itemPrice:id,item_id,price_usd', 'inventories:id,warehouse_id,item_id,quantity', 'taxCode:id,name,tax_percent'];
-        return Item::with($with)->orderBy('description')->active()->get(['id', 'description', 'code', 'short_name', 'item_unit_id', 'tax_code_id']);
+        return Item::with($with)->orderBy('description')->get(['id', 'description', 'code', 'short_name', 'item_unit_id', 'tax_code_id', 'is_active']);
     }
 
     private function itemPriceLists()
