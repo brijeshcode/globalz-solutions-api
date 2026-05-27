@@ -1,17 +1,26 @@
 <table class="items-table">
     <thead>
+        @if($sale->prefix === 'INV')
         <tr>
-            <th style="width: 5%;">{{ __('invoice.col_num') }}</th>
-            <th style="width: 11%;">{{ $sale->prefix === 'INX' ? 'Ref' : __('invoice.col_item_code') }}</th>
-            <th style="width: 32%;">{{ __('invoice.col_description') }}</th>
-            <th style="width: 9%;">{{ __('invoice.col_price') }}</th>
-            <th style="width: 7%;">{{ __('invoice.col_discount') }}</th>
-            <th style="width: 9%;">{{ __('invoice.col_qty') }}</th>
-            @if($sale->prefix === 'INV')
-            <th style="width: 8%;">{{ __('invoice.col_tax') }}</th>
-            @endif
-            <th style="width: 12%;">{{ __('invoice.col_total') }}</th>
+            <th style="width: 5%;">#</th>
+            <th style="width: 11%;">Item Code</th>
+            <th style="width: 32%;">Description</th>
+            <th style="width: 9%;">Price</th>
+            <th style="width: 7%;">Disc.%</th>
+            <th style="width: 9%;">Qty.</th>
+            <th style="width: 12%;">Total</th>
         </tr>
+        @else
+        <tr>
+            <th style="width: 5%;">#</th>
+            <th style="width: 11%;">REF</th>
+            <th style="width: 32%;">Item Details</th>
+            <th style="width: 9%;">Price</th>
+            <th style="width: 7%;">Disc.%</th>
+            <th style="width: 9%;">Quantity</th>
+            <th style="width: 12%;">Total</th>
+        </tr>
+        @endif
     </thead>
     <tbody>
         @foreach($sale->items as $index => $item)
@@ -22,9 +31,6 @@
             <td class="text-center">{{ number_format($item->price, 2) }}</td>
             <td class="text-center">{{ number_format($item->discount_percent, 2) }}%</td>
             <td class="text-center">{{ rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }}</td>
-            @if($sale->prefix === 'INV')
-            <td class="text-center">{{ $item->tax_label ?? '' }}</td>
-            @endif
             <td class="text-right font-bold">{{ number_format($item->total_net_sell_price, 2) }}</td>
         </tr>
         @endforeach
@@ -43,9 +49,6 @@
             <td>&nbsp;</td>
             <td>&nbsp;</td>
             <td>&nbsp;</td>
-            @if($sale->prefix === 'INV')
-            <td>&nbsp;</td>
-            @endif
             <td>&nbsp;</td>
         </tr>
         @endfor

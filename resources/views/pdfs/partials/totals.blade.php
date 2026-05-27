@@ -44,7 +44,7 @@
 
         <tr class="totals-row">
             <td colspan="{{ $invoiceSettings['show_local_currency_total'] ? 4 : 6 }}" style="width: 43%; border: none;"></td>
-            @if($invoiceSettings['show_local_currency_total'])
+            @if($invoiceSettings['show_local_currency_total'] && $sale->prefix !== 'INX')
             <td class="font-bold" style="width:12%; white-space: nowrap;">{{ __('invoice.net_total') }} {{ $invoiceSettings['local_currency_symbol'] }}</td>
             <td class="text-right font-bold" style="width: 15%;">{{ number_format($sale->total_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
             @endif
