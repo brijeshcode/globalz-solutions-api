@@ -449,8 +449,9 @@ class PurchaseService
 
         $subTotal    = $items->sum('total_price');
         $subTotalUsd = $items->sum('total_price_usd');
-        $total       = $subTotal - (float) $purchase->discount_amount;
-        $totalUsd    = $subTotalUsd - (float) $purchase->discount_amount_usd;
+        $taxUsd      = (float) $purchase->tax_usd;
+        $total       = $subTotal - (float) $purchase->discount_amount + CurrencyHelper::fromUsd($purchase->currency_id, $taxUsd, $purchase->currency_rate);
+        $totalUsd    = $subTotalUsd - (float) $purchase->discount_amount_usd + $taxUsd;
 
         $totalExpenseUsd = (float) PurchaseExpense::where('purchase_id', $purchase->id)
             ->join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
