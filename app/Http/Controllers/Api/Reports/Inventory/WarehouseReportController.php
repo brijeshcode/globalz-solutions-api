@@ -7,6 +7,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Inventory\Inventory;
 use App\Models\Items\Item;
 use App\Models\Setups\Warehouse;
+use App\Services\Inventory\PriceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -433,10 +434,17 @@ class WarehouseReportController extends Controller
 
             $fixResults = $this->performInventoryFix(null, $warehouseId, $dryRun);
 
+            // Repair item_prices to match latest item_price_histories
+            // $priceFixResults = [];
+            // if (!$dryRun) {
+            //     $priceFixResults = PriceService::reindexPurchasePrices();
+            // }
+
             Log::info('=== INVENTORY FIX COMPLETED ===', [
                 'total_checked' => $fixResults['total_checked'],
                 'total_fixed' => $fixResults['total_fixed'],
                 'total_errors' => count($fixResults['errors']),
+                // 'prices_fixed' => count($priceFixResults['item_prices'] ?? []),
             ]);
 
             $message = $dryRun

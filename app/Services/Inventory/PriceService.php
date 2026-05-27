@@ -366,9 +366,10 @@ class PriceService
      */
     public static function deleteFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): void
     {
-        // Soft delete price history entries for this purchase
+        // Soft delete ALL price history entries tied to this purchase (covers both
+        // 'purchase' and 'purchase_expense' entries created during expense recalculations)
         ItemPriceHistory::where('item_id', $purchaseItem->item_id)
-            ->where('source_type', 'purchase')
+            ->whereIn('source_type', ['purchase', 'purchase_expense'])
             ->where('source_id', $purchase->id)
             ->delete();
 
@@ -392,6 +393,15 @@ class PriceService
     }
 
     /**
+     * Repair a single item's current price to match its latest price history entry.
+     * Safe to call at any time — idempotent.
+     */
+    public static function repairItemPrice(int $itemId): void
+    {
+        self::restorePriceFromHistory($itemId, now()->toDateString());
+    }
+
+    /**
      * Restore item price from the most recent price history record
      * Used after deleting a purchase or purchase return
      */
@@ -404,27 +414,19 @@ class PriceService
             ->first();
 
         if ($previousPriceHistory) {
-            // Update current price to the previous price from history
-            $currentItemPrice = self::getCurrentPrice($itemId);
-            if ($currentItemPrice) {
-                $currentItemPrice->update([
-                    'price_usd' => $previousPriceHistory->price_usd,
-                    'effective_date' => $previousPriceHistory->effective_date,
-                ]);
-            }
+            ItemPrice::where('item_id', $itemId)->update([
+                'price_usd' => $previousPriceHistory->price_usd,
+                'effective_date' => $previousPriceHistory->effective_date,
+            ]);
         } else {
-            // No price history found, check if item has starting price
+            // No price history found — fall back to starting price or zero
             $item = Item::find($itemId);
-            if ($item && $item->starting_price > 0) {
-                $currentItemPrice = self::getCurrentPrice($itemId);
-                if ($currentItemPrice) {
-                    $currentItemPrice->update([
-                        'price_usd' => $item->starting_price,
-                        'effective_date' => $effectiveDate,
-                    ]);
-                }
-            }
-            // If no starting price either, keep current price as is
+            $fallbackPrice = ($item && $item->starting_price > 0) ? $item->starting_price : 0;
+
+            ItemPrice::where('item_id', $itemId)->update([
+                'price_usd' => $fallbackPrice,
+                'effective_date' => $effectiveDate,
+            ]);
         }
     }
 

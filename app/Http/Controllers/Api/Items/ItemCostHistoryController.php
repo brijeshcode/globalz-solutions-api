@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Items;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
+use App\Jobs\RepairItemPriceJob;
 use App\Models\Inventory\ItemPriceHistory;
-use App\Models\Items\Item;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +17,11 @@ class ItemCostHistoryController extends Controller
     public function index(Request $request): JsonResponse
     {
         $itemId = $request->get('item_id');
-        $search = $request->get('search');
+
+        // Dispatch background job to sync item_prices with latest price history
+        if ($itemId) {
+            dispatch(new RepairItemPriceJob((int) $itemId));
+        }
 
         $rows = ItemPriceHistory::where('item_id', $itemId)
             ->whereIn('source_type', ['purchase', 'initial'])
@@ -33,11 +37,7 @@ class ItemCostHistoryController extends Controller
             ])
             ->get();
 
-        // return ApiResponse::index('Item cost history retrieved successfully', $rows->toArray());
-
         $transformedItems = $rows->map(fn($row) => $this->transformRow($row));
-
-        
 
         return ApiResponse::index('Item cost history retrieved successfully', $transformedItems->toArray());
     }
