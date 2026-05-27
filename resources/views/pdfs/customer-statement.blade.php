@@ -179,6 +179,17 @@
 
     <table class="transactions-table">
         <thead>
+            @if($type === 'tax')
+            <tr>
+                <th class="text-left" style="width: 12%;">Date</th>
+                <th class="text-left" style="width: 12%;">Type</th>
+                <th class="text-left" style="width: 13%;">Transaction Id</th>
+                <th class="text-left" style="width: 20%;">Note</th>
+                <th class="text-right" style="width: 14%;">Debit</th>
+                <th class="text-right" style="width: 14%;">Credit</th>
+                <th class="text-right" style="width: 15%;">Balance</th>
+            </tr>
+            @else
             <tr>
                 <th class="text-left" style="width: 12%;">Date</th>
                 <th class="text-left" style="width: 12%;">TRANS</th>
@@ -188,6 +199,7 @@
                 <th class="text-right" style="width: 14%;">Credit</th>
                 <th class="text-right" style="width: 15%;">Balance</th>
             </tr>
+            @endif
         </thead>
         <tbody>
             @foreach($transactions as $transaction)
