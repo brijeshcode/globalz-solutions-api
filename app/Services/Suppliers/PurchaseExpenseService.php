@@ -172,6 +172,7 @@ class PurchaseExpenseService
                     'amount_usd'    => $data['amount_usd'],
                     'currency_id'   => $data['currency_id'],
                     'currency_rate' => $data['currency_rate'],
+                    'date'          => $date,
                     'note'          => $data['payment_note'] ?? null,
                 ]);
                 // Updated hook fires: reverses old balance, applies new
