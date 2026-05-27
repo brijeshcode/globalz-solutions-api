@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Items;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Jobs\RepairItemPriceJob;
+use App\Models\Inventory\ItemPrice;
 use App\Models\Inventory\ItemPriceHistory;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -40,6 +41,79 @@ class ItemCostHistoryController extends Controller
         $transformedItems = $rows->map(fn($row) => $this->transformRow($row));
 
         return ApiResponse::index('Item cost history retrieved successfully', $transformedItems->toArray());
+    }
+
+    public function currentPrices(Request $request): JsonResponse
+    {
+        $search  = $request->get('search');
+        $itemId  = $request->get('item_id');
+        $perPage = $request->get('per_page', 50);
+
+        $query = ItemPrice::with($this->currentPricesEagerLoads())
+            ->when($itemId, fn($q) => $q->where('item_id', $itemId))
+            ->when($search, function ($q) use ($search) {
+                $q->whereHas('item', function ($q) use ($search) {
+                    $q->where('code', 'like', "%{$search}%")
+                      ->orWhere('short_name', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('effective_date', 'desc');
+
+        $rows = $query->paginate($perPage);
+
+        $transformed = $rows->through(fn($row) => $this->transformCurrentPriceRow($row));
+
+        return ApiResponse::paginated('Current item prices retrieved successfully', $transformed);
+    }
+
+    private function currentPricesEagerLoads(): array
+    {
+        return [
+            'item:id,code,short_name,description,item_unit_id',
+            'item.itemUnit:id,name,short_name',
+            'item.priceHistories' => fn($q) => $q
+                ->whereIn('source_type', ['purchase', 'initial'])
+                ->orderBy('id', 'desc')
+                ->limit(5)
+                ->with([
+                    'source' => fn($morphTo) => $morphTo->morphWith([
+                        \App\Models\Suppliers\Purchase::class => ['currency', 'items'],
+                        \App\Models\Items\Item::class         => [],
+                    ]),
+                ]),
+        ];
+    }
+
+    private function transformCurrentPriceRow(ItemPrice $row): array
+    {
+        $itemId = $row->item_id;
+
+        $history = ($row->item?->priceHistories ?? collect())->map(function ($h) use ($itemId) {
+            if ($h->source_type === 'purchase' && $h->source) {
+                $purchase = clone $h->source;
+                $purchase->setRelation(
+                    'items',
+                    $h->source->items->filter(fn($i) => $i->item_id === $itemId)->values()
+                );
+                $h = clone $h;
+                $h->setRelation('source', $purchase);
+            }
+            return $this->transformRow($h);
+        });
+
+        return [
+            'item_id'        => $itemId,
+            'item_code'      => $row->item?->code,
+            'item_name'      => $row->item?->description,
+            'unit'           => $row->item?->itemUnit ? [
+                'id'         => $row->item->itemUnit->id,
+                'name'       => $row->item->itemUnit->name,
+                'short_name' => $row->item->itemUnit->short_name,
+            ] : null,
+            'price_usd'      => $row->price_usd,
+            'effective_date' => $row->effective_date,
+            'history'        => $history->values(),
+        ];
     }
 
     private function transformRow(ItemPriceHistory $history): array

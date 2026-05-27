@@ -161,6 +161,11 @@ class Item extends Model
         return $this->hasOne(\App\Models\Inventory\ItemPrice::class);
     }
 
+    public function priceHistories(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Inventory\ItemPriceHistory::class);
+    }
+
     public function lastPurchaseItem(): HasOne
     {
         return $this->hasOne(\App\Models\Suppliers\PurchaseItem::class)->latestOfMany('id');
