@@ -520,6 +520,7 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
         Route::controller(ItemCostHistoryController::class)->prefix('cost-history')->name('cost-history.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/current-prices', 'currentPrices')->name('current-prices');
+            Route::get('/current-prices/export', 'exportCurrentPrices')->name('current-prices.export');
         });
 
         // Item Transfers Controller

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Items;
 
+use App\Exports\ItemCurrentPricesExport;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Jobs\RepairItemPriceJob;
@@ -10,6 +11,8 @@ use App\Models\Inventory\ItemPriceHistory;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ItemCostHistoryController extends Controller
 {
@@ -43,6 +46,29 @@ class ItemCostHistoryController extends Controller
         return ApiResponse::index('Item cost history retrieved successfully', $transformedItems->toArray());
     }
 
+    public function exportCurrentPrices(Request $request): BinaryFileResponse
+    {
+        $search = $request->get('search');
+        $itemId = $request->get('item_id');
+
+        $rows = ItemPrice::with($this->exportEagerLoads())
+            ->when($itemId, fn($q) => $q->where('item_id', $itemId))
+            ->when($search, function ($q) use ($search) {
+                $q->whereHas('item', function ($q) use ($search) {
+                    $q->where('code', 'like', "%{$search}%")
+                      ->orWhere('short_name', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('effective_date', 'desc')
+            ->get();
+
+        $transformed = $rows->map(fn($row) => $this->transformCurrentPriceRow($row));
+
+        $filename = 'item-current-prices-' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(new ItemCurrentPricesExport($transformed), $filename);
+    }
+
     public function currentPrices(Request $request): JsonResponse
     {
         $search  = $request->get('search');
@@ -64,6 +90,24 @@ class ItemCostHistoryController extends Controller
         $transformed = $rows->through(fn($row) => $this->transformCurrentPriceRow($row));
 
         return ApiResponse::paginated('Current item prices retrieved successfully', $transformed);
+    }
+
+    private function exportEagerLoads(): array
+    {
+        return [
+            'item:id,code,short_name,description,item_unit_id',
+            'item.itemUnit:id,name,short_name',
+            'item.priceHistories' => fn($q) => $q
+                ->whereIn('source_type', ['purchase', 'initial'])
+                ->orderBy('id', 'desc')
+                ->limit(1)
+                ->with([
+                    'source' => fn($morphTo) => $morphTo->morphWith([
+                        \App\Models\Suppliers\Purchase::class => ['currency', 'items'],
+                        \App\Models\Items\Item::class         => [],
+                    ]),
+                ]),
+        ];
     }
 
     private function currentPricesEagerLoads(): array
