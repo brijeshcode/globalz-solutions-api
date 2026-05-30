@@ -3,7 +3,7 @@
         @if($sale->prefix === 'INV')
         <tr>
             <th style="width: 5%;">#</th>
-            <th style="width: 11%;">Item Code</th>
+            <th style="width: 11%;">SKU</th>
             <th style="width: 32%;">Description</th>
             <th style="width: 9%;">Price</th>
             <th style="width: 7%;">Disc.%</th>
