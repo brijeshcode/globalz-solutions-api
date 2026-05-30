@@ -22,6 +22,7 @@ class PriceListItemResource extends JsonResource
             'item_description' => $this->relationLoaded('item') && $this->item
                 ? $this->item->description
                 : $this->item_description,
+            'item_description1' => $this->item->description,
             'sell_price' => $this->sell_price + 0,
             // 'created_at' => $this->created_at,
             // 'updated_at' => $this->updated_at,
