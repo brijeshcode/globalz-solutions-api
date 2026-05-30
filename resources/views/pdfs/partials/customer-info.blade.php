@@ -12,7 +12,7 @@
             <td>{{ $sale->customer->address ?? '' }}, {{ $sale->customer->city ?? '' }}</td>
         </tr>
         <tr>
-            <td class="info-label">{{ __('invoice.label_phone') }}:</td>
+            <td class="info-label">{{ $sale->prefix === 'INX' ? 'Tel' : __('invoice.label_phone') }}:</td>
             <td>{{ $sale->customer->mobile ?? '' }}</td>
         </tr>
         @if($sale->prefix !== 'INX')

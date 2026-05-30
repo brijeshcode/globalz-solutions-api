@@ -16,7 +16,7 @@
             <th style="width: 11%;">REF</th>
             <th style="width: 32%;">Item Details</th>
             <th style="width: 9%;">Price</th>
-            <th style="width: 7%;">Disc</th>
+            <th style="width: 7%;">Disc.</th>
             <th style="width: 9%;">Quantity</th>
             <th style="width: 12%;">Total</th>
         </tr>
