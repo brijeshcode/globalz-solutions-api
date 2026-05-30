@@ -461,7 +461,7 @@ class PurchaseService
         $finalTotalUsd = $totalUsd + $totalExpenseUsd;
         $finalTotal    = CurrencyHelper::fromUsd($purchase->currency_id, $finalTotalUsd);
 
-        $purchase->updateQuietly([
+        $purchase->update([
             'sub_total'         => $subTotal,
             'sub_total_usd'     => $subTotalUsd,
             'total'             => $total,
