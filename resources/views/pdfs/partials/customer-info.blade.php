@@ -15,10 +15,10 @@
             <td class="info-label">{{ $sale->prefix === 'INX' ? __('invoice.label_tel') : __('invoice.label_phone') }}:</td>
             <td>{{ $sale->customer->mobile ?? '' }}</td>
         </tr>
-        @if($sale->prefix !== 'INX')
+        @if($sale->prefix !== 'INX' && !empty($sale->customer->mof_tax_number))
         <tr>
             <td class="info-label">{{ __('invoice.label_tax') }}</td>
-            <td>{{ $sale->customer->mof_tax_number ?? '' }}</td>
+            <td>{{ $sale->customer->mof_tax_number }}</td>
         </tr>
         @endif
         @if(!empty($sale->outStanding_balance) && $sale->outStanding_balance > 0)
