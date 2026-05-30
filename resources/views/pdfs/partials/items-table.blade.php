@@ -7,7 +7,7 @@
             <th style="width: 32%;">Description</th>
             <th style="width: 9%;">Price</th>
             <th style="width: 7%;">Disc.%</th>
-            <th style="width: 9%;">Qty.</th>
+            <th style="width: 9%;">Qtty.</th>
             <th style="width: 12%;">Total</th>
         </tr>
         @else
