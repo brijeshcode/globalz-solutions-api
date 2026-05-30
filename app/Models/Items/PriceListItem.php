@@ -86,7 +86,7 @@ class PriceListItem extends Model
                 $item = Item::find($priceListItem->item_id);
                 if ($item) {
                     $priceListItem->item_code        = $priceListItem->item_code ?? $item->code;
-                    $priceListItem->item_description = $priceListItem->item_description ?? $item->description;
+                    $priceListItem->item_description = $item->description;
                 }
             }
 

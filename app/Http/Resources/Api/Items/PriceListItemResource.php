@@ -19,7 +19,9 @@ class PriceListItemResource extends JsonResource
             'price_list_id' => $this->price_list_id,
             'item_code' => $this->item_code,
             'item_id' => $this->item_id,
-            'item_description' => $this->item_description,
+            'item_description' => $this->relationLoaded('item') && $this->item
+                ? $this->item->description
+                : $this->item_description,
             'sell_price' => $this->sell_price + 0,
             // 'created_at' => $this->created_at,
             // 'updated_at' => $this->updated_at,
