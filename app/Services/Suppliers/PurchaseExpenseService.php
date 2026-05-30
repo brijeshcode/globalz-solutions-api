@@ -2,6 +2,7 @@
 
 namespace App\Services\Suppliers;
 
+use App\Helpers\FeatureHelper;
 use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Setups\Expenses\ExpenseCategory;
@@ -86,8 +87,19 @@ class PurchaseExpenseService
         return $changedItems;
     }
 
+    private function normalizeCurrency(array $data): array
+    {
+        if (!FeatureHelper::isMultiCurrency()) {
+            $data['currency_rate'] = 1;
+            $data['amount_usd']    = $data['amount'];
+        }
+
+        return $data;
+    }
+
     private function createExpenseLine(Purchase $purchase, array $data): void
     {
+        $data     = $this->normalizeCurrency($data);
         $category = ExpenseCategory::findOrFail($data['expense_category_id']);
         $subject  = "{$category->name} — Purchase {$purchase->purchase_code}";
 
@@ -134,6 +146,7 @@ class PurchaseExpenseService
 
     private function updateExpenseLine(Purchase $purchase, array $data): void
     {
+        $data            = $this->normalizeCurrency($data);
         $purchaseExpense = PurchaseExpense::where('id', $data['id'])
             ->where('purchase_id', $purchase->id)
             ->firstOrFail();
