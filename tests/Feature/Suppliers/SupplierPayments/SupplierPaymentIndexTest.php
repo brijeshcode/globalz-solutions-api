@@ -100,3 +100,44 @@ it('searches payments by note', function () {
     expect($data)->toHaveCount(1)
         ->and($data[0]['note'])->toBe('Invoice settlement for January');
 });
+
+it('filters payments by account', function () {
+    $otherAccount = \App\Models\Accounts\Account::factory()->create(['current_balance' => 5000, 'is_active' => true]);
+
+    $this->createPaymentViaApi(['amount' => 100.00, 'amount_usd' => 100.00]);
+    $this->createPaymentViaApi(['account_id' => $otherAccount->id, 'amount' => 200.00, 'amount_usd' => 200.00]);
+
+    $this->getJson(route('suppliers.payments.index', ['account_id' => $this->account->id]))
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+});
+
+it('filters payments by date_from', function () {
+    $this->createPaymentViaApi(['date' => '2025-01-10']);
+    $this->createPaymentViaApi(['date' => '2025-02-15']);
+    $this->createPaymentViaApi(['date' => '2025-03-20']);
+
+    $this->getJson(route('suppliers.payments.index', ['date_from' => '2025-02-01']))
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+});
+
+it('filters payments by date_to', function () {
+    $this->createPaymentViaApi(['date' => '2025-01-10']);
+    $this->createPaymentViaApi(['date' => '2025-02-15']);
+    $this->createPaymentViaApi(['date' => '2025-03-20']);
+
+    $this->getJson(route('suppliers.payments.index', ['date_to' => '2025-02-28']))
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+});
+
+it('filters payments by date_from and date_to together', function () {
+    $this->createPaymentViaApi(['date' => '2025-01-10']);
+    $this->createPaymentViaApi(['date' => '2025-02-15']);
+    $this->createPaymentViaApi(['date' => '2025-03-20']);
+
+    $this->getJson(route('suppliers.payments.index', ['date_from' => '2025-02-01', 'date_to' => '2025-02-28']))
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+});

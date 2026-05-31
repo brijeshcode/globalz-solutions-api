@@ -143,3 +143,18 @@ it('admin role can update a payment', function () {
         'note'       => 'Admin updated',
     ]))->assertOk();
 });
+
+it('sets updated_by automatically on update', function () {
+    $payment = $this->createPaymentViaApi();
+
+    $newUser = User::factory()->create(['role' => User::ROLE_ADMIN]);
+    $this->actingAs($newUser, 'sanctum');
+
+    $this->putJson(route('suppliers.payments.update', $payment), $this->paymentPayload([
+        'amount'     => 500.00,
+        'amount_usd' => 500.00,
+        'note'       => 'Updated by admin',
+    ]))->assertOk();
+
+    expect($payment->fresh()->updated_by)->toBe($newUser->id);
+});

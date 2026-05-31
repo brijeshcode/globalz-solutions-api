@@ -121,6 +121,11 @@ class SupplierPayment extends Model
         return $query->where('prefix', $prefix);
     }
 
+    public function scopeByAccount($query, $accountId)
+    {
+        return $query->where('account_id', $accountId);
+    }
+
     // Helper Methods
     public function getPaymentCodeAttribute(): string
     {

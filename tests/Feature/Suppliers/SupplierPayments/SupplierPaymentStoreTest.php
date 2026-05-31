@@ -143,3 +143,27 @@ it('warehouse manager role cannot create a payment', function () {
     $this->postJson(route('suppliers.payments.store'), $this->paymentPayload())
         ->assertForbidden();
 });
+
+it('rejects payment when amount_usd does not match currency conversion', function () {
+    // EUR multiply @ 1.25: toUsd(100) = 125, but we send 150 → mismatch > 0.01 tolerance
+    $this->currency->update(['calculation_type' => 'multiply']);
+
+    $this->postJson(route('suppliers.payments.store'), $this->paymentPayload([
+        'currency_rate' => 1.25,
+        'amount'        => 100.00,
+        'amount_usd'    => 150.00, // should be 125.00
+    ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['amount_usd']);
+});
+
+it('accepts payment when amount_usd matches currency conversion within tolerance', function () {
+    $this->currency->update(['calculation_type' => 'multiply']);
+
+    // toUsd(100, 1.25) = 125.00 — exact match
+    $this->postJson(route('suppliers.payments.store'), $this->paymentPayload([
+        'currency_rate' => 1.25,
+        'amount'        => 100.00,
+        'amount_usd'    => 125.00,
+    ]))->assertCreated();
+});

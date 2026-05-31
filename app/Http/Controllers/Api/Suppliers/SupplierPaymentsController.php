@@ -232,7 +232,7 @@ class SupplierPaymentsController extends Controller
             $query->byCurrency($request->currency_id);
         }
         if ($request->has('account_id')) {
-            $query->byCurrency($request->account_id);
+            $query->byAccount($request->account_id);
         }
 
         if ($request->has('prefix')) {
