@@ -64,7 +64,7 @@ class ItemCostHistoryController extends Controller
 
         $transformed = $rows->map(fn($row) => $this->transformCurrentPriceRow($row));
 
-        $filename = 'item-current-prices-' . now()->format('Y-m-d') . '.xlsx';
+        $filename = 'items-cost-list-' . now()->format('Y-m-d') . '.xlsx';
 
         return Excel::download(new ItemCurrentPricesExport($transformed), $filename);
     }
