@@ -184,6 +184,60 @@ it('removes expense lines when update payload sends empty expenses', function ()
         ->and((float) $purchase->final_total_usd)->toBe(200.0);
 });
 
+it('includes expense vat_amount_usd in final_total_usd', function () {
+    // items total_usd=200, expense amount_usd=50, vat_amount_usd=10 → total_expense_usd=60, final_total_usd=260
+    $response = $this->postJson(route('suppliers.purchases.store'), $this->purchasePayload([
+        'currency_rate' => 1.0,
+        'items'         => [['item_id' => $this->item1->id, 'price' => 100.00, 'quantity' => 2]],
+        'expenses'      => [
+            [
+                'expense_category_id' => $this->shippingCategory->id,
+                'amount'              => 50.00,
+                'amount_usd'          => 50.00,
+                'currency_id'         => $this->currency->id,
+                'currency_rate'       => 1.0,
+                'vat_amount'          => 10.00,
+                'is_paid'             => false,
+            ],
+        ],
+    ]))->assertCreated();
+
+    $purchase = Purchase::find($response->json('data.id'));
+
+    expect((float) $purchase->total_usd)->toBe(200.0)
+        ->and((float) $purchase->total_expense_usd)->toBe(60.0)  // 50 amount + 10 vat
+        ->and((float) $purchase->final_total_usd)->toBe(260.0);
+});
+
+it('does not include expense vat in item cost distribution', function () {
+    $response = $this->postJson(route('suppliers.purchases.store'), $this->purchasePayload([
+        'currency_rate' => 1.0,
+        'items'         => [['item_id' => $this->item1->id, 'price' => 100.00, 'quantity' => 2]],
+        'expenses'      => [
+            [
+                'expense_category_id'    => $this->shippingCategory->id,
+                'amount'                 => 50.00,
+                'amount_usd'             => 50.00,
+                'currency_id'            => $this->currency->id,
+                'currency_rate'          => 1.0,
+                'vat_amount'             => 20.00,
+                'exclude_from_item_cost' => false,
+                'is_paid'                => false,
+            ],
+        ],
+    ]))->assertCreated();
+
+    $purchase = Purchase::find($response->json('data.id'));
+
+    // total_expense_usd = 50+20 = 70 (amount+vat), final_total = 200+70 = 270
+    expect((float) $purchase->total_expense_usd)->toBe(70.0)
+        ->and((float) $purchase->final_total_usd)->toBe(270.0);
+
+    // Item cost distribution uses only amount_usd (50), not vat (20)
+    $item = $purchase->purchaseItems()->first();
+    expect((float) $item->total_expense_usd)->toBe(50.0);
+});
+
 it('validates expense fields are required when expenses array is present', function () {
     $this->postJson(route('suppliers.purchases.store'), $this->purchasePayload([
         'items'    => [['item_id' => $this->item1->id, 'price' => 100.00, 'quantity' => 1]],

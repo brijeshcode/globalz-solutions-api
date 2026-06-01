@@ -77,8 +77,39 @@ it('creates an expense payment when is_paid is true', function () {
         'expenseTransaction.purchaseExpense', fn ($q) => $q->where('purchase_id', $purchase->id)
     )->count())->toBe(1);
 
+    // payment_note is stored as the expense transaction note
+    $tx = ExpenseTransaction::whereHas(
+        'purchaseExpense', fn ($q) => $q->where('purchase_id', $purchase->id)
+    )->first();
+    expect($tx->note)->toBe('bank transfer');
+
     // AccountsHelper::removeBalance deducts $payment->amount (local currency = 50.00)
     expect((float) $account->fresh()->current_balance)->toEqual(950.0);
+});
+
+it('sets expense transaction note to null when no payment_note provided', function () {
+    $purchase = $this->createPurchaseViaApi();
+
+    $expenses = [
+        [
+            'expense_category_id'    => $this->shippingCategory->id,
+            'amount'                 => 50.00,
+            'amount_usd'             => 50.00,
+            'currency_id'            => $this->currency->id,
+            'currency_rate'          => 1.0,
+            'exclude_from_item_cost' => false,
+            'is_paid'                => false,
+        ],
+    ];
+
+    $this->service->syncExpenseLines($purchase, $expenses);
+
+    $tx = ExpenseTransaction::whereHas(
+        'purchaseExpense', fn ($q) => $q->where('purchase_id', $purchase->id)
+    )->first();
+
+    expect($tx->note)->toBeNull();
+    expect($tx->subject)->toContain('Shipping'); // subject still auto-generated
 });
 
 it('distributes expenses proportionally to items', function () {
@@ -149,6 +180,97 @@ it('excludes marked expenses from item cost distribution', function () {
 
     // Only 40 USD distributable (customs excluded), single item gets all of it
     expect((float) $item->total_expense_usd)->toEqual(40.0);
+});
+
+it('stores vat_amount and vat_amount_usd on the expense transaction', function () {
+    $purchase = $this->createPurchaseViaApi();
+
+    $expenses = [
+        [
+            'expense_category_id'    => $this->shippingCategory->id,
+            'amount'                 => 50.00,
+            'amount_usd'             => 50.00,
+            'currency_id'            => $this->currency->id,
+            'currency_rate'          => 1.0,
+            'vat_amount'             => 10.00,
+            'exclude_from_item_cost' => false,
+            'is_paid'                => false,
+        ],
+    ];
+
+    $this->service->syncExpenseLines($purchase, $expenses);
+
+    $tx = ExpenseTransaction::whereHas(
+        'purchaseExpense', fn ($q) => $q->where('purchase_id', $purchase->id)
+    )->first();
+
+    // Multi-currency off → vat_amount_usd mirrors vat_amount
+    expect((float) $tx->vat_amount)->toEqual(10.0)
+        ->and((float) $tx->vat_amount_usd)->toEqual(10.0);
+});
+
+it('includes vat in payment amount when is_paid is true', function () {
+    $purchase = $this->createPurchaseViaApi();
+    $account  = \App\Models\Accounts\Account::factory()->create(['current_balance' => 1000]);
+
+    $expenses = [
+        [
+            'expense_category_id'    => $this->shippingCategory->id,
+            'amount'                 => 50.00,
+            'amount_usd'             => 50.00,
+            'currency_id'            => $this->currency->id,
+            'currency_rate'          => 1.0,
+            'vat_amount'             => 10.00,
+            'exclude_from_item_cost' => false,
+            'is_paid'                => true,
+            'account_id'             => $account->id,
+        ],
+    ];
+
+    $this->service->syncExpenseLines($purchase, $expenses);
+
+    $payment = ExpensePayment::whereHas(
+        'expenseTransaction.purchaseExpense', fn ($q) => $q->where('purchase_id', $purchase->id)
+    )->first();
+
+    // Payment covers amount + vat_amount = 60
+    expect((float) $payment->amount)->toEqual(60.0)
+        ->and((float) $payment->amount_usd)->toEqual(60.0);
+
+    // Account deducted by 60 (amount + vat)
+    expect((float) $account->fresh()->current_balance)->toEqual(940.0);
+});
+
+it('does not distribute vat amount to item costs', function () {
+    $purchase = $this->createPurchaseViaApi([
+        'items' => [
+            ['item_id' => $this->item1->id, 'price' => 100.00, 'quantity' => 1],
+            ['item_id' => $this->item2->id, 'price' => 300.00, 'quantity' => 1],
+        ],
+    ]);
+
+    $expenses = [
+        [
+            'expense_category_id'    => $this->shippingCategory->id,
+            'amount'                 => 80.00,
+            'amount_usd'             => 80.00,
+            'currency_id'            => $this->currency->id,
+            'currency_rate'          => 1.0,
+            'vat_amount'             => 20.00,
+            'exclude_from_item_cost' => false,
+            'is_paid'                => false,
+        ],
+    ];
+
+    $this->service->syncExpenseLines($purchase, $expenses);
+    $this->service->recalculateItemCosts($purchase);
+
+    $items = $purchase->fresh()->purchaseItems()->orderBy('total_price_usd')->get();
+
+    // distributableUsd = amount_usd only = 80 (vat 20 excluded from distribution)
+    // sub_total_usd = 400, item1 share = 80*(100/400)=20, item2 share = 80*(300/400)=60
+    expect((float) $items[0]->total_expense_usd)->toEqual(20.0)
+        ->and((float) $items[1]->total_expense_usd)->toEqual(60.0);
 });
 
 it('removes deleted expense lines and restores account balance', function () {

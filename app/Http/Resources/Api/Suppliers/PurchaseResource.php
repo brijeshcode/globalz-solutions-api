@@ -143,9 +143,12 @@ class PurchaseResource extends JsonResource
                                 'name' => $tx->account->name,
                             ] : null,
                             'date'                 => $tx->date,
+                            'note'                 => $tx->note,
+                            'payment_note'                 => $tx->note,
                             'payment_status'       => $tx->payment_status,
                             'is_paid'              => $tx->payment_status === 'paid',
-                            'payment_note'         => $tx->relationLoaded('payments') ? $tx->payments->first()?->note : null,
+                            'vat_amount'                  => $tx->vat_amount,
+                            'vat_amount_usd'                  => $tx->vat_amount_usd,
                             'expense_category'     => $tx->relationLoaded('expenseCategory') && $tx->expenseCategory ? [
                                 'id'                  => $tx->expenseCategory->id,
                                 'parent_id'           => $tx->expenseCategory->parent_id,

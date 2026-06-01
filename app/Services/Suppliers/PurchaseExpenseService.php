@@ -89,10 +89,21 @@ class PurchaseExpenseService
 
     private function normalizeCurrency(array $data): array
     {
+        $vatAmount = (float) ($data['vat_amount'] ?? 0);
+
         if (!FeatureHelper::isMultiCurrency()) {
-            $data['currency_rate'] = 1;
-            $data['amount_usd']    = $data['amount'];
+            $data['currency_rate']  = 1;
+            $data['amount_usd']     = $data['amount'];
+            $data['vat_amount_usd'] = $vatAmount;
+        } else {
+            $data['vat_amount_usd'] = \App\Helpers\CurrencyHelper::toUsd(
+                $data['currency_id'],
+                $vatAmount,
+                $data['currency_rate']
+            );
         }
+
+        $data['vat_amount'] = $vatAmount;
 
         return $data;
     }
@@ -106,21 +117,24 @@ class PurchaseExpenseService
         $isPaid = $data['is_paid'] ?? false;
         $date   = isset($data['date']) ? \Carbon\Carbon::parse($data['date']) : $purchase->date;
 
+        $totalAmount    = (float) $data['amount']     + (float) $data['vat_amount'];
+        $totalAmountUsd = (float) $data['amount_usd'] + (float) $data['vat_amount_usd'];
+
         $expenseTx = ExpenseTransaction::create([
             'date'                => $date,
             'expense_month'       => $date->format('Y-m'),
             'expense_category_id' => $data['expense_category_id'],
             'account_id'          => $isPaid ? ($data['account_id'] ?? null) : null,
             'subject'             => $subject,
-            'note'                => $subject,
+            'note'                => $data['payment_note'] ?? null,
             'amount'              => $data['amount'],
             'amount_usd'          => $data['amount_usd'],
             'currency_id'         => $data['currency_id'],
             'currency_rate'       => $data['currency_rate'],
             'paid_amount'         => 0,
             'paid_amount_usd'     => 0,
-            'vat_amount'          => 0,
-            'vat_amount_usd'      => 0,
+            'vat_amount'          => $data['vat_amount'],
+            'vat_amount_usd'      => $data['vat_amount_usd'],
         ]);
 
         PurchaseExpense::create([
@@ -133,8 +147,8 @@ class PurchaseExpenseService
             ExpensePayment::create([
                 'expense_transaction_id' => $expenseTx->id,
                 'account_id'             => $data['account_id'],
-                'amount'                 => $data['amount'],
-                'amount_usd'             => $data['amount_usd'],
+                'amount'                 => $totalAmount,
+                'amount_usd'             => $totalAmountUsd,
                 'currency_id'            => $data['currency_id'],
                 'currency_rate'          => $data['currency_rate'],
                 'date'                   => $date,
@@ -158,17 +172,22 @@ class PurchaseExpenseService
         $isPaid = $data['is_paid'] ?? false;
         $date   = isset($data['date']) ? \Carbon\Carbon::parse($data['date']) : $purchase->date;
 
+        $totalAmount    = (float) $data['amount']     + (float) $data['vat_amount'];
+        $totalAmountUsd = (float) $data['amount_usd'] + (float) $data['vat_amount_usd'];
+
         $expenseTx->updateQuietly([
             'date'                => $date,
             'expense_month'       => $date->format('Y-m'),
             'expense_category_id' => $data['expense_category_id'],
             'account_id'          => $isPaid ? ($data['account_id'] ?? null) : null,
             'subject'             => $subject,
-            'note'                => $subject,
+            'note'                => $data['payment_note'] ?? null,
             'amount'              => $data['amount'],
             'amount_usd'          => $data['amount_usd'],
             'currency_id'         => $data['currency_id'],
             'currency_rate'       => $data['currency_rate'],
+            'vat_amount'          => $data['vat_amount'],
+            'vat_amount_usd'      => $data['vat_amount_usd'],
         ]);
 
         $purchaseExpense->update([
@@ -181,8 +200,8 @@ class PurchaseExpenseService
             if ($existingPayment) {
                 $existingPayment->update([
                     'account_id'    => $data['account_id'],
-                    'amount'        => $data['amount'],
-                    'amount_usd'    => $data['amount_usd'],
+                    'amount'        => $totalAmount,
+                    'amount_usd'    => $totalAmountUsd,
                     'currency_id'   => $data['currency_id'],
                     'currency_rate' => $data['currency_rate'],
                     'date'          => $date,
@@ -193,8 +212,8 @@ class PurchaseExpenseService
                 ExpensePayment::create([
                     'expense_transaction_id' => $expenseTx->id,
                     'account_id'             => $data['account_id'],
-                    'amount'                 => $data['amount'],
-                    'amount_usd'             => $data['amount_usd'],
+                    'amount'                 => $totalAmount,
+                    'amount_usd'             => $totalAmountUsd,
                     'currency_id'            => $data['currency_id'],
                     'currency_rate'          => $data['currency_rate'],
                     'date'                   => $date,

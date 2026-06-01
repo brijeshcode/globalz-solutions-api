@@ -52,6 +52,8 @@ class PurchasesStoreRequest extends FormRequest
             'expenses.*.currency_rate'               => 'required_with:expenses|numeric|min:0.000001',
             'expenses.*.date'                        => 'nullable|date',
             'expenses.*.exclude_from_item_cost'      => 'nullable|boolean',
+            'expenses.*.vat_amount'                  => 'nullable|numeric|min:0',
+            'expenses.*.vat_amount_usd'              => 'nullable|numeric|min:0',
             'expenses.*.is_paid'                     => 'nullable|boolean',
             'expenses.*.account_id'                  => 'required_if:expenses.*.is_paid,true|nullable|integer|exists:accounts,id',
             'expenses.*.payment_note'                => 'nullable|string|max:1000',

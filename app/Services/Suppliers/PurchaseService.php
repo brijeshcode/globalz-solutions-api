@@ -456,7 +456,8 @@ class PurchaseService
         $totalExpenseUsd = (float) PurchaseExpense::where('purchase_id', $purchase->id)
             ->join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
             ->whereNull('expense_transactions.deleted_at')
-            ->sum('expense_transactions.amount_usd');
+            ->selectRaw('COALESCE(SUM(expense_transactions.amount_usd + expense_transactions.vat_amount_usd), 0) as total')
+            ->value('total');
 
         $finalTotalUsd = $totalUsd + $totalExpenseUsd;
         $finalTotal    = CurrencyHelper::fromUsd($purchase->currency_id, $finalTotalUsd);
