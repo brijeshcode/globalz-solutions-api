@@ -231,7 +231,7 @@
     </table>
 
     @if($type === 'tax')
-    <div class="signature-section clearfix">
+    <!-- <div class="signature-section clearfix">
         <div class="signature-box">
             <div><strong>Received By</strong></div>
             <div class="signature-line"></div>
@@ -240,7 +240,7 @@
             <div><strong>Signature</strong></div>
             <div class="signature-line"></div>
         </div>
-    </div>
+    </div> -->
     @endif
 
 </div>
