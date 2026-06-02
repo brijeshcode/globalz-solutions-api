@@ -9,7 +9,7 @@ class GasStationPaymentsUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return RoleHelper::canWarehouseManager();
+        return RoleHelper::canWarehouseManager() || RoleHelper::canAdmin();
     }
 
     public function rules(): array
