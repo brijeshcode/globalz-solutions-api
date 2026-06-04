@@ -37,7 +37,8 @@ class CustomerStatementPdfController extends Controller
         try {
             $customer->load('salesperson');
 
-            $transactions = $this->buildTransactions($request, $customer, $type);
+            $orderDirection = $request->input('order_direction', 'desc') === 'asc' ? 'asc' : 'desc';
+            $transactions = $this->buildTransactions($request, $customer, $type, $orderDirection);
             $stats        = $this->calculateStats($transactions);
             $companyData  = $this->getCompanyData();
 
@@ -126,7 +127,7 @@ class CustomerStatementPdfController extends Controller
         }
     }
 
-    private function buildTransactions(Request $request, Customer $customer, string $type): \Illuminate\Support\Collection
+    private function buildTransactions(Request $request, Customer $customer, string $type, string $orderDirection = 'desc'): \Illuminate\Support\Collection
     {
         $childIds    = $customer->children()->pluck('id')->toArray();
         $isParent    = !empty($childIds);
@@ -149,7 +150,7 @@ class CustomerStatementPdfController extends Controller
             $balance       += $t['credit'] - $t['debit'];
             $t['balance']   = $balance;
             return $t;
-        })->sortByDesc('date')->values();
+        })->when($orderDirection === 'asc', fn($c) => $c->sortBy('date'), fn($c) => $c->sortByDesc('date'))->values();
     }
 
     private function getCreditDebitNotes(Request $request, array $customerIds): \Illuminate\Support\Collection
