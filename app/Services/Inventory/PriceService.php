@@ -9,6 +9,7 @@ use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\PurchaseItem;
 use App\Models\Suppliers\SupplierItemPrice;
 use App\Services\Suppliers\SupplierItemPriceService;
+use App\Helpers\FeatureHelper;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -137,7 +138,8 @@ class PriceService
         }
 
         if ($oldCostPerItemUsd !== null && $oldCostPerItemUsd != $purchaseItem->cost_per_item_usd) {
-            $changes[] = "cost: \${$oldCostPerItemUsd} → \${$purchaseItem->cost_per_item_usd}";
+            $currency  = FeatureHelper::isMultiCurrency() ? '$' : '';
+            $changes[] = "cost: {$currency}{$oldCostPerItemUsd} → {$currency}{$purchaseItem->cost_per_item_usd}";
         }
 
         $changeText = !empty($changes) ? ' (' . implode(', ', $changes) . ')' : '';
