@@ -235,27 +235,12 @@ class CurrencyService
             $code = self::getLocalCurrencyCode();
             $tenantId = \App\Models\Tenant::current()?->getKey() ?? 0;
             $cacheKey = self::LOCAL_CURRENCY_CACHE_KEY . ':t:' . $tenantId;
-            $cacheHit = \Illuminate\Support\Facades\Cache::has($cacheKey);
             self::$localCurrency = $code
                 ? Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($code) {
                     return Currency::where('code', $code)->first();
                 })
                 : null;
             self::$localCurrencyLoaded = true;
-
-            \Illuminate\Support\Facades\Log::debug('[CurrencyService] getLocalCurrency', [
-                'tenant_id'    => $tenantId,
-                'cache_key'    => $cacheKey,
-                'cache_hit'    => $cacheHit,
-                'setting_code' => $code,
-                'resolved_code'   => self::$localCurrency?->code,
-                'resolved_symbol' => self::$localCurrency?->symbol,
-            ]);
-        } else {
-            \Illuminate\Support\Facades\Log::debug('[CurrencyService] getLocalCurrency (static hit)', [
-                'resolved_code'   => self::$localCurrency?->code,
-                'resolved_symbol' => self::$localCurrency?->symbol,
-            ]);
         }
 
         return self::$localCurrency;

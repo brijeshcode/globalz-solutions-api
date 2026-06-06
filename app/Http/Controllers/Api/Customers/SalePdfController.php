@@ -51,18 +51,6 @@ class SalePdfController extends Controller
             $template = $invoiceGroup['template'] ?? 'template-1';
             $language = $invoiceGroup['language'] ?? 'en';
 
-            Log::debug('[SalePdf] Currency debug', [
-                'sale_id'                   => $sale->id,
-                'sale_currency_code'        => $sale->currency->code ?? null,
-                'sale_currency_symbol'      => $sale->currency->symbol ?? null,
-                'local_currency_code'       => $localCurrency?->code,
-                'local_currency_symbol'     => $localCurrency?->symbol,
-                'local_currency_id'         => $localCurrency?->id,
-                'not_local_currency'        => $notLocalCurrency,
-                'show_local_currency_tax'   => $notLocalCurrency && ($invoiceGroup['show_local_currency_tax'] ?? false),
-                'show_local_currency_total' => $notLocalCurrency && ($invoiceGroup['show_local_currency_total'] ?? false),
-            ]);
-
             $invoiceSettings  = [
                 'local_currency_code'       => $localCurrency?->code,
                 'local_currency_symbol'     => $localCurrency?->symbol,
