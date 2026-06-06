@@ -6,8 +6,10 @@ use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\AttachCacheVersion;
 use App\Http\Responses\ApiResponse;
+use App\Services\Currency\CurrencyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CacheVersionController extends Controller
 {
@@ -34,6 +36,11 @@ class CacheVersionController extends Controller
         $validated = $request->validate([
             'key' => 'required|string',
         ]);
+
+        if ($validated['key'] === 'local_currency') {
+            Cache::forget(CurrencyService::LOCAL_CURRENCY_CACHE_KEY);
+            return ApiResponse::update("Cache 'local_currency' invalidated successfully", []);
+        }
 
         $versions = AttachCacheVersion::invalidate($validated['key']);
 
