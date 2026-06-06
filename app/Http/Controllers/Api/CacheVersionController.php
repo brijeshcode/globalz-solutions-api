@@ -38,7 +38,8 @@ class CacheVersionController extends Controller
         ]);
 
         if ($validated['key'] === 'local_currency') {
-            Cache::forget(CurrencyService::LOCAL_CURRENCY_CACHE_KEY);
+            $tenantId = \App\Models\Tenant::current()?->getKey() ?? 0;
+            Cache::forget(CurrencyService::LOCAL_CURRENCY_CACHE_KEY . ':t:' . $tenantId);
             return ApiResponse::update("Cache 'local_currency' invalidated successfully", []);
         }
 
