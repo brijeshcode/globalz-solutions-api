@@ -424,29 +424,37 @@ class PriceListsController extends Controller
             'sell_price' => 'required|numeric|min:0',
         ]);
 
-        $priceListItem = DB::transaction(function () use ($validated, $priceList, $user) {
-            $priceListItemData = [
+        $itemId = $validated['item_id'] ?? null;
+        $itemCode = $validated['item_code'];
+        $itemDescription = $validated['item_description'] ?? null;
+
+        if ($itemId) {
+            $item = Item::find($itemId);
+            if ($item) {
+                $itemCode = $item->code;
+                $itemDescription = $item->description;
+            }
+        }
+
+        $alreadyExists = $priceList->items()
+            ->when($itemId, fn($q) => $q->where('item_id', $itemId), fn($q) => $q->where('item_code', $itemCode))
+            ->exists();
+
+        if ($alreadyExists) {
+            return ApiResponse::customError('This item already exists in the price list', 422);
+        }
+
+        $priceListItem = DB::transaction(function () use ($validated, $priceList, $user, $itemId, $itemCode, $itemDescription) {
+            $priceListItem = PriceListItem::create([
                 'price_list_id' => $priceList->id,
-                'item_code' => $validated['item_code'],
-                'item_id' => $validated['item_id'] ?? null,
-                'item_description' => $validated['item_description'] ?? null,
+                'item_code' => $itemCode,
+                'item_id' => $itemId,
+                'item_description' => $itemDescription,
                 'sell_price' => $validated['sell_price'],
                 'created_by' => $user->id,
                 'updated_by' => $user->id,
-            ];
+            ]);
 
-            // If item_id is provided, fetch item details
-            if (isset($validated['item_id'])) {
-                $item = Item::find($validated['item_id']);
-                if ($item) {
-                    $priceListItemData['item_code'] = $item->code;
-                    $priceListItemData['item_description'] = $item->description;
-                }
-            }
-
-            $priceListItem = PriceListItem::create($priceListItemData);
-
-            // Update item count on the price list
             $priceList->updateItemCount();
 
             return $priceListItem;

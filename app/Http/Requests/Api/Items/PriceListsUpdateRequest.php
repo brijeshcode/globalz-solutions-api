@@ -55,6 +55,24 @@ class PriceListsUpdateRequest extends FormRequest
      *
      * @return array<string, string>
      */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $items = $this->input('items', []);
+
+            $itemIds = array_filter(array_column($items, 'item_id'));
+            if (count($itemIds) !== count(array_unique($itemIds))) {
+                $validator->errors()->add('items', 'Duplicate items are not allowed in a price list.');
+                return;
+            }
+
+            $itemCodes = array_map('strtolower', array_column($items, 'item_code'));
+            if (count($itemCodes) !== count(array_unique($itemCodes))) {
+                $validator->errors()->add('items', 'Duplicate item codes are not allowed in a price list.');
+            }
+        });
+    }
+
     public function messages(): array
     {
         return [
