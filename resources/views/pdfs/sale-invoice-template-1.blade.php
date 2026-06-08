@@ -87,5 +87,6 @@
         @include('pdfs.partials.signature')
         @include('pdfs.partials.footer')
     </div>
+
 </body>
 </html>

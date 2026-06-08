@@ -123,5 +123,6 @@
         @include('pdfs.partials.footer')
 
     </div>
+
 </body>
 </html>
