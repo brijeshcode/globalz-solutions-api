@@ -38,11 +38,15 @@ class SettingsServiceProvider extends ServiceProvider
         try {
             // Only override if database is available and settings table exists
             if ($this->app->hasBeenBootstrapped() && $this->settingsTableExists()) {
-                // Load ALL settings in a single query
-                $allSettings = \App\Models\Setting::all()
-                    ->groupBy('group_name')
-                    ->map(fn ($group) => $group->mapWithKeys(fn ($s) => [$s->key_name => $s->getCastValue()]))
-                    ->toArray();
+                // Load ALL settings once and cache — runs on the landlord/default connection
+                // because this fires before the Spatie tenant middleware switches the DB.
+                // Invalidated by Setting::boot() saved/deleted events.
+                $allSettings = \Cache::remember('settings_override_config', 3600, fn () =>
+                    \App\Models\Setting::all()
+                        ->groupBy('group_name')
+                        ->map(fn ($group) => $group->mapWithKeys(fn ($s) => [$s->key_name => $s->getCastValue()]))
+                        ->toArray()
+                );
 
                 $get = fn (string $group, string $key, $default = null) =>
                     $allSettings[$group][$key] ?? $default;
@@ -101,12 +105,20 @@ class SettingsServiceProvider extends ServiceProvider
     }
 
     /**
-     * Check if settings table exists
+     * Check if settings table exists — result is cached to avoid repeated information_schema queries
      */
     protected function settingsTableExists(): bool
     {
         try {
-            return \Schema::hasTable('settings');
+            // Only cache true — if table doesn't exist yet, keep checking until it does
+            if (\Cache::has('settings_table_exists')) {
+                return true;
+            }
+            $exists = \Schema::hasTable('settings');
+            if ($exists) {
+                \Cache::put('settings_table_exists', true, 86400);
+            }
+            return $exists;
         } catch (\Exception $e) {
             return false;
         }

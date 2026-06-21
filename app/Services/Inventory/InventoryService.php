@@ -185,7 +185,7 @@ class InventoryService
     public static function getItemInventoryAcrossWarehouses(int $itemId): array
     {
         return Inventory::where('item_id', $itemId)
-            ->with('warehouse')
+            ->with('warehouse:id,name,address_line_1')
             ->get()
             ->toArray();
     }

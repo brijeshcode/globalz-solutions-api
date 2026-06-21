@@ -39,7 +39,7 @@ class ItemsController extends Controller
                 'createdBy:id,name',
                 'updatedBy:id,name',
                 'documents',
-                'inventories',
+                'inventories.warehouse:id,name',
                 'itemPrice'
         ])
         ->sortable($request);

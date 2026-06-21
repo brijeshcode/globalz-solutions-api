@@ -28,17 +28,36 @@ class CustomersController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = $this->customerQuery($request);
-        $query->withSum(['sales' => function ($query) {
-            $query->approved();
-        }], 'total_usd');
 
-        $lastInvoiceSub = '(SELECT MAX(s.date) FROM sales s WHERE s.customer_id = customers.id AND s.approved_by IS NOT NULL AND s.deleted_at IS NULL)';
-        $lastPaymentSub = '(SELECT MAX(cp.date) FROM customer_payments cp WHERE cp.customer_id = customers.id AND cp.approved_by IS NOT NULL AND cp.deleted_at IS NULL)';
-
-        $query->addSelect(DB::raw("{$lastInvoiceSub} as last_invoice_date"))
-              ->addSelect(DB::raw("DATEDIFF(NOW(), {$lastInvoiceSub}) as invoice_age"))
-              ->addSelect(DB::raw("{$lastPaymentSub} as last_payment_date"))
-              ->addSelect(DB::raw("CASE WHEN customers.current_balance BETWEEN -2 AND 2 THEN 0 ELSE DATEDIFF(NOW(), {$lastPaymentSub}) END as payment_age"));
+        // Replace correlated subqueries with derived-table JOINs — each subquery ran per row
+        // (50 rows/page × 6 subqueries = 300 sub-executions). JOINs run once per query.
+        // Pin to customers.* first so the JOIN derived tables don't pollute the SELECT.
+        $query
+            ->select('customers.*')
+            ->leftJoin(
+                DB::raw('(SELECT customer_id, SUM(total_usd) as sales_sum FROM sales WHERE approved_by IS NOT NULL AND deleted_at IS NULL GROUP BY customer_id) as approved_sales'),
+                'approved_sales.customer_id', '=', 'customers.id'
+            )
+            ->leftJoin(
+                DB::raw('(SELECT customer_id, MAX(date) as max_date FROM sales WHERE approved_by IS NOT NULL AND deleted_at IS NULL GROUP BY customer_id) as last_sales'),
+                'last_sales.customer_id', '=', 'customers.id'
+            )
+            ->leftJoin(
+                DB::raw('(SELECT customer_id, MAX(date) as max_date FROM customer_payments WHERE approved_by IS NOT NULL AND deleted_at IS NULL GROUP BY customer_id) as last_payments'),
+                'last_payments.customer_id', '=', 'customers.id'
+            )
+            ->leftJoin(
+                DB::raw('(SELECT parent_id, COUNT(*) as cnt FROM customers WHERE deleted_at IS NULL GROUP BY parent_id) as child_counts'),
+                'child_counts.parent_id', '=', 'customers.id'
+            )
+            ->addSelect([
+                DB::raw('COALESCE(approved_sales.sales_sum, 0) as sales_sum_total_usd'),
+                DB::raw('last_sales.max_date as last_invoice_date'),
+                DB::raw('DATEDIFF(NOW(), last_sales.max_date) as invoice_age'),
+                DB::raw('last_payments.max_date as last_payment_date'),
+                DB::raw('CASE WHEN customers.current_balance BETWEEN -2 AND 2 THEN 0 ELSE DATEDIFF(NOW(), last_payments.max_date) END as payment_age'),
+                DB::raw('COALESCE(child_counts.cnt, 0) as children_count'),
+            ]);
 
         $customers = $this->applyPagination($query, $request);
 
@@ -680,7 +699,6 @@ class CustomersController extends Controller
     public function customerQuery(Request $request)
     {
         $query = Customer::query()
-            ->withCount('children')
             ->with([
                 // 'parent:id,code,name',
                 // 'customerType:id,name',
