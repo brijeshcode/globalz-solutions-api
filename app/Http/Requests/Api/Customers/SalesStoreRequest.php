@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Api\Customers;
 
+use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use App\Helpers\SettingsHelper;
+use App\Models\Item;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -65,6 +67,48 @@ class SalesStoreRequest extends FormRequest
             'items.*.total_price_usd' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string',
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $allowBelowCost = RoleHelper::isSuperAdmin()
+                ? SettingsHelper::get('sale_settings', 'allow_super_admin_sell_below_cost', false)
+                : SettingsHelper::get('sale_settings', 'allow_admin_sell_below_cost', false);
+
+            if ($allowBelowCost) {
+                return;
+            }
+
+            $currencyId  = (int) $this->input('currency_id');
+            $currencyRate = (float) ($this->input('currency_rate') ?? 1);
+
+            foreach ($this->input('items', []) as $index => $itemData) {
+                $itemId = $itemData['item_id'] ?? null;
+                if (! $itemId) {
+                    continue;
+                }
+
+                $item = Item::with('itemPrice')->find($itemId);
+                $costPriceUsd = $item?->itemPrice?->price_usd ?? 0;
+
+                if ($costPriceUsd <= 0) {
+                    continue;
+                }
+
+                $sellingPrice    = (float) ($itemData['price'] ?? 0);
+                $discountPercent = (float) ($itemData['discount_percent'] ?? 0);
+                $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice, $currencyRate);
+                $netSellPriceUsd = $sellingPriceUsd * (1 - $discountPercent / 100);
+
+                if ($netSellPriceUsd < $costPriceUsd) {
+                    $validator->errors()->add(
+                        "items.$index.price",
+                        'Item ' . ($index + 1) . ': selling price cannot be below cost price.'
+                    );
+                }
+            }
+        });
     }
 
     public function messages(): array

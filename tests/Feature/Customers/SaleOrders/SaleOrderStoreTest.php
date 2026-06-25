@@ -108,6 +108,22 @@ it('rejects an inactive warehouse', function () {
         ->assertJsonValidationErrors(['warehouse_id']);
 });
 
+it('rejects items priced below cost price', function () {
+    $this->postJson(route('customers.sale-orders.store'), $this->saleOrderPayload([
+        'items' => [
+            [
+                'item_id'          => $this->item->id,
+                'quantity'         => 5,
+                'price'            => 40.00, // cost is 50.00 USD
+                'discount_percent' => 0,
+                'total_price'      => 200.00,
+                'total_price_usd'  => 200.00,
+            ],
+        ],
+    ]))->assertUnprocessable()
+       ->assertJsonValidationErrors(['items.0.price']);
+});
+
 it('rejects inactive items', function () {
     $inactive = Item::factory()->create([
         'is_active'  => false,
