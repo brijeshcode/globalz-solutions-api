@@ -372,12 +372,9 @@ class PurchasesController extends Controller
         }
 
         // Delete the documents
-        $deleted = $purchase->deleteDocuments($request->document_ids);
+        $purchase->deleteDocuments($request->document_ids);
 
-        return ApiResponse::delete(
-            'Documents deleted successfully',
-            ['deleted_count' => $deleted ? count($request->document_ids) : 0]
-        );
+        return ApiResponse::delete('Documents deleted successfully');
     }
 
     /**
