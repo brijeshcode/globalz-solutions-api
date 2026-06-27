@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\Items\ItemTransfersController;
 use App\Http\Controllers\Api\Items\ItemAdjustsController;
 use App\Http\Controllers\Api\Items\ItemMovementsController;
 use App\Http\Controllers\Api\Items\ItemCostHistoryController;
+use App\Http\Controllers\Api\Items\ItemPriceAuditController;
 use App\Http\Controllers\Api\Items\PriceListsController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\ActivityLogController;
@@ -521,6 +522,14 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/current-prices', 'currentPrices')->name('current-prices');
             Route::get('/current-prices/export', 'exportCurrentPrices')->name('current-prices.export');
+        });
+
+        // Item Price Audit Controller
+        Route::controller(ItemPriceAuditController::class)->prefix('price-audit')->name('price-audit.')->group(function () {
+            Route::get('/', 'audit')->name('index');
+            Route::get('{itemId}', 'auditItem')->name('item');
+            Route::post('fix', 'fix')->name('fix');
+            Route::post('fix/{itemId}', 'fixItem')->name('fix-item');
         });
 
         // Item Transfers Controller

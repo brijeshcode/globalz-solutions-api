@@ -8,6 +8,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Tenant;
 use App\Services\Inventory\PriceService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -20,9 +21,10 @@ class TenantItemPriceAuditController extends Controller
         }
     }
 
-    public function audit(Tenant $tenant): JsonResponse
+    public function audit(Request $request, Tenant $tenant): JsonResponse
     {
-        $result = $tenant->execute(fn () => PriceService::auditItemPrices());
+        $tolerance = (float) $request->query('tolerance', 2.0);
+        $result    = $tenant->execute(fn () => PriceService::auditItemPrices($tolerance));
 
         Log::info('[Developer] Item price scan', [
             'tenant_id'          => $tenant->id,
@@ -36,16 +38,18 @@ class TenantItemPriceAuditController extends Controller
         return ApiResponse::show('Item price scan complete — no changes made', $result);
     }
 
-    public function auditItem(Tenant $tenant, int $itemId): JsonResponse
+    public function auditItem(Request $request, Tenant $tenant, int $itemId): JsonResponse
     {
-        $result = $tenant->execute(fn () => PriceService::auditSingleItemPrice($itemId));
+        $tolerance = (float) $request->query('tolerance', 2.0);
+        $result    = $tenant->execute(fn () => PriceService::auditSingleItemPrice($itemId, $tolerance));
 
         return ApiResponse::show('Item price scan complete (no changes made)', $result);
     }
 
-    public function fixItem(Tenant $tenant, int $itemId): JsonResponse
+    public function fixItem(Request $request, Tenant $tenant, int $itemId): JsonResponse
     {
-        $result = $tenant->execute(fn () => PriceService::auditAndFixSingleItemPrice($itemId));
+        $tolerance = (float) $request->query('tolerance', 2.0);
+        $result    = $tenant->execute(fn () => PriceService::auditAndFixSingleItemPrice($itemId, $tolerance));
 
         Log::info('[Developer] Item price fix for single item', [
             'tenant_id'   => $tenant->id,
@@ -57,9 +61,10 @@ class TenantItemPriceAuditController extends Controller
         return ApiResponse::show('Item price fix complete', $result);
     }
 
-    public function fix(Tenant $tenant): JsonResponse
+    public function fix(Request $request, Tenant $tenant): JsonResponse
     {
-        $result = $tenant->execute(fn () => PriceService::auditAndFixItemPrices());
+        $tolerance = (float) $request->query('tolerance', 2.0);
+        $result    = $tenant->execute(fn () => PriceService::auditAndFixItemPrices($tolerance));
 
         Log::info('[Developer] Item price scan and fix executed', [
             'tenant_id'      => $tenant->id,

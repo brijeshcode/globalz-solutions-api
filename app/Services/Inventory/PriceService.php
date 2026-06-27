@@ -698,7 +698,7 @@ class PriceService
      * Scan all items with delivered purchases and report price discrepancies.
      * No data is modified. Safe to call anytime — including from a scheduler or job.
      */
-    public static function auditItemPrices(): array
+    public static function auditItemPrices(float $tolerance = 2.0): array
     {
         $items   = Item::whereIn('id', self::itemIdsWithDeliveredPurchases())->with('itemPrice')->get();
         $preview = [];
@@ -708,10 +708,13 @@ class PriceService
             $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
             if ($correctPrice === null) continue;
 
-            $currentPrice = $item->itemPrice ? (float) $item->itemPrice->price_usd : null;
-            $difference   = $currentPrice !== null ? round(abs($correctPrice - $currentPrice), 6) : null;
-            $diffPercent  = ($currentPrice !== null && $currentPrice > 0)
-                ? round(abs($correctPrice - $currentPrice) / $currentPrice * 100, 2) . '%'
+            $currentPrice      = $item->itemPrice ? (float) $item->itemPrice->price_usd : null;
+            $difference        = $currentPrice !== null ? round(abs($correctPrice - $currentPrice), 6) : null;
+            $diffPercentValue  = ($currentPrice !== null && $currentPrice > 0)
+                ? round(abs($correctPrice - $currentPrice) / $currentPrice * 100, 2)
+                : null;
+            $diffPercent       = $diffPercentValue !== null
+                ? $diffPercentValue . '%'
                 : ($currentPrice === 0.0 ? 'N/A' : null);
 
             $row = [
@@ -732,6 +735,7 @@ class PriceService
             }
 
             if (abs($correctPrice - $currentPrice) <= 0.000001) continue;
+            if ($diffPercentValue !== null && $diffPercentValue <= $tolerance) continue;
 
             $preview[] = $row;
         }
@@ -743,6 +747,7 @@ class PriceService
             'total_items_checked' => $items->count(),
             'items_to_fix'        => count($preview),
             'items_missing_price' => count($missing),
+            'tolerance_percent'   => $tolerance,
             'changes'             => $preview,
             'missing'             => $missing,
         ];
@@ -752,20 +757,31 @@ class PriceService
      * Scan all items with delivered purchases, correct wrong prices, and populate missing records.
      * Idempotent — safe to call anytime, including from a scheduler or job.
      */
-    public static function auditAndFixItemPrices(): array
+    public static function auditAndFixItemPrices(float $tolerance = 2.0): array
     {
         $result = ['fixed' => [], 'created' => [], 'skipped' => []];
 
         $items = Item::whereIn('id', self::itemIdsWithDeliveredPurchases())->with('itemPrice')->get();
 
         foreach ($items as $item) {
+            if ($tolerance > 0 && $item->itemPrice) {
+                $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
+                $currentPrice = (float) $item->itemPrice->price_usd;
+                if ($correctPrice !== null && $currentPrice > 0) {
+                    $diffPercent = abs($correctPrice - $currentPrice) / $currentPrice * 100;
+                    if ($diffPercent <= $tolerance) {
+                        $result['skipped'][] = $item->id;
+                        continue;
+                    }
+                }
+            }
             self::fixOneItem($item, $result);
         }
 
         return $result;
     }
 
-    public static function auditSingleItemPrice(int $itemId): array
+    public static function auditSingleItemPrice(int $itemId, float $tolerance = 2.0): array
     {
         $item = Item::with('itemPrice')->find($itemId);
 
@@ -779,22 +795,26 @@ class PriceService
             return ['status' => 'skipped', 'reason' => 'No delivered purchases found for this item.'];
         }
 
-        $currentPrice = $item->itemPrice ? (float) $item->itemPrice->price_usd : null;
-        $difference   = $currentPrice !== null ? round(abs($correctPrice - $currentPrice), 6) : null;
-        $diffPercent  = ($currentPrice !== null && $currentPrice > 0)
-            ? round(abs($correctPrice - $currentPrice) / $currentPrice * 100, 2) . '%'
+        $currentPrice     = $item->itemPrice ? (float) $item->itemPrice->price_usd : null;
+        $difference       = $currentPrice !== null ? round(abs($correctPrice - $currentPrice), 6) : null;
+        $diffPercentValue = ($currentPrice !== null && $currentPrice > 0)
+            ? round(abs($correctPrice - $currentPrice) / $currentPrice * 100, 2)
+            : null;
+        $diffPercent      = $diffPercentValue !== null
+            ? $diffPercentValue . '%'
             : ($currentPrice === 0.0 ? 'N/A' : null);
 
         $base = [
-            'item_id'       => $item->id,
-            'item_code'     => $item->code,
-            'item_name'     => $item->short_name,
-            'description'   => $item->description,
-            'calc_method'   => $item->cost_calculation,
-            'current_price' => $currentPrice,
-            'correct_price' => round($correctPrice, 6),
-            'difference'    => $difference,
-            'diff_percent'  => $diffPercent,
+            'item_id'           => $item->id,
+            'item_code'         => $item->code,
+            'item_name'         => $item->short_name,
+            'description'       => $item->description,
+            'calc_method'       => $item->cost_calculation,
+            'current_price'     => $currentPrice,
+            'correct_price'     => round($correctPrice, 6),
+            'difference'        => $difference,
+            'diff_percent'      => $diffPercent,
+            'tolerance_percent' => $tolerance,
         ];
 
         if (!$item->itemPrice) {
@@ -805,10 +825,14 @@ class PriceService
             return array_merge($base, ['status' => 'ok']);
         }
 
+        if ($diffPercentValue !== null && $diffPercentValue <= $tolerance) {
+            return array_merge($base, ['status' => 'within_tolerance']);
+        }
+
         return array_merge($base, ['status' => 'wrong']);
     }
 
-    public static function auditAndFixSingleItemPrice(int $itemId): array
+    public static function auditAndFixSingleItemPrice(int $itemId, float $tolerance = 2.0): array
     {
         $item = Item::with('itemPrice')->find($itemId);
 
@@ -817,6 +841,18 @@ class PriceService
         }
 
         $result = ['fixed' => [], 'created' => [], 'skipped' => []];
+
+        if ($tolerance > 0 && $item->itemPrice) {
+            $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
+            $currentPrice = (float) $item->itemPrice->price_usd;
+            if ($correctPrice !== null && $currentPrice > 0) {
+                $diffPercent = abs($correctPrice - $currentPrice) / $currentPrice * 100;
+                if ($diffPercent <= $tolerance) {
+                    $result['skipped'][] = $item->id;
+                    return $result;
+                }
+            }
+        }
 
         self::fixOneItem($item, $result);
 
