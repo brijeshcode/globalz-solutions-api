@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Items\Item;
 use App\Models\Suppliers\Purchase;
+use App\Models\Suppliers\PurchaseItem;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -25,8 +26,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Relation::morphMap([
-            'purchase' => Purchase::class,
-            'initial'  => Item::class,
+            'purchase'      => Purchase::class,
+            'purchase_item' => PurchaseItem::class,
+            'initial'       => Item::class,
         ]);
 
         DB::listen(function ($query) {

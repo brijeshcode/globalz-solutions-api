@@ -126,10 +126,13 @@ class PurchaseService
                         $oldCost         = $original ? (float) $original->cost_per_item_usd : null;
                         $oldQty          = $original ? (int) $original->quantity : 0;
                         $costChanged     = $oldCost !== null && abs((float) $purchaseItem->cost_per_item_usd - $oldCost) > 0.000001;
+                        $qtyChanged      = $original !== null && (int) $purchaseItem->quantity !== $oldQty;
 
                         if ($isNew || $costChanged) {
                             PriceService::updateFromPurchase($purchase, $purchaseItem, !$isNew, $oldCost, $oldQty);
                             SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
+                        } elseif ($qtyChanged) {
+                            PriceService::recalculateCurrentPrice($purchaseItem->item_id);
                         }
                     }
                 }

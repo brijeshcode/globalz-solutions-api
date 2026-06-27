@@ -188,7 +188,7 @@ class SupplierItemPriceService
         $rate = $currencyRate ?? $supplierPrice->currency_rate ?? 1.0;
         $priceUsd = CurrencyHelper::toUsd($supplierPrice->currency_id, $supplierPrice->price, $rate);
         
-        $supplierPrice->update(['price_usd' => $priceUsd]);
+        $supplierPrice->updateQuietly(['price_usd' => $priceUsd]);
     }
 
     /**
