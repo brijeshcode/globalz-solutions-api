@@ -43,7 +43,7 @@ class PurchaseItem extends Model
         'total_price_usd' => 'decimal:2',
         'total_expense_usd' => 'decimal:2',
         'final_total_cost_usd' => 'decimal:2',
-        'cost_per_item_usd' => 'decimal:2',
+        'cost_per_item_usd' => 'decimal:4',
     ];
 
     protected $searchable = [

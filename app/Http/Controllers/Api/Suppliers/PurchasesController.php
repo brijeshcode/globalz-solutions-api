@@ -18,7 +18,7 @@ class PurchasesController extends Controller
 {
     use HasPagination;
 
-    protected $purchaseService;
+    protected PurchaseService $purchaseService;
 
     public function __construct(PurchaseService $purchaseService)
     {
