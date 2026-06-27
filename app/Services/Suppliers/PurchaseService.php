@@ -27,21 +27,26 @@ class PurchaseService
     {
         try {
             return DB::transaction(function () use ($purchaseData, $items, $expenses) {
-                // Create the purchase
                 $purchase = Purchase::create($purchaseData);
 
-                // Process purchase items
-                if (!empty($items)) {
-                    $this->processPurchaseItems($purchase, $items);
+                // Step 1: Create item records (data only — no price history, no inventory yet)
+                foreach ($items as $itemData) {
+                    $this->createPurchaseItem($purchase, $itemData);
                 }
 
-                // Recalculate purchase totals
-                $this->recalculatePurchaseTotals($purchase);
-
-                // Sync expense lines and recalculate with expense totals
+                // Step 2: Sync expenses and distribute costs across items
                 $this->purchaseExpenseService->syncExpenseLines($purchase, $expenses);
                 $this->recalculatePurchaseTotals($purchase);
                 $this->purchaseExpenseService->recalculateItemCosts($purchase);
+
+                // Step 3: Write price history and add inventory once with the final cost
+                if ($purchase->status === 'Delivered') {
+                    foreach ($purchase->purchaseItems()->get() as $purchaseItem) {
+                        PriceService::updateFromPurchase($purchase, $purchaseItem, false, null, 0);
+                        SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
+                        InventoryService::add($purchaseItem->item_id, $purchase->warehouse_id, $purchaseItem->quantity);
+                    }
+                }
 
                 return $purchase->fresh();
             });
@@ -101,26 +106,38 @@ class PurchaseService
             $updatedPurchase = DB::transaction(function () use ($purchase, $purchaseData, $items, $expenses, &$removedItems) {
                 $purchase->update($purchaseData);
 
+                // Capture original costs BEFORE any changes (keyed by purchase_item.id)
+                $originalCosts = $purchase->purchaseItems()
+                    ->get(['id', 'cost_per_item_usd', 'quantity'])
+                    ->keyBy('id');
+
                 $removedItems = collect($this->updatePurchaseItems($purchase, $items));
 
-                $this->recalculatePurchaseTotals($purchase);
-
+                // Sync expenses and finalise cost_per_item_usd for all remaining items
                 $this->purchaseExpenseService->syncExpenseLines($purchase, $expenses);
                 $this->recalculatePurchaseTotals($purchase);
-                $changedItems = $this->purchaseExpenseService->recalculateItemCosts($purchase);
+                $this->purchaseExpenseService->recalculateItemCosts($purchase);
 
+                // Write price history once per item using the final cost
                 if ($purchase->status === 'Delivered') {
-                    foreach ($changedItems as $changed) {
-                        $note = "Purchase #{$purchase->purchase_code} — expense adjustment (cost/unit: \${$changed['old_cost']} → \${$changed['item']->cost_per_item_usd})";
-                        PriceService::updateFromPurchase($purchase, $changed['item'], true, $changed['old_cost'], $changed['item']->quantity, $note, 'purchase_expense');
+                    foreach ($purchase->purchaseItems()->get() as $purchaseItem) {
+                        $original        = $originalCosts->get($purchaseItem->id);
+                        $isNew           = $original === null;
+                        $oldCost         = $original ? (float) $original->cost_per_item_usd : null;
+                        $oldQty          = $original ? (int) $original->quantity : 0;
+                        $costChanged     = $oldCost !== null && abs((float) $purchaseItem->cost_per_item_usd - $oldCost) > 0.000001;
+
+                        if ($isNew || $costChanged) {
+                            PriceService::updateFromPurchase($purchase, $purchaseItem, !$isNew, $oldCost, $oldQty);
+                            SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
+                        }
                     }
                 }
 
                 return $purchase->fresh();
             });
 
-            // Post-transaction: adjust inventory and clean up prices for removed items.
-            // This runs after the purchases lock has been released.
+            // Post-transaction: mark removed items' history and adjust inventory
             if ($updatedPurchase->status === 'Delivered' && $removedItems->isNotEmpty()) {
                 foreach ($removedItems as $removedItem) {
                     InventoryService::subtract($removedItem->item_id, $updatedPurchase->warehouse_id, $removedItem->quantity);
@@ -235,13 +252,12 @@ class PurchaseService
         }
 
         // Collect removed items BEFORE soft-deleting so the caller can handle
-        // inventory/price side-effects after the transaction commits.
+        // inventory and price side-effects after the transaction commits.
         $removedItems = $purchase->purchaseItems()
             ->whereNotIn('id', $processedItemIds)
             ->get()
             ->all();
 
-        // Soft-delete removed items from the database
         $purchase->purchaseItems()
             ->whereNotIn('id', $processedItemIds)
             ->delete();
@@ -301,20 +317,12 @@ class PurchaseService
     }
 
     /**
-     * Process all related data for a purchase item
-     * Only processes if purchase status is 'Delivered'
+     * Adjust inventory for a purchase item when status is Delivered.
+     * Price history and supplier prices are written separately after expense distribution.
      */
     private function processPurchaseItemRelatedData(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, int $oldQuantity = 0, ?float $oldCostPerItemUsd = null): void
     {
-        // Only update prices, supplier prices, and inventory if purchase is Delivered
         if ($purchase->status === 'Delivered') {
-            // 1. Update item price and price history (BEFORE updating inventory)
-            PriceService::updateFromPurchase($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
-
-            // 2. Update supplier item prices
-            SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
-
-            // 3. Update inventory (AFTER price calculation)
             $this->updateInventory($purchase, $purchaseItem, $isUpdate, $oldQuantity);
         }
     }
@@ -568,31 +576,21 @@ class PurchaseService
                     );
                 }
 
-                // Update status to Delivered
                 $purchase->update(['status' => 'Delivered']);
 
-                // Load purchase items
-                $purchaseItems = $purchase->purchaseItems;
-
-                if ($purchaseItems->isEmpty()) {
+                if ($purchase->purchaseItems()->doesntExist()) {
                     throw new \InvalidArgumentException(
                         "Cannot deliver purchase #{$purchase->id}. No items found in this purchase."
                     );
                 }
 
-                foreach ($purchaseItems as $purchaseItem) {
-                    // 1. Update item price and price history
+                // Ensure cost_per_item_usd reflects any expenses already on the purchase
+                $this->purchaseExpenseService->recalculateItemCosts($purchase);
+
+                foreach ($purchase->purchaseItems()->get() as $purchaseItem) {
                     PriceService::updateFromPurchase($purchase, $purchaseItem, false, null, 0);
-
-                    // 2. Update supplier item prices
                     SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
-
-                    // 3. Add inventory
-                    InventoryService::add(
-                        $purchaseItem->item_id,
-                        $purchase->warehouse_id,
-                        $purchaseItem->quantity
-                    );
+                    InventoryService::add($purchaseItem->item_id, $purchase->warehouse_id, $purchaseItem->quantity);
                 }
             });
         } catch (\InvalidArgumentException $e) {

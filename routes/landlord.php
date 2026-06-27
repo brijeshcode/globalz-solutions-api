@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Landlord\Developer\TenantItemPriceAuditController;
 use App\Http\Controllers\Api\Landlord\FeatureBundleController;
 use App\Http\Controllers\Api\Landlord\FeatureController;
 use App\Http\Controllers\Api\Landlord\TenantCacheController;
@@ -75,6 +76,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // ── Bundles (apply as template to tenant) ─────────────────────────
         Route::post('{tenant}/bundles/{featureBundle}/apply', [FeatureBundleController::class, 'applyBundleToTenant'])->name('bundles.apply');
+
+        // ── Developer / repair ─────────────────────────────────────────────
+        Route::prefix('{tenant}/developer')->name('developer.')->group(function () {
+            Route::get('item-price-audit', [TenantItemPriceAuditController::class, 'audit'])->name('item-price-audit');
+            Route::get('item-price-audit/{itemId}', [TenantItemPriceAuditController::class, 'auditItem'])->name('item-price-audit.item');
+            Route::post('item-price-audit/fix', [TenantItemPriceAuditController::class, 'fix'])->name('item-price-audit.fix');
+            Route::post('item-price-audit/fix/{itemId}', [TenantItemPriceAuditController::class, 'fixItem'])->name('item-price-audit.fix-item');
+        });
     });
 
     // ── Feature management ─────────────────────────────────────────────────

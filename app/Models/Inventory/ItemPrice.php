@@ -3,7 +3,6 @@
 namespace App\Models\Inventory;
 
 use App\Models\Items\Item;
-use App\Models\Suppliers\Purchase;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -19,6 +18,7 @@ class ItemPrice extends Model
         'item_id',
         'price_usd',
         'effective_date',
+        'price_history_id',
     ];
 
     protected $casts = [
@@ -99,13 +99,7 @@ class ItemPrice extends Model
         });
 
         static::created(function ($itemPrice) {
-            // Create price history record if price has changed
-            $previousPrice = static::byItem($itemPrice->item_id)
-                                  ->where('id', '!=', $itemPrice->id)
-                                  ->orderBy('effective_date', 'desc')
-                                  ->first();
-
-            
+            //
         });
     }
 }

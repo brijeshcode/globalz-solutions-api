@@ -26,13 +26,16 @@ class ItemPriceHistory extends Model
         'source_type',
         'source_id',
         'note',
+        'is_current',
+        'calculation_type',
     ];
 
     protected $casts = [
-        'price_usd' => 'decimal:4',
+        'price_usd'              => 'decimal:4',
         'average_weighted_price' => 'decimal:4',
-        'latest_price' => 'decimal:4',
-        'effective_date' => 'date',
+        'latest_price'           => 'decimal:4',
+        'effective_date'         => 'date',
+        'is_current'             => 'boolean',
     ];
 
     protected $searchable = [];

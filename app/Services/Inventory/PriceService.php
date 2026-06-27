@@ -32,35 +32,73 @@ class PriceService
     /**
      * Update item price based on purchase
      */
-    public static function updateFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, ?float $oldCostPerItemUsd = null, ?int $oldQuantity = null, ?string $customNote = null, string $sourceType = 'purchase'): void
+    public static function updateFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem, bool $isUpdate = false, ?float $oldCostPerItemUsd = null, ?int $oldQuantity = null, ?string $customNote = null): void
     {
-        $item = $purchaseItem->item;
-        $newPriceUsd = $purchaseItem->cost_per_item_usd;
+        $item            = $purchaseItem->item;
+        $newPriceUsd     = $purchaseItem->cost_per_item_usd;
+        $calculationType = $item->cost_calculation;
+        $effectiveDate   = $isUpdate ? now()->toDateString() : $purchase->date;
 
         $currentItemPrice = self::getCurrentPrice($purchaseItem->item_id);
 
-        // Use today's date for updates, purchase date for new entries
-        $effectiveDate = $isUpdate ? now()->toDateString() : $purchase->date;
-
         if ($currentItemPrice) {
             $oldPriceUsd = $currentItemPrice->price_usd;
-            // Calculate price based on item's cost calculation method
+
             if ($item->cost_calculation === Item::COST_WEIGHTED_AVERAGE) {
                 $newPriceUsd = self::calculateWeightedAveragePrice($purchaseItem, $oldPriceUsd, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
             }
-            // For COST_LAST_COST, use the new price as-is
 
             $priceDifference = abs($newPriceUsd - $oldPriceUsd);
 
-            if ($priceDifference > 0) {
-                $note = $customNote ?? self::buildPurchaseUpdateNote($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
+            if ($priceDifference > 0.000001) {
+                $note      = $customNote ?? self::buildPurchaseUpdateNote($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
+                $isCurrent = self::shouldBeCurrentPrice($purchaseItem, $item->cost_calculation);
 
-                self::updatePrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $oldPriceUsd, $note, $sourceType, $purchase->id);
+                self::updatePrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $oldPriceUsd, $note, 'purchase_item', $purchaseItem->id, $calculationType, $isCurrent);
             }
         } else {
             $note = $customNote ?? "Initial price from Purchase #{$purchase->id}";
-            self::createPrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $note, $sourceType, $purchase->id);
+            self::createPrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $note, 'purchase_item', $purchaseItem->id, $calculationType);
         }
+    }
+
+    /**
+     * Mark a purchase item's price history entry as removed.
+     * Called when a purchase item is deleted or replaced.
+     */
+    public static function markPurchaseItemRemoved(PurchaseItem $purchaseItem): void
+    {
+        ItemPriceHistory::where('item_id', $purchaseItem->item_id)
+            ->where('source_type', 'purchase_item')
+            ->where('source_id', $purchaseItem->id)
+            ->update([
+                'is_current' => false,
+                'note'       => 'Removed by user — no longer valid',
+            ]);
+    }
+
+    /**
+     * Determine whether a new price history entry should be marked as current.
+     * Weighted average: always current (latest calculation wins).
+     * Last cost: only current if this purchase item is the newest delivered purchase for the item.
+     */
+    private static function shouldBeCurrentPrice(PurchaseItem $purchaseItem, string $costCalculation): bool
+    {
+        if ($costCalculation === Item::COST_WEIGHTED_AVERAGE) {
+            return true;
+        }
+
+        // Last cost: check if this purchase item belongs to the newest delivered purchase for the item
+        $newestPurchaseItemId = PurchaseItem::where('item_id', $purchaseItem->item_id)
+            ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+            ->where('purchases.status', 'Delivered')
+            ->whereNull('purchase_items.deleted_at')
+            ->whereNull('purchases.deleted_at')
+            ->orderByDesc('purchases.date')
+            ->orderByDesc('purchase_items.id')
+            ->value('purchase_items.id');
+
+        return $newestPurchaseItemId === $purchaseItem->id;
     }
 
     /**
@@ -252,10 +290,14 @@ class PriceService
         $startingQuantity = $item && $item->starting_quantity > 0 ? $item->starting_quantity : 0;
         $startingPrice = $item && $item->starting_price > 0 ? $item->starting_price : 0;
 
-        // Get all OTHER purchase items for this item across all warehouses
+        // Get all OTHER delivered purchase items for this item (non-delivered stock is not in warehouse)
         $otherPurchases = \App\Models\Suppliers\PurchaseItem::where('item_id', $itemId)
             ->where('id', '!=', $excludePurchaseItemId)
-            ->get(['quantity', 'cost_per_item_usd']);
+            ->whereNull('purchase_items.deleted_at')
+            ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+            ->where('purchases.status', 'Delivered')
+            ->whereNull('purchases.deleted_at')
+            ->get(['purchase_items.quantity', 'purchase_items.cost_per_item_usd']);
 
         // Calculate total value and quantity from other purchases AND starting inventory
         $totalValueFromOthers = 0;
@@ -306,25 +348,30 @@ class PriceService
     /**
      * Create new item price record
      */
-    private static function createPrice(int $itemId, float $priceUsd, string $effectiveDate, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null): ItemPrice
+    private static function createPrice(int $itemId, float $priceUsd, string $effectiveDate, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null, ?string $calculationType = null): ItemPrice
     {
-        return DB::transaction(function () use ($itemId, $priceUsd, $effectiveDate, $reason, $sourceType, $sourceId) {
-            $itemPrice = ItemPrice::create([
-                'item_id' => $itemId,
-                'price_usd' => $priceUsd,
-                'effective_date' => $effectiveDate,
+        return DB::transaction(function () use ($itemId, $priceUsd, $effectiveDate, $reason, $sourceType, $sourceId, $calculationType) {
+            // Mark any existing is_current entries as no longer current
+            ItemPriceHistory::where('item_id', $itemId)->where('is_current', true)->update(['is_current' => false]);
+
+            $history = ItemPriceHistory::create([
+                'item_id'                => $itemId,
+                'price_usd'              => $priceUsd,
+                'average_weighted_price' => $priceUsd,
+                'latest_price'           => 0,
+                'effective_date'         => $effectiveDate,
+                'source_type'            => $sourceType ?? 'initial',
+                'source_id'              => $sourceId,
+                'note'                   => $reason ?? 'Initial price',
+                'is_current'             => true,
+                'calculation_type'       => $calculationType,
             ]);
 
-            // Create price history entry
-            ItemPriceHistory::create([
-                'item_id' => $itemId,
-                'price_usd' => $priceUsd,
-                'average_weighted_price' => $priceUsd,
-                'latest_price' => 0, // No previous price
-                'effective_date' => $effectiveDate,
-                'source_type' => $sourceType ?? 'initial',
-                'source_id' => $sourceId,
-                'note' => $reason ?? 'Initial price',
+            $itemPrice = ItemPrice::create([
+                'item_id'          => $itemId,
+                'price_usd'        => $priceUsd,
+                'effective_date'   => $effectiveDate,
+                'price_history_id' => $history->id,
             ]);
 
             return $itemPrice;
@@ -334,29 +381,37 @@ class PriceService
     /**
      * Update existing item price
      */
-    private static function updatePrice(int $itemId, float $newPriceUsd, string $effectiveDate, ?float $oldPriceUsd = null, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null): ItemPrice
+    private static function updatePrice(int $itemId, float $newPriceUsd, string $effectiveDate, ?float $oldPriceUsd = null, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null, ?string $calculationType = null, bool $isCurrent = true): ItemPrice
     {
-        return DB::transaction(function () use ($itemId, $newPriceUsd, $effectiveDate, $oldPriceUsd, $reason, $sourceType, $sourceId) {
+        return DB::transaction(function () use ($itemId, $newPriceUsd, $effectiveDate, $oldPriceUsd, $reason, $sourceType, $sourceId, $calculationType, $isCurrent) {
             $itemPrice = ItemPrice::byItem($itemId)->first();
-            $oldPrice = $oldPriceUsd ?? $itemPrice->price_usd;
+            $oldPrice  = $oldPriceUsd ?? $itemPrice->price_usd;
 
-            // Update current item price
-            $itemPrice->update([
-                'price_usd' => $newPriceUsd,
-                'effective_date' => $effectiveDate,
-            ]);
+            if ($isCurrent) {
+                // Clear previous is_current flag before creating the new entry
+                ItemPriceHistory::where('item_id', $itemId)->where('is_current', true)->update(['is_current' => false]);
+            }
 
-            // Create price history entry for the change
-            ItemPriceHistory::create([
-                'item_id' => $itemId,
-                'price_usd' => $newPriceUsd,
+            $history = ItemPriceHistory::create([
+                'item_id'                => $itemId,
+                'price_usd'              => $newPriceUsd,
                 'average_weighted_price' => $newPriceUsd,
-                'latest_price' => $oldPrice,
-                'effective_date' => $effectiveDate,
-                'source_type' => $sourceType ?? 'manual',
-                'source_id' => $sourceId,
-                'note' => $reason ?? 'Price update',
+                'latest_price'           => $oldPrice,
+                'effective_date'         => $effectiveDate,
+                'source_type'            => $sourceType ?? 'manual',
+                'source_id'              => $sourceId,
+                'note'                   => $reason ?? 'Price update',
+                'is_current'             => $isCurrent,
+                'calculation_type'       => $calculationType,
             ]);
+
+            if ($isCurrent) {
+                $itemPrice->update([
+                    'price_usd'        => $newPriceUsd,
+                    'effective_date'   => $effectiveDate,
+                    'price_history_id' => $history->id,
+                ]);
+            }
 
             return $itemPrice;
         });
@@ -368,14 +423,10 @@ class PriceService
      */
     public static function deleteFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): void
     {
-        // Soft delete ALL price history entries tied to this purchase (covers both
-        // 'purchase' and 'purchase_expense' entries created during expense recalculations)
-        ItemPriceHistory::where('item_id', $purchaseItem->item_id)
-            ->whereIn('source_type', ['purchase', 'purchase_expense'])
-            ->where('source_id', $purchase->id)
-            ->delete();
+        // Mark history entry as removed (immutable — do not delete price data)
+        self::markPurchaseItemRemoved($purchaseItem);
 
-        // Restore previous price from price history
+        // Restore current price from the most recent still-valid history entry
         self::restorePriceFromHistory($purchaseItem->item_id, $purchase->date);
     }
 
@@ -409,24 +460,30 @@ class PriceService
      */
     private static function restorePriceFromHistory(int $itemId, string $effectiveDate): void
     {
-        // Get the most recent price history record (excluding soft-deleted ones)
+        // Find the most recent still-valid history entry (not marked removed)
         $previousPriceHistory = ItemPriceHistory::where('item_id', $itemId)
+            ->where('note', '!=', 'Removed by user — no longer valid')
             ->orderBy('effective_date', 'desc')
             ->orderBy('id', 'desc')
             ->first();
 
+        // Clear all is_current flags first
+        ItemPriceHistory::where('item_id', $itemId)->where('is_current', true)->update(['is_current' => false]);
+
         if ($previousPriceHistory) {
             ItemPrice::where('item_id', $itemId)->update([
-                'price_usd' => $previousPriceHistory->price_usd,
-                'effective_date' => $previousPriceHistory->effective_date,
+                'price_usd'        => $previousPriceHistory->price_usd,
+                'effective_date'   => $previousPriceHistory->effective_date,
+                'price_history_id' => $previousPriceHistory->id,
             ]);
+
+            $previousPriceHistory->update(['is_current' => true]);
         } else {
-            // No price history found — fall back to starting price or zero
-            $item = Item::find($itemId);
+            $item          = Item::find($itemId);
             $fallbackPrice = ($item && $item->starting_price > 0) ? $item->starting_price : 0;
 
             ItemPrice::where('item_id', $itemId)->update([
-                'price_usd' => $fallbackPrice,
+                'price_usd'      => $fallbackPrice,
                 'effective_date' => $effectiveDate,
             ]);
         }
@@ -610,6 +667,291 @@ class PriceService
         }
 
         return $fixed;
+    }
+
+    /**
+     * Scan all items with delivered purchases and report price discrepancies.
+     * No data is modified. Safe to call anytime — including from a scheduler or job.
+     */
+    public static function auditItemPrices(): array
+    {
+        $items   = Item::whereIn('id', self::itemIdsWithDeliveredPurchases())->with('itemPrice')->get();
+        $preview = [];
+        $missing = [];
+
+        foreach ($items as $item) {
+            $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
+            if ($correctPrice === null) continue;
+
+            $currentPrice = $item->itemPrice ? (float) $item->itemPrice->price_usd : null;
+            $difference   = $currentPrice !== null ? round(abs($correctPrice - $currentPrice), 6) : null;
+            $diffPercent  = ($currentPrice !== null && $currentPrice > 0)
+                ? round(abs($correctPrice - $currentPrice) / $currentPrice * 100, 2) . '%'
+                : ($currentPrice === 0.0 ? 'N/A' : null);
+
+            $row = [
+                'item_id'       => $item->id,
+                'item_code'     => $item->code,
+                'item_name'     => $item->short_name,
+                'description'   => $item->description,
+                'calc_method'   => $item->cost_calculation,
+                'current_price' => $currentPrice,
+                'correct_price' => round($correctPrice, 6),
+                'difference'    => $difference,
+                'diff_percent'  => $diffPercent,
+            ];
+
+            if (!$item->itemPrice) {
+                $missing[] = $row;
+                continue;
+            }
+
+            if (abs($correctPrice - $currentPrice) <= 0.000001) continue;
+
+            $preview[] = $row;
+        }
+
+        usort($preview, fn($a, $b) => (float) $b['diff_percent'] <=> (float) $a['diff_percent']);
+        usort($missing, fn($a, $b) => $b['correct_price'] <=> $a['correct_price']);
+
+        return [
+            'total_items_checked' => $items->count(),
+            'items_to_fix'        => count($preview),
+            'items_missing_price' => count($missing),
+            'changes'             => $preview,
+            'missing'             => $missing,
+        ];
+    }
+
+    /**
+     * Scan all items with delivered purchases, correct wrong prices, and populate missing records.
+     * Idempotent — safe to call anytime, including from a scheduler or job.
+     */
+    public static function auditAndFixItemPrices(): array
+    {
+        $result = ['fixed' => [], 'created' => [], 'skipped' => []];
+
+        $items = Item::whereIn('id', self::itemIdsWithDeliveredPurchases())->with('itemPrice')->get();
+
+        foreach ($items as $item) {
+            self::fixOneItem($item, $result);
+        }
+
+        return $result;
+    }
+
+    public static function auditSingleItemPrice(int $itemId): array
+    {
+        $item = Item::with('itemPrice')->find($itemId);
+
+        if (!$item) {
+            return ['error' => 'Item not found.'];
+        }
+
+        $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
+
+        if ($correctPrice === null) {
+            return ['status' => 'skipped', 'reason' => 'No delivered purchases found for this item.'];
+        }
+
+        $currentPrice = $item->itemPrice ? (float) $item->itemPrice->price_usd : null;
+        $difference   = $currentPrice !== null ? round(abs($correctPrice - $currentPrice), 6) : null;
+        $diffPercent  = ($currentPrice !== null && $currentPrice > 0)
+            ? round(abs($correctPrice - $currentPrice) / $currentPrice * 100, 2) . '%'
+            : ($currentPrice === 0.0 ? 'N/A' : null);
+
+        $base = [
+            'item_id'       => $item->id,
+            'item_code'     => $item->code,
+            'item_name'     => $item->short_name,
+            'description'   => $item->description,
+            'calc_method'   => $item->cost_calculation,
+            'current_price' => $currentPrice,
+            'correct_price' => round($correctPrice, 6),
+            'difference'    => $difference,
+            'diff_percent'  => $diffPercent,
+        ];
+
+        if (!$item->itemPrice) {
+            return array_merge($base, ['status' => 'missing']);
+        }
+
+        if (abs($correctPrice - $currentPrice) <= 0.000001) {
+            return array_merge($base, ['status' => 'ok']);
+        }
+
+        return array_merge($base, ['status' => 'wrong']);
+    }
+
+    public static function auditAndFixSingleItemPrice(int $itemId): array
+    {
+        $item = Item::with('itemPrice')->find($itemId);
+
+        if (!$item) {
+            return ['error' => 'Item not found.'];
+        }
+
+        $result = ['fixed' => [], 'created' => [], 'skipped' => []];
+
+        self::fixOneItem($item, $result);
+
+        return $result;
+    }
+
+    private static function fixOneItem(Item $item, array &$result): void
+    {
+        $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
+
+        if ($correctPrice === null) {
+            $result['skipped'][] = $item->id;
+            return;
+        }
+
+        $drivingPurchaseItem = PurchaseItem::where('purchase_items.item_id', $item->id)
+            ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+            ->where('purchases.status', 'Delivered')
+            ->whereNull('purchase_items.deleted_at')
+            ->whereNull('purchases.deleted_at')
+            ->orderByDesc('purchases.date')
+            ->orderByDesc('purchase_items.id')
+            ->select('purchase_items.*')
+            ->first();
+
+        if (!$drivingPurchaseItem) {
+            $result['skipped'][] = $item->id;
+            return;
+        }
+
+        // No item_prices record at all — create from scratch
+        if (!$item->itemPrice) {
+            DB::transaction(function () use ($item, $correctPrice, $drivingPurchaseItem, &$result) {
+                $note = "[Created by audit on " . now()->toDateTimeString() . "] No price record existed. Populated from purchase history.";
+
+                $history = ItemPriceHistory::create([
+                    'item_id'                => $item->id,
+                    'price_usd'              => $correctPrice,
+                    'average_weighted_price' => $correctPrice,
+                    'latest_price'           => 0,
+                    'effective_date'         => now()->toDateString(),
+                    'source_type'            => 'purchase_item',
+                    'source_id'              => $drivingPurchaseItem->id,
+                    'note'                   => $note,
+                    'is_current'             => true,
+                    'calculation_type'       => $item->cost_calculation,
+                ]);
+
+                ItemPrice::create([
+                    'item_id'          => $item->id,
+                    'price_usd'        => $correctPrice,
+                    'effective_date'   => now()->toDateString(),
+                    'price_history_id' => $history->id,
+                ]);
+
+                $result['created'][$item->id] = [
+                    'item_code'                => $item->code,
+                    'item_name'                => $item->short_name,
+                    'description'              => $item->description,
+                    'correct_price'            => $correctPrice,
+                    'calc_method'              => $item->cost_calculation,
+                    'driving_purchase_item_id' => $drivingPurchaseItem->id,
+                ];
+            });
+            return;
+        }
+
+        $currentPrice = (float) $item->itemPrice->price_usd;
+
+        if (abs($correctPrice - $currentPrice) <= 0.000001) {
+            $result['skipped'][] = $item->id;
+            return;
+        }
+
+        DB::transaction(function () use ($item, $correctPrice, $currentPrice, $drivingPurchaseItem, &$result) {
+            ItemPriceHistory::where('item_id', $item->id)->forceDelete();
+
+            $note = "[Repaired on " . now()->toDateTimeString() . "] Price corrected from {$currentPrice} to {$correctPrice} — purchase expenses were not included in the original cost calculation.";
+
+            $history = ItemPriceHistory::create([
+                'item_id'                => $item->id,
+                'price_usd'              => $correctPrice,
+                'average_weighted_price' => $correctPrice,
+                'latest_price'           => $currentPrice,
+                'effective_date'         => now()->toDateString(),
+                'source_type'            => 'purchase_item',
+                'source_id'              => $drivingPurchaseItem->id,
+                'note'                   => $note,
+                'is_current'             => true,
+                'calculation_type'       => $item->cost_calculation,
+            ]);
+
+            $item->itemPrice->update([
+                'price_usd'        => $correctPrice,
+                'effective_date'   => now()->toDateString(),
+                'price_history_id' => $history->id,
+            ]);
+
+            $result['fixed'][$item->id] = [
+                'item_code'                => $item->code,
+                'item_name'                => $item->short_name,
+                'description'              => $item->description,
+                'old_price'                => $currentPrice,
+                'correct_price'            => $correctPrice,
+                'difference'               => round(abs($correctPrice - $currentPrice), 4),
+                'diff_percent'             => $currentPrice > 0
+                    ? round(abs($correctPrice - $currentPrice) / $currentPrice * 100, 2)
+                    : null,
+                'calc_method'              => $item->cost_calculation,
+                'driving_purchase_item_id' => $drivingPurchaseItem->id,
+            ];
+        });
+    }
+
+    private static function itemIdsWithDeliveredPurchases(): array
+    {
+        return PurchaseItem::join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+            ->where('purchases.status', 'Delivered')
+            ->whereNull('purchase_items.deleted_at')
+            ->whereNull('purchases.deleted_at')
+            ->pluck('purchase_items.item_id')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Compute the correct current price for an item from delivered purchase items.
+     * Returns null if no delivered purchases exist.
+     */
+    private static function computeCorrectPrice(int $itemId, string $costCalculation): ?float
+    {
+        $deliveredItems = PurchaseItem::where('purchase_items.item_id', $itemId)
+            ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+            ->where('purchases.status', 'Delivered')
+            ->whereNull('purchase_items.deleted_at')
+            ->whereNull('purchases.deleted_at')
+            ->orderBy('purchases.date', 'asc')
+            ->orderBy('purchase_items.id', 'asc')
+            ->get(['purchase_items.quantity', 'purchase_items.cost_per_item_usd', 'purchases.date']);
+
+        if ($deliveredItems->isEmpty()) {
+            return null;
+        }
+
+        if ($costCalculation === Item::COST_LAST_COST) {
+            return (float) $deliveredItems->last()->cost_per_item_usd;
+        }
+
+        // Weighted average: include starting inventory as the base, then layer purchases
+        $item             = Item::find($itemId);
+        $totalQty         = ($item && $item->starting_quantity > 0) ? (float) $item->starting_quantity : 0.0;
+        $totalValue       = ($item && $item->starting_price > 0)    ? $totalQty * (float) $item->starting_price : 0.0;
+
+        foreach ($deliveredItems as $pi) {
+            $totalQty   += (float) $pi->quantity;
+            $totalValue += (float) $pi->quantity * (float) $pi->cost_per_item_usd;
+        }
+
+        return $totalQty > 0 ? ($totalValue / $totalQty) : null;
     }
 
 }
