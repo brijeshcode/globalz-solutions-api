@@ -45,6 +45,7 @@ class FeatureController extends Controller
         ['key' => 'item_adjustments',          'name' => 'Item Adjustments',            'description' => 'Manually adjust item stock quantities.'],
         ['key' => 'price_lists',               'name' => 'Price Lists',                 'description' => 'Manage multiple price lists per item.'],
         ['key' => 'item_cost_history',         'name' => 'Item Cost History',           'description' => 'Track and audit item cost changes over time.'],
+        ['key' => 'item_cost_audit',           'name' => 'Item Cost Audit',             'description' => 'Audit scan to flag items whose current cost price deviates from their latest purchase cost.'],
 
         // HR / Employees
         ['key' => 'employee_management',       'name' => 'Employee Management',         'description' => 'Full HR module: employee records and departments.'],
