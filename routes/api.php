@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\Items\ItemAdjustsController;
 use App\Http\Controllers\Api\Items\ItemMovementsController;
 use App\Http\Controllers\Api\Items\ItemCostHistoryController;
 use App\Http\Controllers\Api\Items\ItemPriceAuditController;
+use App\Http\Controllers\Api\Items\ItemQuantityAuditController;
 use App\Http\Controllers\Api\Items\PriceListsController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\ActivityLogController;
@@ -530,6 +531,14 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('{itemId}', 'auditItem')->name('item');
             Route::post('fix', 'fix')->name('fix');
             Route::post('fix/{itemId}', 'fixItem')->name('fix-item');
+        });
+
+        // Item Quantity Audit Controller
+        Route::controller(ItemQuantityAuditController::class)->prefix('quantity-audit')->name('quantity-audit.')->group(function () {
+            Route::get('/', 'audit')->name('index');
+            Route::get('{item}', 'auditItem')->name('item');
+            Route::post('fix', 'fix')->name('fix');
+            Route::post('fix/{item}', 'fixItem')->name('fix-item');
         });
 
         // Item Transfers Controller
@@ -1144,9 +1153,6 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
         // Inventory Reports
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('warehouse', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'index'])->name('warehouse.index');
-            Route::get('warehouse/discrepancies', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'previewDiscrepancies'])->name('warehouse.discrepancies');
-            Route::post('warehouse/fix-all', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'fixAllInventory'])->name('warehouse.fix-all');
-            Route::post('warehouse/fix/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'fixItemInventory'])->name('warehouse.fix-item');
             Route::get('warehouse/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'show'])->name('warehouse.show');
         });
     });
