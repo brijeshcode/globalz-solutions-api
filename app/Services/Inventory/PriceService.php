@@ -1050,6 +1050,19 @@ class PriceService
      */
     private static function computeCorrectPrice(int $itemId, string $costCalculation): ?float
     {
+        if ($costCalculation === Item::COST_LAST_COST) {
+            $latest = PurchaseItem::where('purchase_items.item_id', $itemId)
+                ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+                ->where('purchases.status', 'Delivered')
+                ->whereNull('purchase_items.deleted_at')
+                ->whereNull('purchases.deleted_at')
+                ->orderByDesc('purchases.id')
+                ->orderByDesc('purchase_items.id')
+                ->first(['purchase_items.cost_per_item_usd']);
+            return $latest ? (float) $latest->cost_per_item_usd : null;
+        }
+
+        // Weighted average: recompute from delivered purchases in chronological order.
         $deliveredItems = PurchaseItem::where('purchase_items.item_id', $itemId)
             ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
             ->where('purchases.status', 'Delivered')
@@ -1064,14 +1077,9 @@ class PriceService
             return null;
         }
 
-        if ($costCalculation === Item::COST_LAST_COST) {
-            return (float) $deliveredItems->last()->cost_per_item_usd;
-        }
-
-        // Weighted average: include starting inventory as the base, then layer purchases
-        $item             = Item::find($itemId);
-        $totalQty         = ($item && $item->starting_quantity > 0) ? (float) $item->starting_quantity : 0.0;
-        $totalValue       = ($item && $item->starting_price > 0)    ? $totalQty * (float) $item->starting_price : 0.0;
+        $item       = Item::find($itemId);
+        $totalQty   = ($item && $item->starting_quantity > 0) ? (float) $item->starting_quantity : 0.0;
+        $totalValue = ($item && $item->starting_price > 0)    ? $totalQty * (float) $item->starting_price : 0.0;
 
         foreach ($deliveredItems as $pi) {
             $totalQty   += (float) $pi->quantity;
