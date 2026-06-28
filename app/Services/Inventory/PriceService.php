@@ -120,6 +120,7 @@ class PriceService
             ->whereNull('purchase_items.deleted_at')
             ->whereNull('purchases.deleted_at')
             ->orderByDesc('purchases.date')
+            ->orderByDesc('purchases.id')
             ->orderByDesc('purchase_items.id')
             ->value('purchase_items.id');
 
@@ -867,6 +868,7 @@ class PriceService
             ->whereNull('purchase_items.deleted_at')
             ->whereNull('purchases.deleted_at')
             ->orderBy('purchases.date', 'asc')
+            ->orderBy('purchases.id', 'asc')
             ->orderBy('purchase_items.id', 'asc')
             ->select('purchase_items.*', 'purchases.date as purchase_date')
             ->get();
@@ -1054,6 +1056,7 @@ class PriceService
             ->whereNull('purchase_items.deleted_at')
             ->whereNull('purchases.deleted_at')
             ->orderBy('purchases.date', 'asc')
+            ->orderBy('purchases.id', 'asc')
             ->orderBy('purchase_items.id', 'asc')
             ->get(['purchase_items.quantity', 'purchase_items.cost_per_item_usd', 'purchases.date']);
 
