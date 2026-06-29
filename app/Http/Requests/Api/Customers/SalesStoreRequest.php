@@ -5,7 +5,7 @@ namespace App\Http\Requests\Api\Customers;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use App\Helpers\SettingsHelper;
-use App\Models\Item;
+use App\Models\Items\Item;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
