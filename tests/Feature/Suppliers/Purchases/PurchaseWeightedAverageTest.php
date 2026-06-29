@@ -198,5 +198,5 @@ it('creates item price history on significant price change', function () {
     expect($priceHistory)->not()->toBeNull()
         ->and($priceHistory->latest_price)->toBe('50.0000')
         ->and($priceHistory->price_usd)->toBeGreaterThan(50.00)
-        ->and($priceHistory->source_type)->toBe('purchase');
+        ->and($priceHistory->source_type)->toBe('purchase_item');
 });

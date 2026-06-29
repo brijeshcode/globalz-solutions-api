@@ -33,7 +33,7 @@ use App\Models\User;
 uses()->group('calculations', 'inventory', 'item-quantity-movement');
 
 beforeEach(function () {
-    $this->user = User::factory()->create(['role' => 'admin']);
+    $this->user = User::factory()->create(['role' => 'super_admin']);
     $this->actingAs($this->user, 'sanctum');
 
     // Create settings
@@ -176,6 +176,7 @@ describe('2. Purchase Module - Inventory Updates via API', function () {
         ]);
 
         $response->assertCreated();
+        $this->patchJson(route('suppliers.purchases.changeStatus', $response->json('data.id')), ['status' => 'Delivered'])->assertOk();
 
         $quantity = ($this->getInventoryQuantity)($item->id, $this->warehouse1->id);
         expect($quantity)->toBe(100.0);
@@ -184,6 +185,7 @@ describe('2. Purchase Module - Inventory Updates via API', function () {
     it('handles multiple items in a single purchase via API', function () {
         // Create first item via API
         $item1Response = $this->postJson(route('setups.items.store'), [
+            'code' => 'MPITEM1',
             'short_name' => 'Multi Purchase Item 1',
             'description' => 'First item for multi-purchase test',
             'item_type_id' => $this->itemType->id,
@@ -200,6 +202,7 @@ describe('2. Purchase Module - Inventory Updates via API', function () {
 
         // Create second item via API
         $item2Response = $this->postJson(route('setups.items.store'), [
+            'code' => 'MPITEM2',
             'short_name' => 'Multi Purchase Item 2',
             'description' => 'Second item for multi-purchase test',
             'item_type_id' => $this->itemType->id,
@@ -252,6 +255,7 @@ describe('2. Purchase Module - Inventory Updates via API', function () {
         ]);
 
         $response->assertCreated();
+        $this->patchJson(route('suppliers.purchases.changeStatus', $response->json('data.id')), ['status' => 'Delivered'])->assertOk();
 
         expect(($this->getInventoryQuantity)($item1Id, $this->warehouse1->id))->toBe(150.0); // 50 + 100
         expect(($this->getInventoryQuantity)($item2Id, $this->warehouse1->id))->toBe(125.0); // 25 + 100
@@ -301,6 +305,7 @@ describe('2. Purchase Module - Inventory Updates via API', function () {
         $response->assertCreated();
         $purchaseId = $response->json('data.id');
         $purchaseItemId = $response->json('data.items.0.id');
+        $this->patchJson(route('suppliers.purchases.changeStatus', $purchaseId), ['status' => 'Delivered'])->assertOk();
 
         expect(($this->getInventoryQuantity)($item->id, $this->warehouse1->id))->toBe(100.0);
 
@@ -384,6 +389,7 @@ describe('2. Purchase Module - Inventory Updates via API', function () {
 
         $response->assertCreated();
         $purchaseId = $response->json('data.id');
+        $this->patchJson(route('suppliers.purchases.changeStatus', $purchaseId), ['status' => 'Delivered'])->assertOk();
 
         expect(($this->getInventoryQuantity)($item->id, $this->warehouse1->id))->toBe(150.0);
 
@@ -440,6 +446,7 @@ describe('2a. Purchase Return Module - Inventory Updates via API', function () {
         ]);
 
         $purchaseResponse->assertCreated();
+        $this->patchJson(route('suppliers.purchases.changeStatus', $purchaseResponse->json('data.id')), ['status' => 'Delivered'])->assertOk();
         expect(($this->getInventoryQuantity)($item->id, $this->warehouse1->id))->toBe(200.0);
 
         // Create purchase return via API
@@ -517,6 +524,7 @@ describe('2a. Purchase Return Module - Inventory Updates via API', function () {
         ]);
 
         $purchaseResponse->assertCreated();
+        $this->patchJson(route('suppliers.purchases.changeStatus', $purchaseResponse->json('data.id')), ['status' => 'Delivered'])->assertOk();
 
         // Create purchase return
         $response = $this->postJson(route('suppliers.purchase-returns.store'), [
@@ -626,6 +634,7 @@ describe('2a. Purchase Return Module - Inventory Updates via API', function () {
         ]);
 
         $purchaseResponse->assertCreated();
+        $this->patchJson(route('suppliers.purchases.changeStatus', $purchaseResponse->json('data.id')), ['status' => 'Delivered'])->assertOk();
 
         // Create purchase return
         $response = $this->postJson(route('suppliers.purchase-returns.store'), [

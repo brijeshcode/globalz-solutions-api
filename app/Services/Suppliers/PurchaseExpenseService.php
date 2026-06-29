@@ -11,10 +11,6 @@ use App\Models\Suppliers\PurchaseExpense;
 
 class PurchaseExpenseService
 {
-    /**
-     * Sync expense lines for a purchase.
-     * Lines with 'id' are updated, lines without are created, absent lines are deleted.
-     */
     public function syncExpenseLines(Purchase $purchase, array $expenses): void
     {
         $submittedIds = collect($expenses)->pluck('id')->filter()->values()->toArray();
@@ -37,22 +33,47 @@ class PurchaseExpenseService
         }
     }
 
-    /**
-     * Distribute expenses proportionally to purchase items.
-     * Only expenses with exclude_from_item_cost = false are distributed.
-     */
-    /**
-     * Returns array of ['item' => PurchaseItem, 'old_cost' => float] for items whose cost changed.
-     */
-    public function recalculateItemCosts(Purchase $purchase): array
+    public function computeExpenseShares(Purchase $purchase, array $items): array
     {
-        $purchase->refresh();
+        $distributableUsd = $this->distributableUsd($purchase);
+        $itemCount        = count($items);
 
-        $distributableUsd = (float) PurchaseExpense::where('purchase_id', $purchase->id)
+        $subTotalUsd = collect($items)->sum(
+            fn($i) => \App\Helpers\CurrencyHelper::toUsd($purchase->currency_id, $this->itemTotalPrice($i), $purchase->currency_rate)
+        );
+
+        return collect($items)->map(function ($itemData) use ($purchase, $distributableUsd, $subTotalUsd, $itemCount) {
+            $itemTotalUsd = \App\Helpers\CurrencyHelper::toUsd($purchase->currency_id, $this->itemTotalPrice($itemData), $purchase->currency_rate);
+            return $subTotalUsd > 0
+                ? ($itemTotalUsd / $subTotalUsd) * $distributableUsd
+                : ($itemCount > 0 ? $distributableUsd / $itemCount : 0);
+        })->values()->toArray();
+    }
+
+    private function distributableUsd(Purchase $purchase): float
+    {
+        return (float) PurchaseExpense::where('purchase_id', $purchase->id)
             ->join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
             ->whereNull('expense_transactions.deleted_at')
             ->where('purchase_expenses.exclude_from_item_cost', false)
             ->sum('expense_transactions.amount_usd');
+    }
+
+    private function itemTotalPrice(array $itemData): float
+    {
+        $discountAmount  = $itemData['discount_amount'] ?? 0;
+        $discountPercent = $itemData['discount_percent'] ?? 0;
+        if ($discountPercent > 0) {
+            $discountAmount = ($itemData['price'] * $itemData['quantity'] * $discountPercent) / 100;
+        }
+        return ($itemData['price'] * $itemData['quantity']) - $discountAmount;
+    }
+
+    public function recalculateItemCosts(Purchase $purchase): array
+    {
+        $purchase->refresh();
+
+        $distributableUsd = $this->distributableUsd($purchase);
 
         $items       = $purchase->purchaseItems()->get();
         $subTotalUsd = (float) $purchase->sub_total_usd;
@@ -225,7 +246,6 @@ class PurchaseExpenseService
             // Deleted hook fires: restores account balance
         }
 
-        // Sync paid_amount on expense transaction
         ExpensePayment::syncExpensePaidAmount($expenseTx->id);
     }
 }
