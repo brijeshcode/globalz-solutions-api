@@ -22,15 +22,15 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_HOST" value="127.0.0.1"/>
-        <env name="DB_PORT" value="3306"/>
-        <env name="DB_DATABASE" value="nick_globalzTest"/>
-        <env name="DB_DATABASE_TENANT" value="nick_globalzTest_tenant"/>
-        <env name="DB_USERNAME" value="root"/>
-        <env name="DB_USERNAME_TENANT" value="root"/>
-        <env name="DB_PASSWORD" value=""/>
-        <env name="DB_PASSWORD_TENANT" value=""/>
+        <env name="DB_CONNECTION" value="mysql" force="true"/>
+        <env name="DB_HOST" value="127.0.0.1" force="true"/>
+        <env name="DB_PORT" value="3306" force="true"/>
+        <env name="DB_DATABASE" value="nick_globalzTest" force="true"/>
+        <env name="DB_DATABASE_TENANT" value="nick_globalzTest_tenant" force="true"/>
+        <env name="DB_USERNAME" value="root" force="true"/>
+        <env name="DB_USERNAME_TENANT" value="root" force="true"/>
+        <env name="DB_PASSWORD" value="" force="true"/>
+        <env name="DB_PASSWORD_TENANT" value="" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
