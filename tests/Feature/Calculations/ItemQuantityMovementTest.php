@@ -87,6 +87,7 @@ describe('1. Item Module - Starting Quantity via API', function () {
 
     it('creates inventory record when item is created via API with starting_quantity', function () {
         $response = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Test Item',
             'description' => 'Test item description',
             'item_type_id' => $this->itemType->id,
@@ -112,6 +113,7 @@ describe('1. Item Module - Starting Quantity via API', function () {
 
     it('does not create inventory when starting_quantity is zero via API', function () {
         $response = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Test Item',
             'description' => 'Test item description',
             'item_type_id' => $this->itemType->id,
@@ -682,6 +684,7 @@ describe('3. Sale Module - Inventory Updates via API', function () {
     it('reduces inventory when sale is created via API', function () {
         // Create item via API to ensure inventory is initialized
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Sale Test Item',
             'description' => 'Item for sale test',
             'item_type_id' => $this->itemType->id,
@@ -744,6 +747,7 @@ describe('3. Sale Module - Inventory Updates via API', function () {
     it('updates inventory when sale item quantity is updated via API', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Update Test Item',
             'description' => 'Item for update test',
             'item_type_id' => $this->itemType->id,
@@ -852,6 +856,7 @@ describe('3. Sale Module - Inventory Updates via API', function () {
     it('restores inventory when sale is deleted via API', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Delete Test Item',
             'description' => 'Item for delete test',
             'item_type_id' => $this->itemType->id,
@@ -925,6 +930,7 @@ describe('3a. Sale Return Module - Inventory Updates via API', function () {
     it('inventory does not change when customer return is created but increases when marked as received', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Sale Return Test Item',
             'description' => 'Item for sale return test',
             'item_type_id' => $this->itemType->id,
@@ -1045,6 +1051,7 @@ describe('3a. Sale Return Module - Inventory Updates via API', function () {
     it('inventory does not change when updating customer return before it is received', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Sale Return Update Item',
             'description' => 'Item for sale return update test',
             'item_type_id' => $this->itemType->id,
@@ -1212,6 +1219,7 @@ describe('3a. Sale Return Module - Inventory Updates via API', function () {
     it('inventory does not change when deleting non-received return but decreases when deleting received return', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Sale Return Delete Item',
             'description' => 'Item for sale return delete test',
             'item_type_id' => $this->itemType->id,
@@ -1395,6 +1403,7 @@ describe('4. Stock Adjust Module - Inventory Updates via API', function () {
     it('increases inventory when adjustment type is Add via API', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Adjust Add Test Item',
             'description' => 'Item for adjust add test',
             'item_type_id' => $this->itemType->id,
@@ -1433,6 +1442,7 @@ describe('4. Stock Adjust Module - Inventory Updates via API', function () {
     it('decreases inventory when adjustment type is Subtract via API', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Adjust Subtract Test Item',
             'description' => 'Item for adjust subtract test',
             'item_type_id' => $this->itemType->id,
@@ -1474,6 +1484,7 @@ describe('5. Stock Transfer Module - Inventory Updates Between Warehouses via AP
     it('transfers inventory from one warehouse to another via API', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Transfer Test Item',
             'description' => 'Item for transfer test',
             'item_type_id' => $this->itemType->id,
@@ -1515,6 +1526,7 @@ describe('5. Stock Transfer Module - Inventory Updates Between Warehouses via AP
     it('maintains correct total quantity across warehouses after transfer via API', function () {
         // Create item via API
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Transfer Total Test Item',
             'description' => 'Item for transfer total test',
             'item_type_id' => $this->itemType->id,
@@ -1558,6 +1570,7 @@ describe('6. Comprehensive Multi-Transaction Test via API', function () {
     it('maintains correct inventory through complex transaction sequence via API', function () {
         // 1. Create item with initial quantity
         $itemResponse = $this->postJson(route('setups.items.store'), [
+            'code' => fake()->unique()->numerify('TITEM-#####'),
             'short_name' => 'Comprehensive Test Item',
             'description' => 'Testing complex transactions',
             'item_type_id' => $this->itemType->id,
