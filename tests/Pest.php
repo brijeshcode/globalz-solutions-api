@@ -68,6 +68,11 @@ uses(Tests\Feature\Accounts\IncomeTransactions\Concerns\HasIncomeTransactionSetu
     ->group('api', 'accounts', 'income-transactions')
     ->in('Feature/Accounts/IncomeTransactions');
 
+// ─── Item Price Calculations ──────────────────────────────────────────────────
+uses(Tests\Feature\Calculations\ItemPrice\Concerns\HasItemPriceSetup::class)
+    ->group('calculations', 'item-price')
+    ->in('Feature/Calculations/ItemPrice');
+
 // ─── Purchases ────────────────────────────────────────────────────────────────
 uses(Tests\Feature\Suppliers\Purchases\Concerns\HasPurchaseSetup::class)
     ->group('api', 'suppliers', 'purchases')
