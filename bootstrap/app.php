@@ -69,8 +69,6 @@ return Application::configure(basePath: dirname(__DIR__))
             foreach ($tenants as $tenant) {
                 try {
                     $tenant->makeCurrent();
-                    $result = AuthController::autoLogoutAllUsers();
-                    info('Auto logout completed', array_merge(['tenant' => $tenant->tenant_key], $result));
                 } catch (\Throwable $e) {
                     info('Auto logout failed for tenant ' . $tenant->tenant_key, ['error' => $e->getMessage()]);
                 } finally {

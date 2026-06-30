@@ -79,12 +79,12 @@ class PriceService
             return;
         }
 
-        $correctPrice = self::computeCorrectPrice($itemId, $item->cost_calculation);
-        if ($correctPrice === null) {
+        $computed     = self::computeCorrectPrice($itemId, $item->cost_calculation);
+        if ($computed === null) {
             return;
         }
 
-        $currentItemPrice->update(['price_usd' => $correctPrice]);
+        $currentItemPrice->update(['price_usd' => $computed['price']]);
     }
 
     /**
@@ -520,10 +520,10 @@ class PriceService
      */
     public static function restoreFromPurchase(Purchase $purchase, PurchaseItem $purchaseItem): void
     {
-        // Restore soft-deleted price history entries for this purchase
+        // Restore soft-deleted price history entries for this purchase item
         ItemPriceHistory::where('item_id', $purchaseItem->item_id)
-            ->where('source_type', 'purchase')
-            ->where('source_id', $purchase->id)
+            ->where('source_type', 'purchase_item')
+            ->where('source_id', $purchaseItem->id)
             ->onlyTrashed()
             ->restore();
 
@@ -706,8 +706,10 @@ class PriceService
         $missing = [];
 
         foreach ($items as $item) {
-            $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
-            if ($correctPrice === null) continue;
+            $computed     = self::computeCorrectPrice($item->id, $item->cost_calculation);
+            if ($computed === null) continue;
+
+            $correctPrice = $computed['price'];
 
             $currentPrice      = $item->itemPrice ? (float) $item->itemPrice->price_usd : null;
             $difference        = $currentPrice !== null ? round(abs($correctPrice - $currentPrice), 6) : null;
@@ -719,15 +721,18 @@ class PriceService
                 : ($currentPrice === 0.0 ? 'N/A' : null);
 
             $row = [
-                'item_id'       => $item->id,
-                'item_code'     => $item->code,
-                'item_name'     => $item->short_name,
-                'description'   => $item->description,
-                'calc_method'   => $item->cost_calculation,
-                'current_price' => $currentPrice,
-                'correct_price' => round($correctPrice, 6),
-                'difference'    => $difference,
-                'diff_percent'  => $diffPercent,
+                'item_id'        => $item->id,
+                'item_code'      => $item->code,
+                'item_name'      => $item->short_name,
+                'description'    => $item->description,
+                'calc_method'    => $item->cost_calculation,
+                'current_price'  => $currentPrice,
+                'correct_price'  => round($correctPrice, 6),
+                'difference'     => $difference,
+                'diff_percent'   => $diffPercent,
+                'last_purchase'  => $item->cost_calculation === Item::COST_LAST_COST
+                    ? ['purchase_id' => $computed['purchase_id'], 'purchase_code' => $computed['purchase_code'], 'price' => $computed['price'], 'purchase_date' => $computed['purchase_date']]
+                    : null,
             ];
 
             if (!$item->itemPrice) {
@@ -735,7 +740,7 @@ class PriceService
                 continue;
             }
 
-            if (abs($correctPrice - $currentPrice) <= 0.000001) continue;
+            if ($difference <= 0.000001) continue;
             if ($diffPercentValue !== null && $diffPercentValue <= $tolerance) continue;
 
             $preview[] = $row;
@@ -766,10 +771,10 @@ class PriceService
 
         foreach ($items as $item) {
             if ($tolerance > 0 && $item->itemPrice) {
-                $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
+                $computed     = self::computeCorrectPrice($item->id, $item->cost_calculation);
                 $currentPrice = (float) $item->itemPrice->price_usd;
-                if ($correctPrice !== null && $currentPrice > 0) {
-                    $diffPercent = abs($correctPrice - $currentPrice) / $currentPrice * 100;
+                if ($computed !== null && $currentPrice > 0) {
+                    $diffPercent = abs($computed['price'] - $currentPrice) / $currentPrice * 100;
                     if ($diffPercent <= $tolerance) {
                         $result['skipped'][] = $item->id;
                         continue;
@@ -790,11 +795,13 @@ class PriceService
             return ['error' => 'Item not found.'];
         }
 
-        $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
+        $computed = self::computeCorrectPrice($item->id, $item->cost_calculation);
 
-        if ($correctPrice === null) {
+        if ($computed === null) {
             return ['status' => 'skipped', 'reason' => 'No delivered purchases found for this item.'];
         }
+
+        $correctPrice = $computed['price'];
 
         $currentPrice     = $item->itemPrice ? (float) $item->itemPrice->price_usd : null;
         $difference       = $currentPrice !== null ? round(abs($correctPrice - $currentPrice), 6) : null;
@@ -816,6 +823,9 @@ class PriceService
             'difference'        => $difference,
             'diff_percent'      => $diffPercent,
             'tolerance_percent' => $tolerance,
+            'last_purchase'  => $item->cost_calculation === Item::COST_LAST_COST
+                    ? ['purchase_id' => $computed['purchase_id'], 'purchase_code' => $computed['purchase_code'], 'price' => $computed['price'], 'purchase_date' => $computed['purchase_date']]
+                    : null,
         ];
 
         if (!$item->itemPrice) {
@@ -844,10 +854,10 @@ class PriceService
         $result = ['fixed' => [], 'created' => [], 'skipped' => []];
 
         if ($tolerance > 0 && $item->itemPrice) {
-            $correctPrice = self::computeCorrectPrice($item->id, $item->cost_calculation);
+            $computed     = self::computeCorrectPrice($item->id, $item->cost_calculation);
             $currentPrice = (float) $item->itemPrice->price_usd;
-            if ($correctPrice !== null && $currentPrice > 0) {
-                $diffPercent = abs($correctPrice - $currentPrice) / $currentPrice * 100;
+            if ($computed !== null && $currentPrice > 0) {
+                $diffPercent = abs($computed['price'] - $currentPrice) / $currentPrice * 100;
                 if ($diffPercent <= $tolerance) {
                     $result['skipped'][] = $item->id;
                     return $result;
@@ -1046,9 +1056,10 @@ class PriceService
 
     /**
      * Compute the correct current price for an item from delivered purchase items.
-     * Returns null if no delivered purchases exist.
+     * Returns ['price' => float, 'purchase_id' => int|null, 'purchase_date' => string|null],
+     * or null if no delivered purchases exist.
      */
-    private static function computeCorrectPrice(int $itemId, string $costCalculation): ?float
+    private static function computeCorrectPrice(int $itemId, string $costCalculation): ?array
     {
         if ($costCalculation === Item::COST_LAST_COST) {
             $latest = PurchaseItem::where('purchase_items.item_id', $itemId)
@@ -1058,8 +1069,14 @@ class PriceService
                 ->whereNull('purchases.deleted_at')
                 ->orderByDesc('purchases.id')
                 ->orderByDesc('purchase_items.id')
-                ->first(['purchase_items.cost_per_item_usd']);
-            return $latest ? (float) $latest->cost_per_item_usd : null;
+                ->first(['purchase_items.cost_per_item_usd', 'purchases.id as purchase_id', 'purchases.date as purchase_date', 'purchases.prefix as purchase_prefix', 'purchases.code as purchase_code']);
+
+            return $latest ? [
+                'price'         => (float) $latest->cost_per_item_usd,
+                'purchase_id'   => $latest->purchase_id,
+                'purchase_code' => $latest->purchase_prefix . $latest->purchase_code,
+                'purchase_date' => $latest->purchase_date,
+            ] : null;
         }
 
         // Weighted average: recompute from delivered purchases in chronological order.
@@ -1086,7 +1103,9 @@ class PriceService
             $totalValue += (float) $pi->quantity * (float) $pi->cost_per_item_usd;
         }
 
-        return $totalQty > 0 ? ($totalValue / $totalQty) : null;
+        $price = $totalQty > 0 ? ($totalValue / $totalQty) : null;
+
+        return $price !== null ? ['price' => $price, 'purchase_id' => null, 'purchase_date' => null] : null;
     }
 
 }
