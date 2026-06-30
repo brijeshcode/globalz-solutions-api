@@ -770,10 +770,16 @@ class PriceService
         $items = Item::whereIn('id', self::itemIdsWithDeliveredPurchases())->with('itemPrice')->get();
 
         foreach ($items as $item) {
+            $computed = self::computeCorrectPrice($item->id, $item->cost_calculation);
+
+            if ($computed === null) {
+                $result['skipped'][] = $item->id;
+                continue;
+            }
+
             if ($tolerance > 0 && $item->itemPrice) {
-                $computed     = self::computeCorrectPrice($item->id, $item->cost_calculation);
                 $currentPrice = (float) $item->itemPrice->price_usd;
-                if ($computed !== null && $currentPrice > 0) {
+                if ($currentPrice > 0) {
                     $diffPercent = abs($computed['price'] - $currentPrice) / $currentPrice * 100;
                     if ($diffPercent <= $tolerance) {
                         $result['skipped'][] = $item->id;
@@ -781,7 +787,8 @@ class PriceService
                     }
                 }
             }
-            self::fixOneItem($item, $result);
+
+            self::fixOneItem($item, $computed, $result);
         }
 
         return $result;
@@ -851,12 +858,17 @@ class PriceService
             return ['error' => 'Item not found.'];
         }
 
-        $result = ['fixed' => [], 'created' => [], 'skipped' => []];
+        $result   = ['fixed' => [], 'created' => [], 'skipped' => []];
+        $computed = self::computeCorrectPrice($item->id, $item->cost_calculation);
+
+        if ($computed === null) {
+            $result['skipped'][] = $item->id;
+            return $result;
+        }
 
         if ($tolerance > 0 && $item->itemPrice) {
-            $computed     = self::computeCorrectPrice($item->id, $item->cost_calculation);
             $currentPrice = (float) $item->itemPrice->price_usd;
-            if ($computed !== null && $currentPrice > 0) {
+            if ($currentPrice > 0) {
                 $diffPercent = abs($computed['price'] - $currentPrice) / $currentPrice * 100;
                 if ($diffPercent <= $tolerance) {
                     $result['skipped'][] = $item->id;
@@ -865,12 +877,12 @@ class PriceService
             }
         }
 
-        self::fixOneItem($item, $result);
+        self::fixOneItem($item, $computed, $result);
 
         return $result;
     }
 
-    private static function fixOneItem(Item $item, array &$result): void
+    private static function fixOneItem(Item $item, array $computed, array &$result): void
     {
         $purchaseItems = PurchaseItem::where('purchase_items.item_id', $item->id)
             ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
@@ -888,103 +900,70 @@ class PriceService
             return;
         }
 
-        $expectedEntries = self::buildExpectedHistory($item, $purchaseItems);
-
-        if (empty($expectedEntries)) {
-            $result['skipped'][] = $item->id;
-            return;
-        }
-
-        DB::transaction(function () use ($item, $expectedEntries, &$result) {
+        DB::transaction(function () use ($item, $purchaseItems, $computed, &$result) {
             $existingBySourceId = ItemPriceHistory::where('item_id', $item->id)
                 ->where('source_type', 'purchase_item')
                 ->get()
                 ->keyBy('source_id');
 
-            $expectedSourceIds = array_column($expectedEntries, 'source_id');
-
-            $kept    = 0;
-            $deleted = 0;
-            $created = 0;
-
-            // Remove existing entries that are no longer in the expected set
-            foreach ($existingBySourceId as $sourceId => $record) {
-                if (!in_array($sourceId, $expectedSourceIds)) {
-                    $record->forceDelete();
-                    $deleted++;
-                }
-            }
-
-            $prevPrice   = 0.0;
+            $updated     = 0;
             $lastHistory = null;
-            $lastIndex   = count($expectedEntries) - 1;
 
-            foreach ($expectedEntries as $index => $entry) {
-                $isCurrent = ($index === $lastIndex);
-                $existing  = $existingBySourceId->get($entry['source_id']);
+            foreach ($purchaseItems as $pi) {
+                $correctPrice = round((float) $pi->cost_per_item_usd, 4);
+                $existing     = $existingBySourceId->get($pi->id);
 
-                if ($existing && abs((float) $existing->price_usd - $entry['price']) <= 0.000001) {
-                    // Correct price — just sync flags if needed
-                    $updates = [];
-                    if ((bool) $existing->is_current !== $isCurrent) {
-                        $updates['is_current'] = $isCurrent;
+                if ($existing) {
+                    if (abs((float) $existing->price_usd - $correctPrice) > 0.000001) {
+                        $existing->timestamps = false;
+                        $existing->update([
+                            'price_usd'              => $correctPrice,
+                            'average_weighted_price' => $correctPrice,
+                            'effective_date'         => $pi->purchase_date,
+                            'created_at'             => $pi->created_at,
+                            'updated_at'             => $pi->updated_at,
+                            'note'                   => "Price corrected from {$existing->price_usd} to {$correctPrice} [Audited]",
+                        ]);
+                        $updated++;
                     }
-                    if (abs((float) $existing->latest_price - $prevPrice) > 0.000001) {
-                        $updates['latest_price'] = $prevPrice;
-                    }
-                    if ($updates) {
-                        $existing->update($updates);
-                    }
-                    $lastHistory = $existing->fresh();
-                    $kept++;
+                    $lastHistory = $existing;
                 } else {
-                    // Corrupted or missing — replace
-                    if ($existing) {
-                        $existing->forceDelete();
-                        $deleted++;
-                    }
-
-                    $note = $existing
-                        ? "Price corrected from {$existing->price_usd} to {$entry['price']} [Audited]"
-                        : "Price {$entry['price']} from purchase [Audited]";
-
-                    $lastHistory = ItemPriceHistory::create([
+                    $history             = new ItemPriceHistory([
                         'item_id'                => $item->id,
-                        'price_usd'              => $entry['price'],
-                        'average_weighted_price' => $entry['price'],
-                        'latest_price'           => $prevPrice,
-                        'effective_date'         => $entry['date'],
+                        'price_usd'              => $correctPrice,
+                        'average_weighted_price' => $correctPrice,
+                        'latest_price'           => 0,
+                        'effective_date'         => $pi->purchase_date,
                         'source_type'            => 'purchase_item',
-                        'source_id'              => $entry['source_id'],
-                        'note'                   => $note,
-                        'is_current'             => $isCurrent,
+                        'source_id'              => $pi->id,
+                        'note'                   => "Price {$correctPrice} from purchase [Audited]",
+                        'is_current'             => false,
                         'calculation_type'       => $item->cost_calculation,
                     ]);
-                    $created++;
+                    $history->created_at = $pi->created_at;
+                    $history->updated_at = $pi->updated_at;
+                    $history->save();
+                    $lastHistory = $history;
+                    $updated++;
                 }
-
-                $prevPrice = $entry['price'];
             }
-
-            $finalEntry = end($expectedEntries);
-            $finalPrice = $finalEntry['price'];
 
             if ($item->itemPrice) {
                 $item->itemPrice->update([
-                    'price_usd'        => $finalPrice,
-                    'effective_date'   => $finalEntry['date'],
-                    'price_history_id' => $lastHistory->id,
+                    'price_usd'        => $computed['price'],
+                    'effective_date'   => $computed['purchase_date'],
+                    'price_history_id' => $lastHistory?->id,
                 ]);
             } else {
                 ItemPrice::create([
                     'item_id'          => $item->id,
-                    'price_usd'        => $finalPrice,
-                    'effective_date'   => $finalEntry['date'],
-                    'price_history_id' => $lastHistory->id,
+                    'price_usd'        => $computed['price'],
+                    'effective_date'   => $computed['purchase_date'],
+                    'price_history_id' => $lastHistory?->id,
                 ]);
             }
 
-            if ($deleted === 0 && $created === 0) {
+            if ($updated === 0) {
                 $result['skipped'][] = $item->id;
                 return;
             }
@@ -993,53 +972,10 @@ class PriceService
                 'item_code'   => $item->code,
                 'item_name'   => $item->short_name,
                 'description' => $item->description,
-                'final_price' => $finalPrice,
+                'final_price' => $computed['price'],
                 'calc_method' => $item->cost_calculation,
-                'kept'        => $kept,
-                'deleted'     => $deleted,
-                'created'     => $created,
             ];
         });
-    }
-
-    private static function buildExpectedHistory(Item $item, $purchaseItems): array
-    {
-        $entries   = [];
-        $prevPrice = null;
-
-        if ($item->cost_calculation === Item::COST_LAST_COST) {
-            foreach ($purchaseItems as $pi) {
-                $price = round((float) $pi->cost_per_item_usd, 4);
-                if ($prevPrice === null || abs($price - $prevPrice) > 0.000001) {
-                    $entries[] = [
-                        'source_id' => $pi->id,
-                        'price'     => $price,
-                        'date'      => $pi->purchase_date,
-                    ];
-                    $prevPrice = $price;
-                }
-            }
-        } else {
-            $totalQty   = ($item->starting_quantity > 0) ? (float) $item->starting_quantity : 0.0;
-            $totalValue = ($item->starting_price > 0)    ? $totalQty * (float) $item->starting_price : 0.0;
-
-            foreach ($purchaseItems as $pi) {
-                $totalQty   += (float) $pi->quantity;
-                $totalValue += (float) $pi->quantity * (float) $pi->cost_per_item_usd;
-
-                $price = $totalQty > 0 ? round($totalValue / $totalQty, 4) : 0.0;
-                if ($prevPrice === null || abs($price - $prevPrice) > 0.000001) {
-                    $entries[] = [
-                        'source_id' => $pi->id,
-                        'price'     => $price,
-                        'date'      => $pi->purchase_date,
-                    ];
-                    $prevPrice = $price;
-                }
-            }
-        }
-
-        return $entries;
     }
 
     private static function itemIdsWithDeliveredPurchases(): array

@@ -26,14 +26,14 @@ class TenantItemPriceAuditController extends Controller
         $tolerance = (float) $request->query('tolerance', 2.0);
         $result    = $tenant->execute(fn () => PriceService::auditItemPrices($tolerance));
 
-        Log::info('[Developer] Item price scan', [
-            'tenant_id'          => $tenant->id,
-            'tenant_name'        => $tenant->name,
-            'total_checked'      => $result['total_items_checked'] ?? 0,
-            'items_to_fix'       => $result['items_to_fix'] ?? 0,
-            'items_missing_price'=> $result['items_missing_price'] ?? 0,
-            'executed_by'        => Auth::user()?->email ?? 'System',
-        ]);
+        // Log::info('[Developer] Item price scan', [
+        //     'tenant_id'          => $tenant->id,
+        //     'tenant_name'        => $tenant->name,
+        //     'total_checked'      => $result['total_items_checked'] ?? 0,
+        //     'items_to_fix'       => $result['items_to_fix'] ?? 0,
+        //     'items_missing_price'=> $result['items_missing_price'] ?? 0,
+        //     'executed_by'        => Auth::user()?->email ?? 'System',
+        // ]);
 
         return ApiResponse::show('Item price scan complete — no changes made', $result);
     }
@@ -66,14 +66,14 @@ class TenantItemPriceAuditController extends Controller
         $tolerance = (float) $request->query('tolerance', 2.0);
         $result    = $tenant->execute(fn () => PriceService::auditAndFixItemPrices($tolerance));
 
-        Log::info('[Developer] Item price scan and fix executed', [
-            'tenant_id'      => $tenant->id,
-            'tenant_name'    => $tenant->name,
-            'items_fixed'    => count($result['fixed'] ?? []),
-            'items_created'  => count($result['created'] ?? []),
-            'items_skipped'  => count($result['skipped'] ?? []),
-            'executed_by'    => Auth::user()?->email ?? 'System',
-        ]);
+        // Log::info('[Developer] Item price scan and fix executed', [
+        //     'tenant_id'      => $tenant->id,
+        //     'tenant_name'    => $tenant->name,
+        //     'items_fixed'    => count($result['fixed'] ?? []),
+        //     'items_created'  => count($result['created'] ?? []),
+        //     'items_skipped'  => count($result['skipped'] ?? []),
+        //     'executed_by'    => Auth::user()?->email ?? 'System',
+        // ]);
 
         return ApiResponse::show('Item price scan and fix complete', $result);
     }
