@@ -76,7 +76,7 @@ class ItemCostHistoryController extends Controller
     private function priceEagerLoads(): array
     {
         return [
-            'item:id,code,short_name,description,item_unit_id',
+            'item:id,code,short_name,description,item_unit_id,cost_calculation',
             'item.itemUnit:id,name,short_name',
             'item.priceHistories' => fn($q) => $q
                 ->whereIn('source_type', ['purchase_item', 'initial'])
@@ -93,7 +93,7 @@ class ItemCostHistoryController extends Controller
 
         return [
             'item_id'          => $row->item_id,
-            'calculation_type' => $currentHistory?->calculation_type,
+            'calculation_type' => $currentHistory?->calculation_type ?? $row->item?->cost_calculation,
             'item_code'        => $row->item?->code,
             'item_name'        => $row->item?->description,
             'unit'             => $row->item?->itemUnit?->only(['id', 'name', 'short_name']),
@@ -118,6 +118,7 @@ class ItemCostHistoryController extends Controller
         return [
             'id'               => $history->id,
             'source_type'      => $history->source_type,
+            'calculation_type' => $history->calculation_type,
             'is_current'       => $history->is_current,
             'effective_date'   => $history->effective_date,
             'source_date'      => $history->created_at,
