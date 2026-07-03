@@ -28,6 +28,7 @@ class ItemPriceHistory extends Model
         'note',
         'is_current',
         'calculation_type',
+        'calculation_inputs',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class ItemPriceHistory extends Model
         'latest_price'           => 'decimal:4',
         'effective_date'         => 'date',
         'is_current'             => 'boolean',
+        'calculation_inputs'     => 'array',
     ];
 
     protected $searchable = [];

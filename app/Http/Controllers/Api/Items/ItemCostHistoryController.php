@@ -20,8 +20,10 @@ class ItemCostHistoryController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        PriceService::backfillCalculationInputs(); // TODO: remove after backfill is done
+
         $rows = ItemPriceHistory::where('item_id', $request->get('item_id'))
-            ->whereIn('source_type', ['purchase_item', 'initial'])
+            ->whereIn('source_type', ['purchase_item', 'initial', 'calculation_type_change'])
             ->orderBy('id', 'desc')
             ->with(['purchaseItemSource.purchase.currency'])
             ->get();
@@ -32,7 +34,7 @@ class ItemCostHistoryController extends Controller
     }
 
     public function currentPrices(Request $request): JsonResponse
-    {
+    {   
         $rows = ItemPrice::with($this->priceEagerLoads())
             ->when($request->get('item_id'), fn($q, $id) => $q->where('item_id', $id))
             ->when($request->get('search'), fn($q, $s) => $q->whereHas('item', fn($q) =>
@@ -79,7 +81,7 @@ class ItemCostHistoryController extends Controller
             'item:id,code,short_name,description,item_unit_id,cost_calculation',
             'item.itemUnit:id,name,short_name',
             'item.priceHistories' => fn($q) => $q
-                ->whereIn('source_type', ['purchase_item', 'initial'])
+                ->whereIn('source_type', ['purchase_item', 'initial', 'calculation_type_change'])
                 ->orderBy('id', 'desc')
                 ->with(['purchaseItemSource.purchase.currency']),
         ];
@@ -111,9 +113,35 @@ class ItemCostHistoryController extends Controller
 
     private function transformRow(ItemPriceHistory $history): array
     {
-        $purchaseItem = $history->source_type === 'purchase_item' ? $history->purchaseItemSource : null;
-        $purchase     = $purchaseItem?->purchase;
-        $currency     = $purchase?->currency;
+        $inputs = $history->calculation_inputs;
+
+        // Fallback to live relationship for records created before calculation_inputs was added
+        if (!$inputs && $history->source_type === 'purchase_item') {
+            $purchaseItem = $history->purchaseItemSource;
+            $purchase     = $purchaseItem?->purchase;
+            $currency     = $purchase?->currency;
+
+            $qty             = $purchaseItem?->quantity ?? 0;
+            $totalExpenseUsd = $purchaseItem?->total_expense_usd ?? 0;
+
+            $inputs = [
+                'quantity'                => $qty,
+                'discount_percent'        => $purchaseItem?->discount_percent ?? 0,
+                'cost_price'              => $purchaseItem?->price,
+                'final_cost_per_item_usd' => $purchaseItem?->cost_per_item_usd,
+                'expense_per_item_usd'    => $qty > 0 ? $totalExpenseUsd / $qty : 0,
+                'total_expense_usd'       => $totalExpenseUsd,
+                'final_total_cost_usd'    => $purchaseItem?->final_total_cost_usd,
+                'currency_rate'           => $purchase?->currency_rate ?? 1,
+                'purchase_id'             => $purchase?->id,
+                'purchase_prefix'         => $purchase?->prefix,
+                'purchase_code'           => $purchase?->code,
+                'currency'                => $currency?->only(['id', 'symbol', 'symbol_position', 'decimal_places', 'decimal_separator', 'thousand_separator']),
+            ];
+        }
+
+        $totalExpense   = $inputs['total_expense_usd'] ?? 0;
+        $finalTotalCost = $inputs['final_total_cost_usd'] ?? 0;
 
         return [
             'id'               => $history->id,
@@ -122,22 +150,18 @@ class ItemCostHistoryController extends Controller
             'is_current'       => $history->is_current,
             'effective_date'   => $history->effective_date,
             'source_date'      => $history->created_at,
-            'source_id'        => $purchase?->id,
-            'source_prefix'    => $purchase?->prefix,
-            'source_code'      => $purchase ? $purchase->code : $history->source_type,
-            'cost_price'       => $purchaseItem ? $purchaseItem->price : $history->price_usd,
-            'price_usd'        => $purchaseItem ? $purchaseItem->cost_per_item_usd : $history->price_usd,
-            'discount_percent' => $purchaseItem?->discount_percent ?? 0,
-            'currency_rate'    => $purchase?->currency_rate ?? 1,
-            'exp_share'        => $purchaseItem && $purchaseItem->quantity > 0
-                                    ? round($purchaseItem->total_expense_usd / $purchaseItem->quantity, 4)
-                                    : 0,
-            'exp_share_total'  => $purchaseItem?->total_expense_usd ?? 0,
-            'exp_pct'          => $purchaseItem && $purchaseItem->final_total_cost_usd > 0
-                                    ? round(($purchaseItem->total_expense_usd / $purchaseItem->final_total_cost_usd) * 100, 2)
-                                    : 0,
+            'source_id'        => $inputs['purchase_id'] ?? null,
+            'source_prefix'    => $inputs['purchase_prefix'] ?? null,
+            'source_code'      => $inputs['purchase_code'] ?? $history->source_type,
+            'cost_price'       => $inputs['cost_price'] ?? $history->price_usd,
+            'price_usd'        => $inputs['final_cost_per_item_usd'] ?? $history->price_usd,
+            'discount_percent' => $inputs['discount_percent'] ?? 0,
+            'currency_rate'    => $inputs['currency_rate'] ?? 1,
+            'exp_share'        => round($inputs['expense_per_item_usd'] ?? 0, 4),
+            'exp_share_total'  => $totalExpense,
+            'exp_pct'          => $finalTotalCost > 0 ? round($totalExpense / $finalTotalCost * 100, 2) : 0,
             'remark'           => $history->note,
-            'currency'         => $currency?->only(['id', 'symbol', 'symbol_position', 'decimal_places', 'decimal_separator', 'thousand_separator']),
+            'currency'         => $inputs['currency'] ?? null,
         ];
     }
 }

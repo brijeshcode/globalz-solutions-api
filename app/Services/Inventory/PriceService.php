@@ -39,6 +39,9 @@ class PriceService
         $calculationType = $item->cost_calculation;
         $effectiveDate   = $isUpdate ? now()->toDateString() : $purchase->date;
 
+        $purchase->loadMissing('currency');
+        $calculationInputs = self::buildPurchaseCalculationInputs($purchase, $purchaseItem);
+
         $currentItemPrice = self::getCurrentPrice($purchaseItem->item_id);
 
         if ($currentItemPrice) {
@@ -54,12 +57,49 @@ class PriceService
                 $note      = $customNote ?? self::buildPurchaseUpdateNote($purchase, $purchaseItem, $isUpdate, $oldCostPerItemUsd, $oldQuantity);
                 $isCurrent = self::shouldBeCurrentPrice($purchaseItem, $item->cost_calculation);
 
-                self::updatePrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $oldPriceUsd, $note, 'purchase_item', $purchaseItem->id, $calculationType, $isCurrent);
+                self::updatePrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $oldPriceUsd, $note, 'purchase_item', $purchaseItem->id, $calculationType, $isCurrent, $calculationInputs);
             }
         } else {
             $note = $customNote ?? "Initial price from Purchase #{$purchase->id}";
-            self::createPrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $note, 'purchase_item', $purchaseItem->id, $calculationType);
+            self::createPrice($purchaseItem->item_id, $newPriceUsd, $effectiveDate, $note, 'purchase_item', $purchaseItem->id, $calculationType, $calculationInputs);
         }
+    }
+
+    private static function buildPurchaseCalculationInputs(Purchase $purchase, PurchaseItem $purchaseItem): array
+    {
+        $currency = $purchase->currency;
+
+        $costPrice      = $purchaseItem->price;
+        $discountPerItem = $costPrice * ($purchaseItem->discount_percent / 100);
+        $netCostPrice   = $costPrice - $discountPerItem;
+        $expensePerItem = $purchaseItem->quantity > 0
+            ? $purchaseItem->total_expense_usd / $purchaseItem->quantity
+            : 0;
+
+        return [
+            'quantity'                => $purchaseItem->quantity,
+            'discount_percent'        => $purchaseItem->discount_percent,
+
+            // Local currency (supplier's currency)
+            'cost_price'              => $costPrice,
+            'discount_per_item'       => $discountPerItem,
+            'total_discount'          => $purchaseItem->discount_amount,
+            'net_cost_price'          => $netCostPrice,
+
+            // USD
+            'subtotal_usd'            => $purchaseItem->total_price_usd,
+            'expense_per_item_usd'    => $expensePerItem,
+            'total_expense_usd'       => $purchaseItem->total_expense_usd,
+            'final_total_cost_usd'    => $purchaseItem->final_total_cost_usd,
+            'final_cost_per_item_usd' => $purchaseItem->cost_per_item_usd,
+
+            'currency_rate'           => $purchase->currency_rate ?? 1,
+            'purchase_id'             => $purchase->id,
+            'purchase_prefix'         => $purchase->prefix,
+            'purchase_code'           => $purchase->code,
+            'purchase_date'           => $purchase->date,
+            'currency'                => $currency?->only(['id', 'symbol', 'symbol_position', 'decimal_places', 'decimal_separator', 'thousand_separator']),
+        ];
     }
 
     /**
@@ -165,6 +205,45 @@ class PriceService
                 'purchase_return',
                 $purchaseReturn->id
             );
+        }
+    }
+
+    /**
+     * Recalculate and record price when cost_calculation method changes on an item.
+     * Uses the same computeCorrectPrice logic as the audit tools to ensure consistency.
+     */
+    public static function updateFromCalculationTypeChange(Item $item, string $oldMethod, string $newMethod): void
+    {
+        $computed = self::computeCorrectPrice($item->id, $newMethod);
+
+        if ($computed !== null && $computed['price'] > 0) {
+            $newPrice = $computed['price'];
+        } elseif ($item->itemPrice && $item->itemPrice->price_usd > 0) {
+            $newPrice = (float) $item->itemPrice->price_usd;
+        } elseif ($item->base_cost > 0) {
+            $newPrice = (float) $item->base_cost;
+        } else {
+            return;
+        }
+
+        $currentItemPrice = self::getCurrentPrice($item->id);
+        $effectiveDate    = now()->toDateString();
+        $note             = "Cost calculation changed from '{$oldMethod}' to '{$newMethod}'";
+
+        if ($currentItemPrice) {
+            $oldPrice        = (float) $currentItemPrice->price_usd;
+            $priceDifference = abs($newPrice - $oldPrice);
+
+            if ($priceDifference > 0.000001) {
+                self::updatePrice($item->id, $newPrice, $effectiveDate, $oldPrice, $note, 'calculation_type_change', $item->id, $newMethod, true);
+            } else {
+                // Price unchanged — just update calculation_type on the current history entry
+                ItemPriceHistory::where('item_id', $item->id)
+                    ->where('is_current', true)
+                    ->update(['calculation_type' => $newMethod]);
+            }
+        } else {
+            self::createPrice($item->id, $newPrice, $effectiveDate, $note, 'calculation_type_change', $item->id, $newMethod);
         }
     }
 
@@ -374,9 +453,9 @@ class PriceService
     /**
      * Create new item price record
      */
-    private static function createPrice(int $itemId, float $priceUsd, string $effectiveDate, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null, ?string $calculationType = null): ItemPrice
+    private static function createPrice(int $itemId, float $priceUsd, string $effectiveDate, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null, ?string $calculationType = null, ?array $calculationInputs = null): ItemPrice
     {
-        return DB::transaction(function () use ($itemId, $priceUsd, $effectiveDate, $reason, $sourceType, $sourceId, $calculationType) {
+        return DB::transaction(function () use ($itemId, $priceUsd, $effectiveDate, $reason, $sourceType, $sourceId, $calculationType, $calculationInputs) {
             // Mark any existing is_current entries as no longer current
             ItemPriceHistory::where('item_id', $itemId)->where('is_current', true)->update(['is_current' => false]);
 
@@ -391,6 +470,7 @@ class PriceService
                 'note'                   => $reason ?? 'Initial price',
                 'is_current'             => true,
                 'calculation_type'       => $calculationType,
+                'calculation_inputs'     => $calculationInputs,
             ]);
 
             $itemPrice = ItemPrice::create([
@@ -407,9 +487,9 @@ class PriceService
     /**
      * Update existing item price
      */
-    private static function updatePrice(int $itemId, float $newPriceUsd, string $effectiveDate, ?float $oldPriceUsd = null, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null, ?string $calculationType = null, bool $isCurrent = true): ItemPrice
+    private static function updatePrice(int $itemId, float $newPriceUsd, string $effectiveDate, ?float $oldPriceUsd = null, ?string $reason = null, ?string $sourceType = null, ?int $sourceId = null, ?string $calculationType = null, bool $isCurrent = true, ?array $calculationInputs = null): ItemPrice
     {
-        return DB::transaction(function () use ($itemId, $newPriceUsd, $effectiveDate, $oldPriceUsd, $reason, $sourceType, $sourceId, $calculationType, $isCurrent) {
+        return DB::transaction(function () use ($itemId, $newPriceUsd, $effectiveDate, $oldPriceUsd, $reason, $sourceType, $sourceId, $calculationType, $isCurrent, $calculationInputs) {
             $itemPrice = ItemPrice::byItem($itemId)->first();
             $oldPrice  = $oldPriceUsd ?? $itemPrice->price_usd;
 
@@ -429,6 +509,7 @@ class PriceService
                 'note'                   => $reason ?? 'Price update',
                 'is_current'             => $isCurrent,
                 'calculation_type'       => $calculationType,
+                'calculation_inputs'     => $calculationInputs,
             ]);
 
             if ($isCurrent) {
@@ -976,6 +1057,45 @@ class PriceService
                 'calc_method' => $item->cost_calculation,
             ];
         });
+    }
+
+    /**
+     * One-time backfill: populate calculation_inputs on existing purchase_item history records
+     * that were created before the column was added.
+     *
+     * Call once, then remove the call. Safe to run multiple times — skips already-filled records.
+     * Returns ['filled' => int, 'skipped_no_source' => int, 'already_filled' => int]
+     */
+    public static function backfillCalculationInputs(): array
+    {
+        $result = ['filled' => 0, 'skipped_no_source' => 0, 'already_filled' => 0];
+
+        ItemPriceHistory::where('source_type', 'purchase_item')
+            ->whereNull('calculation_inputs')
+            ->with(['purchaseItemSource' => fn($q) => $q->withTrashed()->with(['purchase.currency'])])
+            ->chunkById(200, function ($histories) use (&$result) {
+                foreach ($histories as $history) {
+                    if ($history->calculation_inputs !== null) {
+                        $result['already_filled']++;
+                        continue;
+                    }
+
+                    $purchaseItem = $history->purchaseItemSource;
+                    $purchase     = $purchaseItem?->purchase;
+
+                    if (!$purchaseItem || !$purchase) {
+                        $result['skipped_no_source']++;
+                        continue;
+                    }
+
+                    $history->updateQuietly([
+                        'calculation_inputs' => self::buildPurchaseCalculationInputs($purchase, $purchaseItem),
+                    ]);
+
+                    $result['filled']++;
+                }
+            });
+        return $result;
     }
 
     private static function itemIdsWithDeliveredPurchases(): array
