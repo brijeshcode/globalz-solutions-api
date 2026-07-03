@@ -1059,44 +1059,6 @@ class PriceService
         });
     }
 
-    /**
-     * One-time backfill: populate calculation_inputs on existing purchase_item history records
-     * that were created before the column was added.
-     *
-     * Call once, then remove the call. Safe to run multiple times — skips already-filled records.
-     * Returns ['filled' => int, 'skipped_no_source' => int, 'already_filled' => int]
-     */
-    public static function backfillCalculationInputs(): array
-    {
-        $result = ['filled' => 0, 'skipped_no_source' => 0, 'already_filled' => 0];
-
-        ItemPriceHistory::where('source_type', 'purchase_item')
-            ->whereNull('calculation_inputs')
-            ->with(['purchaseItemSource' => fn($q) => $q->withTrashed()->with(['purchase.currency'])])
-            ->chunkById(200, function ($histories) use (&$result) {
-                foreach ($histories as $history) {
-                    if ($history->calculation_inputs !== null) {
-                        $result['already_filled']++;
-                        continue;
-                    }
-
-                    $purchaseItem = $history->purchaseItemSource;
-                    $purchase     = $purchaseItem?->purchase;
-
-                    if (!$purchaseItem || !$purchase) {
-                        $result['skipped_no_source']++;
-                        continue;
-                    }
-
-                    $history->updateQuietly([
-                        'calculation_inputs' => self::buildPurchaseCalculationInputs($purchase, $purchaseItem),
-                    ]);
-
-                    $result['filled']++;
-                }
-            });
-        return $result;
-    }
 
     private static function itemIdsWithDeliveredPurchases(): array
     {

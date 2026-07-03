@@ -20,7 +20,6 @@ class ItemCostHistoryController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        PriceService::backfillCalculationInputs(); // TODO: remove after backfill is done
 
         $rows = ItemPriceHistory::where('item_id', $request->get('item_id'))
             ->whereIn('source_type', ['purchase_item', 'initial', 'calculation_type_change'])
