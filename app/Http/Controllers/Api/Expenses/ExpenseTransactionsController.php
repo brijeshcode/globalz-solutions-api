@@ -40,8 +40,6 @@ class ExpenseTransactionsController extends Controller
             ])
         ->sortable($request);
 
-        
-
         $expenseTransactions = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
@@ -635,9 +633,12 @@ class ExpenseTransactionsController extends Controller
 
         if ($request->has('payment_status')) {
             if ($request->input('payment_status') === 'paid') {
-                $query->whereNotNull('account_id');
+                $query->whereRaw('paid_amount >= (amount + COALESCE(vat_amount, 0))');
             } elseif ($request->input('payment_status') === 'unpaid') {
-                $query->whereNull('account_id');
+                $query->where(fn($q) => $q->whereNull('paid_amount')->orWhere('paid_amount', '<=', 0));
+            } elseif ($request->input('payment_status') === 'partial') {
+                $query->where('paid_amount', '>', 0)
+                      ->whereRaw('paid_amount < (amount + COALESCE(vat_amount, 0))');
             }
         }
 
