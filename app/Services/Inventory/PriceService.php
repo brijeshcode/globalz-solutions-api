@@ -6,6 +6,7 @@ use App\Models\Inventory\ItemPrice;
 use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
 use App\Models\Suppliers\Purchase;
+use App\Models\Suppliers\PurchaseExpense;
 use App\Models\Suppliers\PurchaseItem;
 use App\Models\Suppliers\SupplierItemPrice;
 use App\Services\Suppliers\SupplierItemPriceService;
@@ -65,6 +66,20 @@ class PriceService
         }
     }
 
+    private static function purchaseExpensePct(Purchase $purchase): float
+    {
+        $totalUsd = (float) $purchase->total_usd;
+        if ($totalUsd <= 0) return 0.0;
+
+        $distributable = (float) PurchaseExpense::join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
+            ->whereNull('expense_transactions.deleted_at')
+            ->where('purchase_expenses.exclude_from_item_cost', false)
+            ->where('purchase_expenses.purchase_id', $purchase->id)
+            ->sum('expense_transactions.amount_usd');
+
+        return round($distributable / $totalUsd * 100, 2);
+    }
+
     private static function buildPurchaseCalculationInputs(Purchase $purchase, PurchaseItem $purchaseItem): array
     {
         $currency = $purchase->currency;
@@ -97,6 +112,7 @@ class PriceService
             'purchase_id'             => $purchase->id,
             'purchase_prefix'         => $purchase->prefix,
             'purchase_code'           => $purchase->code,
+            'purchase_exp_pct' => self::purchaseExpensePct($purchase),
             'purchase_date'           => $purchase->date,
             'currency'                => $currency?->only(['id', 'symbol', 'symbol_position', 'decimal_places', 'decimal_separator', 'thousand_separator']),
         ];

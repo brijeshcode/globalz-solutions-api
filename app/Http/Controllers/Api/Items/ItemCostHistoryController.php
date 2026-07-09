@@ -7,10 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Inventory\ItemPrice;
 use App\Models\Inventory\ItemPriceHistory;
+use App\Models\Suppliers\PurchaseExpense;
 use App\Services\Inventory\PriceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -27,8 +29,10 @@ class ItemCostHistoryController extends Controller
             ->with(['purchaseItemSource.purchase.currency'])
             ->get();
 
+        $expPctMap = $this->buildExpensePctMap($rows);
+
         return ApiResponse::index('Item cost history retrieved successfully',
-            $rows->map(fn($row) => $this->transformRow($row))->toArray()
+            $rows->map(fn($row) => $this->transformRow($row, $expPctMap))->toArray()
         );
     }
 
@@ -53,8 +57,13 @@ class ItemCostHistoryController extends Controller
                 ->keyBy('item_id');
         }
 
+        $allHistories = $rows->getCollection()->flatMap(
+            fn($row) => $row->item?->priceHistories?->take(5) ?? collect()
+        );
+        $expPctMap = $this->buildExpensePctMap($allHistories);
+
         return ApiResponse::paginated('Current item prices retrieved successfully',
-            $rows->through(fn($row) => $this->transformCurrentPriceRow($row, $auditIndex))
+            $rows->through(fn($row) => $this->transformCurrentPriceRow($row, $auditIndex, $expPctMap))
         );
     }
 
@@ -68,8 +77,11 @@ class ItemCostHistoryController extends Controller
             ->orderBy('effective_date', 'desc')
             ->get();
 
+        $allHistories = $rows->flatMap(fn($row) => $row->item?->priceHistories?->take(5) ?? collect());
+        $expPctMap    = $this->buildExpensePctMap($allHistories);
+
         return Excel::download(
-            new ItemCurrentPricesExport($rows->map(fn($row) => $this->transformCurrentPriceRow($row))),
+            new ItemCurrentPricesExport($rows->map(fn($row) => $this->transformCurrentPriceRow($row, null, $expPctMap))),
             'items-cost-list-' . now()->format('Y-m-d') . '.xlsx'
         );
     }
@@ -86,7 +98,7 @@ class ItemCostHistoryController extends Controller
         ];
     }
 
-    private function transformCurrentPriceRow(ItemPrice $row, ?\Illuminate\Support\Collection $auditIndex = null): array
+    private function transformCurrentPriceRow(ItemPrice $row, ?\Illuminate\Support\Collection $auditIndex = null, array $expPctMap = []): array
     {
         $histories      = $row->item?->priceHistories ?? collect();
         $currentHistory = $histories->firstWhere('is_current', true);
@@ -100,7 +112,7 @@ class ItemCostHistoryController extends Controller
             'unit'             => $row->item?->itemUnit?->only(['id', 'name', 'short_name']),
             'price_usd'        => $row->price_usd,
             'effective_date'   => $row->effective_date,
-            'history'          => $histories->take(5)->map(fn($h) => $this->transformRow($h))->values(),
+            'history'          => $histories->take(5)->map(fn($h) => $this->transformRow($h, $expPctMap))->values(),
             'price_check'      => $auditIndex !== null ? [
                 'correct_price' => $auditRow['correct_price'] ?? null,
                 'difference'    => $auditRow['difference'] ?? 0,
@@ -110,7 +122,35 @@ class ItemCostHistoryController extends Controller
         ];
     }
 
-    private function transformRow(ItemPriceHistory $history): array
+    private function buildExpensePctMap(Collection $histories): array
+    {
+        $purchaseData = [];
+        foreach ($histories as $history) {
+            $purchase = $history->purchaseItemSource?->purchase;
+            if (!$purchase) continue;
+            $purchaseData[$purchase->id] = (float) $purchase->total_usd;
+        }
+
+        if (empty($purchaseData)) return [];
+
+        $distributable = PurchaseExpense::join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
+            ->whereNull('expense_transactions.deleted_at')
+            ->where('purchase_expenses.exclude_from_item_cost', false)
+            ->whereIn('purchase_expenses.purchase_id', array_keys($purchaseData))
+            ->groupBy('purchase_expenses.purchase_id')
+            ->selectRaw('purchase_expenses.purchase_id, SUM(expense_transactions.amount_usd) as distributable_usd')
+            ->pluck('distributable_usd', 'purchase_id');
+
+        $map = [];
+        foreach ($purchaseData as $purchaseId => $totalUsd) {
+            $distributableUsd    = (float) ($distributable[$purchaseId] ?? 0);
+            $map[$purchaseId] = $totalUsd > 0 ? round($distributableUsd / $totalUsd * 100, 2) : 0;
+        }
+
+        return $map;
+    }
+
+    private function transformRow(ItemPriceHistory $history, array $expPctMap = []): array
     {
         $inputs = $history->calculation_inputs;
 
@@ -139,8 +179,11 @@ class ItemCostHistoryController extends Controller
             ];
         }
 
-        $totalExpense   = $inputs['total_expense_usd'] ?? 0;
-        $finalTotalCost = $inputs['final_total_cost_usd'] ?? 0;
+        $totalExpense = $inputs['total_expense_usd'] ?? 0;
+        $purchaseId   = $history->purchaseItemSource?->purchase?->id;
+        $expPct       = isset($inputs['purchase_exp_pct'])
+            ? (float) $inputs['purchase_exp_pct']
+            : ($purchaseId ? ($expPctMap[$purchaseId] ?? 0) : 0);
 
         return [
             'id'               => $history->id,
@@ -158,7 +201,7 @@ class ItemCostHistoryController extends Controller
             'currency_rate'    => $inputs['currency_rate'] ?? 1,
             'exp_share'        => round($inputs['expense_per_item_usd'] ?? 0, 4),
             'exp_share_total'  => $totalExpense,
-            'exp_pct'          => $finalTotalCost > 0 ? round($totalExpense / $finalTotalCost * 100, 2) : 0,
+            'purchase_exp_pct'          => $expPct,
             'remark'           => $history->note,
             'currency'         => $inputs['currency'] ?? null,
         ];
