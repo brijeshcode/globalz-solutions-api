@@ -31,10 +31,10 @@
             <td class="text-center">{{ $item->item_code ?? '' }}</td>
             <td>{{ $item->item->description ?? 'Unknown Item' }}</td>
             <td class="text-center">{{ rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }}</td>
-            <td class="text-center">{{ number_format($item->price, 2) }}</td>
+            <td class="text-center">{{ number_format($item->price, $invoiceSettings['unit_price_decimals']) }}</td>
             <td class="text-center">{{ number_format($item->discount_percent, 2) }}%</td>
             {{-- <td class="text-center">{{ number_format($item->net_sell_price, 2) }}</td> --}}
-            <td class="text-right font-bold">{{ number_format($item->total_net_sell_price, 2) }}</td>
+            <td class="text-right font-bold">{{ number_format($item->total_net_sell_price, $invoiceSettings['total_decimals']) }}</td>
         </tr>
         @endforeach
 

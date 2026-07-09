@@ -44,6 +44,8 @@ class InvoiceSettingsController extends Controller
         'inv_show_google_map_qrcode'     => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
         'template'                       => ['value' => 'template-1', 'type' => Setting::TYPE_STRING],
         'language'                       => ['value' => 'en',         'type' => Setting::TYPE_STRING],
+        'unit_price_decimals'            => ['value' => 2,            'type' => Setting::TYPE_NUMBER],
+        'total_decimals'                 => ['value' => 2,            'type' => Setting::TYPE_NUMBER],
     ];
 
     /**

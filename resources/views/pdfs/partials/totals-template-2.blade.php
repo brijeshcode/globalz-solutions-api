@@ -31,11 +31,11 @@
                     @if($sale->prefix !== 'INX')
                     <tr>
                         <td colspan="2" class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 50%;">{{ __('invoice.sub_total') }}</td>
-                        <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 50%;">{{ number_format($sale->sub_total, 2) }}</td>
+                        <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 50%;">{{ number_format($sale->sub_total, $invoiceSettings['total_decimals']) }}</td>
                     </tr>
                     <tr>
                         <td colspan="2" class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap;">{{ __('invoice.amount_discount') }}</td>
-                        <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px;">{{ number_format($sale->discount_amount, 2) }}</td>
+                        <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px;">{{ number_format($sale->discount_amount, $invoiceSettings['total_decimals']) }}</td>
                     </tr>
                     @endif
 
@@ -43,14 +43,14 @@
                         @if($invoiceSettings['show_local_currency_tax'])
                         <tr>
                             <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.tax_amount') }} {{ $invoiceSettings['local_currency_symbol'] }}</td>
-                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
+                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), $invoiceSettings['total_decimals']) }}</td>
                             <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.tax_amount') }}</td>
-                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount, 2) }}</td>
+                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount, $invoiceSettings['total_decimals']) }}</td>
                         </tr>
                         @else
                         <tr>
                             <td colspan="2" class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap;">{{ __('invoice.tax_amount') }}</td>
-                            <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px;">{{ number_format($sale->total_tax_amount, 2) }}</td>
+                            <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px;">{{ number_format($sale->total_tax_amount, $invoiceSettings['total_decimals']) }}</td>
                         </tr>
                         @endif
                     @endif

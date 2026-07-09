@@ -32,12 +32,12 @@
                     <tr>
                         <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
                         <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.sub_total') }}</td>
-                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->sub_total, 2) }}</td>
+                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->sub_total, $invoiceSettings['total_decimals']) }}</td>
                     </tr>
                     <tr>
                         <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
                         <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.amount_discount') }}</td>
-                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->discount_amount, 2) }}</td>
+                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->discount_amount, $invoiceSettings['total_decimals']) }}</td>
                     </tr>
                     @endif
 
@@ -45,15 +45,15 @@
                         @if($invoiceSettings['show_local_currency_tax'])
                         <tr>
                             <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ $sale->invoice_tax_label }} {{ $invoiceSettings['local_currency_symbol'] }}</td>
-                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
+                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), $invoiceSettings['total_decimals']) }}</td>
                             <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ $sale->invoice_tax_label }}</td>
-                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount, 2) }}</td>
+                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount, $invoiceSettings['total_decimals']) }}</td>
                         </tr>
                         @else
                         <tr>
                             <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
                             <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ $sale->invoice_tax_label }}</td>
-                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount, 2) }}</td>
+                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount, $invoiceSettings['total_decimals']) }}</td>
                         </tr>
                         @endif
                     @endif
@@ -64,14 +64,14 @@
                             <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap;">{{ __('invoice.net_total') }} {{ $invoiceSettings['local_currency_symbol'] }}</td>
                             <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px;">{{ number_format($sale->total_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
                             <td  class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap;">{{ __('invoice.net_total') }}</td>
-                            <td  class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt;">{{ number_format($sale->total, 2) }}</td>
+                            <td  class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt;">{{ number_format($sale->total, $invoiceSettings['total_decimals']) }}</td>
                         </tr>
 
                         @else
                         <tr>
                             <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
                             <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.net_total') }}</td>
-                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt; width: 22%;">{{ number_format($sale->total, 2) }}</td>
+                            <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt; width: 22%;">{{ number_format($sale->total, $invoiceSettings['total_decimals']) }}</td>
                         </tr>
                         @endif
                     @endif
@@ -80,7 +80,7 @@
                     <tr>
                         <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
                         <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.net_total') }}</td>
-                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt; width: 22%;">{{ number_format($sale->total, 2) }}</td>
+                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt; width: 22%;">{{ number_format($sale->total, $invoiceSettings['total_decimals']) }}</td>
                     </tr>
                     @endif
                 </table>

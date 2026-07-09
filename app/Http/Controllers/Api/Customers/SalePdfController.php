@@ -60,6 +60,8 @@ class SalePdfController extends Controller
                 'show_note_1'               => $invoiceGroup['show_note_1'] ?? true,
                 'show_note_2'               => $invoiceGroup['show_note_2'] ?? true,
                 'is_multi_currency'         => $isMultiCurrency,
+                'unit_price_decimals'       => min(max((int) ($invoiceGroup['unit_price_decimals'] ?? 2), 0), 6),
+                'total_decimals'            => min(max((int) ($invoiceGroup['total_decimals'] ?? 2), 0), 6),
             ];
 
             // Generate catalog QR code based on per-prefix show setting and catalog link
