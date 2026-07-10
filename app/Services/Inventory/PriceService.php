@@ -66,18 +66,29 @@ class PriceService
         }
     }
 
+    private static function purchaseTotalExpenseUsd(Purchase $purchase): float
+    {
+        return (float) PurchaseExpense::join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
+            ->whereNull('expense_transactions.deleted_at')
+            ->where('purchase_expenses.exclude_from_item_cost', false)
+            ->where('purchase_expenses.purchase_id', $purchase->id)
+            ->sum('expense_transactions.amount_usd');
+    }
+
+    private static function purchaseTotalExpenseAllUsd(Purchase $purchase): float
+    {
+        return (float) PurchaseExpense::join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
+            ->whereNull('expense_transactions.deleted_at')
+            ->where('purchase_expenses.purchase_id', $purchase->id)
+            ->sum('expense_transactions.amount_usd');
+    }
+
     private static function purchaseExpensePct(Purchase $purchase): float
     {
         $totalUsd = (float) $purchase->total_usd;
         if ($totalUsd <= 0) return 0.0;
 
-        $distributable = (float) PurchaseExpense::join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
-            ->whereNull('expense_transactions.deleted_at')
-            ->where('purchase_expenses.exclude_from_item_cost', false)
-            ->where('purchase_expenses.purchase_id', $purchase->id)
-            ->sum('expense_transactions.amount_usd');
-
-        return round($distributable / $totalUsd * 100, 2);
+        return round(self::purchaseTotalExpenseUsd($purchase) / $totalUsd * 100, 2);
     }
 
     private static function buildPurchaseCalculationInputs(Purchase $purchase, PurchaseItem $purchaseItem): array
@@ -112,7 +123,9 @@ class PriceService
             'purchase_id'             => $purchase->id,
             'purchase_prefix'         => $purchase->prefix,
             'purchase_code'           => $purchase->code,
-            'purchase_exp_pct' => self::purchaseExpensePct($purchase),
+            'purchase_exp_pct'          => self::purchaseExpensePct($purchase),
+            'purchase_total_expense_usd'     => self::purchaseTotalExpenseUsd($purchase),
+            'purchase_total_expense_all_usd' => self::purchaseTotalExpenseAllUsd($purchase),
             'purchase_date'           => $purchase->date,
             'currency'                => $currency?->only(['id', 'symbol', 'symbol_position', 'decimal_places', 'decimal_separator', 'thousand_separator']),
         ];
