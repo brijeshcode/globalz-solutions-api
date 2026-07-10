@@ -59,19 +59,19 @@
                         @if($invoiceSettings['show_local_currency_total'])
                         <tr>
                             <td colspan="2" class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap;">{{ __('invoice.net_total') }} {{ $invoiceSettings['local_currency_symbol'] }}</td>
-                            <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px;">{{ number_format($sale->total_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), 2) }}</td>
+                            <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px;">{{ number_format($sale->total_usd * ($sale->local_curreny_rate > 0 ? $sale->local_curreny_rate : 1), $invoiceSettings['total_decimals']) }}</td>
                         </tr>
                         @endif
                         <tr>
                             <td colspan="2" class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap;">{{ __('invoice.net_total') }}</td>
-                            <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt;">{{ number_format($sale->total, 2) }}</td>
+                            <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt;">{{ number_format($sale->total, $invoiceSettings['total_decimals']) }}</td>
                         </tr>
                     @endif
 
                     @if($sale->prefix === 'INX')
                     <tr>
                         <td colspan="2" class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap;">{{ __('invoice.net_total') }}</td>
-                        <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt;">{{ number_format($sale->total, 2) }}</td>
+                        <td colspan="2" class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt;">{{ number_format($sale->total, $invoiceSettings['total_decimals']) }}</td>
                     </tr>
                     @endif
                 </table>
