@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Customers\SaleStatusHistory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
@@ -127,6 +128,11 @@ class Sale extends Model
 
     protected $defaultSortField = 'id';
     protected $defaultSortDirection = 'desc';
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(SaleStatusHistory::class)->orderBy('created_at');
+    }
 
     public function saleItems(): HasMany
     {
@@ -520,6 +526,11 @@ class Sale extends Model
         });
 
         static::created(function ($sale) {
+            $sale->statusHistories()->create([
+                'status' => 'Waiting',
+                'changed_by' => $sale->created_by,
+            ]);
+
             // Only update customer balance if sale is approved
             if ($sale->isApproved()) {
                 CustomersHelper::removeBalance(Customer::find($sale->customer_id), $sale->total_usd);
