@@ -1016,23 +1016,33 @@ class PriceService
                 ->get()
                 ->keyBy('source_id');
 
+            $isWeightedAverage = $item->cost_calculation === Item::COST_WEIGHTED_AVERAGE;
+            $runningAverages   = $computed['running_averages'] ?? [];
+
             $updated     = 0;
             $lastHistory = null;
 
             foreach ($purchaseItems as $pi) {
-                $correctPrice = round((float) $pi->cost_per_item_usd, 4);
-                $existing     = $existingBySourceId->get($pi->id);
+                $unitPrice = round((float) $pi->cost_per_item_usd, 4);
+                $avgPrice  = $isWeightedAverage
+                    ? ($runningAverages[$pi->id] ?? $unitPrice)
+                    : $unitPrice;
+
+                $existing = $existingBySourceId->get($pi->id);
 
                 if ($existing) {
-                    if (abs((float) $existing->price_usd - $correctPrice) > 0.000001) {
+                    $needsUpdate = abs((float) $existing->price_usd - $unitPrice) > 0.000001
+                        || abs((float) $existing->average_weighted_price - $avgPrice) > 0.000001;
+
+                    if ($needsUpdate) {
                         $existing->timestamps = false;
                         $existing->update([
-                            'price_usd'              => $correctPrice,
-                            'average_weighted_price' => $correctPrice,
+                            'price_usd'              => $unitPrice,
+                            'average_weighted_price' => $avgPrice,
                             'effective_date'         => $pi->purchase_date,
                             'created_at'             => $pi->created_at,
                             'updated_at'             => $pi->updated_at,
-                            'note'                   => "Price corrected from {$existing->price_usd} to {$correctPrice} [Audited]",
+                            'note'                   => "Price corrected to {$unitPrice} (avg: {$avgPrice}) [Audited]",
                         ]);
                         $updated++;
                     }
@@ -1040,13 +1050,13 @@ class PriceService
                 } else {
                     $history             = new ItemPriceHistory([
                         'item_id'                => $item->id,
-                        'price_usd'              => $correctPrice,
-                        'average_weighted_price' => $correctPrice,
+                        'price_usd'              => $unitPrice,
+                        'average_weighted_price' => $avgPrice,
                         'latest_price'           => 0,
                         'effective_date'         => $pi->purchase_date,
                         'source_type'            => 'purchase_item',
                         'source_id'              => $pi->id,
-                        'note'                   => "Price {$correctPrice} from purchase [Audited]",
+                        'note'                   => "Price {$unitPrice} (avg: {$avgPrice}) from purchase [Audited]",
                         'is_current'             => false,
                         'calculation_type'       => $item->cost_calculation,
                     ]);
@@ -1059,11 +1069,17 @@ class PriceService
             }
 
             if ($item->itemPrice) {
-                $item->itemPrice->update([
-                    'price_usd'        => $computed['price'],
-                    'effective_date'   => $computed['purchase_date'],
-                    'price_history_id' => $lastHistory?->id,
-                ]);
+                $priceChanged = abs((float) $item->itemPrice->price_usd - (float) $computed['price']) > 0.000001
+                    || $item->itemPrice->price_history_id !== $lastHistory?->id;
+
+                if ($priceChanged) {
+                    $item->itemPrice->update([
+                        'price_usd'        => $computed['price'],
+                        'effective_date'   => $computed['purchase_date'],
+                        'price_history_id' => $lastHistory?->id,
+                    ]);
+                    $updated++;
+                }
             } else {
                 ItemPrice::create([
                     'item_id'          => $item->id,
@@ -1071,6 +1087,7 @@ class PriceService
                     'effective_date'   => $computed['purchase_date'],
                     'price_history_id' => $lastHistory?->id,
                 ]);
+                $updated++;
             }
 
             if ($updated === 0) {
@@ -1135,7 +1152,7 @@ class PriceService
             ->orderBy('purchases.date', 'asc')
             ->orderBy('purchases.id', 'asc')
             ->orderBy('purchase_items.id', 'asc')
-            ->get(['purchase_items.quantity', 'purchase_items.cost_per_item_usd', 'purchases.date']);
+            ->get(['purchase_items.id', 'purchase_items.quantity', 'purchase_items.cost_per_item_usd', 'purchases.date']);
 
         if ($deliveredItems->isEmpty()) {
             return null;
@@ -1145,14 +1162,23 @@ class PriceService
         $totalQty   = ($item && $item->starting_quantity > 0) ? (float) $item->starting_quantity : 0.0;
         $totalValue = ($item && $item->starting_price > 0)    ? $totalQty * (float) $item->starting_price : 0.0;
 
+        $runningAverages = [];
+
         foreach ($deliveredItems as $pi) {
             $totalQty   += (float) $pi->quantity;
             $totalValue += (float) $pi->quantity * (float) $pi->cost_per_item_usd;
+
+            $runningAverages[$pi->id] = $totalQty > 0 ? round($totalValue / $totalQty, 4) : 0.0;
         }
 
         $price = $totalQty > 0 ? ($totalValue / $totalQty) : null;
 
-        return $price !== null ? ['price' => $price, 'purchase_id' => null, 'purchase_date' => null] : null;
+        return $price !== null ? [
+            'price'            => $price,
+            'purchase_id'      => null,
+            'purchase_date'    => null,
+            'running_averages' => $runningAverages,
+        ] : null;
     }
 
 }
