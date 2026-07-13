@@ -97,11 +97,9 @@ class SalesStoreRequest extends FormRequest
                 }
 
                 $sellingPrice    = (float) ($itemData['price'] ?? 0);
-                $discountPercent = (float) ($itemData['discount_percent'] ?? 0);
                 $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice, $currencyRate);
-                $netSellPriceUsd = $sellingPriceUsd * (1 - $discountPercent / 100);
 
-                if ($netSellPriceUsd < $costPriceUsd) {
+                if ($sellingPriceUsd < $costPriceUsd) {
                     $validator->errors()->add(
                         "items.$index.price",
                         'Item ' . ($index + 1) . ': selling price cannot be below cost price.'
