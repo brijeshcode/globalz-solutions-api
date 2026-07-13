@@ -55,10 +55,12 @@ class Purchase extends Model
         'final_total',
         'final_total_usd',
         'note',
+        'delivered_at',
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date'         => 'date',
+        'delivered_at' => 'datetime',
         'currency_rate' => 'decimal:6',
         'sub_total' => 'decimal:4',
         'sub_total_usd' => 'decimal:4',

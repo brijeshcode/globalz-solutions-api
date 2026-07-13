@@ -484,7 +484,7 @@ class PurchaseService
                     );
                 }
 
-                $purchase->update(['status' => 'Delivered']);
+                $purchase->update(['status' => 'Delivered', 'delivered_at' => now()]);
 
                 if ($purchase->purchaseItems()->doesntExist()) {
                     throw new \InvalidArgumentException(
