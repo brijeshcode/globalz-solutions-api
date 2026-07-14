@@ -3,14 +3,10 @@
 namespace App\Console\Commands\Tenants;
 
 use Illuminate\Console\Command;
-use Spatie\Multitenancy\Commands\Concerns\TenantAware;
 
 class ScheduleDocumentCleanup extends Command
 {
-    use TenantAware;
-
     protected $signature = 'documents:schedule-cleanup
-                            {--tenant=* : Tenant ID(s), defaults to all tenants}
                             {--enable : Enable automatic cleanup scheduling}
                             {--disable : Disable automatic cleanup scheduling}
                             {--status : Show current scheduling status}';

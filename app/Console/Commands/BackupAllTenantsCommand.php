@@ -16,42 +16,30 @@ class BackupAllTenantsCommand extends Command
 
     public function handle(BackupService $backupService, BackupStorageService $storageService): int
     {
-        $tenants = Tenant::on('mysql')->where('is_active', true)->get();
+        $this->info('Starting backup check...');
 
-        if ($tenants->isEmpty()) {
-            $this->info('No active tenants found.');
-            return self::SUCCESS;
-        }
+        Tenant::runForEachActive('Tenant backup', function (Tenant $tenant) use ($backupService, $storageService) {
+            $skip = $this->skipReason($tenant, $backupService);
 
-        $this->info("Starting backup check for {$tenants->count()} tenant(s)...");
-
-        foreach ($tenants as $tenant) {
-            try {
-                $tenant->makeCurrent();
-
-                $skip = $this->skipReason($tenant, $backupService);
-
-                if ($skip !== null) {
-                    $this->info("  ↷ Skipped {$tenant->tenant_key}: {$skip}");
-                    continue;
-                }
-
-                $this->info("Backing up tenant: {$tenant->tenant_key}");
-
-                $log = $backupService->run($tenant);
-
-                if ($log->status === BackupLog::STATUS_SUCCESS) {
-                    $this->info("  ✓ Success — {$log->file_name} ({$this->formatBytes($log->file_size)}) in {$log->duration_seconds}s");
-                    $storageService->pushToRemote($tenant, $log);
-                } else {
-                    $this->error("  ✗ Failed — {$log->error_message}");
-                }
-            } catch (\Throwable $e) {
-                $this->error("  ✗ Exception for tenant {$tenant->tenant_key}: {$e->getMessage()}");
-            } finally {
-                Tenant::forgetCurrent();
+            if ($skip !== null) {
+                $this->info("  ↷ Skipped {$tenant->tenant_key}: {$skip}");
+                return ['skipped' => $skip];
             }
-        }
+
+            $this->info("Backing up tenant: {$tenant->tenant_key}");
+
+            $log = $backupService->run($tenant);
+
+            if ($log->status !== BackupLog::STATUS_SUCCESS) {
+                $this->error("  ✗ Failed — {$log->error_message}");
+                return ['failed' => $log->error_message];
+            }
+
+            $this->info("  ✓ Success — {$log->file_name} ({$this->formatBytes($log->file_size)}) in {$log->duration_seconds}s");
+            $storageService->pushToRemote($tenant, $log);
+
+            return ['file' => $log->file_name, 'size' => $log->file_size, 'duration_seconds' => $log->duration_seconds];
+        });
 
         $this->info('Backup run complete.');
         return self::SUCCESS;

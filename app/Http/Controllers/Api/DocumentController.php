@@ -237,11 +237,13 @@ class DocumentController extends Controller
      */
     public function getPreviewUrl(Document $document): JsonResponse
     {
-        // Generate a signed URL that's valid for 1 hour
+        // Generate a signed URL that's valid for 1 hour.
+        // The tenant domain rides along (signature-protected) so the tenant can be
+        // resolved when the URL is opened by native viewers that send no headers.
         $signedUrl = URL::temporarySignedRoute(
             'documents.preview-signed',
             now()->addHour(),
-            ['document' => $document->id]
+            ['document' => $document->id, 'tenant' => \App\Models\Tenant::current()?->domain]
         );
 
         return ApiResponse::show(

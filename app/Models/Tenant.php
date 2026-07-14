@@ -92,6 +92,50 @@ class Tenant extends BaseTenant
     }
 
     /**
+     * Counterpart to the makeCurrent() override: restore the landlord connection
+     * as default. Without this, long-running CLI/queue processes keep pointing at
+     * the last tenant's database after the tenant is forgotten.
+     */
+    public static function forgetCurrent(): ?static
+    {
+        $tenant = parent::forgetCurrent();
+
+        config(['database.default' => 'mysql']);
+        DB::purge('tenant');
+
+        return $tenant;
+    }
+
+    /**
+     * Run a callback once per active tenant, making each tenant current in turn.
+     * Failures are logged per tenant and do not stop the loop. If the callback
+     * returns an array, it is included in the completion log entry.
+     * Pass $tenantIds to limit the run to specific tenants (e.g. from a --tenant option).
+     */
+    public static function runForEachActive(string $taskName, callable $callback, array $tenantIds = []): void
+    {
+        $tenants = static::on('mysql')
+            ->where('is_active', true)
+            ->when(!empty($tenantIds), fn ($query) => $query->whereIn('id', $tenantIds))
+            ->get();
+
+        foreach ($tenants as $tenant) {
+            try {
+                $tenant->makeCurrent();
+                $result = $callback($tenant);
+                info("{$taskName} completed for tenant {$tenant->tenant_key}", is_array($result) ? $result : []);
+                // Destruct any PendingDispatch NOW — queued jobs capture the current
+                // tenant at push time, which must happen before forgetCurrent() below.
+                unset($result);
+            } catch (\Throwable $e) {
+                info("{$taskName} failed for tenant {$tenant->tenant_key}", ['error' => $e->getMessage()]);
+            } finally {
+                static::forgetCurrent();
+            }
+        }
+    }
+
+    /**
      * Override route model binding to use landlord connection
      */
     public function resolveRouteBinding($value, $field = null)

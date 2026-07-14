@@ -26,9 +26,22 @@ class OriginTenantFinder extends TenantFinder
         elseif ($request->header('Referer')) {
             $domain = parse_url($request->header('Referer'), PHP_URL_HOST);
         }
+        // Priority 4: tenant query parameter — set on signed preview URLs so native
+        // viewers (iOS QuickLook etc.) that send no Origin/Referer headers can still
+        // resolve the tenant. On signed routes the value is covered by the URL
+        // signature, so tampering with it invalidates the link.
+        elseif ($request->query('tenant')) {
+            $domain = $request->query('tenant');
+        }
 
-        // If no domain found, log and return null
+        // If no domain found, log and return null.
+        // Only warn for real API traffic — crawler/bot hits to sitemap.xml,
+        // robots.txt, wp-login.php etc. would otherwise flood the log.
         if (!$domain) {
+            if (!$request->is('api/*')) {
+                return null;
+            }
+
             Log::warning('Could not determine company domain', [
                 'method' => $request->method(),
                 'url' => $request->fullUrl(),

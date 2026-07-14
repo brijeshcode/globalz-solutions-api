@@ -35,6 +35,14 @@ class SettingsServiceProvider extends ServiceProvider
      */
     protected function overrideConfig(): void
     {
+        // Settings live in tenant databases only. With no current tenant (landlord
+        // CLI, queue worker boot, requests where no tenant could be resolved) there
+        // is nothing to override — and querying would hit the landlord DB, which
+        // has no settings table.
+        if (!\App\Models\Tenant::checkCurrent()) {
+            return;
+        }
+
         try {
             // Only override if database is available and settings table exists
             if ($this->app->hasBeenBootstrapped() && $this->settingsTableExists()) {

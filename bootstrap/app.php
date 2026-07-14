@@ -64,17 +64,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Auto logout all users daily at 1:00 AM — runs per tenant
         $schedule->call(function () {
-            $tenants = \App\Models\Tenant::on('mysql')->where('is_active', true)->get();
-
-            foreach ($tenants as $tenant) {
-                try {
-                    $tenant->makeCurrent();
-                } catch (\Throwable $e) {
-                    info('Auto logout failed for tenant ' . $tenant->tenant_key, ['error' => $e->getMessage()]);
-                } finally {
-                    \App\Models\Tenant::forgetCurrent();
-                }
-            }
+            \App\Models\Tenant::runForEachActive('Auto logout', fn () => AuthController::autoLogoutAllUsers());
         })
         ->daily()
         ->at('01:00')
