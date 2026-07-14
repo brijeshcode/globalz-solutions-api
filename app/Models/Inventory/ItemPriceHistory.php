@@ -76,6 +76,18 @@ class ItemPriceHistory extends Model
     }
 
 
+    /**
+     * Id of the history row that supplied the item's current price —
+     * used to stamp sale_items.cost_history_id when a sale is created.
+     */
+    public static function currentRowIdFor(int $itemId): ?int
+    {
+        return static::where('item_id', $itemId)
+            ->where('is_current', true)
+            ->orderByDesc('id')
+            ->value('id');
+    }
+
     // Scopes
     public function scopeByItem($query, $itemId)
     {

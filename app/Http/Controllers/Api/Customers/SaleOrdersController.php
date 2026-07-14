@@ -15,6 +15,7 @@ use App\Http\Resources\Api\Customers\SaleOrderResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\Sale;
+use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
 use App\Models\Items\PriceList;
 use App\Services\Inventory\InventoryService;
@@ -209,6 +210,7 @@ class SaleOrdersController extends Controller
 
                     // Assign all calculated values to sale item
                     $items[$index]['cost_price'] = $costPrice;
+                    $items[$index]['cost_history_id'] = ItemPriceHistory::currentRowIdFor($itemData['item_id']);
                     $items[$index]['price_usd'] = $sellingPriceUsd;
                     $items[$index]['discount_percent'] = $discountPercent;
                     $items[$index]['unit_discount_amount'] = $unitDiscountAmount;
@@ -410,6 +412,7 @@ class SaleOrdersController extends Controller
 
                         // Assign all calculated values to sale item
                         $items[$index]['cost_price'] = $costPrice;
+                        $items[$index]['cost_history_id'] = ItemPriceHistory::currentRowIdFor($itemData['item_id']);
                         $items[$index]['price_usd'] = $sellingPriceUsd;
                         $items[$index]['discount_percent'] = $discountPercent;
                         $items[$index]['unit_discount_amount'] = $unitDiscountAmount;

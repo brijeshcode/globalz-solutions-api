@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Customers\SaleStatusHistory;
+use App\Models\Inventory\ItemPriceHistory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
@@ -404,9 +405,14 @@ class Sale extends Model
             $unitProfit = $netSellPriceUsd - $costPrice;
             $itemTotalProfit = $unitProfit * $quantity;
 
-            // Update sale item without firing events
+            // Update sale item without firing events.
+            // cost_history_id is refreshed only when the cost came from the item's
+            // current price; the fallback branch keeps the existing stamp.
             $saleItem->updateQuietly([
                 'cost_price' => $costPrice,
+                'cost_history_id' => $saleItem->item?->itemPrice
+                    ? ItemPriceHistory::currentRowIdFor($saleItem->item_id)
+                    : $saleItem->cost_history_id,
                 'price_usd' => $sellingPriceUsd,
                 'unit_discount_amount' => $unitDiscountAmount,
                 'unit_discount_amount_usd' => $unitDiscountAmountUsd,

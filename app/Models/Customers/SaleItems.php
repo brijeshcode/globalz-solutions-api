@@ -29,6 +29,7 @@ class SaleItems extends Model
         'item_id',
         'quantity',
         'cost_price',
+        'cost_history_id',
         'price',
         'price_usd',
         'net_sell_price',
