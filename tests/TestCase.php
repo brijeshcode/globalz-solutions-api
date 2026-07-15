@@ -43,13 +43,16 @@ abstract class TestCase extends BaseTestCase
             $this->initTenant();
         }
 
-        // App container is recreated per test — restore the two things makeCurrent() set:
+        // App container is recreated per test — restore the three things makeCurrent() set:
         // 1. default connection → tenant DB
         // 2. tenant binding in container
+        // 3. tenant id in Context — queued (incl. sync) tenant-aware jobs stamp their
+        //    payload from Context; without it dispatching throws "No tenantId was set"
         // (No DB::purge needed — connections reconnect automatically from env config)
         config(['database.default' => 'tenant']);
         $this->tenant = static::$sharedTenant;
         app()->instance(config('multitenancy.current_tenant_container_key'), $this->tenant);
+        \Illuminate\Support\Facades\Context::add(config('multitenancy.current_tenant_context_key'), $this->tenant->id);
         $this->withHeaders(['X-Company-Domain' => 'test.example.com']);
 
         // Wrap each test in a transaction on the tenant DB, rolled back on teardown.

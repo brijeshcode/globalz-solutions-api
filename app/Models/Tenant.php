@@ -74,6 +74,18 @@ class Tenant extends BaseTenant
      */
     public function makeCurrent(): static
     {
+        // Already current with the tenant connection active — nothing to switch.
+        // Skipping matters: queued jobs call makeCurrent() on every process, and the
+        // purge below would needlessly drop live connections (and, on the sync
+        // driver, destroy any open transaction — e.g. the one wrapping each test).
+        // Context is still (re)stamped so job payloads dispatched after this call
+        // always carry the tenant id.
+        if (static::current()?->getKey() === $this->getKey() && config('database.default') === 'tenant') {
+            \Illuminate\Support\Facades\Context::add(config('multitenancy.current_tenant_context_key'), $this->getKey());
+
+            return $this;
+        }
+
         parent::makeCurrent();
 
         // Set custom database connection with tenant-specific credentials

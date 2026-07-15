@@ -7,7 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Suppliers\PurchasesStoreRequest;
 use App\Http\Requests\Api\Suppliers\PurchasesUpdateRequest;
 use App\Http\Resources\Api\Suppliers\PurchaseResource;
+use App\Models\Customers\Sale;
+use App\Models\Items\Item;
 use App\Models\Suppliers\Purchase;
+use App\Services\Customers\SaleProfitRecalculationService;
 use App\Services\Suppliers\PurchaseService;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
@@ -399,6 +402,93 @@ class PurchasesController extends Controller
                 ];
             })
         );
+    }
+
+    /**
+     * Preview what a profit recalculation would change — computed fresh, nothing stored.
+     * Grouped per sale (code, old/new profit) with item details, purely for review:
+     * the confirm endpoint always applies ALL changes, recomputed at execution time.
+     */
+    public function recalculateSaleProfitPreview(Purchase $purchase, SaleProfitRecalculationService $service): JsonResponse
+    {
+        if ($purchase->status !== 'Delivered') {
+            return ApiResponse::customError('Cannot recalculate profit. Purchase is not delivered yet.', 422);
+        }
+
+        $changes = $service->buildChangesForPurchase($purchase);
+
+        $sales = Sale::whereIn('id', array_unique(array_column($changes, 'sale_id')))
+            ->get(['id', 'prefix', 'code', 'date', 'total_profit'])
+            ->keyBy('id');
+
+        $items = Item::whereIn('id', array_unique(array_column($changes, 'item_id')))
+            ->get(['id', 'code', 'short_name', 'description'])
+            ->keyBy('id');
+
+        $salesPreview      = [];
+        $totalProfitChange = 0.0;
+
+        foreach ($changes as $change) {
+            $saleId = $change['sale_id'];
+            $sale   = $sales->get($saleId);
+            $item   = $items->get($change['item_id']);
+            $delta  = $change['new_total_profit'] - $change['old_total_profit'];
+
+            if (!isset($salesPreview[$saleId])) {
+                $oldProfit = (float) ($sale?->total_profit ?? 0);
+                $salesPreview[$saleId] = [
+                    'sale_id'          => $saleId,
+                    'sale_code'        => $sale ? $sale->prefix . $sale->code : null,
+                    'sale_date'        => $change['sale_date'],
+                    'old_total_profit' => $oldProfit,
+                    'new_total_profit' => $oldProfit, // item deltas applied below
+                    'items'            => [],
+                ];
+            }
+
+            $salesPreview[$saleId]['new_total_profit'] += $delta;
+            $totalProfitChange                         += $delta;
+
+            $salesPreview[$saleId]['items'][] = [
+                'sale_item_id'     => $change['sale_item_id'],
+                'item_id'          => $change['item_id'],
+                'item_code'        => $item?->code,
+                'item_name'        => $item?->short_name,
+                'item_description' => $item?->description,
+                'quantity'         => $change['quantity'],
+                'old_cost'         => $change['old_cost'],
+                'new_cost'         => $change['new_cost'],
+                'old_total_profit' => $change['old_total_profit'],
+                'new_total_profit' => $change['new_total_profit'],
+            ];
+        }
+
+        foreach ($salesPreview as &$salePreview) {
+            $salePreview['profit_change'] = $salePreview['new_total_profit'] - $salePreview['old_total_profit'];
+        }
+        unset($salePreview);
+
+        return ApiResponse::send('Recalculation preview generated.', 200, [
+            'summary' => [
+                'purchase_id'          => $purchase->id,
+                'purchase_date'        => $purchase->date,
+                'sale_items_to_update' => count($changes),
+                'sales_affected'       => count($salesPreview),
+                'total_profit_change'  => $totalProfitChange,
+            ],
+            'sales' => array_values($salesPreview),
+        ]);
+    }
+
+    public function recalculateSaleProfit(Purchase $purchase, SaleProfitRecalculationService $service): JsonResponse
+    {
+        if ($purchase->status !== 'Delivered') {
+            return ApiResponse::customError('Cannot recalculate profit. Purchase is not delivered yet.', 422);
+        }
+
+        $result = $service->recalculateForPurchase($purchase);
+
+        return ApiResponse::send('Sale profit recalculated.', 200, $result);
     }
 
     public function stats(Request $request): JsonResponse

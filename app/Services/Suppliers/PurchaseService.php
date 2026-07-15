@@ -3,6 +3,7 @@
 namespace App\Services\Suppliers;
 
 use App\Helpers\CurrencyHelper;
+use App\Jobs\RecalculateSaleProfitForPurchaseJob;
 use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\PurchaseExpense;
 use App\Models\Suppliers\PurchaseItem;
@@ -99,14 +100,16 @@ class PurchaseService
             }
         }
 
-        $removedItems = collect();
-        $createdItems = collect();
+        $removedItems        = collect();
+        $createdItems        = collect();
+        $itemCostsChanged    = false;
+        $oldExpenseTotalUsd  = (float) $purchase->total_expense_usd;
 
         try {
             // Short transaction: only data record updates (purchases + purchase_items).
             // Inventory and price side-effects are handled AFTER this transaction commits
             // so the purchases row lock is released quickly.
-            $updatedPurchase = DB::transaction(function () use ($purchase, $purchaseData, $items, $expenses, &$removedItems, &$createdItems) {
+            $updatedPurchase = DB::transaction(function () use ($purchase, $purchaseData, $items, $expenses, &$removedItems, &$createdItems, &$itemCostsChanged) {
                 $purchase->update($purchaseData);
 
                 // Capture original costs BEFORE any changes (keyed by purchase_item.id)
@@ -137,8 +140,10 @@ class PurchaseService
                         if ($isNew || $costChanged) {
                             PriceService::updateFromPurchase($purchase, $purchaseItem, !$isNew, $oldCost, $oldQty);
                             SupplierItemPriceService::updateOrCreateFromPurchase($purchase, $purchaseItem);
+                            $itemCostsChanged = true;
                         } elseif ($qtyChanged) {
                             PriceService::recalculateCurrentPrice($purchaseItem->item_id);
+                            $itemCostsChanged = true;
                         }
                     }
                 }
@@ -159,6 +164,16 @@ class PurchaseService
                     InventoryService::subtract($removedItem->item_id, $updatedPurchase->warehouse_id, $removedItem->quantity);
                     PriceService::deleteFromPurchase($updatedPurchase, $removedItem);
                     SupplierItemPriceService::deleteFromPurchase($updatedPurchase, $removedItem);
+                }
+
+                // Dispatch profit recalculation whenever anything cost-affecting changed:
+                // item cost/quantity edits, added or removed items, or a change in the
+                // expense total (including removing all expenses — $expenses arrives empty
+                // then, which is why we can't rely on !empty($expenses) here).
+                $expenseTotalChanged = abs((float) $updatedPurchase->total_expense_usd - $oldExpenseTotalUsd) > 0.000001;
+
+                if ($itemCostsChanged || $expenseTotalChanged || $removedItems->isNotEmpty()) {
+                    RecalculateSaleProfitForPurchaseJob::dispatch($updatedPurchase->id);
                 }
             }
 
