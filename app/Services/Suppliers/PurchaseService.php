@@ -3,6 +3,7 @@
 namespace App\Services\Suppliers;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\FeatureHelper;
 use App\Jobs\RecalculateSaleProfitForPurchaseJob;
 use App\Models\Suppliers\Purchase;
 use App\Models\Suppliers\PurchaseExpense;
@@ -172,7 +173,9 @@ class PurchaseService
                 // then, which is why we can't rely on !empty($expenses) here).
                 $expenseTotalChanged = abs((float) $updatedPurchase->total_expense_usd - $oldExpenseTotalUsd) > 0.000001;
 
-                if ($itemCostsChanged || $expenseTotalChanged || $removedItems->isNotEmpty()) {
+                if (($itemCostsChanged || $expenseTotalChanged || $removedItems->isNotEmpty())
+                    && FeatureHelper::isSaleProfitRecalculation()
+                ) {
                     RecalculateSaleProfitForPurchaseJob::dispatch($updatedPurchase->id);
                 }
             }

@@ -68,8 +68,13 @@ class FeatureHelper {
         return self::isEnabled('bug_lock');
     }
 
-    public static function expensePaymentEnabled(): bool 
+    public static function expensePaymentEnabled(): bool
     {
         return self::isEnabled('expense_deferred_payment');
+    }
+
+    public static function isSaleProfitRecalculation(): bool
+    {
+        return self::isEnabled('sale_profit_recalculation');
     }
 }

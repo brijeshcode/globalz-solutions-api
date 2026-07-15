@@ -29,6 +29,7 @@ class FeatureController extends Controller
         // Purchases & Suppliers
         ['key' => 'purchase_returns',          'name' => 'Purchase Returns',            'description' => 'Return purchased goods back to suppliers.'],
         ['key' => 'supplier_credit_notes',     'name' => 'Supplier Credit/Debit Notes', 'description' => 'Record credit or debit notes received from suppliers.'],
+        ['key' => 'sale_profit_recalculation', 'name' => 'Sale Profit Recalculation',   'description' => 'Recalculate sale profits when purchase costs change (expenses, price corrections) — manual preview/apply, auto-trigger on purchase updates, and weekly self-heal.'],
 
         // Expenses
         ['key' => 'expense',                    'name' => 'Expense transaction',        'description' => 'Enable expense module.'],

@@ -30,6 +30,7 @@ class TestFeatureSeeder
         // Purchases & Suppliers
         'purchase_returns',
         'supplier_credit_notes',
+        'sale_profit_recalculation',
 
         // Expenses
         'expense',

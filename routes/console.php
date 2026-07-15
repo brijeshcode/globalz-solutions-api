@@ -15,7 +15,18 @@ Artisan::command('inspire', function () {
 // must be dispatched with a tenant current — dispatching from the scheduler
 // directly would fail with no tenant context.
 Schedule::call(function () {
-    Tenant::runForEachActive('Sale profit recalculation dispatch', fn () => RecalculateAllSalesProfitJob::dispatch());
+    Tenant::runForEachActive('Sale profit recalculation dispatch', function () {
+        // Read the flag while the tenant is current, then flush so the static
+        // feature cache never leaks into the next tenant's iteration.
+        $enabled = \App\Helpers\FeatureHelper::isSaleProfitRecalculation();
+        \App\Helpers\FeatureHelper::flush();
+
+        if (!$enabled) {
+            return ['skipped' => 'sale_profit_recalculation feature disabled'];
+        }
+
+        RecalculateAllSalesProfitJob::dispatch();
+    });
 })
 ->weekly()
 ->sundays()

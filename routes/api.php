@@ -463,8 +463,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('{purchase}', 'show')->name('show');
             Route::put('{purchase}', 'update')->name('update');
             Route::patch('{purchase}/changeStatus', 'changeStatus')->name('changeStatus');
-            Route::get('{purchase}/recalculate-sale-profit/preview', 'recalculateSaleProfitPreview')->name('recalculate-sale-profit.preview');
-            Route::post('{purchase}/recalculate-sale-profit', 'recalculateSaleProfit')->name('recalculate-sale-profit');
+            Route::get('{purchase}/recalculate-sale-profit/preview', 'recalculateSaleProfitPreview')->name('recalculate-sale-profit.preview')->middleware('feature:sale_profit_recalculation');
+            Route::post('{purchase}/recalculate-sale-profit', 'recalculateSaleProfit')->name('recalculate-sale-profit')->middleware('feature:sale_profit_recalculation');
             Route::delete('{purchase}', 'destroy')->name('destroy');
         });
 
