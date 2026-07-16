@@ -139,6 +139,8 @@ class CustomerResource extends JsonResource
             'has_children' => $this->hasChildren(),
             'is_over_credit_limit' => $this->isOverCreditLimit(),
             'sales_count' => $this->sales_count ?? 0,
+            'payment_count' => $this->customer_payments_count ?? $this->payment_count ?? 0,
+            'return_count' => $this->customer_returns_count ?? $this->return_count ?? 0,
             'sales_total_usd' => $this->sales_sum_total_usd ? (float) $this->sales_sum_total_usd : 0,
             'last_invoice_date' => $this->last_invoice_date ?? null,
             'invoice_age' => isset($this->invoice_age) ? (int) $this->invoice_age : null,

@@ -162,6 +162,16 @@ class Customer extends Model
         return $this->hasMany(Sale::class);
     }
 
+    public function customerPayments(): HasMany
+    {
+        return $this->hasMany(CustomerPayment::class);
+    }
+
+    public function customerReturns(): HasMany
+    {
+        return $this->hasMany(CustomerReturn::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {

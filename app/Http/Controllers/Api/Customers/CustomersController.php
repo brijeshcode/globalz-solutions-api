@@ -35,7 +35,7 @@ class CustomersController extends Controller
         $query
             ->select('customers.*')
             ->leftJoin(
-                DB::raw('(SELECT customer_id, SUM(total_usd) as sales_sum FROM sales WHERE approved_by IS NOT NULL AND deleted_at IS NULL GROUP BY customer_id) as approved_sales'),
+                DB::raw('(SELECT customer_id, COUNT(*) as sales_count, SUM(total_usd) as sales_sum FROM sales WHERE approved_by IS NOT NULL AND deleted_at IS NULL GROUP BY customer_id) as approved_sales'),
                 'approved_sales.customer_id', '=', 'customers.id'
             )
             ->leftJoin(
@@ -51,6 +51,7 @@ class CustomersController extends Controller
                 'child_counts.parent_id', '=', 'customers.id'
             )
             ->addSelect([
+                DB::raw('COALESCE(approved_sales.sales_count, 0) as sales_count'),
                 DB::raw('COALESCE(approved_sales.sales_sum, 0) as sales_sum_total_usd'),
                 DB::raw('last_sales.max_date as last_invoice_date'),
                 DB::raw('DATEDIFF(NOW(), last_sales.max_date) as invoice_age'),
@@ -58,6 +59,22 @@ class CustomersController extends Controller
                 DB::raw('CASE WHEN customers.current_balance BETWEEN -2 AND 2 THEN 0 ELSE DATEDIFF(NOW(), last_payments.max_date) END as payment_age'),
                 DB::raw('COALESCE(child_counts.cnt, 0) as children_count'),
             ]);
+
+        if ($request->boolean('with_counts')) {
+            $query
+                ->leftJoin(
+                    DB::raw('(SELECT customer_id, COUNT(*) as payments_count FROM customer_payments WHERE approved_by IS NOT NULL AND deleted_at IS NULL GROUP BY customer_id) as approved_payments'),
+                    'approved_payments.customer_id', '=', 'customers.id'
+                )
+                ->leftJoin(
+                    DB::raw('(SELECT customer_id, COUNT(*) as returns_count FROM customer_returns WHERE approved_by IS NOT NULL AND deleted_at IS NULL GROUP BY customer_id) as approved_returns'),
+                    'approved_returns.customer_id', '=', 'customers.id'
+                )
+                ->addSelect([
+                    DB::raw('COALESCE(approved_payments.payments_count, 0) as payment_count'),
+                    DB::raw('COALESCE(approved_returns.returns_count, 0) as return_count'),
+                ]);
+        }
 
         $customers = $this->applyPagination($query, $request);
 
@@ -121,7 +138,7 @@ class CustomersController extends Controller
         );
     }
 
-    public function show(Customer $customer): JsonResponse
+    public function show(Request $request, Customer $customer): JsonResponse
     {
         $customer->load([
             // 'parent:id,code,name',
@@ -139,6 +156,23 @@ class CustomersController extends Controller
             'updatedBy:id,name',
             'documents'
         ]);
+
+        $customer->loadSum(['sales' => fn($q) => $q->whereNotNull('approved_by')], 'total_usd');
+
+        $customer->loadCount([
+            'sales' => fn($q) => $q->whereNotNull('approved_by'),
+            'customerPayments' => fn($q) => $q->whereNotNull('approved_by'),
+            'customerReturns' => fn($q) => $q->whereNotNull('approved_by'),
+        ]);
+
+        $lastInvoiceDate = $customer->sales()->whereNotNull('approved_by')->max('date');
+        $lastPaymentDate = $customer->customerPayments()->whereNotNull('approved_by')->max('date');
+        $balance = $customer->current_balance;
+
+        $customer->last_invoice_date = $lastInvoiceDate;
+        $customer->invoice_age = $lastInvoiceDate ? now()->diffInDays($lastInvoiceDate) : null;
+        $customer->last_payment_date = $lastPaymentDate;
+        $customer->payment_age = ($balance >= -2 && $balance <= 2) ? 0 : ($lastPaymentDate ? now()->diffInDays($lastPaymentDate) : null);
 
         return ApiResponse::show(
             'Customer retrieved successfully',
