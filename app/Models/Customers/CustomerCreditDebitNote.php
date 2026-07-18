@@ -2,8 +2,10 @@
 
 namespace App\Models\Customers;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\CustomersHelper;
 use App\Models\Setting;
+use Carbon\CarbonInterface;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\User;
 use App\Traits\Authorable;
@@ -17,7 +19,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class CustomerCreditDebitNote extends Model
+class CustomerCreditDebitNote extends Model implements ModuleLockable
 {
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
     
@@ -225,5 +227,21 @@ class CustomerCreditDebitNote extends Model
                 CustomersHelper::addBalance(Customer::find($note->customer_id), $note->amount_usd);
             }
         });
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return 'customer_credit_note';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return false;
     }
 }

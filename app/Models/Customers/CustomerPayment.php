@@ -2,9 +2,11 @@
 
 namespace App\Models\Customers;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\AccountsHelper;
 use App\Helpers\CustomersHelper;
 use App\Models\Accounts\Account;
+use Carbon\CarbonInterface;
 use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Setups\Generals\Currencies\Currency;
@@ -20,7 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class CustomerPayment extends Model
+class CustomerPayment extends Model implements ModuleLockable
 {
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
 
@@ -257,5 +259,21 @@ class CustomerPayment extends Model
                 CustomersHelper::removeBalance(Customer::find($payment->customer_id), $payment->amount_usd);
             }
         });
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return is_null($this->approved_by) ? 'customer_payment_order' : 'customer_payment';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return false;
     }
 }

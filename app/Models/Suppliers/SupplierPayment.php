@@ -2,12 +2,14 @@
 
 namespace App\Models\Suppliers;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\AccountsHelper;
 use App\Helpers\SuppliersHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Supplier;
 use App\Models\Setups\SupplierPaymentTerm;
+use Carbon\CarbonInterface;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
 use App\Traits\HasDateFilters;
@@ -20,7 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class SupplierPayment extends Model
+class SupplierPayment extends Model implements ModuleLockable
 {
     /** @use HasFactory<\Database\Factories\Suppliers\SupplierPaymentFactory> */
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasDocuments, Searchable, Sortable, HasDateFilters;
@@ -206,5 +208,21 @@ class SupplierPayment extends Model
             // Add balance back to supplier when payment is deleted (we owe them again)
             SuppliersHelper::addBalance(Supplier::find($payment->supplier_id), $payment->amount_usd);
         });
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return 'supplier_payment';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return false;
     }
 }

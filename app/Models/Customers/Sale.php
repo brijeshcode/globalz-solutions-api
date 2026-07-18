@@ -2,7 +2,9 @@
 
 namespace App\Models\Customers;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\CommonHelper;
+use Carbon\CarbonInterface;
 use App\Models\Employees\Employee;
 use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
@@ -28,7 +30,7 @@ use App\Models\Inventory\ItemPriceHistory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
-class Sale extends Model
+class Sale extends Model implements ModuleLockable
 {
     public const TAXSALEPREFIX = 'INV';
     public const NOTAXSALEPREFIX = 'INX';
@@ -318,6 +320,22 @@ class Sale extends Model
     public function isPending(): bool
     {
         return is_null($this->approved_by);
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return $this->isApproved() ? 'sale' : 'sale_order';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return $this->isApproved() && $this->status !== 'Delivered';
     }
 
     public function recalculateTotalTax(): void

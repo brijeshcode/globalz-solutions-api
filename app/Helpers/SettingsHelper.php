@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Contracts\ModuleLockable;
 use App\Models\Setting;
 use App\Models\UserSetting;
 use Illuminate\Support\Facades\Auth;
@@ -354,5 +355,33 @@ class SettingsHelper
         };
 
         return $contextSize;
+    }
+
+    /**
+     * Module lock helpers
+     */
+    public static function moduleLockDays(string $module): int
+    {
+        return (int) self::get('module_locks', $module, 0);
+    }
+
+    public static function isRecordLocked(ModuleLockable $record): bool
+    {
+        // Console commands and queued jobs have no authenticated user and must
+        // stay able to modify old records (e.g. sale profit recalculation).
+        if (!Auth::check() || RoleHelper::canSuperAdmin()) {
+            return false;
+        }
+
+        if ($record->isModuleLockExempt()) {
+            return false;
+        }
+
+        $days = self::moduleLockDays($record->moduleLockKey());
+        $date = $record->moduleLockDate();
+
+        return $days > 0
+            && $date !== null
+            && $date->lt(now()->subDays($days)->startOfDay());
     }
 }

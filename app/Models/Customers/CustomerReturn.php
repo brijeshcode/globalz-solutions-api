@@ -2,8 +2,10 @@
 
 namespace App\Models\Customers;
 
+use App\Contracts\ModuleLockable;
 use App\Models\Employees\Employee;
 use App\Models\Setting;
+use Carbon\CarbonInterface;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
 use App\Models\User;
@@ -20,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
-class CustomerReturn extends Model
+class CustomerReturn extends Model implements ModuleLockable
 {
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
 
@@ -237,5 +239,22 @@ class CustomerReturn extends Model
                 $return->setReturnCode();
             }
         });
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return is_null($this->approved_by) ? 'customer_return_order' : 'customer_return';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        // Approved but not yet received returns are still in-flight.
+        return !is_null($this->approved_by) && is_null($this->return_received_by);
     }
 }

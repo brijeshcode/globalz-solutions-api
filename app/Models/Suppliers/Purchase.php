@@ -2,9 +2,11 @@
 
 namespace App\Models\Suppliers;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\AccountsHelper;
 use App\Helpers\SuppliersHelper;
 use App\Models\Suppliers\PurchaseExpense;
+use Carbon\CarbonInterface;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Items\Item;
@@ -25,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Purchase extends Model
+class Purchase extends Model implements ModuleLockable
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, HasDocuments, Searchable, Sortable, HasDateFilters;
     public const STATUS_WAITING = 'Waiting';
@@ -315,5 +317,21 @@ class Purchase extends Model
             SuppliersHelper::removeBalance(Supplier::find($purchase->supplier_id), $purchase->total_usd);
         });
 
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return 'purchase';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return $this->status !== 'Delivered';
     }
 }

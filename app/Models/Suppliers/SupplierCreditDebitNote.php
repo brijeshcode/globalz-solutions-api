@@ -2,8 +2,10 @@
 
 namespace App\Models\Suppliers;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\SuppliersHelper;
 use App\Models\Setting;
+use Carbon\CarbonInterface;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Supplier;
 use App\Models\User;
@@ -17,7 +19,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class SupplierCreditDebitNote extends Model
+class SupplierCreditDebitNote extends Model implements ModuleLockable
 {
     /** @use HasFactory<\Database\Factories\Suppliers\SupplierCreditDebitNoteFactory> */
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasDateFilters;
@@ -210,5 +212,21 @@ class SupplierCreditDebitNote extends Model
                 SuppliersHelper::removeBalance(Supplier::find($note->supplier_id), $note->amount_usd);
             }
         });
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return 'supplier_credit_note';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return false;
     }
 }

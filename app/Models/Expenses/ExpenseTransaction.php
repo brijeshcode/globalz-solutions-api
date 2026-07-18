@@ -2,9 +2,11 @@
 
 namespace App\Models\Expenses;
 
+use App\Contracts\ModuleLockable;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Expenses\ExpenseCategory;
+use Carbon\CarbonInterface;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDateFilters;
@@ -18,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ExpenseTransaction extends Model
+class ExpenseTransaction extends Model implements ModuleLockable
 {
     public const PREFIX = 'EXP';
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, HasBooleanFilters, HasDocuments, Searchable, Sortable, HasDateFilters;
@@ -246,5 +248,22 @@ class ExpenseTransaction extends Model
             // Cascade soft-delete all payments; each payment's deleted hook restores its account balance.
             $expenseTransaction->payments()->each(fn ($p) => $p->delete());
         });
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return 'expense';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        // An expense with no payment yet is still amendable (deferred payment flow).
+        return (float) $this->paid_amount <= 0;
     }
 }

@@ -87,6 +87,7 @@ use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use App\Http\Controllers\Api\Settings\EmployeeSettingsController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
 use App\Http\Controllers\Api\Settings\Items\ItemCatalogSettingsController;
+use App\Http\Controllers\Api\Settings\ModuleLockSettingsController;
 use App\Http\Controllers\Api\Settings\SaleSettingsController;
 use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Backup\BackupController;
@@ -270,10 +271,10 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{sale}', 'show')->name('show');
-            Route::put('{sale}', 'update')->name('update');
-            Route::delete('{sale}', 'destroy')->name('destroy');
-            Route::patch('{sale}/changeStatus', 'changeStatus')->name('changeStatus');
-            Route::patch('{sale}/unapprove', 'unapprove')->name('unapprove');
+            Route::put('{sale}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{sale}', 'destroy')->name('destroy')->middleware('module.lock');
+            Route::patch('{sale}/changeStatus', 'changeStatus')->name('changeStatus')->middleware('module.lock');
+            Route::patch('{sale}/unapprove', 'unapprove')->name('unapprove')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
 
@@ -296,8 +297,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{sale}', 'show')->name('show');
-            Route::put('{sale}', 'update')->name('update');
-            Route::delete('{sale}', 'destroy')->name('destroy');
+            Route::put('{sale}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{sale}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{sale}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
@@ -311,9 +312,9 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerPayment}', 'show')->name('show');
-            Route::put('{customerPayment}', 'update')->name('update');
-            Route::delete('{customerPayment}', 'destroy')->name('destroy');
-            Route::patch('{customerPayment}/unapprove', 'unapprove')->name('unapprove');
+            Route::put('{customerPayment}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{customerPayment}', 'destroy')->name('destroy')->middleware('module.lock');
+            Route::patch('{customerPayment}/unapprove', 'unapprove')->name('unapprove')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
@@ -325,8 +326,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerPayment}', 'show')->name('show');
-            Route::put('{customerPayment}', 'update')->name('update');
-            Route::delete('{customerPayment}', 'destroy')->name('destroy');
+            Route::put('{customerPayment}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{customerPayment}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{customerPayment}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
@@ -339,8 +340,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerReturn}', 'show')->name('show');
-            Route::put('{customerReturn}', 'update')->name('update');
-            Route::delete('{customerReturn}', 'destroy')->name('destroy');
+            Route::put('{customerReturn}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{customerReturn}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             Route::patch('{customerReturn}/mark-received', 'markReceived')->name('markReceived');
@@ -356,9 +357,9 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::post('/', 'store')->name('store');
             Route::post('direct', 'storeDirectReturn')->name('store-direct');
             Route::get('{customerReturn}', 'show')->name('show');
-            Route::put('{customerReturn}', 'update')->name('update');
-            Route::put('direct/{customerReturn}', 'updateDirectReturn')->name('update-direct');
-            Route::delete('{customerReturn}', 'destroy')->name('destroy');
+            Route::put('{customerReturn}', 'update')->name('update')->middleware('module.lock');
+            Route::put('direct/{customerReturn}', 'updateDirectReturn')->name('update-direct')->middleware('module.lock');
+            Route::delete('{customerReturn}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{customerReturn}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
@@ -371,8 +372,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerCreditDebitNote}', 'show')->name('show');
-            Route::put('{customerCreditDebitNote}', 'update')->name('update');
-            Route::delete('{customerCreditDebitNote}', 'destroy')->name('destroy');
+            Route::put('{customerCreditDebitNote}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{customerCreditDebitNote}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
@@ -461,11 +462,11 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{purchase}', 'show')->name('show');
-            Route::put('{purchase}', 'update')->name('update');
-            Route::patch('{purchase}/changeStatus', 'changeStatus')->name('changeStatus');
+            Route::put('{purchase}', 'update')->name('update')->middleware('module.lock');
+            Route::patch('{purchase}/changeStatus', 'changeStatus')->name('changeStatus')->middleware('module.lock');
             Route::get('{purchase}/recalculate-sale-profit/preview', 'recalculateSaleProfitPreview')->name('recalculate-sale-profit.preview')->middleware('feature:sale_profit_recalculation');
             Route::post('{purchase}/recalculate-sale-profit', 'recalculateSaleProfit')->name('recalculate-sale-profit')->middleware('feature:sale_profit_recalculation');
-            Route::delete('{purchase}', 'destroy')->name('destroy');
+            Route::delete('{purchase}', 'destroy')->name('destroy')->middleware('module.lock');
         });
 
         Route::controller(PurchaseReturnsController::class)->prefix('purchase-returns')->name('purchase-returns.')->group(function () {
@@ -492,8 +493,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{supplierCreditDebitNote}', 'show')->name('show');
-            Route::put('{supplierCreditDebitNote}', 'update')->name('update');
-            Route::delete('{supplierCreditDebitNote}', 'destroy')->name('destroy');
+            Route::put('{supplierCreditDebitNote}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{supplierCreditDebitNote}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
@@ -505,8 +506,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{supplierPayment}', 'show')->name('show');
-            Route::put('{supplierPayment}', 'update')->name('update');
-            Route::delete('{supplierPayment}', 'destroy')->name('destroy');
+            Route::put('{supplierPayment}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{supplierPayment}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
@@ -1048,8 +1049,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
         Route::get('{expenseTransaction}', 'show')->name('show');
-        Route::put('{expenseTransaction}', 'update')->name('update');
-        Route::delete('{expenseTransaction}', 'destroy')->name('destroy');
+        Route::put('{expenseTransaction}', 'update')->name('update')->middleware('module.lock');
+        Route::delete('{expenseTransaction}', 'destroy')->name('destroy')->middleware('module.lock');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
 
@@ -1057,8 +1058,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
 
     // Expense Payments — standalone endpoints (no expense transaction in URL)
     Route::get('expense-payments', [ExpensePaymentsController::class, 'listAll'])->name('expense-payments.index');
-    Route::put('expense-payments/{payment}', [ExpensePaymentsController::class, 'updatePayment'])->name('expense-payments.update');
-    Route::delete('expense-payments/{payment}', [ExpensePaymentsController::class, 'destroyPayment'])->name('expense-payments.destroy');
+    Route::put('expense-payments/{payment}', [ExpensePaymentsController::class, 'updatePayment'])->name('expense-payments.update')->middleware('module.lock');
+    Route::delete('expense-payments/{payment}', [ExpensePaymentsController::class, 'destroyPayment'])->name('expense-payments.destroy')->middleware('module.lock');
 
     // Expense Payments (deferred / partial payment feature)
     Route::controller(ExpensePaymentsController::class)
@@ -1174,6 +1175,13 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('/', [SaleSettingsController::class, 'get'])->name('get');
             Route::put('/', [SaleSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [SaleSettingsController::class, 'reset'])->name('reset');
+        });
+
+        // Module Lock Settings (block edit/delete of aged records)
+        Route::prefix('module-locks')->name('settings.module-locks.')->group(function () {
+            Route::get('/', [ModuleLockSettingsController::class, 'get'])->name('get');
+            Route::put('/', [ModuleLockSettingsController::class, 'update'])->name('update');
+            Route::post('/reset', [ModuleLockSettingsController::class, 'reset'])->name('reset');
         });
 
         // Employee Settings

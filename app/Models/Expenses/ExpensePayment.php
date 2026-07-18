@@ -2,8 +2,10 @@
 
 namespace App\Models\Expenses;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
+use Carbon\CarbonInterface;
 use App\Traits\Authorable;
 use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
@@ -14,7 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class ExpensePayment extends Model
+class ExpensePayment extends Model implements ModuleLockable
 {
     /** Default prefix; can be overridden per-record to 'EPX'. */
     public const DEFAULT_PREFIX = 'EP';
@@ -141,5 +143,21 @@ class ExpensePayment extends Model
             'paid_amount'     => $totals->total_paid,
             'paid_amount_usd' => $totals->total_paid_usd,
         ]);
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return 'expense_payment';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return false;
     }
 }
