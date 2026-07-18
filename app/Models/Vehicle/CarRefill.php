@@ -128,17 +128,17 @@ class CarRefill extends Model
         });
 
         static::created(function (CarRefill $refill) {
-            $refill->gasStation()->increment('balance', $refill->amount);
-            $refill->recalculateNextRefill();
-        });
-
-        static::deleted(function (CarRefill $refill) {
             $refill->gasStation()->decrement('balance', $refill->amount);
             $refill->recalculateNextRefill();
         });
 
-        static::restored(function (CarRefill $refill) {
+        static::deleted(function (CarRefill $refill) {
             $refill->gasStation()->increment('balance', $refill->amount);
+            $refill->recalculateNextRefill();
+        });
+
+        static::restored(function (CarRefill $refill) {
+            $refill->gasStation()->decrement('balance', $refill->amount);
             $refill->recalculateNextRefill();
         });
     }

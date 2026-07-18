@@ -80,7 +80,7 @@ class GasStationPayment extends Model
         });
 
         static::created(function (GasStationPayment $payment) {
-            $payment->gasStation()->decrement('balance', $payment->amount);
+            $payment->gasStation()->increment('balance', $payment->amount);
             AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount);
         });
 
@@ -89,11 +89,11 @@ class GasStationPayment extends Model
 
             // Gas station balance
             if ($original['gas_station_id'] !== $payment->gas_station_id) {
-                $payment->gasStation()->decrement('balance', $payment->amount);
-                GasStation::find($original['gas_station_id'])?->increment('balance', $original['amount']);
+                $payment->gasStation()->increment('balance', $payment->amount);
+                GasStation::find($original['gas_station_id'])?->decrement('balance', $original['amount']);
             } elseif ($original['amount'] != $payment->amount) {
                 $diff = $payment->amount - $original['amount'];
-                $payment->gasStation()->decrement('balance', $diff);
+                $payment->gasStation()->increment('balance', $diff);
             }
 
             // Account balance
@@ -107,12 +107,12 @@ class GasStationPayment extends Model
         });
 
         static::deleted(function (GasStationPayment $payment) {
-            $payment->gasStation()->increment('balance', $payment->amount);
+            $payment->gasStation()->decrement('balance', $payment->amount);
             AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount);
         });
 
         static::restored(function (GasStationPayment $payment) {
-            $payment->gasStation()->decrement('balance', $payment->amount);
+            $payment->gasStation()->increment('balance', $payment->amount);
             AccountsHelper::removeBalance(Account::find($payment->account_id), $payment->amount);
         });
     }

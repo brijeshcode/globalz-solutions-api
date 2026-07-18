@@ -136,7 +136,7 @@ class GasStationsController extends Controller
 
         $runningBalance = '0.0000';
         $result = $combined->map(function ($item) use (&$runningBalance) {
-            if ($item['type'] === 'refill') {
+            if ($item['type'] === 'payment') {
                 $runningBalance = bcadd($runningBalance, (string) $item['amount'], 4);
             } else {
                 $runningBalance = bcsub($runningBalance, (string) $item['amount'], 4);

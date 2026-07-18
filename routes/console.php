@@ -14,6 +14,14 @@ Artisan::command('inspire', function () {
 // after purchase expenses are settled. The queue is tenant-aware, so each job
 // must be dispatched with a tenant current — dispatching from the scheduler
 // directly would fail with no tenant context.
+Schedule::command('gas-stations:reconcile-balances')
+    ->weekly()
+    ->sundays()
+    ->at('03:00')
+    ->name('reconcile-gas-station-balances')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::call(function () {
     Tenant::runForEachActive('Sale profit recalculation dispatch', function () {
         // Read the flag while the tenant is current, then flush so the static
