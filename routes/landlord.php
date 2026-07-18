@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Landlord\CommandRunnerController;
 use App\Http\Controllers\Api\Landlord\Developer\TenantItemPriceAuditController;
 use App\Http\Controllers\Api\Landlord\FeatureBundleController;
 use App\Http\Controllers\Api\Landlord\FeatureController;
@@ -84,6 +85,36 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('item-price-audit/fix', [TenantItemPriceAuditController::class, 'fix'])->name('item-price-audit.fix');
             Route::post('item-price-audit/fix/{itemId}', [TenantItemPriceAuditController::class, 'fixItem'])->name('item-price-audit.fix-item');
         });
+    });
+
+    // ── Command runner ─────────────────────────────────────────────────────
+    Route::prefix('commands')->name('commands.')->group(function () {
+        Route::get('queue-status',                    [CommandRunnerController::class, 'queueStatus'])->name('queue-status');
+        Route::post('auto-logout-all-users',          [CommandRunnerController::class, 'autoLogoutAllUsers'])->name('auto-logout-all-users');
+        Route::post('reconcile-gas-station-balances', [CommandRunnerController::class, 'reconcileGasStationBalances'])->name('reconcile-gas-station-balances');
+        Route::post('capital-snapshot',               [CommandRunnerController::class, 'capitalSnapshot'])->name('capital-snapshot');
+        Route::post('monthly-closing-balance',        [CommandRunnerController::class, 'calculateMonthlyClosingBalance'])->name('monthly-closing-balance');
+        Route::post('yearly-closing-balance',         [CommandRunnerController::class, 'calculateYearlyClosingBalance'])->name('yearly-closing-balance');
+        Route::post('prune-orphaned-settings',        [CommandRunnerController::class, 'pruneOrphanedSettings'])->name('prune-orphaned-settings');
+        Route::post('cleanup-activity-logs',          [CommandRunnerController::class, 'cleanupActivityLogs'])->name('cleanup-activity-logs');
+        Route::post('cleanup-orphaned-files',         [CommandRunnerController::class, 'cleanupOrphanedFiles'])->name('cleanup-orphaned-files');
+        Route::post('schedule-document-cleanup',      [CommandRunnerController::class, 'scheduleDocumentCleanup'])->name('schedule-document-cleanup');
+        Route::post('backup-all-tenants',             [CommandRunnerController::class, 'backupAllTenants'])->name('backup-all-tenants');
+        Route::post('backup-retention-cleanup',       [CommandRunnerController::class, 'backupRetentionCleanup'])->name('backup-retention-cleanup');
+        Route::post('mirror-all-tenants',             [CommandRunnerController::class, 'mirrorAllTenants'])->name('mirror-all-tenants');
+        Route::post('analyze-api-hits',               [CommandRunnerController::class, 'analyzeApiHits'])->name('analyze-api-hits');
+
+        // Laravel built-in maintenance
+        Route::post('optimize-clear',                 [CommandRunnerController::class, 'optimizeClear'])->name('optimize-clear');
+        Route::post('cache-clear',                    [CommandRunnerController::class, 'cacheClear'])->name('cache-clear');
+        Route::post('config-clear',                   [CommandRunnerController::class, 'configClear'])->name('config-clear');
+        Route::post('config-cache',                   [CommandRunnerController::class, 'configCache'])->name('config-cache');
+        Route::post('route-clear',                    [CommandRunnerController::class, 'routeClear'])->name('route-clear');
+        Route::post('route-cache',                    [CommandRunnerController::class, 'routeCache'])->name('route-cache');
+        Route::post('view-clear',                     [CommandRunnerController::class, 'viewClear'])->name('view-clear');
+        Route::post('storage-link',                   [CommandRunnerController::class, 'storageLink'])->name('storage-link');
+        Route::post('queue-retry-all',                [CommandRunnerController::class, 'queueRetryAll'])->name('queue-retry-all');
+        Route::post('queue-flush',                    [CommandRunnerController::class, 'queueFlush'])->name('queue-flush');
     });
 
     // ── Feature management ─────────────────────────────────────────────────

@@ -1,14 +1,8 @@
 <?php
 
-use App\Console\Commands\BackupAllTenantsCommand;
-use App\Console\Commands\BackupRetentionCleanupCommand;
-use App\Console\Commands\MirrorAllTenantsCommand;
-use App\Http\Controllers\Api\Auth\AuthController;
-use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Route;
 use Spatie\Multitenancy\Exceptions\NoCurrentTenant;
 
@@ -53,90 +47,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
         ]);
-    })
-    ->withSchedule(function (Schedule $schedule): void {
-        // Process queued jobs every minute. withoutOverlapping() ensures only one
-        // worker runs at a time. --stop-when-empty exits after draining the queue
-        // instead of running as a daemon — safe for shared hosting cron.
-        $schedule->command('queue:work --stop-when-empty')
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->runInBackground();
-
-        // Auto logout all users daily at 1:00 AM — runs per tenant
-        $schedule->call(function () {
-            \App\Models\Tenant::runForEachActive('Auto logout', fn () => AuthController::autoLogoutAllUsers());
-        })
-        ->daily()
-        ->at('01:00')
-        ->name('auto-logout-all-users')
-        ->withoutOverlapping()
-        ->onOneServer();
-
-        // Recalculate all customer balances daily at midnight
-        // $schedule->call(function () {
-        //     $statementController = app(CustomerStatmentController::class);
-        //     $result = $statementController->processBalanceRecalculation();
-
-        //     \Illuminate\Support\Facades\Log::info('Daily customer balance recalculation completed', $result);
-        // })
-        // ->daily()
-        // ->at('00:00')
-        // ->name('recalculate-customer-balances')
-        // ->withoutOverlapping()
-        // ->onOneServer();
-
-        // Calculate monthly closing balance at 00:01 on the 1st of each month
-        // $schedule->command('customers:calculate-monthly-closing')
-        //     ->monthlyOn(1, '00:01')
-        //     ->name('calculate-monthly-closing-balance')
-        //     ->withoutOverlapping()
-        //     ->runInBackground();
-
-        // Calculate yearly closing balance at 00:59 on January 1st of each year
-        // $schedule->command('customers:calculate-yearly-closing')
-        //     ->yearlyOn(1, 1, '00:59')
-        //     ->name('calculate-yearly-closing-balance')
-        //     ->withoutOverlapping()
-        //     ->runInBackground();
-
-        // Take capital snapshot at end of each month (1st of next month at 00:30)
-        $schedule->command('capital:snapshot')
-            ->monthlyOn(1, '00:30')
-            ->name('take-capital-snapshot')
-            ->withoutOverlapping()
-            ->runInBackground();
-
-        // Cleanup old activity logs daily at 2:00 AM (only if auto_cleanup is enabled)
-        if (config('activitylog.auto_cleanup')) {
-            $schedule->command('activitylog:cleanup --force')
-                ->daily()
-                ->at('02:00')
-                ->name('cleanup-old-activity-logs')
-                ->withoutOverlapping()
-                ->onOneServer();
-        }
-
-        // Backup scheduler runs every hour. Each tenant's frequency, preferred hour,
-        // and skip-if-unchanged rules are evaluated inside the command per tenant.
-        $schedule->command(BackupAllTenantsCommand::class)
-            ->hourly()
-            ->name('backup-all-tenants')
-            ->withoutOverlapping();
-
-        // Retention cleanup runs hourly too, 30 min after the backup window.
-        $schedule->command(BackupRetentionCleanupCommand::class)
-            ->hourlyAt(30)
-            ->name('backup-retention-cleanup')
-            ->withoutOverlapping();
-
-        // Mirror tenant databases to remote MySQL every 2 hours
-        $schedule->command(MirrorAllTenantsCommand::class)
-            ->everyThirtyMinutes()
-            ->name('mirror-all-tenants')
-            ->withoutOverlapping()
-            ->runInBackground();
-
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Return clean JSON response instead of stack trace (reason already logged in OriginTenantFinder)
