@@ -52,7 +52,7 @@ class SaleResource extends JsonResource
             'status' => $this->status,
             'status_histories' => $this->when(
                 $this->relationLoaded('statusHistories') && (
-                    $this->status === 'Delivered' ||
+                    $this->status !== 'Delivered' ||
                     ($this->statusHistories->isNotEmpty() && $this->statusHistories->first()->relationLoaded('changedBy'))
                 ),
                 fn() => $this->statusHistories->map(fn($h) => [
