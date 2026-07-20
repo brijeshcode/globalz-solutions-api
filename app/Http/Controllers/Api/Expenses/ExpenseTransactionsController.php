@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Api\Expenses;
 
+use App\Exports\ExpenseCategorySummaryExport;
+use App\Exports\ExpenseTransactionsExport;
 use App\Helpers\CurrencyHelper;
 use App\Services\Currency\CurrencyService;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Expenses\ExpenseTransactionsStoreRequest;
 use App\Http\Requests\Api\Expenses\ExpenseTransactionsUpdateRequest;
@@ -518,6 +521,21 @@ class ExpenseTransactionsController extends Controller
 
     public function categorySummary(Request $request): JsonResponse
     {
+        $summary = $this->buildCategorySummaryData($request);
+
+        return ApiResponse::show('Expense category summary retrieved successfully', $summary);
+    }
+
+    public function exportCategorySummary(Request $request)
+    {
+        $summary  = $this->buildCategorySummaryData($request);
+        $filename = 'expense-category-summary_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new ExpenseCategorySummaryExport($summary), $filename);
+    }
+
+    private function buildCategorySummaryData(Request $request): \Illuminate\Support\Collection
+    {
         $aggregates = ExpenseTransaction::query()
             ->searchable($request)
             ->when($request->has('account_id'),          fn($q) => $q->where('account_id', $request->input('account_id')))
@@ -534,12 +552,10 @@ class ExpenseTransactionsController extends Controller
             ->active()
             ->get();
 
-        $summary = $categories
+        return $categories
             ->map(fn($cat) => $this->buildCategoryNode($cat, $aggregates))
             ->filter(fn($node) => $node['total_amount_usd'] > 0)
             ->values();
-
-        return ApiResponse::show('Expense category summary retrieved successfully', $summary);
     }
 
     private function buildCategoryNode(ExpenseCategory $category, $aggregates): array
@@ -589,6 +605,14 @@ class ExpenseTransactionsController extends Controller
             $ids = array_merge($ids, $this->resolveDescendantCategoryIds($childId));
         }
         return $ids;
+    }
+
+    public function export(Request $request)
+    {
+        $query    = $this->query($request);
+        $filename = 'expense-transactions_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new ExpenseTransactionsExport($query), $filename);
     }
 
     private function query(Request $request)

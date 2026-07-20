@@ -1084,6 +1084,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('stats', 'stats')->name('stats');
         Route::get('category-summary', 'categorySummary')->name('category-summary');
+        Route::get('category-summary/export', 'exportCategorySummary')->name('category-summary.export');
+        Route::get('export', 'export')->name('export');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
         Route::get('{expenseTransaction}', 'show')->name('show');
