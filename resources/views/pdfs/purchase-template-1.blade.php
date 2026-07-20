@@ -91,7 +91,8 @@
         <thead>
             <tr>
                 <th style="width: 6%;">#</th>
-                <th style="width: 74%; text-align: left; padding-left: 6px;">Description</th>
+                <th style="width: 20%;">Item Code</th>
+                <th style="width: 54%; text-align: left; padding-left: 6px;">Description</th>
                 <th style="width: 20%;">Quantity</th>
             </tr>
         </thead>
@@ -99,7 +100,8 @@
             @foreach($purchase->items as $index => $item)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
-                <td style="padding-left: 6px;">{{ $item->item->description ?? $item->item_code ?? '' }}</td>
+                <td class="text-center">{{ $item->item_code ?? '' }}</td>
+                <td style="padding-left: 6px;">{{ $item->item->description ?? '' }}</td>
                 <td class="text-center">{{ rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }}</td>
             </tr>
             @endforeach
