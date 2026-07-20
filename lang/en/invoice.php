@@ -2,6 +2,8 @@
 
 return [
     'title'             => 'SALES INVOICE',
+    'proforma_title'    => 'PROFORMA INVOICE',
+    'label_po_number'   => 'PO Number',
     'google_map'        => 'Google Map',
     'customer_info'     => 'Customer Information',
     'invoice_details'   => 'Invoice Details',

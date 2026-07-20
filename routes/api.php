@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\Customers\CustomerReturnPdfController;
 use App\Http\Controllers\Api\Customers\SalesController;
 use App\Http\Controllers\Api\Customers\SalePdfController;
 use App\Http\Controllers\Api\Customers\SaleOrdersController;
+use App\Http\Controllers\Api\Customers\ProformaInvoicesController;
+use App\Http\Controllers\Api\Customers\ProformaInvoicePdfController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
 use App\Http\Controllers\Api\Setups\ItemCategoriesController;
 use App\Http\Controllers\Api\Setups\ItemFamiliesController;
@@ -303,6 +305,35 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
+
+        // Proforma Invoices
+        Route::middleware('feature:proforma_invoice')
+            ->controller(ProformaInvoicesController::class)
+            ->prefix('proforma-invoices')
+            ->name('proforma-invoices.')
+            ->group(function () {
+                Route::get('stats', 'stats')->name('stats');
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{proformaInvoice}', 'show')->name('show');
+                Route::put('{proformaInvoice}', 'update')->name('update');
+                Route::delete('{proformaInvoice}', 'destroy')->name('destroy');
+                Route::patch('{proformaInvoice}/changeStatus', 'changeStatus')->name('changeStatus');
+                Route::post('{proformaInvoice}/convert-to-sale', 'convertToSale')->name('convertToSale');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+        // Proforma Invoice PDF Routes
+        Route::middleware('feature:proforma_invoice')
+            ->controller(ProformaInvoicePdfController::class)
+            ->prefix('proforma-invoices')
+            ->name('proforma-invoices.')
+            ->group(function () {
+                Route::get('{proformaInvoice}/pdf/download', 'generateInvoice')->defaults('action', 'download')->name('pdf.download');
+                Route::get('{proformaInvoice}/pdf/stream', 'generateInvoice')->defaults('action', 'stream')->name('pdf.stream');
+            });
 
         // Customer Payments Controller (for approved payments) - Must be defined BEFORE {customer} routes to avoid conflicts
         Route::controller(CustomerPaymentsController::class)->prefix('payments')->name('payments.')->group(function () {

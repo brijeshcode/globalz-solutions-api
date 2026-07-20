@@ -2,6 +2,8 @@
 
 return [
     'title'             => 'FACTURE',
+    'proforma_title'    => 'DEVIS',
+    'label_po_number'   => 'N° Commande',
     'google_map'        => 'Google Map',
     'customer_info'     => 'Informations Client',
     'invoice_details'   => 'Détails Facture',

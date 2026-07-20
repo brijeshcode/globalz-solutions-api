@@ -25,6 +25,7 @@ class FeatureController extends Controller
         ['key' => 'customer_returns',          'name' => 'Customer Returns',            'description' => 'Allow customers to return sold goods.'],
         ['key' => 'customer_return_orders',    'name' => 'Customer Return Orders',      'description' => 'Pending return orders that require approval. Requires customer_returns.'],
         ['key' => 'customer_credit_notes',     'name' => 'Customer Credit/Debit Notes', 'description' => 'Issue credit or debit notes against customer accounts.'],
+        ['key' => 'proforma_invoice',          'name' => 'Proforma Invoice',            'description' => 'Enable proforma invoice creation and management.'],
 
         // Purchases & Suppliers
         ['key' => 'purchase_returns',          'name' => 'Purchase Returns',            'description' => 'Return purchased goods back to suppliers.'],

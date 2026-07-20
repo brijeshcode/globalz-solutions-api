@@ -77,4 +77,9 @@ class FeatureHelper {
     {
         return self::isEnabled('sale_profit_recalculation');
     }
+
+    public static function isProformaInvoice(): bool
+    {
+        return self::isEnabled('proforma_invoice');
+    }
 }
