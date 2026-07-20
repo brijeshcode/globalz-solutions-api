@@ -14,9 +14,10 @@ class CarRefillResource extends JsonResource
         $kmCost   = ($kmDriven > 0) ? round($amount / $kmDriven, 4) : null;
 
         return [
-            'id'             => $this->id,
-            'date'           => $this->date?->format('Y-m-d H:i:s'),
-            'code'           => $this->code,
+            'id'                => $this->id,
+            'date'              => $this->date?->format('Y-m-d H:i:s'),
+            'code'              => $this->code,
+            'filling_auth_code' => $this->filling_auth_code,
             'car_id'         => $this->car_id,
             'gas_station_id' => $this->gas_station_id,
             'driver_id'      => $this->driver_id,

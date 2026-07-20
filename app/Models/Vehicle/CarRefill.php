@@ -17,7 +17,7 @@ class CarRefill extends Model
     use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
 
     protected $fillable = [
-        'date', 'code', 'car_id', 'gas_station_id', 'driver_id',
+        'date', 'code', 'filling_auth_code', 'car_id', 'gas_station_id', 'driver_id',
         'odometer', 'km_driven', 'amount', 'amount_usd', 'currency_id', 'currency_rate',
         'invoices_count', 'note',
     ];
@@ -63,6 +63,19 @@ class CarRefill extends Model
     public function driver()
     {
         return $this->belongsTo(Employee::class, 'driver_id');
+    }
+
+    public static function generateFillingAuthCode(): string
+    {
+        $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        do {
+            $code = '';
+            for ($i = 0; $i < 4; $i++) {
+                $code .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+        } while (self::withTrashed()->where('filling_auth_code', $code)->exists());
+
+        return $code;
     }
 
     public static function generateNextCode(): string
@@ -123,6 +136,9 @@ class CarRefill extends Model
         static::creating(function (CarRefill $refill) {
             if (!$refill->code) {
                 $refill->code = self::reserveNextCode();
+            }
+            if (!$refill->filling_auth_code) {
+                $refill->filling_auth_code = self::generateFillingAuthCode();
             }
             $refill->km_driven = $refill->calculateKmDriven();
         });
