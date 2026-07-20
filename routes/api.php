@@ -69,6 +69,7 @@ use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
 use App\Http\Controllers\Api\Setups\Generals\CompanyController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
+use App\Http\Controllers\Api\Suppliers\PurchasePdfController;
 use App\Http\Controllers\Api\Suppliers\PurchasesController;
 use App\Http\Controllers\Api\Suppliers\PurchaseReturnsController;
 use App\Http\Controllers\Api\Suppliers\SupplierCreditDebitNotesController;
@@ -498,6 +499,12 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
             Route::get('{purchase}/recalculate-sale-profit/preview', 'recalculateSaleProfitPreview')->name('recalculate-sale-profit.preview')->middleware('feature:sale_profit_recalculation');
             Route::post('{purchase}/recalculate-sale-profit', 'recalculateSaleProfit')->name('recalculate-sale-profit')->middleware('feature:sale_profit_recalculation');
             Route::delete('{purchase}', 'destroy')->name('destroy')->middleware('module.lock');
+        });
+
+        // Purchase PDF Routes
+        Route::controller(PurchasePdfController::class)->prefix('purchases')->name('purchases.')->group(function () {
+            Route::get('{purchase}/pdf/download', 'generatePurchase')->defaults('action', 'download')->name('pdf.download');
+            Route::get('{purchase}/pdf/stream', 'generatePurchase')->defaults('action', 'stream')->name('pdf.stream');
         });
 
         Route::controller(PurchaseReturnsController::class)->prefix('purchase-returns')->name('purchase-returns.')->group(function () {
