@@ -6,6 +6,7 @@ use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\BackupLog;
+use App\Services\Backup\BackupRetentionService;
 use App\Services\Backup\BackupService;
 use App\Services\Backup\BackupStorageService;
 use App\Models\Setting;
@@ -112,11 +113,20 @@ class BackupController extends Controller
 
     /**
      * Delete a backup log and its physical file.
+     * Blocked by global delete_protected or per-disk delete_protected_{disk} setting.
      */
     public function destroy(int $id): JsonResponse
     {
+        if ((bool) Setting::get('backup', 'delete_protected', false, false, Setting::TYPE_BOOLEAN)) {
+            return ApiResponse::customError('Manual backup deletion is disabled. Disable delete protection in backup settings first.', 403);
+        }
+
         $tenant = Tenant::current();
         $log    = BackupLog::on('mysql')->forTenant($tenant->id)->findOrFail($id);
+
+        if ((bool) Setting::get('backup', "delete_protected_{$log->disk}", false, false, Setting::TYPE_BOOLEAN)) {
+            return ApiResponse::customError("Manual deletion is disabled for {$log->disk} backups.", 403);
+        }
 
         if (Storage::disk('backup')->exists($log->file_path)) {
             Storage::disk('backup')->delete($log->file_path);
@@ -133,6 +143,16 @@ class BackupController extends Controller
      */
     public function getSettings(): JsonResponse
     {
+        $retentionPerDisk = [];
+        foreach (BackupRetentionService::KNOWN_DISKS as $disk) {
+            $rawValue = Setting::get('backup', "retention_{$disk}_value", null, false, Setting::TYPE_NUMBER);
+            $retentionPerDisk[$disk] = [
+                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", true, false, Setting::TYPE_BOOLEAN),
+                'type'    => Setting::get('backup', "retention_{$disk}_type", null, false, Setting::TYPE_STRING),
+                'value'   => $rawValue !== null ? (int) $rawValue : null,
+            ];
+        }
+
         $settings = [
             // Storage destinations
             'storage_drivers' => Setting::get('backup', 'storage_drivers', ['local'], false, Setting::TYPE_JSON),
@@ -146,9 +166,16 @@ class BackupController extends Controller
             'frequency_hours'   => (int)  Setting::get('backup', 'frequency_hours',   24,   false, Setting::TYPE_NUMBER),
             'preferred_hour'    => (int)  Setting::get('backup', 'preferred_hour',    2,    false, Setting::TYPE_NUMBER),
             'skip_if_unchanged' => (bool) Setting::get('backup', 'skip_if_unchanged', true, false, Setting::TYPE_BOOLEAN),
-            // Retention
-            'retention_type'  => Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING),
-            'retention_value' => (int) Setting::get('backup', 'retention_value', 60,   false, Setting::TYPE_NUMBER),
+            // Retention — global fallback
+            'retention_type'     => Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING),
+            'retention_value'    => (int) Setting::get('backup', 'retention_value', 60, false, Setting::TYPE_NUMBER),
+            // Retention — per disk (null type/value means falls back to global)
+            'retention_per_disk' => $retentionPerDisk,
+            // Delete protection — global and per disk
+            'delete_protected'          => (bool) Setting::get('backup', 'delete_protected', false, false, Setting::TYPE_BOOLEAN),
+            'delete_protected_per_disk' => collect(BackupRetentionService::KNOWN_DISKS)
+                ->mapWithKeys(fn($disk) => [$disk => (bool) Setting::get('backup', "delete_protected_{$disk}", false, false, Setting::TYPE_BOOLEAN)])
+                ->all(),
         ];
 
         return ApiResponse::show('Backup settings retrieved successfully', $settings);
@@ -178,9 +205,18 @@ class BackupController extends Controller
             'frequency_hours'   => 'sometimes|integer|min:1|max:8760',
             'preferred_hour'    => 'sometimes|integer|min:0|max:23',
             'skip_if_unchanged' => 'sometimes|boolean',
-            // Retention
+            // Retention — global fallback
             'retention_type'  => 'sometimes|string|in:by_count,by_days',
             'retention_value' => 'sometimes|integer|min:1|max:9999',
+            // Retention — per disk
+            'retention_per_disk'              => 'sometimes|array',
+            'retention_per_disk.*.enabled'    => 'sometimes|boolean',
+            'retention_per_disk.*.type'       => 'sometimes|nullable|string|in:by_count,by_days',
+            'retention_per_disk.*.value'      => 'sometimes|nullable|integer|min:1|max:9999',
+            // Delete protection
+            'delete_protected'              => 'sometimes|boolean',
+            'delete_protected_per_disk'     => 'sometimes|array',
+            'delete_protected_per_disk.*'   => 'boolean',
         ]);
 
         if ($request->has('storage_drivers')) {
@@ -227,13 +263,58 @@ class BackupController extends Controller
             Setting::set('backup', 'retention_value', $request->retention_value, Setting::TYPE_NUMBER, 'Number of backups to keep (by_count) or days to retain (by_days)');
         }
 
+        if ($request->has('delete_protected')) {
+            Setting::set('backup', 'delete_protected', $request->boolean('delete_protected') ? '1' : '0', Setting::TYPE_BOOLEAN, 'Prevent manual deletion of all backup files');
+        }
+
+        if ($request->has('delete_protected_per_disk')) {
+            foreach ($request->delete_protected_per_disk as $disk => $value) {
+                if (!in_array($disk, BackupRetentionService::KNOWN_DISKS, true)) {
+                    continue;
+                }
+                Setting::set('backup', "delete_protected_{$disk}", $value ? '1' : '0', Setting::TYPE_BOOLEAN, "Prevent manual deletion of {$disk} backups");
+            }
+        }
+
+        if ($request->has('retention_per_disk')) {
+            foreach ($request->retention_per_disk as $disk => $config) {
+                if (!in_array($disk, BackupRetentionService::KNOWN_DISKS, true)) {
+                    continue;
+                }
+                if (array_key_exists('enabled', $config)) {
+                    Setting::set('backup', "retention_{$disk}_enabled", $config['enabled'] ? '1' : '0', Setting::TYPE_BOOLEAN, "Retention enabled for {$disk}");
+                }
+                if (array_key_exists('type', $config)) {
+                    Setting::set('backup', "retention_{$disk}_type", $config['type'], Setting::TYPE_STRING, "Retention type for {$disk}");
+                }
+                if (array_key_exists('value', $config)) {
+                    Setting::set('backup', "retention_{$disk}_value", $config['value'], Setting::TYPE_NUMBER, "Retention value for {$disk}");
+                }
+            }
+        }
+
+        $retentionPerDisk = [];
+        foreach (BackupRetentionService::KNOWN_DISKS as $disk) {
+            $rawValue = Setting::get('backup', "retention_{$disk}_value", null, false, Setting::TYPE_NUMBER);
+            $retentionPerDisk[$disk] = [
+                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", true, false, Setting::TYPE_BOOLEAN),
+                'type'    => Setting::get('backup', "retention_{$disk}_type", null, false, Setting::TYPE_STRING),
+                'value'   => $rawValue !== null ? (int) $rawValue : null,
+            ];
+        }
+
         return ApiResponse::update('Backup settings updated successfully', [
-            'storage_drivers'   => Setting::get('backup', 'storage_drivers',   ['local'], false, Setting::TYPE_JSON),
-            'frequency_hours'   => (int)  Setting::get('backup', 'frequency_hours',   24,   false, Setting::TYPE_NUMBER),
-            'preferred_hour'    => (int)  Setting::get('backup', 'preferred_hour',    2,    false, Setting::TYPE_NUMBER),
-            'skip_if_unchanged' => (bool) Setting::get('backup', 'skip_if_unchanged', true, false, Setting::TYPE_BOOLEAN),
-            'retention_type'    => Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING),
-            'retention_value'   => (int)  Setting::get('backup', 'retention_value', 60,   false, Setting::TYPE_NUMBER),
+            'storage_drivers'    => Setting::get('backup', 'storage_drivers',   ['local'], false, Setting::TYPE_JSON),
+            'frequency_hours'    => (int)  Setting::get('backup', 'frequency_hours',   24,   false, Setting::TYPE_NUMBER),
+            'preferred_hour'     => (int)  Setting::get('backup', 'preferred_hour',    2,    false, Setting::TYPE_NUMBER),
+            'skip_if_unchanged'  => (bool) Setting::get('backup', 'skip_if_unchanged', true, false, Setting::TYPE_BOOLEAN),
+            'retention_type'     => Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING),
+            'retention_value'    => (int)  Setting::get('backup', 'retention_value', 60, false, Setting::TYPE_NUMBER),
+            'retention_per_disk' => $retentionPerDisk,
+            'delete_protected'          => (bool) Setting::get('backup', 'delete_protected', false, false, Setting::TYPE_BOOLEAN),
+            'delete_protected_per_disk' => collect(BackupRetentionService::KNOWN_DISKS)
+                ->mapWithKeys(fn($disk) => [$disk => (bool) Setting::get('backup', "delete_protected_{$disk}", false, false, Setting::TYPE_BOOLEAN)])
+                ->all(),
         ]);
     }
 
@@ -254,7 +335,17 @@ class BackupController extends Controller
         $preferredHour   = (int)  Setting::get('backup', 'preferred_hour',    2,    false, Setting::TYPE_NUMBER);
         $skipIfUnchanged = (bool) Setting::get('backup', 'skip_if_unchanged', true, false, Setting::TYPE_BOOLEAN);
         $retentionType   = Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING);
-        $retentionValue  = (int)  Setting::get('backup', 'retention_value', 60,   false, Setting::TYPE_NUMBER);
+        $retentionValue  = (int)  Setting::get('backup', 'retention_value', 60, false, Setting::TYPE_NUMBER);
+
+        $retentionPerDisk = [];
+        foreach (BackupRetentionService::KNOWN_DISKS as $disk) {
+            $rawValue = Setting::get('backup', "retention_{$disk}_value", null, false, Setting::TYPE_NUMBER);
+            $retentionPerDisk[$disk] = [
+                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", true, false, Setting::TYPE_BOOLEAN),
+                'type'    => Setting::get('backup', "retention_{$disk}_type", null, false, Setting::TYPE_STRING),
+                'value'   => $rawValue !== null ? (int) $rawValue : null,
+            ];
+        }
 
         $lastBackup = BackupLog::on('mysql')
             ->forTenant($tenant->id)
@@ -309,11 +400,12 @@ class BackupController extends Controller
             'next_expected_at'             => $nextExpectedAt,
             'current_server_hour'          => now()->hour,
             'settings' => [
-                'frequency_hours'   => $frequencyHours,
-                'preferred_hour'    => $preferredHour,
-                'skip_if_unchanged' => $skipIfUnchanged,
-                'retention_type'    => $retentionType,
-                'retention_value'   => $retentionValue,
+                'frequency_hours'    => $frequencyHours,
+                'preferred_hour'     => $preferredHour,
+                'skip_if_unchanged'  => $skipIfUnchanged,
+                'retention_type'     => $retentionType,
+                'retention_value'    => $retentionValue,
+                'retention_per_disk' => $retentionPerDisk,
             ],
         ]);
     }
