@@ -28,7 +28,7 @@
             {{-- Right: financial totals --}}
             <td style="width: 28%; border: none; padding: 0; vertical-align: top;">
                 <table style="width: 100%; border-collapse: collapse;">
-                    @if($sale->prefix !== 'INX')
+                    @if($sale->prefix === 'INV')
                     <tr>
                         <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
                         <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.sub_total') }}</td>
@@ -56,9 +56,6 @@
                             <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->total_tax_amount, $invoiceSettings['total_decimals']) }}</td>
                         </tr>
                         @endif
-                    @endif
-
-                    @if($sale->prefix !== 'INX')
                         @if($invoiceSettings['show_local_currency_total'])
                         <tr>
                             <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap;">{{ __('invoice.net_total') }} {{ $invoiceSettings['local_currency_symbol'] }}</td>
@@ -77,6 +74,11 @@
                     @endif
 
                     @if($sale->prefix === 'INX')
+                     <tr>
+                        <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
+                        <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.discount') }}</td>
+                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->discount_amount, $invoiceSettings['total_decimals']) }}</td>
+                    </tr>
                     <tr>
                         <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
                         <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.net_total') }}</td>

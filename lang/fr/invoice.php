@@ -31,6 +31,7 @@ return [
     'weight_kg'         => 'Poids KG',
     'sub_total'         => 'TOTAL HT',
     'amount_discount'   => 'Total Remise',
+    'discount'          => 'Remise',
     'net_total'         => 'Net à Payer',
     'received_by'       => 'Cachet et Signature Client',
     'signature'         => 'Signature',

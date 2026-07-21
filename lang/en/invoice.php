@@ -32,6 +32,7 @@ return [
     'weight_kg'         => 'Weight KG',
     'sub_total'         => 'Sub Total',
     'amount_discount'   => 'Amount Discount',
+    'discount'          => 'Discount',
     'net_total'         => 'Net Total',
     'received_by'       => 'Received By',
     'signature'         => 'Signature',
