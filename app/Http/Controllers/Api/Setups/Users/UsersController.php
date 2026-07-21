@@ -51,7 +51,16 @@ class UsersController extends Controller
     public function store(UsersStoreRequest $request): JsonResponse
     {
         $data = $request->validated();
-        
+
+        if (($data['role'] ?? null) === User::ROLE_DEVELOPER) {
+            if (!RoleHelper::isDeveloper()) {
+                return ApiResponse::customError('Only a developer can create a developer user.', 403);
+            }
+            if (User::where('role', User::ROLE_DEVELOPER)->exists()) {
+                return ApiResponse::customError('A developer user already exists. Only one developer is allowed.', 422);
+            }
+        }
+
         // Hash the password
         if (isset($data['password'])) {
             $data['password'] = Hash::make($data['password']);
@@ -90,6 +99,17 @@ class UsersController extends Controller
     public function update(UsersUpdateRequest $request, User $user): JsonResponse
     {
         $data = $request->validated();
+
+        $isDeveloperUser = $user->role === User::ROLE_DEVELOPER;
+        $assigningDeveloper = ($data['role'] ?? null) === User::ROLE_DEVELOPER;
+
+        if (($isDeveloperUser || $assigningDeveloper) && !RoleHelper::isDeveloper()) {
+            return ApiResponse::customError('Only a developer can create or edit a developer user.', 403);
+        }
+
+        if ($assigningDeveloper && !$isDeveloperUser && User::where('role', User::ROLE_DEVELOPER)->exists()) {
+            return ApiResponse::customError('A developer user already exists. Only one developer is allowed.', 422);
+        }
         
         // Hash the password if provided
         if (isset($data['password']) && !empty($data['password'])) {
