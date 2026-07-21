@@ -1196,6 +1196,8 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
         // Inventory Reports
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('warehouse', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'index'])->name('warehouse.index');
+            Route::get('warehouse/price-list', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'priceListReport'])->name('warehouse.price-list');
+            Route::get('warehouse/price-list/export', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'priceListExport'])->name('warehouse.price-list.export');
             Route::get('warehouse/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'show'])->name('warehouse.show');
         });
     });

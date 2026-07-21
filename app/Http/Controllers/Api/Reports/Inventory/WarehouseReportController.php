@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api\Reports\Inventory;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Items\Item;
+use App\Models\Items\PriceList;
 use App\Models\Setups\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Mpdf\Mpdf;
 
 class WarehouseReportController extends Controller
 {
@@ -199,6 +201,85 @@ class WarehouseReportController extends Controller
         );
     }
 
+    public function priceListReport(Request $request): JsonResponse
+    {
+        $perPage     = $request->get('per_page', 50);
+        $search      = $request->get('search');
+        $warehouseId = $request->get('warehouse_id');
+
+        $warehouses       = Warehouse::active()->orderBy('name')->get(['id', 'name']);
+        $defaultPriceList = PriceList::getDefaultInv();
+
+        $query = Item::query()
+            ->with(['inventories.warehouse:id,name'])
+            ->where('items.is_active', true)
+            ->select('items.id', 'items.code', 'items.short_name', 'items.description')
+            ->leftJoin('price_list_items', function ($join) use ($defaultPriceList) {
+                $join->on('price_list_items.item_id', '=', 'items.id')
+                    ->where('price_list_items.price_list_id', $defaultPriceList?->id)
+                    ->whereNull('price_list_items.deleted_at');
+            })
+            ->addSelect('price_list_items.sell_price');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('items.code', 'like', "%{$search}%")
+                    ->orWhere('items.short_name', 'like', "%{$search}%")
+                    ->orWhere('items.description', 'like', "%{$search}%")
+                    ->orWhere('items.barcode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($warehouseId) {
+            $query->whereHas('inventories', fn($q) => $q->where('warehouse_id', $warehouseId));
+        }
+
+        $query->orderBy('items.code');
+
+        $items = $query->paginate($perPage);
+
+        $transformedData = $items->through(function ($item) use ($warehouses, $warehouseId) {
+            $warehouseQuantities = [];
+            $totalQuantity       = 0;
+
+            $warehousesToShow = $warehouseId
+                ? $warehouses->where('id', $warehouseId)
+                : $warehouses;
+
+            foreach ($warehousesToShow as $warehouse) {
+                $inventory = $item->inventories->firstWhere('warehouse_id', $warehouse->id);
+                $quantity  = $inventory ? (float) $inventory->quantity : 0;
+                $warehouseQuantities[] = [
+                    'warehouse_id'   => $warehouse->id,
+                    'warehouse_name' => $warehouse->name,
+                    'quantity'       => $quantity,
+                ];
+                $totalQuantity += $quantity;
+            }
+
+            return [
+                'id'                  => $item->id,
+                'code'                => $item->code,
+                'short_name'          => $item->short_name,
+                'description'         => $item->description,
+                'sell_price'          => $item->sell_price !== null ? (float) $item->sell_price : null,
+                'total_quantity'      => $totalQuantity,
+                'warehouse_quantities' => $warehouseQuantities,
+            ];
+        });
+
+        return ApiResponse::paginated(
+            'Price list inventory report retrieved successfully',
+            $transformedData,
+            null,
+            [
+                'warehouses'    => $warehouses->map(fn($w) => ['id' => $w->id, 'name' => $w->name]),
+                'price_list_id' => $defaultPriceList?->id,
+                'price_list'    => $defaultPriceList ? ['id' => $defaultPriceList->id, 'code' => $defaultPriceList->code, 'description' => $defaultPriceList->description] : null,
+            ]
+        );
+    }
+
     public function show(Request $request, Item $item): JsonResponse
     {
         $warehouseId = $request->get('warehouse_id');
@@ -248,6 +329,104 @@ class WarehouseReportController extends Controller
         ];
 
         return ApiResponse::show('Item warehouse inventory retrieved successfully', $data);
+    }
+
+    public function priceListExport(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $search      = $request->get('search');
+        $warehouseId = $request->get('warehouse_id');
+
+        $warehouses       = Warehouse::active()->orderBy('name')->get(['id', 'name']);
+        $defaultPriceList = PriceList::getDefaultInv();
+
+        $query = Item::query()
+            ->with(['inventories'])
+            ->where('items.is_active', true)
+            ->select('items.id', 'items.code', 'items.short_name', 'items.description')
+            ->leftJoin('price_list_items', function ($join) use ($defaultPriceList) {
+                $join->on('price_list_items.item_id', '=', 'items.id')
+                    ->where('price_list_items.price_list_id', $defaultPriceList?->id)
+                    ->whereNull('price_list_items.deleted_at');
+            })
+            ->addSelect('price_list_items.sell_price');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('items.code', 'like', "%{$search}%")
+                    ->orWhere('items.short_name', 'like', "%{$search}%")
+                    ->orWhere('items.description', 'like', "%{$search}%")
+                    ->orWhere('items.barcode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($warehouseId) {
+            $query->whereHas('inventories', fn($q) => $q->where('warehouse_id', $warehouseId));
+        }
+
+        $query->orderBy('items.code');
+        $items = $query->get();
+
+        $warehousesToShow = $warehouseId ? $warehouses->where('id', $warehouseId) : $warehouses;
+
+        $rows = $items->map(function ($item) use ($warehousesToShow) {
+            $warehouseQuantities = [];
+            $totalQuantity       = 0;
+
+            foreach ($warehousesToShow as $warehouse) {
+                $inventory = $item->inventories->firstWhere('warehouse_id', $warehouse->id);
+                $quantity  = $inventory ? (float) $inventory->quantity : 0;
+                $warehouseQuantities[] = [
+                    'warehouse_id'   => $warehouse->id,
+                    'warehouse_name' => $warehouse->name,
+                    'quantity'       => $quantity,
+                ];
+                $totalQuantity += $quantity;
+            }
+
+            return [
+                'code'                 => $item->code,
+                'short_name'           => $item->short_name,
+                'description'          => $item->description,
+                'sell_price'           => $item->sell_price !== null ? (float) $item->sell_price : null,
+                'total_quantity'       => $totalQuantity,
+                'warehouse_quantities' => $warehouseQuantities,
+            ];
+        });
+
+        $html = view('pdfs.inventory-price-list-report', [
+            'rows'             => $rows,
+            'warehouses'       => $warehousesToShow->values(),
+            'defaultPriceList' => $defaultPriceList,
+            'generatedAt'      => now()->format('Y-m-d H:i'),
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L',
+            'margin_left'   => 8,
+            'margin_right'  => 8,
+            'margin_top'    => 10,
+            'margin_bottom' => 15,
+            'margin_header' => 5,
+            'margin_footer' => 5,
+        ]);
+
+        $mpdf->SetHTMLFooter('
+            <table width="100%" style="font-size: 8pt; border-top: 1px solid #000; padding-top: 4px;">
+                <tr>
+                    <td style="text-align: left;">Price List Inventory Report</td>
+                    <td style="text-align: center;">Page {PAGENO} of {nbpg}</td>
+                    <td style="text-align: right;">' . now()->format('Y-m-d') . '</td>
+                </tr>
+            </table>');
+
+        $mpdf->WriteHTML($html);
+
+        $filename = 'price-list-inventory-' . now()->format('Y-m-d') . '.pdf';
+
+        return response()->streamDownload(function () use ($mpdf) {
+            echo $mpdf->Output('', 'S');
+        }, $filename, ['Content-Type' => 'application/pdf']);
     }
 
     private function getStockStatus(float $quantity, ?float $lowAlert): string
