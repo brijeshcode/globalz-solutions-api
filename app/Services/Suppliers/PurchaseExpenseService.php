@@ -135,8 +135,9 @@ class PurchaseExpenseService
         $category = ExpenseCategory::findOrFail($data['expense_category_id']);
         $subject  = "{$category->name} — Purchase {$purchase->purchase_code}";
 
-        $isPaid = $data['is_paid'] ?? false;
-        $date   = isset($data['date']) ? \Carbon\Carbon::parse($data['date']) : $purchase->date;
+        $isPaid      = $data['is_paid'] ?? false;
+        $date        = isset($data['date']) ? \Carbon\Carbon::parse($data['date']) : $purchase->date;
+        $paymentDate = $data['payment_date'] ?? $date->toDateString();
 
         $totalAmount    = (float) $data['amount']     + (float) $data['vat_amount'];
         $totalAmountUsd = (float) $data['amount_usd'] + (float) $data['vat_amount_usd'];
@@ -172,7 +173,7 @@ class PurchaseExpenseService
                 'amount_usd'             => $totalAmountUsd,
                 'currency_id'            => $data['currency_id'],
                 'currency_rate'          => $data['currency_rate'],
-                'date'                   => $date,
+                'date'                   => $paymentDate,
                 'note'                   => $data['payment_note'] ?? null,
             ]);
             // Model boot hook fires: AccountsHelper::removeBalance + syncExpensePaidAmount
@@ -190,9 +191,9 @@ class PurchaseExpenseService
         $category  = ExpenseCategory::findOrFail($data['expense_category_id']);
         $subject   = "{$category->name} — Purchase {$purchase->purchase_code}";
 
-        $isPaid = $data['is_paid'] ?? false;
-        $date   = isset($data['date']) ? \Carbon\Carbon::parse($data['date']) : $purchase->date;
-
+        $isPaid      = $data['is_paid'] ?? false;
+        $date        = isset($data['date']) ? \Carbon\Carbon::parse($data['date']) : $purchase->date;
+        $paymentDate = \Carbon\Carbon::parse($data['payment_date'] ?? $date->toDateString())->setTime(12, 0, 0);
         $totalAmount    = (float) $data['amount']     + (float) $data['vat_amount'];
         $totalAmountUsd = (float) $data['amount_usd'] + (float) $data['vat_amount_usd'];
 
@@ -225,7 +226,7 @@ class PurchaseExpenseService
                     'amount_usd'    => $totalAmountUsd,
                     'currency_id'   => $data['currency_id'],
                     'currency_rate' => $data['currency_rate'],
-                    'date'          => $date,
+                    'date'          => $paymentDate,
                     'note'          => $data['payment_note'] ?? null,
                 ]);
                 // Updated hook fires: reverses old balance, applies new
@@ -237,7 +238,7 @@ class PurchaseExpenseService
                     'amount_usd'             => $totalAmountUsd,
                     'currency_id'            => $data['currency_id'],
                     'currency_rate'          => $data['currency_rate'],
-                    'date'                   => $date,
+                    'date'                   => $paymentDate,
                     'note'                   => $data['payment_note'] ?? null,
                 ]);
             }

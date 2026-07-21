@@ -66,6 +66,7 @@ class PurchasesUpdateRequest extends FormRequest
             'expenses.*.vat_amount_usd'              => 'nullable|numeric|min:0',
             'expenses.*.is_paid'                     => 'nullable|boolean',
             'expenses.*.account_id'                  => 'required_if:expenses.*.is_paid,true|nullable|integer|exists:accounts,id',
+            'expenses.*.payment_date'                => 'nullable|date',
             'expenses.*.payment_note'                => 'nullable|string|max:1000',
 
             // Documents
