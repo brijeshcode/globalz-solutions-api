@@ -19,7 +19,7 @@ class CarRefill extends Model
     protected $fillable = [
         'date', 'code', 'filling_auth_code', 'car_id', 'gas_station_id', 'driver_id',
         'odometer', 'km_driven', 'amount', 'amount_usd', 'currency_id', 'currency_rate',
-        'invoices_count', 'note',
+        'invoices_count', 'sales_amount_usd', 'delivery_cost_pct', 'note',
     ];
 
     protected $searchable = ['code', 'note'];
@@ -31,7 +31,9 @@ class CarRefill extends Model
         'amount'         => 'decimal:4',
         'amount_usd'     => 'decimal:8',
         'currency_rate'  => 'decimal:4',
-        'invoices_count' => 'integer',
+        'invoices_count'    => 'integer',
+        'sales_amount_usd'  => 'decimal:8',
+        'delivery_cost_pct' => 'decimal:4',
     ];
 
     protected $sortable = [
@@ -124,9 +126,60 @@ class CarRefill extends Model
             ->first();
 
         if ($next) {
-            $next->km_driven = $next->calculateKmDriven();
+            $stats = $next->calculateSalesStats();
+            $next->km_driven          = $next->calculateKmDriven();
+            $next->invoices_count     = $stats['invoices_count'];
+            $next->sales_amount_usd   = $stats['sales_amount_usd'];
+            $next->delivery_cost_pct  = $stats['delivery_cost_pct'];
             $next->saveQuietly();
         }
+    }
+
+    public function calculateSalesStats(): array
+    {
+        $previousDate = self::where('car_id', $this->car_id)
+            ->where(function ($q) {
+                $q->where('date', '<', $this->date)
+                  ->orWhere(function ($q2) {
+                      $q2->where('date', '=', $this->date)->where('id', '<', $this->id ?? PHP_INT_MAX);
+                  });
+            })
+            ->orderBy('date', 'desc')
+            ->orderBy('id', 'desc')
+            ->value('date');
+
+        $query = \App\Models\Customers\SaleStatusHistory::query()
+            ->join('sales', 'sales.id', '=', 'sale_status_histories.sale_id')
+            ->where('sale_status_histories.status', 'Delivered')
+            ->where('sale_status_histories.car_id', $this->car_id)
+            ->where('sale_status_histories.created_at', '<=', $this->date);
+
+        if ($previousDate) {
+            $query->where('sale_status_histories.created_at', '>', $previousDate);
+        }
+
+        $result = $query->selectRaw('COUNT(*) as count, COALESCE(SUM(sales.total_usd), 0) as amount_usd')->first();
+
+        $count     = (int) ($result->count ?? 0);
+        $amountUsd = (float) ($result->amount_usd ?? 0);
+        $refillUsd = (float) ($this->amount_usd ?? 0);
+        $costPct   = ($amountUsd > 0 && $refillUsd > 0) ? round($refillUsd / $amountUsd * 100, 4) : null;
+
+        return [
+            'invoices_count'    => $count,
+            'sales_amount_usd'  => $amountUsd,
+            'delivery_cost_pct' => $costPct,
+        ];
+    }
+
+    public function recalculateSalesStats(): void
+    {
+        $stats = $this->calculateSalesStats();
+        $this->updateQuietly([
+            'invoices_count'    => $stats['invoices_count'],
+            'sales_amount_usd'  => $stats['sales_amount_usd'],
+            'delivery_cost_pct' => $stats['delivery_cost_pct'],
+        ]);
     }
 
     protected static function boot(): void
@@ -141,6 +194,20 @@ class CarRefill extends Model
                 $refill->filling_auth_code = self::generateFillingAuthCode();
             }
             $refill->km_driven = $refill->calculateKmDriven();
+
+            $stats = $refill->calculateSalesStats();
+            $refill->invoices_count    = $stats['invoices_count'];
+            $refill->sales_amount_usd  = $stats['sales_amount_usd'];
+            $refill->delivery_cost_pct = $stats['delivery_cost_pct'];
+        });
+
+        static::updating(function (CarRefill $refill) {
+            if ($refill->isDirty(['date', 'car_id', 'amount_usd'])) {
+                $stats = $refill->calculateSalesStats();
+                $refill->invoices_count    = $stats['invoices_count'];
+                $refill->sales_amount_usd  = $stats['sales_amount_usd'];
+                $refill->delivery_cost_pct = $stats['delivery_cost_pct'];
+            }
         });
 
         static::created(function (CarRefill $refill) {

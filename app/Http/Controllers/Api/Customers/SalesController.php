@@ -575,10 +575,16 @@ class SalesController extends Controller
 
         $sale->update(['status' => $request->status]);
 
-        $sale->statusHistories()->create([
-            'status' => $request->status,
+        $historyData = [
+            'status'     => $request->status,
             'changed_by' => auth()->id(),
-        ]);
+        ];
+
+        if ($request->status === 'Delivered' && $request->filled('car_id')) {
+            $historyData['car_id'] = $request->integer('car_id');
+        }
+
+        $sale->statusHistories()->create($historyData);
 
         return ApiResponse::update(
             'Sale status updated successfully',

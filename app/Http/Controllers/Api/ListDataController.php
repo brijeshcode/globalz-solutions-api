@@ -34,6 +34,7 @@ use App\Models\Setups\SupplierPaymentTerm;
 use App\Models\Setups\SupplierType;
 use App\Models\Setups\TaxCode;
 use App\Models\Setups\Warehouse;
+use App\Models\Vehicle\Car;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -89,6 +90,9 @@ class ListDataController extends Controller
             'all-sales-employees' => $this->salesEmployee(),
             'all-driver-employees' => $this->driverEmployee(),
             'departments' => $this->departments(),
+
+            // vehicles
+            'cars' => $this->cars(),
 
             // generals
             'countries' => $this->countries(),
@@ -398,6 +402,12 @@ class ListDataController extends Controller
     private function departments()
     {
         return Department::active()->orderBy('name')->get(['id', 'name']);
+    }
+
+    // vehicles
+    private function cars()
+    {
+        return Car::where('is_active', true)->orderBy('name')->get(['id', 'name', 'plate_number']);
     }
 
     // generals

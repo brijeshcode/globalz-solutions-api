@@ -28,8 +28,10 @@ class CarRefillResource extends JsonResource
             'currency_id'    => $this->currency_id,
             'currency_rate'  => $this->currency_rate,
             'km_cost'        => $kmCost,
-            'invoices_count' => $this->invoices_count,
-            'note'           => $this->note,
+            'invoices_count'    => $this->invoices_count,
+            'sales_amount_usd'  => $this->sales_amount_usd,
+            'delivery_cost_pct' => $this->delivery_cost_pct,
+            'note'              => $this->note,
             'car' => $this->whenLoaded('car', fn() => [
                 'id'   => $this->car->id,
                 'name' => $this->car->name,
