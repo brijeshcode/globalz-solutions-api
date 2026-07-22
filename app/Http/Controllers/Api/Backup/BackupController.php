@@ -147,7 +147,7 @@ class BackupController extends Controller
         foreach (BackupRetentionService::KNOWN_DISKS as $disk) {
             $rawValue = Setting::get('backup', "retention_{$disk}_value", null, false, Setting::TYPE_NUMBER);
             $retentionPerDisk[$disk] = [
-                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", true, false, Setting::TYPE_BOOLEAN),
+                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", false, false, Setting::TYPE_BOOLEAN),
                 'type'    => Setting::get('backup', "retention_{$disk}_type", null, false, Setting::TYPE_STRING),
                 'value'   => $rawValue !== null ? (int) $rawValue : null,
             ];
@@ -297,7 +297,7 @@ class BackupController extends Controller
         foreach (BackupRetentionService::KNOWN_DISKS as $disk) {
             $rawValue = Setting::get('backup', "retention_{$disk}_value", null, false, Setting::TYPE_NUMBER);
             $retentionPerDisk[$disk] = [
-                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", true, false, Setting::TYPE_BOOLEAN),
+                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", false, false, Setting::TYPE_BOOLEAN),
                 'type'    => Setting::get('backup', "retention_{$disk}_type", null, false, Setting::TYPE_STRING),
                 'value'   => $rawValue !== null ? (int) $rawValue : null,
             ];
@@ -341,7 +341,7 @@ class BackupController extends Controller
         foreach (BackupRetentionService::KNOWN_DISKS as $disk) {
             $rawValue = Setting::get('backup', "retention_{$disk}_value", null, false, Setting::TYPE_NUMBER);
             $retentionPerDisk[$disk] = [
-                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", true, false, Setting::TYPE_BOOLEAN),
+                'enabled' => (bool) Setting::get('backup', "retention_{$disk}_enabled", false, false, Setting::TYPE_BOOLEAN),
                 'type'    => Setting::get('backup', "retention_{$disk}_type", null, false, Setting::TYPE_STRING),
                 'value'   => $rawValue !== null ? (int) $rawValue : null,
             ];

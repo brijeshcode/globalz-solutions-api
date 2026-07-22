@@ -14,6 +14,12 @@ class BackupRetentionService
     public const KNOWN_DISKS = ['local', 's3', 'ftp', 'dropbox'];
 
     /**
+     * Absolute minimum backups to retain per disk, regardless of retention settings.
+     * This prevents accidental total loss even when pruning is misconfigured.
+     */
+    public const MIN_KEEP = 10;
+
+    /**
      * Run retention cleanup for one tenant, per disk.
      * Each disk reads its own settings:
      *   backup.retention_{disk}_enabled — true (default) or false (skip this disk)
@@ -38,7 +44,8 @@ class BackupRetentionService
             ->pluck('disk');
 
         foreach ($disks as $disk) {
-            $enabled = (bool) Setting::get('backup', "retention_{$disk}_enabled", true, false, Setting::TYPE_BOOLEAN);
+            // Default is FALSE — pruning must be explicitly enabled per disk to avoid accidental deletion.
+            $enabled = (bool) Setting::get('backup', "retention_{$disk}_enabled", false, false, Setting::TYPE_BOOLEAN);
 
             if (!$enabled) {
                 continue;
@@ -60,9 +67,12 @@ class BackupRetentionService
 
     /**
      * Keep only the N most recent successful backups for the given disk; delete the rest.
+     * Always retains at least MIN_KEEP backups regardless of the configured value.
      */
     protected function pruneByCount(int $tenantId, string $disk, int $keep): void
     {
+        $keep = max($keep, self::MIN_KEEP);
+
         $keepIds = BackupLog::on('mysql')
             ->forTenant($tenantId)
             ->successful()
@@ -85,16 +95,26 @@ class BackupRetentionService
 
     /**
      * Delete successful backups older than $days days for the given disk.
+     * Always retains at least MIN_KEEP most recent backups regardless of the cutoff date.
      */
     protected function pruneByDays(int $tenantId, string $disk, int $days): void
     {
         $cutoff = now()->subDays($days);
+
+        $safeIds = BackupLog::on('mysql')
+            ->forTenant($tenantId)
+            ->successful()
+            ->where('disk', $disk)
+            ->orderByDesc('created_at')
+            ->limit(self::MIN_KEEP)
+            ->pluck('id');
 
         $toDelete = BackupLog::on('mysql')
             ->forTenant($tenantId)
             ->successful()
             ->where('disk', $disk)
             ->where('created_at', '<', $cutoff)
+            ->whereNotIn('id', $safeIds)
             ->get();
 
         foreach ($toDelete as $log) {
