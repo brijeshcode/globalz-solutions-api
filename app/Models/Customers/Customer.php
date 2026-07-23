@@ -16,6 +16,7 @@ use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -173,52 +174,52 @@ class Customer extends Model
     }
 
     // Scopes
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeByType($query, $typeId)
+    public function scopeByType(Builder $query, int $typeId)
     {
         return $query->where('customer_type_id', $typeId);
     }
 
-    public function scopeByGroup($query, $groupId)
+    public function scopeByGroup(Builder $query, int $groupId)
     {
         return $query->where('customer_group_id', $groupId);
     }
 
-    public function scopeByProvince($query, $provinceId)
+    public function scopeByProvince(Builder $query, int $provinceId)
     {
         return $query->where('customer_province_id', $provinceId);
     }
 
-    public function scopeByZone($query, $zoneId)
+    public function scopeByZone(Builder $query, int $zoneId)
     {
         return $query->where('customer_zone_id', $zoneId);
     }
 
-    public function scopeBySalesperson($query, $salespersonId)
+    public function scopeBySalesperson(Builder $query, int $salespersonId)
     {
         return $query->where('salesperson_id', $salespersonId);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, $code)
     {
         return $query->where('code', $code);
     }
 
-    public function scopeByEmail($query, $email)
+    public function scopeByEmail(Builder $query, string $email)
     {
         return $query->where('email', $email);
     }
 
-    public function scopeWithBalance($query)
+    public function scopeWithBalance(Builder $query)
     {
         return $query->where('current_balance', '!=', 0);
     }
 
-    public function scopeOverCreditLimit($query)
+    public function scopeOverCreditLimit(Builder $query)
     {
         return $query->whereColumn('current_balance', '>', 'credit_limit')
                     ->whereNotNull('credit_limit');
