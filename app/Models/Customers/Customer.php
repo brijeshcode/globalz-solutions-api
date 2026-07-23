@@ -10,7 +10,6 @@ use App\Models\Setups\Customers\CustomerType;
 use App\Models\Setups\Customers\CustomerZone;
 use App\Models\Employees\Employee;
 use App\Models\Items\PriceList;
-use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
@@ -204,7 +203,7 @@ class Customer extends Model
         return $query->where('salesperson_id', $salespersonId);
     }
 
-    public function scopeByCode(Builder $query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }
