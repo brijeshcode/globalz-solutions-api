@@ -38,9 +38,9 @@ class CommissionTargetRule extends Model
     public const AMOUNT_TYPE_AUTO = 'auto';
     public const AMOUNT_TYPE_SET = 'set';
 
-    public const PERCENTAGE_TYPE = ['fixed', 'dynamic'];
-    public const PERCENTAGE_TYPE_FIXED = 'fixed';
-    public const PERCENTAGE_TYPE_DYNAMIC = 'dynamic';
+    public const REWARD_CALCULATION_TYPE = ['fixed', 'dynamic'];
+    public const REWARD_CALCULATION_TYPE_FIXED = 'fixed';
+    public const REWARD_CALCULATION_TYPE_DYNAMIC = 'dynamic';
 
     public const REWARD_TYPE = ['fixed', 'percent'];
     public const REWARD_TYPE_FIXED = 'fixed';
@@ -59,7 +59,7 @@ class CommissionTargetRule extends Model
         'reward_type',
         'percent',
         'fixed_reward',
-        'percent_type',
+        'reward_calculation_type',
         'comission_label',
     ];
 
@@ -89,9 +89,9 @@ class CommissionTargetRule extends Model
         return $query->where('type', $type);
     }
 
-    public function scopeByPercentType(Builder $query, string $type)
+    public function scopeByRewardCalculationType(Builder $query, string $type)
     {
-        return $query->where('percent_type', $type);
+        return $query->where('reward_calculation_type', $type);
     }
 
     public function scopeInAmountRange(Builder $query, float $amount)

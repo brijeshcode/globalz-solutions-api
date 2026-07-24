@@ -49,7 +49,7 @@ class CommissionTargetsUpdateRequest extends FormRequest
             'rules.*.reward_type' => 'nullable|in:fixed,percent',
             'rules.*.percent' => 'required|numeric|min:0|max:100',
             'rules.*.fixed_reward' => 'nullable|numeric|min:0',
-            'rules.*.percent_type' => 'required|in:fixed,dynamic',
+            'rules.*.reward_calculation_type' => 'required|in:fixed,dynamic',
             'rules.*.comission_label' => 'required|string|max:100',
         ];
     }

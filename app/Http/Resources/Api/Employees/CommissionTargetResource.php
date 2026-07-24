@@ -40,7 +40,7 @@ class CommissionTargetResource extends JsonResource
                         'reward_type' => $rule->reward_type,
                         'percent' => $rule->percent,
                         'fixed_reward' => $rule->fixed_reward,
-                        'percent_type' => $rule->percent_type,
+                        'reward_calculation_type' => $rule->reward_calculation_type,
                         'comission_label' => $rule->comission_label,
                         'created_at' => $rule->created_at?->format('Y-m-d H:i:s'),
                         'updated_at' => $rule->updated_at?->format('Y-m-d H:i:s'),
