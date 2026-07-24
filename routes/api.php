@@ -78,7 +78,7 @@ use App\Http\Controllers\Api\Suppliers\SupplierStatmentController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\CacheVersionController;
 use App\Http\Controllers\Api\ClearDataController;
-use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
+use App\Http\Controllers\Api\Employees\CommissionsCalculationController;
 use App\Http\Controllers\Api\Employees\EmployeeStatmentsController;
 use App\Http\Controllers\Api\Employees\SalaryController;
 use App\Http\Controllers\Api\Items\PriceListBulkUpdateController;
@@ -215,9 +215,9 @@ Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });
 
-    Route::controller(EmployeeCommissionsController::class)->prefix('employee/business')->name('employee.business.')->group(function () {
-        Route::get('monthly/commission', 'getMonthlyCommission')->name('getMonthlyCommission');
-        Route::get('my-monthly/commission', 'getEmployeeMonthlyCommission')->name('myMonthlyCommission');
+    Route::controller(CommissionsCalculationController::class)->prefix('employee/business')->name('employee.business.')->group(function () {
+        Route::get('commission', 'getEmployeeCommission')->name('getEmployeeCommission');
+        Route::get('my/commission', 'getMyCommission')->name('getMyCommission');
     });
 
     // Commission Targets Controller

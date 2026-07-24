@@ -8,6 +8,8 @@ use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -62,29 +64,29 @@ class CommissionTarget extends Model
         return $this->hasMany(EmployeeCommissionTarget::class);
     }
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }
 
 
     // Scopes
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, Carbon|string $startDate, Carbon|string $endDate)
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }
 
-    public function scopeByPrefix($query, $prefix)
+    public function scopeByPrefix(Builder $query, string $prefix)
     {
         return $query->where('prefix', $prefix);
     }
 
-    public function scopeByName($query, $name)
+    public function scopeByName(Builder $query, string $name)
     {
         return $query->where('name', 'like', "%{$name}%");
     }
