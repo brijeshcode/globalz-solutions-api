@@ -14,7 +14,7 @@ return new class extends Migration
 
             // New columns
             $table->string('period', 20)->default('monthly')->after('type');
-            $table->string('amount_type', 20)->default('auto')->after('include_type');     // 'set' or 'auto'
+            $table->string('amount_type', 20)->default('set')->after('include_type');     // 'set' or 'auto'
             $table->unsignedInteger('number_of_months')->default(0)->after('amount_type'); // 0 = not applicable
             $table->decimal('push_target_percent', 8, 2)->default(0)->after('number_of_months');
             $table->string('reward_type', 20)->default('percent')->after('maximum_amount'); // 'fixed' or 'percent'

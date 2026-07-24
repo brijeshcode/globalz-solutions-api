@@ -17,7 +17,9 @@ class CommissionTargetFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'name' => $this->faker->words(3, true),
+            'date' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            'note' => $this->faker->optional()->sentence(),
         ];
     }
 }

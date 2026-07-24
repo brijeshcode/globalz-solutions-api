@@ -18,7 +18,7 @@ use App\Models\Employees\EmployeeCommissionTarget;
 use App\Models\Employees\Salary;
 use App\Models\Employees\SalaryItem;
 use App\Models\Setting;
-use App\Traits\CalculatesCommissions;
+use App\Services\Employees\Commission\RuleCalculator;
 use App\Traits\HasPagination;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +27,7 @@ use Mpdf\Mpdf;
 
 class SalaryController extends Controller
 {
-    use CalculatesCommissions, HasPagination;
+    use HasPagination;
 
     public function index(Request $request): JsonResponse
     {
@@ -381,32 +381,17 @@ class SalaryController extends Controller
             return [];
         }
 
-        $saleIncludeType    = CommissionTargetRule::INCLUDE_TYPE_OWN;
-        $paymentIncludeType = CommissionTargetRule::INCLUDE_TYPE_OWN;
+        // Single source of truth: run each rule through the commission engine so salary slips
+        // match the commission reports. The engine derives its own date window from the rule's
+        // period (monthly/yearly) using the pay period's month/year.
+        $calculator = app(RuleCalculator::class);
 
-        foreach ($rules as $rule) {
-            if ($rule->type === 'sale') {
-                $saleIncludeType = $rule->include_type ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
-            } elseif ($rule->type === 'payment') {
-                $paymentIncludeType = $rule->include_type ?? CommissionTargetRule::INCLUDE_TYPE_OWN;
-            }
-        }
-
-        [$totalSales, $totalReturns, $totalPayments] = $this->getCommissionTotals(
-            $employeeId, $firstDay, $lastDay, $saleIncludeType, $paymentIncludeType
-        );
-
-        return $rules->map(function (CommissionTargetRule $rule) use ($totalSales, $totalReturns, $totalPayments) {
-            $amount = match ($rule->type) {
-                'fuel'    => $this->calculateFuelCommission($rule, $totalSales, $totalPayments, $totalReturns),
-                'sale'    => $this->calculateSaleCommission($rule, $totalSales),
-                'payment' => $this->calculatePaymentCommission($rule, $totalPayments),
-                default   => 0.0,
-            };
+        return $rules->map(function (CommissionTargetRule $rule) use ($calculator, $employeeId, $firstDay) {
+            $row = $calculator->calculate($rule, $employeeId, (int) $firstDay->month, (int) $firstDay->year);
 
             return [
-                'commission_label'  => $rule->comission_label,
-                'commission_amount' => (float) $amount,
+                'commission_label'  => $row['label'],
+                'commission_amount' => (float) $row['reward']['amount'],
             ];
         })->values()->all();
     }
