@@ -49,6 +49,10 @@ it('sums rewards across all matching rules for the employee', function () {
     // Rule 1: 3% * 4000 = 120 ; Rule 2: 2% * 4000 = 80 ; total 200
     expect(round($result['total_commission'], 2))->toBe(200.0);
     expect($result['commissions'])->toHaveCount(2);
+    // Configured reward settings are returned so the frontend can show the % / amount.
+    expect($result['commissions'][0]['reward'])->toMatchArray([
+        'reward_type' => 'percent', 'percent' => 3.0, 'fixed_reward' => null,
+    ]);
     expect($result)->not->toHaveKey('daily_business');
 
     $detailed = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026, detailed: true);
@@ -119,11 +123,11 @@ it('treats the auto target as the ceiling (max) with no floor (min = 0)', functi
     $employee = Employee::factory()->create();
     $target = CommissionTarget::factory()->create();
 
-    // Auto: average of the previous 2 months, +0% push, is the CEILING.
+    // Auto: average of the previous 2 months, +0% push, applied as the CEILING (max).
     CommissionTargetRule::create([
         'commission_target_id' => $target->id, 'comission_label' => 'Rule',
         'type' => 'sale', 'period' => 'monthly', 'include_type' => 'Own',
-        'amount_type' => 'auto', 'number_of_months' => 2, 'push_target_percent' => 0,
+        'amount_type' => 'auto', 'auto_target_type' => 'max', 'number_of_months' => 2, 'push_target_percent' => 0,
         'minimum_amount' => 0, 'maximum_amount' => 0,
         'reward_calculation_type' => 'dynamic', 'reward_type' => 'percent', 'percent' => 10,
     ]);
@@ -150,6 +154,43 @@ it('treats the auto target as the ceiling (max) with no floor (min = 0)', functi
     // (If auto were treated as a floor, this would wrongly be 10% * 3000 = 300.)
     expect($result['commissions'][0]['target'])->toMatchArray(['min' => 0.0, 'max' => 1500.0]);
     expect(round($result['total_commission'], 2))->toBe(150.0);
+});
+
+it('auto with target_type=min uses the computed value as a threshold (fixed reward withheld below it)', function () {
+    $employee = Employee::factory()->create();
+    $target = CommissionTarget::factory()->create();
+
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Rule',
+        'type' => 'sale', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'auto', 'auto_target_type' => 'min',
+        'number_of_months' => 2, 'push_target_percent' => 0,
+        'minimum_amount' => 0, 'maximum_amount' => 0,
+        'reward_calculation_type' => 'fixed', 'reward_type' => 'fixed', 'fixed_reward' => 500, 'percent' => 0,
+    ]);
+    assignTarget($employee, $target, month: 3, year: 2026);
+
+    // Prev 2 months: Jan 1000 + Feb 2000 => avg 1500 => threshold (min) = 1500.
+    Sale::factory()->create([
+        'salesperson_id' => $employee->id, 'prefix' => Sale::TAXFREEPREFIX,
+        'total_usd' => 1000, 'date' => '2026-01-15', 'approved_by' => User::factory(),
+    ]);
+    Sale::factory()->create([
+        'salesperson_id' => $employee->id, 'prefix' => Sale::TAXFREEPREFIX,
+        'total_usd' => 2000, 'date' => '2026-02-15', 'approved_by' => User::factory(),
+    ]);
+    // Current March achievement 1000 — BELOW the 1500 threshold.
+    Sale::factory()->create([
+        'salesperson_id' => $employee->id, 'prefix' => Sale::TAXFREEPREFIX,
+        'total_usd' => 1000, 'date' => '2026-03-15', 'approved_by' => User::factory(),
+    ]);
+
+    $result = app(CommissionCalculator::class)->forEmployee($employee->id, 3, 2026);
+
+    // Auto target applied as the minimum; achievement 1000 < 1500 => no reward.
+    // (Previously auto forced min = 0, so a fixed reward was paid for nothing.)
+    expect($result['commissions'][0]['target'])->toMatchArray(['min' => 1500.0, 'max' => 0.0]);
+    expect(round($result['total_commission'], 2))->toBe(0.0);
 });
 
 it('returns the daily business grid and gross/net totals when detailed', function () {
@@ -180,6 +221,35 @@ it('returns the daily business grid and gross/net totals when detailed', functio
     expect(round($totals['without_vat']['sales']['INV']['total'], 2))->toBe(1000.0);
     expect($totals['without_vat']['sales']['INX']['total'])->toBe(500.0);
     expect($totals['month_total']['sales'])->toBe(1500.0);
+});
+
+it('reports target_reward — the goal amount on full target completion', function () {
+    $employee = Employee::factory()->create();
+    $target = CommissionTarget::factory()->create();
+
+    // Capped percent rule: 3% up to max 5000 => goal 150.
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Sale',
+        'type' => 'sale', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'set', 'minimum_amount' => 1000, 'maximum_amount' => 5000,
+        'reward_calculation_type' => 'dynamic', 'reward_type' => 'percent', 'percent' => 3,
+    ]);
+    // Fixed reward rule: goal = the fixed amount 500.
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Payment',
+        'type' => 'payment', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'set', 'minimum_amount' => 0, 'maximum_amount' => 0,
+        'reward_calculation_type' => 'fixed', 'reward_type' => 'fixed', 'fixed_reward' => 500, 'percent' => 0,
+    ]);
+    assignTarget($employee, $target);
+
+    $result = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026);
+
+    $sale = collect($result['commissions'])->firstWhere('type', 'sale');
+    $payment = collect($result['commissions'])->firstWhere('type', 'payment');
+
+    expect($sale['reward']['target_reward'])->toBe(150.0);      // 3% × 5000 (capped)
+    expect($payment['reward']['target_reward'])->toBe(500.0);   // the fixed reward
 });
 
 it('returns zero commission when the employee has no assigned target', function () {

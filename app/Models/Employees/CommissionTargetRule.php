@@ -38,6 +38,12 @@ class CommissionTargetRule extends Model
     public const AMOUNT_TYPE_AUTO = 'auto';
     public const AMOUNT_TYPE_SET = 'set';
 
+    // How an 'auto' target is applied (see the migration/RuleCalculator for semantics).
+    public const AUTO_TARGET_TYPE = ['min', 'max', 'both'];
+    public const AUTO_TARGET_MIN = 'min';
+    public const AUTO_TARGET_MAX = 'max';
+    public const AUTO_TARGET_BOTH = 'both';
+
     public const REWARD_CALCULATION_TYPE = ['fixed', 'dynamic'];
     public const REWARD_CALCULATION_TYPE_FIXED = 'fixed';
     public const REWARD_CALCULATION_TYPE_DYNAMIC = 'dynamic';
@@ -52,6 +58,7 @@ class CommissionTargetRule extends Model
         'period',
         'include_type',
         'amount_type',
+        'auto_target_type',
         'number_of_months',
         'push_target_percent',
         'minimum_amount',

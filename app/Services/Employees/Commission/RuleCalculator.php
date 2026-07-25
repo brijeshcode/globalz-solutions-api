@@ -44,10 +44,13 @@ class RuleCalculator
                 'met'         => $achievement['amount'] >= $min,
             ],
             'reward'       => [
-                'amount'      => round($reward['amount'], 2),
-                'reward_type' => $rule->reward_type,
-                'calc_type'   => $rule->reward_calculation_type,
-                'formula'     => $reward['formula'],
+                'amount'        => round($reward['amount'], 2),
+                'reward_type'   => $rule->reward_type,
+                'calc_type'     => $rule->reward_calculation_type,
+                'percent'       => (float) $rule->percent,                                    // configured % (used when reward_type = percent)
+                'fixed_reward'  => $rule->fixed_reward !== null ? (float) $rule->fixed_reward : null, // configured amount (used when reward_type = fixed)
+                'target_reward' => $this->targetReward($rule, $max),                          // what the employee gets on FULL target completion
+                'formula'       => $reward['formula'],
             ],
             'breakdown'    => $achievement['breakdown'],
         ];
@@ -113,18 +116,44 @@ class RuleCalculator
     /**
      * Phase 4 — the target min/max.
      *   set  = the rule's minimum_amount / maximum_amount
-     *   auto = average achievement over the previous N months × (1 + push%) is the target
-     *          ceiling (max); there is no floor on auto (min = 0)
+     *   auto = average achievement over the previous N months × (1 + push%) = T, applied per
+     *          the rule's auto_target_type:
+     *            min  -> [T, 0]   (threshold: must reach T)  — default
+     *            max  -> [0, T]   (ceiling: scale from 0)
+     *            both -> [T, T]   (T is both threshold and cap)
      *
      * @return array{0: float, 1: float} [min, max]
      */
     private function target(CommissionTargetRule $rule, int $employeeId, int $month, int $year): array
     {
-        if ($rule->amount_type === CommissionTargetRule::AMOUNT_TYPE_AUTO) {
-            return [0.0, $this->autoTarget($rule, $employeeId, $month, $year)];
+        if ($rule->amount_type === CommissionTargetRule::AMOUNT_TYPE_SET) {
+            return [(float) $rule->minimum_amount, (float) $rule->maximum_amount];
         }
 
-        return [(float) $rule->minimum_amount, (float) $rule->maximum_amount];
+        
+        $t = $this->autoTarget($rule, $employeeId, $month, $year);
+
+        return match ($rule->auto_target_type) {
+            CommissionTargetRule::AUTO_TARGET_MAX  => [0.0, $t],
+            CommissionTargetRule::AUTO_TARGET_BOTH => [$t, $t],
+            default                                => [$t, 0.0], // AUTO_TARGET_MIN (default)
+        };
+
+    }
+
+    /**
+     * The reward the employee earns on FULL target completion (the "goal" figure to show them):
+     *   - fixed reward  -> the configured fixed_reward
+     *   - percent, max > 0 -> percent × max (the capped ceiling)
+     *   - percent, max = 0 -> null (uncapped: earning grows with achievement, no fixed goal)
+     */
+    private function targetReward(CommissionTargetRule $rule, float $max): ?float
+    {
+        if ($rule->reward_type === CommissionTargetRule::REWARD_TYPE_FIXED) {
+            return $rule->fixed_reward !== null ? (float) $rule->fixed_reward : null;
+        }
+
+        return $max > 0 ? round((float) $rule->percent / 100 * $max, 2) : null;
     }
 
     /** Average of the previous N months' achievement, pushed up by push_target_percent. */

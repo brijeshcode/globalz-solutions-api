@@ -35,6 +35,7 @@ class CommissionTargetsStoreRequest extends FormRequest
             'rules.*.period' => ['required', 'string', Rule::in(CommissionTargetRule::PERIODS)],
             'rules.*.include_type' => 'required|in:Own,All,All except own',
             'rules.*.amount_type' => 'nullable|in:set,auto',
+            'rules.*.auto_target_type' => 'nullable|in:min,max,both',
             'rules.*.number_of_months' => 'nullable|integer|min:0',
             'rules.*.push_target_percent' => 'nullable|numeric|min:0|max:100',
             'rules.*.minimum_amount' => 'required|numeric|min:0|max:9999999999.9999',

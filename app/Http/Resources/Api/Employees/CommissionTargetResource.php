@@ -33,6 +33,7 @@ class CommissionTargetResource extends JsonResource
                         'period' => $rule->period,
                         'include_type' => $rule->include_type,
                         'amount_type' => $rule->amount_type,
+                        'auto_target_type' => $rule->auto_target_type,
                         'number_of_months' => $rule->number_of_months,
                         'push_target_percent' => $rule->push_target_percent,
                         'minimum_amount' => $rule->minimum_amount,
