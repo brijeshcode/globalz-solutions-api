@@ -13,8 +13,10 @@ class EnforceGlobalEditLock
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Only edit/delete requests are gated; creates (POST) and reads (GET) pass through.
-        if (! in_array($request->method(), ['PUT', 'PATCH', 'DELETE'], true)) {
+        // Only full-record edits (PUT) and deletes (DELETE) are gated. Creates
+        // (POST), reads (GET), and PATCH actions — status changes, approvals,
+        // restore, etc. — always pass through.
+        if (! in_array($request->method(), ['PUT', 'DELETE'], true)) {
             return $next($request);
         }
 
