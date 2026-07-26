@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'feature' => \App\Http\Middleware\RequireFeature::class,
             'bug-lock' => \App\Http\Middleware\BugLockMiddleware::class,
             'module.lock' => \App\Http\Middleware\EnforceModuleLock::class,
+            'global-edit-lock' => \App\Http\Middleware\EnforceGlobalEditLock::class,
         ]);
         // Add CORS and session middleware for API (needed for CSRF and tenant session validation)
         $middleware->api(prepend: [

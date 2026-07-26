@@ -124,7 +124,7 @@ Route::get('/cache-versions', [CacheVersionController::class, 'index'])
     ->name('cache-versions.index');
 
 // Protected routes (authentication required)
-Route::middleware(['auth:sanctum', 'bug-lock'])->group(function () {
+Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(function () {
 
     // Bug Lock Management
     Route::controller(\App\Http\Controllers\Api\BugLockController::class)->prefix('bug-lock')->name('bug-lock.')->group(function () {

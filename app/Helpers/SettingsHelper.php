@@ -365,6 +365,15 @@ class SettingsHelper
         return (int) self::get('module_locks', $module, 0);
     }
 
+    /**
+     * When enabled, all edit/delete requests are blocked for everyone except
+     * super admins (enforced by EnforceGlobalEditLock middleware).
+     */
+    public static function isGlobalEditBlocked(): bool
+    {
+        return (bool) self::get('module_locks', 'block_global_edit', false);
+    }
+
     public static function isRecordLocked(ModuleLockable $record): bool
     {
         // Console commands and queued jobs have no authenticated user and must

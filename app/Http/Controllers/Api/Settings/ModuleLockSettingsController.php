@@ -19,6 +19,9 @@ class ModuleLockSettingsController extends Controller
      * exempt until final (delivered / received / paid) — see ModuleLockable.
      */
     private const DEFAULTS = [
+        // Global switch: when true, all edit/delete requests are blocked for
+        // everyone except super admins (see EnforceGlobalEditLock middleware).
+        'block_global_edit'       => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
         'sale'                    => ['value' => 0, 'type' => Setting::TYPE_NUMBER],
         'sale_order'              => ['value' => 0, 'type' => Setting::TYPE_NUMBER],
         'purchase'                => ['value' => 0, 'type' => Setting::TYPE_NUMBER],

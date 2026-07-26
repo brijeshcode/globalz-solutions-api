@@ -25,6 +25,7 @@ class ModuleLockSettingsUpdateRequest extends FormRequest
         $rule = 'sometimes|integer|min:0|max:3650';
 
         return [
+            'block_global_edit'       => 'sometimes|boolean',
             'sale'                    => $rule,
             'sale_order'              => $rule,
             'purchase'                => $rule,
