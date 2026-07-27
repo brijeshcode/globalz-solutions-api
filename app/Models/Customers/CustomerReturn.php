@@ -15,12 +15,12 @@ use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Collection;
 
 class CustomerReturn extends Model implements ModuleLockable
 {
@@ -40,6 +40,10 @@ class CustomerReturn extends Model implements ModuleLockable
         'currency_rate',
         'total',
         'total_usd',
+        'subtotal_taxable_amount',
+        'subtotal_taxable_amount_usd',
+        'total_tax_amount',
+        'total_tax_amount_usd',
         'total_volume_cbm',
         'total_weight_kg',
         'approved_by',
@@ -57,6 +61,10 @@ class CustomerReturn extends Model implements ModuleLockable
         'return_received_at' => 'datetime',
         'total' => 'decimal:2',
         'total_usd' => 'decimal:2',
+        'subtotal_taxable_amount' => 'decimal:2',
+        'subtotal_taxable_amount_usd' => 'decimal:2',
+        'total_tax_amount' => 'decimal:2',
+        'total_tax_amount_usd' => 'decimal:2',
         'total_volume_cbm' => 'decimal:4',
         'total_weight_kg' => 'decimal:4',
     ];
@@ -132,6 +140,10 @@ class CustomerReturn extends Model implements ModuleLockable
             'currency_rate',
             'total',
             'total_usd',
+            'subtotal_taxable_amount',
+            'subtotal_taxable_amount_usd',
+            'total_tax_amount',
+            'total_tax_amount_usd',
             'total_volume_cbm',
             'total_weight_kg',
             'note',
@@ -145,52 +157,52 @@ class CustomerReturn extends Model implements ModuleLockable
     }
 
     // Scopes
-    public function scopeApproved($query)
+    public function scopeApproved(Builder $query)
     {
         return $query->whereNotNull('approved_by');
     }
 
-    public function scopePending($query)
+    public function scopePending(Builder $query)
     {
         return $query->whereNull('approved_by');
     }
 
-    public function scopeReceived($query)
+    public function scopeReceived(Builder $query)
     {
         return $query->whereNotNull('return_received_by');
     }
 
-    public function scopeNotReceived($query)
+    public function scopeNotReceived(Builder $query)
     {
         return $query->whereNull('return_received_by');
     }
 
-    public function scopeByCustomer($query, $customerId)
+    public function scopeByCustomer(Builder $query, int $customerId)
     {
         return $query->where('customer_id', $customerId);
     }
 
-    public function scopeByCurrency($query, $currencyId)
+    public function scopeByCurrency(Builder $query, int $currencyId)
     {
         return $query->where('currency_id', $currencyId);
     }
 
-    public function scopeByWarehouse($query, $warehouseId)
+    public function scopeByWarehouse(Builder $query, int $warehouseId)
     {
         return $query->where('warehouse_id', $warehouseId);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }
 
-    public function scopeByPrefix($query, $prefix)
+    public function scopeByPrefix(Builder $query, string $prefix)
     {
         return $query->where('prefix', $prefix);
     }

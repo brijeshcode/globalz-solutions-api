@@ -24,7 +24,7 @@ class CustomerReturnsController extends Controller
 {
     use HasPagination;
 
-    protected $customerReturnService;
+    protected CustomerReturnService $customerReturnService;
 
     public function __construct(CustomerReturnService $customerReturnService)
     {
@@ -98,6 +98,10 @@ class CustomerReturnsController extends Controller
             // Recalculate return totals
             $customerReturn->total = $customerReturn->items->sum('total_price');
             $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->subtotal_taxable_amount = $customerReturn->items->sum('total_taxable_amount');
+            $customerReturn->subtotal_taxable_amount_usd = $customerReturn->items->sum('total_taxable_amount_usd');
+            $customerReturn->total_tax_amount = $customerReturn->items->sum('total_tax_amount');
+            $customerReturn->total_tax_amount_usd = $customerReturn->items->sum('total_tax_amount_usd');
             $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
             $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
             $customerReturn->save();
@@ -239,6 +243,10 @@ class CustomerReturnsController extends Controller
             $customerReturn->refresh();
             $customerReturn->total = $customerReturn->items->sum('total_price');
             $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->subtotal_taxable_amount = $customerReturn->items->sum('total_taxable_amount');
+            $customerReturn->subtotal_taxable_amount_usd = $customerReturn->items->sum('total_taxable_amount_usd');
+            $customerReturn->total_tax_amount = $customerReturn->items->sum('total_tax_amount');
+            $customerReturn->total_tax_amount_usd = $customerReturn->items->sum('total_tax_amount_usd');
             $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
             $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
             $customerReturn->save();

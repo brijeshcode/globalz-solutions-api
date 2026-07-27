@@ -291,7 +291,7 @@
                 <td class="text-right">{{ number_format($item->discount_percent ?? 0, 2) }}%</td>
                 <td class="text-right">{{ number_format($item->tax_percent ?? $item->item->taxCode->tax_percent ?? 0, 2) }}%</td>
                 <td class="text-right">{{ $item->quantity }}</td>
-                <td class="text-right">{{ number_format($item->total_price, 2) }}</td>
+                <td class="text-right">{{ number_format($item->total_taxable_amount, 2) }}</td>
             </tr>
             @else
             <tr>
@@ -301,12 +301,26 @@
                 <td class="text-right">{{ number_format($item->price ?? $item->unit_price, 2) }}</td>
                 <td class="text-right">{{ number_format($item->discount_percent ?? 0, 2) }}%</td>
                 <td class="text-right">{{ $item->quantity }}</td>
-                <td class="text-right">{{ number_format($item->total_price, 2) }}</td>
+                <td class="text-right">{{ number_format($item->total_taxable_amount, 2) }}</td>
             </tr>
             @endif
             @endforeach
         </tbody>
         <tfoot>
+            @if($isTax)
+            <tr>
+                <td colspan="{{ $isTax ? 7 : 6 }}" class="text-right">Subtotal:</td>
+                <td class="text-right">
+                    {{ $customerReturn->currency->symbol ?? '' }} {{ number_format($customerReturn->subtotal_taxable_amount, 2) }}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="{{ $isTax ? 7 : 6 }}" class="text-right">Tax:</td>
+                <td class="text-right">
+                    {{ $customerReturn->currency->symbol ?? '' }} {{ number_format($customerReturn->total_tax_amount, 2) }}
+                </td>
+            </tr>
+            @endif
             <tr>
                 <td colspan="{{ $isTax ? 7 : 6 }}" class="text-right">Total:</td>
                 <td class="text-right">
@@ -321,7 +335,6 @@
             @endif
         </tfoot>
     </table>
-    <pre>{{$customerReturn}}</pre>
     {{-- ── Notes ── --}}
     @if($customerReturn->note)
     <div class="section-title">Notes</div>

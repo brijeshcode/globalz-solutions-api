@@ -3,16 +3,15 @@
 namespace App\Models\Customers;
 
 use App\Models\Items\Item;
-use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use App\Traits\TracksActivity;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Collection;
 
 class CustomerReturnItem extends Model
 {
@@ -38,6 +37,12 @@ class CustomerReturnItem extends Model
         'tax_amount_usd',
         'ttc_price',
         'ttc_price_usd',
+        'unit_taxable_amount',
+        'unit_taxable_amount_usd',
+        'total_taxable_amount',
+        'total_taxable_amount_usd',
+        'total_tax_amount', 
+        'total_tax_amount_usd',
         'total_price',
         'total_price_usd',
         'total_profit',
@@ -60,6 +65,12 @@ class CustomerReturnItem extends Model
         'tax_amount_usd' => 'decimal:2',
         'ttc_price' => 'decimal:2',
         'ttc_price_usd' => 'decimal:2',
+        'unit_taxable_amount' => 'decimal:2',
+        'unit_taxable_amount_usd' => 'decimal:2',
+        'total_taxable_amount' => 'decimal:2',
+        'total_taxable_amount_usd' => 'decimal:2',
+        'total_tax_amount' => 'decimal:2',
+        'total_tax_amount_usd' => 'decimal:2',
         'total_price' => 'decimal:2',
         'total_price_usd' => 'decimal:2',
         'total_profit' => 'decimal:2',
@@ -129,6 +140,12 @@ class CustomerReturnItem extends Model
             'tax_amount_usd',
             'ttc_price',
             'ttc_price_usd',
+            'unit_taxable_amount',
+            'unit_taxable_amount_usd',
+            'total_taxable_amount',
+            'total_taxable_amount_usd',
+            'total_tax_amount',
+            'total_tax_amount_usd',
             'total_price',
             'total_price_usd',
             'total_profit',
@@ -142,22 +159,22 @@ class CustomerReturnItem extends Model
     }
 
     // Scopes
-    public function scopeByCustomerReturn($query, $customerReturnId)
+    public function scopeByCustomerReturn(Builder $query, int $customerReturnId)
     {
         return $query->where('customer_return_id', $customerReturnId);
     }
 
-    public function scopeByItem($query, $itemId)
+    public function scopeByItem(Builder $query, int $itemId)
     {
         return $query->where('item_id', $itemId);
     }
 
-    public function scopeByItemCode($query, $itemCode)
+    public function scopeByItemCode(Builder $query, string $itemCode)
     {
         return $query->where('item_code', $itemCode);
     }
 
-    public function scopeBySale($query, $saleId)
+    public function scopeBySale(Builder $query, int $saleId)
     {
         return $query->where('sale_id', $saleId);
     }

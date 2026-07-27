@@ -151,6 +151,46 @@ trait HasCustomerReturnSetup
         ], $overrides));
     }
 
+    /**
+     * Sale item for the setup customer with an explicit, known price breakdown:
+     *   price 100, 5% discount (unit discount 5) -> net (taxable) 95 per unit
+     *   10% tax on net -> tax 9.5 per unit -> ttc 104.5 per unit
+     * Currency is USD @ rate 1, so base == usd throughout.
+     */
+    protected function createSaleItemWithBreakdown(int $availableQty = 20): SaleItems
+    {
+        $sale = Sale::factory()->create([
+            'customer_id' => $this->customer->id,
+            'created_by'  => $this->superAdmin->id,
+            'updated_by'  => $this->superAdmin->id,
+        ]);
+
+        return SaleItems::withoutEvents(fn () => SaleItems::create([
+            'sale_id'                  => $sale->id,
+            'item_id'                  => $this->item->id,
+            'item_code'                => $this->item->code,
+            'quantity'                 => $availableQty,
+            'price'                    => 100.00,
+            'price_usd'                => 100.00,
+            'discount_percent'         => 5.0,
+            'unit_discount_amount'     => 5.00,
+            'unit_discount_amount_usd' => 5.00,
+            'net_sell_price'           => 95.00,
+            'net_sell_price_usd'       => 95.00,
+            'tax_percent'              => 10.0,
+            'tax_amount'               => 9.50,
+            'tax_amount_usd'           => 9.50,
+            'tax_label'                => 'TVA',
+            'ttc_price'                => 104.50,
+            'ttc_price_usd'            => 104.50,
+            'unit_profit'              => 0,
+            'total_price'              => 104.50 * $availableQty,
+            'total_price_usd'          => 104.50 * $availableQty,
+            'created_by'               => $this->superAdmin->id,
+            'updated_by'               => $this->superAdmin->id,
+        ]));
+    }
+
     protected function createSaleItemForCustomer(int $availableQty = 20, float $ttcPriceUsd = 10.00): SaleItems
     {
         $sale = Sale::factory()->create([
