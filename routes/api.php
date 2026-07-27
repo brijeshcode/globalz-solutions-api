@@ -186,6 +186,8 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
     // AdvanceLoans Controller
     Route::controller(AdvanceLoansController::class)->prefix('advanceLoans')->name('advanceLoans.')->group(function () {
         Route::get('stats', 'stats')->name('stats');
+        Route::get('employee-loan-summary', 'employeeLoanSummary')->name('employee-loan-summary');
+        Route::get('employee-loan-for', 'employeeLoanFor')->name('employee-loan-for');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
