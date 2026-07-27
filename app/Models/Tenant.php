@@ -97,6 +97,7 @@ class Tenant extends BaseTenant
 
         // Set tenant connection as default for migrations and queries
         config(['database.default' => 'tenant']);
+        DB::purge('mysql'); // Release landlord connection slot — no longer needed for this request
         DB::reconnect('tenant'); // Reconnect tenant connection
 
         return $this;
