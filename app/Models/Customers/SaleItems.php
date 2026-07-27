@@ -47,9 +47,9 @@ class SaleItems extends Model
         'tax_amount_usd',
         'total_tax_amount',
         'total_tax_amount_usd',
-        'total_net_sell_price',
+        'total_net_sell_price',// without tax
         'total_net_sell_price_usd',
-        'total_price',
+        'total_price', // with tax
         'total_price_usd',
         'unit_profit',
         'total_profit',
