@@ -19,7 +19,7 @@ class CustomerReturnFactory extends Factory
         return [
             'code' => $this->faker->unique()->numerify('######'),
             'date' => $this->faker->dateTimeBetween('-1 year', 'now'),
-            'prefix' => 'RTV',
+            'prefix' => 'RTN',
             'salesperson_id' => \App\Models\User::factory(),
             'customer_id' => \App\Models\Customers\Customer::factory()->state(fn () => [
                 'salesperson_id' => \App\Models\Employees\Employee::factory(),

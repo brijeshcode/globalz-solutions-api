@@ -84,7 +84,9 @@
         }
         .items-table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 14px; }
         .items-table thead tr th {
-            background-color: #f9fafb;
+            /* background-color: #f9fafb; */
+            background-color: #E0E0E0;
+            border: 1px solid #000000;
             color: #555555;
             font-size: 7.5pt;
             font-weight: bold;
@@ -255,41 +257,53 @@
     @php $isTax = $customerReturn->prefix === 'RTN'; @endphp
     <table class="items-table">
         <thead>
+            @if($isTax)
             <tr>
                 <th style="width:4%;">#</th>
-                <th style="width:10%;">Item Code</th>
-                @if($isTax)
-                <th style="width:30%;">Description</th>
-                @else
-                <th style="width:34%;">Description</th>
-                @endif
-                <th class="text-right" style="width:9%;">Qty</th>
-                <th class="text-right" style="width:12%;">Price</th>
-                <th class="text-right" style="width:10%;">Disc %</th>
-                @if($isTax)
-                <th class="text-right" style="width:10%;">Tax %</th>
-                @endif
-                @if($isTax)
-                <th class="text-right" style="width:15%;">Total</th>
-                @else
-                <th class="text-right" style="width:21%;">Total</th>
-                @endif
+                <th style="width:8%;">SKU</th>
+                <th style="width:45%;">Description</th>
+                <th class="text-right" style="width:10%;">Price</th>
+                <th class="text-right" style="width:8%;">Disc.%</th>
+                <th class="text-right" style="width:8%;">Tax %</th>
+                <th class="text-right" style="width:7%;">Qtty.</th>
+                <th class="text-right" style="width:10%;">Total</th>
             </tr>
+            @else
+            <tr>
+                <th style="width:4%;">#</th>
+                <th style="width:8%;">Item Code</th>
+                <th style="width:53%;">Item Details</th>
+                <th class="text-right" style="width:10%;">Price</th>
+                <th class="text-right" style="width:8%;">Disc.</th>
+                <th class="text-right" style="width:7%;">Qty.</th>
+                <th class="text-right" style="width:10%;">Total</th>
+            </tr>
+            @endif
         </thead>
         <tbody>
             @foreach($customerReturn->items as $index => $item)
+            @if($isTax)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
                 <td>{{ $item->item->code ?? $item->item_code ?? '-' }}</td>
                 <td>{{ $item->item->description ?? $item->item->short_name ?? '-' }}</td>
-                <td class="text-right">{{ number_format($item->quantity, 2) }}</td>
                 <td class="text-right">{{ number_format($item->price ?? $item->unit_price, 2) }}</td>
                 <td class="text-right">{{ number_format($item->discount_percent ?? 0, 2) }}%</td>
-                @if($isTax)
                 <td class="text-right">{{ number_format($item->tax_percent ?? $item->item->taxCode->tax_percent ?? 0, 2) }}%</td>
-                @endif
+                <td class="text-right">{{ $item->quantity }}</td>
                 <td class="text-right">{{ number_format($item->total_price, 2) }}</td>
             </tr>
+            @else
+            <tr>
+                <td class="text-center">{{ $index + 1 }}</td>
+                <td>{{ $item->item->code ?? $item->item_code ?? '-' }}</td>
+                <td>{{ $item->item->description ?? $item->item->short_name ?? '-' }}</td>
+                <td class="text-right">{{ number_format($item->price ?? $item->unit_price, 2) }}</td>
+                <td class="text-right">{{ number_format($item->discount_percent ?? 0, 2) }}%</td>
+                <td class="text-right">{{ $item->quantity }}</td>
+                <td class="text-right">{{ number_format($item->total_price, 2) }}</td>
+            </tr>
+            @endif
             @endforeach
         </tbody>
         <tfoot>
@@ -307,7 +321,7 @@
             @endif
         </tfoot>
     </table>
-
+    <pre>{{$customerReturn}}</pre>
     {{-- ── Notes ── --}}
     @if($customerReturn->note)
     <div class="section-title">Notes</div>

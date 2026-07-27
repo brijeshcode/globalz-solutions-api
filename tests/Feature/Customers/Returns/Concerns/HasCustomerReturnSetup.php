@@ -4,6 +4,8 @@ namespace Tests\Feature\Customers\Returns\Concerns;
 
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
+use App\Models\Customers\Sale;
+use App\Models\Customers\SaleItems;
 use App\Models\Employees\Employee;
 use App\Models\Items\Item;
 use App\Models\Setting;
@@ -13,6 +15,7 @@ use App\Models\User;
 
 trait HasCustomerReturnSetup
 {
+    protected User $superAdmin;
     protected User $admin;
     protected User $salesman;
     protected Customer $customer;
@@ -22,7 +25,8 @@ trait HasCustomerReturnSetup
 
     public function setUpCustomerReturns(): void
     {
-        $this->admin   = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $this->superAdmin = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
+        $this->admin      = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $this->salesman = User::factory()->create(['role' => User::ROLE_SALESMAN]);
 
         // Employee ID matches salesman user ID so salesperson_id lookups resolve correctly
@@ -131,5 +135,51 @@ trait HasCustomerReturnSetup
             'approved_by'    => $this->admin->id,
             'approved_at'    => now(),
         ], $overrides));
+    }
+
+    protected function createReceivedReturn(array $overrides = []): CustomerReturn
+    {
+        return CustomerReturn::factory()->create(array_merge([
+            'customer_id'        => $this->customer->id,
+            'currency_id'        => $this->currency->id,
+            'warehouse_id'       => $this->warehouse->id,
+            'salesperson_id'     => $this->salesman->id,
+            'approved_by'        => $this->superAdmin->id,
+            'approved_at'        => now(),
+            'return_received_by' => $this->superAdmin->id,
+            'return_received_at' => now(),
+        ], $overrides));
+    }
+
+    protected function createSaleItemForCustomer(int $availableQty = 20, float $ttcPriceUsd = 10.00): SaleItems
+    {
+        $sale = Sale::factory()->create([
+            'customer_id' => $this->customer->id,
+            'created_by'  => $this->superAdmin->id,
+            'updated_by'  => $this->superAdmin->id,
+        ]);
+
+        // Use withoutEvents to avoid the SaleItems::created boot hook that deducts inventory
+        return SaleItems::withoutEvents(fn () => SaleItems::create([
+            'sale_id'                  => $sale->id,
+            'item_id'                  => $this->item->id,
+            'item_code'                => $this->item->code,
+            'quantity'                 => $availableQty,
+            'price'                    => 100.00,
+            'ttc_price'                => $ttcPriceUsd,
+            'ttc_price_usd'            => $ttcPriceUsd,
+            'discount_percent'         => 0,
+            'unit_discount_amount'     => 0,
+            'unit_discount_amount_usd' => 0,
+            'tax_percent'              => 0,
+            'tax_amount'               => 0,
+            'tax_amount_usd'           => 0,
+            'tax_label'                => 'TVA',
+            'unit_profit'              => 0,
+            'total_price'              => $ttcPriceUsd * $availableQty,
+            'total_price_usd'          => $ttcPriceUsd * $availableQty,
+            'created_by'               => $this->superAdmin->id,
+            'updated_by'               => $this->superAdmin->id,
+        ]));
     }
 }

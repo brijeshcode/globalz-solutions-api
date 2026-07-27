@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerReturnOrdersStoreRequest;
@@ -11,9 +12,11 @@ use App\Http\Requests\Api\Customers\CustomerDirectReturnStoreRequest;
 use App\Http\Requests\Api\Customers\CustomerDirectReturnUpdateRequest;
 use App\Http\Resources\Api\Customers\CustomerReturnOrderResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\SaleItems;
 use App\Services\Customers\CustomerReturnService;
+use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -277,6 +280,13 @@ class CustomerReturnOrdersController extends Controller
      */
     public function updateDirectReturn(CustomerDirectReturnUpdateRequest $request, CustomerReturn $customerReturn): JsonResponse
     {
+        $isReceived   = $customerReturn->isReceived();
+        $isSuperAdmin = RoleHelper::canSuperAdmin();
+
+        if ($isReceived && !$isSuperAdmin) {
+            return ApiResponse::customError('Only super admins can update received returns', 403);
+        }
+
         if ($customerReturn->isApproved() && !RoleHelper::canAdmin()) {
             return ApiResponse::customError('Cannot update approved returns', 422);
         }
@@ -286,13 +296,46 @@ class CustomerReturnOrdersController extends Controller
         if (RoleHelper::isSalesman() && $customerReturn->salesperson_id !== $employee->id) {
             return ApiResponse::customError('You can only update your own return orders', 403);
         }
-        
+
         $data = $request->validated();
 
-        DB::transaction(function () use ($data, $customerReturn) {
+        // Non-super-admin admins: only date and note on non-received returns
+        if (!$isSuperAdmin) {
+            $customerReturn->update(array_filter([
+                'date' => $data['date'] ?? null,
+                'note' => $data['note'] ?? null,
+            ], fn($v) => !is_null($v)));
+
+            $customerReturn->load([
+                'customer:id,name,code,address,city,mobile,mof_tax_number',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'warehouse:id,name,address_line_1',
+                'salesperson:id,name',
+                'approvedBy:id,name',
+                'items.item:id,short_name,description,code',
+                'createdBy:id,name',
+                'updatedBy:id,name',
+            ]);
+
+            return ApiResponse::update('Direct customer return updated successfully', new CustomerReturnOrderResource($customerReturn));
+        }
+
+        // Capture old values before update for balance adjustment
+        $oldCustomerId = $customerReturn->customer_id;
+        $oldTotalUsd   = (float) $customerReturn->total_usd;
+
+        DB::transaction(function () use ($data, $customerReturn, $isReceived, $oldCustomerId, $oldTotalUsd) {
             // Extract items data
             $itemsInput = $data['items'];
             unset($data['items']);
+
+            // Snapshot current item quantities before any changes (for re-syncing inventory on received returns)
+            $oldItemSnapshots = $isReceived
+                ? $customerReturn->items()->get()->map(fn($item) => [
+                    'item_id'  => $item->item_id,
+                    'quantity' => (int) $item->quantity,
+                ])->all()
+                : [];
 
             // Update the return order
             $customerReturn->update($data);
@@ -306,44 +349,64 @@ class CustomerReturnOrdersController extends Controller
             // Update or create items
             foreach ($itemsInput as $itemInput) {
                 $itemData = [
-                    'item_id' => $itemInput['item_id'],
-                    'item_code' => $itemInput['item_code'],
-                    'quantity' => $itemInput['quantity'],
-                    'price' => $itemInput['price'],
-                    'price_usd' => $itemInput['price_usd'],
-                    'discount_percent' => $itemInput['discount_percent'] ?? 0,
-                    'unit_discount_amount' => $itemInput['unit_discount_amount'] ?? 0,
+                    'item_id'                  => $itemInput['item_id'],
+                    'item_code'                => $itemInput['item_code'],
+                    'quantity'                 => $itemInput['quantity'],
+                    'price'                    => $itemInput['price'],
+                    'price_usd'                => $itemInput['price_usd'],
+                    'discount_percent'         => $itemInput['discount_percent'] ?? 0,
+                    'unit_discount_amount'     => $itemInput['unit_discount_amount'] ?? 0,
                     'unit_discount_amount_usd' => $itemInput['unit_discount_amount_usd'] ?? 0,
-                    'tax_percent' => $itemInput['tax_percent'] ?? 0,
-                    'tax_label' => $itemInput['tax_label'] ?? 'TVA',
-                    'tax_amount' => $itemInput['tax_amount'] ?? 0,
-                    'tax_amount_usd' => $itemInput['tax_amount_usd'] ?? 0,
-                    'ttc_price' => $itemInput['ttc_price'] ?? 0,
-                    'ttc_price_usd' => $itemInput['ttc_price_usd'] ?? 0,
-                    'total_price' => $itemInput['total_price'],
-                    'total_price_usd' => $itemInput['total_price_usd'],
-                    'total_volume_cbm' => $itemInput['total_volume_cbm'] ?? 0,
-                    'total_weight_kg' => $itemInput['total_weight_kg'] ?? 0,
-                    'note' => $itemInput['note'] ?? null,
-                    // No sale_id or sale_item_id for direct returns
+                    'tax_percent'              => $itemInput['tax_percent'] ?? 0,
+                    'tax_label'                => $itemInput['tax_label'] ?? 'TVA',
+                    'tax_amount'               => $itemInput['tax_amount'] ?? 0,
+                    'tax_amount_usd'           => $itemInput['tax_amount_usd'] ?? 0,
+                    'ttc_price'                => $itemInput['ttc_price'] ?? 0,
+                    'ttc_price_usd'            => $itemInput['ttc_price_usd'] ?? 0,
+                    'total_price'              => $itemInput['total_price'],
+                    'total_price_usd'          => $itemInput['total_price_usd'],
+                    'total_volume_cbm'         => $itemInput['total_volume_cbm'] ?? 0,
+                    'total_weight_kg'          => $itemInput['total_weight_kg'] ?? 0,
+                    'note'                     => $itemInput['note'] ?? null,
                 ];
 
                 if (isset($itemInput['id']) && $itemInput['id']) {
-                    // Update existing item
                     $customerReturn->items()->where('id', $itemInput['id'])->update($itemData);
                 } else {
-                    // Create new item
                     $customerReturn->items()->create($itemData);
                 }
             }
 
             // Recalculate return totals
             $customerReturn->refresh();
-            $customerReturn->total = $customerReturn->items->sum('total_price');
-            $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
-            $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
-            $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
+            $customerReturn->total              = $customerReturn->items->sum('total_price');
+            $customerReturn->total_usd          = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->total_volume_cbm   = $customerReturn->items->sum('total_volume_cbm');
+            $customerReturn->total_weight_kg    = $customerReturn->items->sum('total_weight_kg');
             $customerReturn->save();
+
+            // Re-sync warehouse inventory for received returns: reverse old quantities, apply new
+            if ($isReceived) {
+                foreach ($oldItemSnapshots as $old) {
+                    if ($old['item_id'] && $old['quantity'] > 0) {
+                        InventoryService::subtract($old['item_id'], $customerReturn->warehouse_id, $old['quantity']);
+                    }
+                }
+                foreach ($customerReturn->items as $returnItem) {
+                    if ($returnItem->item_id && $returnItem->quantity > 0) {
+                        InventoryService::add($returnItem->item_id, $customerReturn->warehouse_id, (int) $returnItem->quantity);
+                    }
+                }
+            }
+
+            // Adjust customer balance when updating a received return (super admin only)
+            if ($isReceived) {
+                $newTotalUsd   = (float) $customerReturn->total_usd;
+                $newCustomerId = $customerReturn->customer_id;
+
+                CustomersHelper::removeBalance(Customer::find($oldCustomerId), $oldTotalUsd);
+                CustomersHelper::addBalance(Customer::find($newCustomerId), $newTotalUsd);
+            }
         });
 
         $customerReturn->load([
@@ -353,12 +416,10 @@ class CustomerReturnOrdersController extends Controller
             'salesperson:id,name',
             'items.item:id,short_name,description,code',
             'createdBy:id,name',
-            'updatedBy:id,name'
+            'updatedBy:id,name',
         ]);
 
-        $message = 'Direct customer return order updated successfully (pending approval)';
-
-        return ApiResponse::update($message, new CustomerReturnOrderResource($customerReturn));
+        return ApiResponse::update('Direct customer return order updated successfully', new CustomerReturnOrderResource($customerReturn));
     }
 
     public function destroy(CustomerReturn $customerReturn): JsonResponse
