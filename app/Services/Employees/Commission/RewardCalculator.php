@@ -71,13 +71,16 @@ class RewardCalculator
         return ['amount' => $amount, 'formula' => "{$percent}% × {$base} = {$amount}."];
     }
 
-    /** Percent of the current achievement (capped at max) as it grows. No minimum gate. */
+    /** Percent of achievement scaled by progress toward max. No minimum gate. progress=1 when uncapped. */
     private function dynamicPercent(CommissionTargetRule $rule, float $achievement, float $max): array
     {
         $percent = (float) $rule->percent;
-        $base = $max > 0 ? min($achievement, $max) : $achievement;
-        $amount = $base * ($percent / 100);
+        $base     = $max > 0 ? min($achievement, $max) : $achievement;
+        $progress = $max > 0 ? $base / $max : 1.0;
+        $amount   = $base * ($percent / 100) * $progress;
 
-        return ['amount' => $amount, 'formula' => "{$percent}% × {$base} = {$amount}."];
+        $progressPct = round($progress * 100, 4);
+
+        return ['amount' => $amount, 'formula' => "{$percent}% × {$progressPct}% progress × {$base} = {$amount}."];
     }
 }

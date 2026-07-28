@@ -150,8 +150,8 @@ it('treats the auto target as the ceiling (max) with no floor (min = 0)', functi
 
     $result = app(CommissionCalculator::class)->forEmployee($employee->id, 3, 2026);
 
-    // Dynamic percent, min 0 / max 1500 => base = min(3000, 1500) = 1500 => 10% * 1500 = 150.
-    // (If auto were treated as a floor, this would wrongly be 10% * 3000 = 300.)
+    // Dynamic percent, min 0 / max 1500 => base = min(3000, 1500) = 1500 => progress = 1500/1500 = 100% => 10% × 100% × 1500 = 150.
+    // (If auto were treated as a floor, this would wrongly be 10% × 100% × 3000 = 300.)
     expect($result['commissions'][0]['target'])->toMatchArray(['min' => 0.0, 'max' => 1500.0]);
     expect(round($result['total_commission'], 2))->toBe(150.0);
 });
