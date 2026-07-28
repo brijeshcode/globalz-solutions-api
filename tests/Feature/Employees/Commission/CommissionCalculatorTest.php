@@ -252,6 +252,79 @@ it('reports target_reward — the goal amount on full target completion', functi
     expect($payment['reward']['target_reward'])->toBe(500.0);   // the fixed reward
 });
 
+it('dynamic percent (capped) pays percent scaled by progress toward the target', function () {
+    $employee = Employee::factory()->create();
+    $target = CommissionTarget::factory()->create();
+
+    // Target 1000, 10%. Achievement 200 => 20% progress => 10% × 20% × 200 = 4.
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Rule',
+        'type' => 'sale', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'set', 'minimum_amount' => 0, 'maximum_amount' => 1000, 'is_capped' => true,
+        'reward_calculation_type' => 'dynamic', 'reward_type' => 'percent', 'percent' => 10,
+    ]);
+    assignTarget($employee, $target);
+
+    Sale::factory()->create([
+        'salesperson_id' => $employee->id, 'prefix' => Sale::TAXFREEPREFIX,
+        'total_usd' => 200, 'date' => '2026-06-10', 'approved_by' => User::factory(),
+    ]);
+
+    $result = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026);
+
+    expect($result['commissions'][0]['achievement'])->toBe(200.0);
+    expect(round($result['total_commission'], 2))->toBe(4.0);
+    // Effective rate paid on achievement: 10% × 20% progress = 2%.
+    expect($result['commissions'][0]['reward']['effective_percent'])->toBe(2.0);
+});
+
+it('dynamic percent (uncapped) keeps growing past the target', function () {
+    $employee = Employee::factory()->create();
+    $target = CommissionTarget::factory()->create();
+
+    // Target 1000, 10%, NOT capped. Achievement 1500 => 150% progress => 10% × 150% × 1500 = 225.
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Rule',
+        'type' => 'sale', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'set', 'minimum_amount' => 0, 'maximum_amount' => 1000, 'is_capped' => false,
+        'reward_calculation_type' => 'dynamic', 'reward_type' => 'percent', 'percent' => 10,
+    ]);
+    assignTarget($employee, $target);
+
+    Sale::factory()->create([
+        'salesperson_id' => $employee->id, 'prefix' => Sale::TAXFREEPREFIX,
+        'total_usd' => 1500, 'date' => '2026-06-10', 'approved_by' => User::factory(),
+    ]);
+
+    $result = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026);
+
+    expect($result['commissions'][0]['achievement'])->toBe(1500.0);
+    expect(round($result['total_commission'], 2))->toBe(225.0);
+});
+
+it('fixed percent (uncapped) pays percent on the full achievement past the max', function () {
+    $employee = Employee::factory()->create();
+    $target = CommissionTarget::factory()->create();
+
+    // 10% of full achievement, no cap. Achievement 3000, max 2000 => 10% × 3000 = 300.
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Rule',
+        'type' => 'sale', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'set', 'minimum_amount' => 0, 'maximum_amount' => 2000, 'is_capped' => false,
+        'reward_calculation_type' => 'fixed', 'reward_type' => 'percent', 'percent' => 10,
+    ]);
+    assignTarget($employee, $target);
+
+    Sale::factory()->create([
+        'salesperson_id' => $employee->id, 'prefix' => Sale::TAXFREEPREFIX,
+        'total_usd' => 3000, 'date' => '2026-06-10', 'approved_by' => User::factory(),
+    ]);
+
+    $result = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026);
+
+    expect(round($result['total_commission'], 2))->toBe(300.0);
+});
+
 it('returns zero commission when the employee has no assigned target', function () {
     $employee = Employee::factory()->create();
 

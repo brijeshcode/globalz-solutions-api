@@ -37,7 +37,7 @@ class CommissionTargetsStoreRequest extends FormRequest
             'rules.*.amount_type' => 'nullable|in:set,auto',
             'rules.*.auto_target_type' => 'nullable|in:min,max,both',
             'rules.*.number_of_months' => 'nullable|integer|min:0',
-            'rules.*.push_target_percent' => 'nullable|numeric|min:0|max:100',
+            'rules.*.push_target_percent' => 'nullable|numeric|min:-100|max:100',
             'rules.*.minimum_amount' => 'required|numeric|min:0|max:9999999999.9999',
             'rules.*.maximum_amount' => 'required|numeric|min:0|max:9999999999.9999',
             'rules.*.reward_type' => 'nullable|in:fixed,percent',

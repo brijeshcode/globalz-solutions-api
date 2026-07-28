@@ -47,7 +47,8 @@ class RuleCalculator
                 'amount'        => round($reward['amount'], 2),
                 'reward_type'   => $rule->reward_type,
                 'calc_type'     => $rule->reward_calculation_type,
-                'percent'       => (float) $rule->percent,                                    // configured % (used when reward_type = percent)
+                'percent'         => (float) $rule->percent,                                  // configured % (used when reward_type = percent)
+                'effective_percent' => $reward['effective_percent'],                          // actual % paid on achievement (percent × progress)
                 'fixed_reward'  => $rule->fixed_reward !== null ? (float) $rule->fixed_reward : null, // configured amount (used when reward_type = fixed)
                 'target_reward' => $this->targetReward($rule, $max),                          // what the employee gets on FULL target completion
                 'formula'       => $reward['formula'],

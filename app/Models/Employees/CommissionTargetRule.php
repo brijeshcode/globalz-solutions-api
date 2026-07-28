@@ -63,6 +63,7 @@ class CommissionTargetRule extends Model
         'push_target_percent',
         'minimum_amount',
         'maximum_amount',
+        'is_capped',
         'reward_type',
         'percent',
         'fixed_reward',
@@ -73,6 +74,7 @@ class CommissionTargetRule extends Model
     protected $casts = [
         'minimum_amount'      => 'decimal:4',
         'maximum_amount'      => 'decimal:4',
+        'is_capped'           => 'boolean',
         'percent'             => 'decimal:4',
         'fixed_reward'        => 'decimal:4',
         'push_target_percent' => 'decimal:2',
