@@ -3,6 +3,7 @@
 namespace App\Models\Items;
 
 use App\Traits\Authorable;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class PriceListItem extends Model
 {
     /** @use HasFactory<\Database\Factories\Items\PriceListItemFactory> */
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'price_lists';
 
     protected $fillable = [
         'item_code',

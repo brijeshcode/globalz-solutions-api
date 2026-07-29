@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Traits\Authorable;
 use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Carbon\Carbon;
@@ -18,7 +19,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class CommissionTarget extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\CommissionTargetFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasDateFilters;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, HasDateFilters, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'commission_targets';
 
     protected $fillable = [
         'code',

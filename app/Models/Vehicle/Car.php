@@ -4,6 +4,7 @@ namespace App\Models\Vehicle;
 
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Database\Factories\Vehicle\CarFactory;
@@ -13,7 +14,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Car extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, HasBooleanFilters;
+    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, HasBooleanFilters, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'cars';
 
     protected $fillable = ['name', 'plate_number', 'year', 'color', 'make', 'model', 'note', 'is_active'];
 

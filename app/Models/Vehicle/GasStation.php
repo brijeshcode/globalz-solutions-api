@@ -6,13 +6,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Authorable;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Database\Factories\Vehicle\GasStationFactory;
 
 class GasStation extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'gas_stations';
 
     protected $fillable = ['name', 'balance', 'address', 'note', 'is_active'];
 
