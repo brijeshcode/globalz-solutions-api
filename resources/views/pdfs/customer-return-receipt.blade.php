@@ -52,9 +52,9 @@
             padding-bottom: 3px;
             margin-bottom: 6px;
         }
-        .info-row { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+        .info-row { width: 250px; border-collapse: collapse; margin-bottom: 2px; }
         .info-row td { padding: 1px 0; font-size: 8pt; }
-        .info-label { color: #555555; font-weight: bold; width: 110px; }
+        .info-label { color: #555555; font-weight: bold; width: 110px; white-space: nowrap; padding-right: 12px; }
         .info-value { color: #111111; }
 
         /* ── Currency info box ── */
@@ -67,10 +67,10 @@
         .currency-grid { width: 100%; border-collapse: collapse; }
         .currency-grid td { width: 50%; vertical-align: top; padding: 0 6px; font-size: 8pt; }
         .currency-section-title { font-size: 8pt; font-weight: bold; color: #444444; margin-bottom: 4px; }
-        .currency-row { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
-        .currency-row td { padding: 1px 0; font-size: 8pt; }
-        .currency-label { color: #555555; }
-        .currency-value { text-align: right; font-weight: bold; color: #111111; }
+        .currency-row { width: auto; border-collapse: collapse; margin-bottom: 2px; }
+        .currency-row td { padding: 1px 4px 1px 0; font-size: 8pt; }
+        .currency-label { color: #555555; white-space: nowrap; }
+        .currency-value { font-weight: bold; color: #111111; white-space: nowrap; padding-left: 10px; }
         .currency-total-value { font-size: 10pt; font-weight: bold; color: #111111; text-align: right; }
 
         /* ── Items table ── */
@@ -134,9 +134,9 @@
             width: 100%;
             display: block;
         }
-        .meta-row { width: 100%; border-collapse: collapse; margin-bottom: 1px; margin-top: 14px; }
+        .meta-row { width: 200px; border-collapse: collapse; margin-bottom: 1px; margin-top: 14px; }
         .meta-row td { padding: 1px 0; font-size: 7.5pt; }
-        .meta-label { color: #555555; }
+        .meta-label { color: #555555; white-space: nowrap; }
         .meta-value { text-align: left; font-weight: bold; color: #111111; }
 
         /* ── Signatures ── */
@@ -155,7 +155,7 @@
             @elseif(!empty($company['name']))
                 <div class="company-name">{{ $company['name'] }}</div>
             @endif
-            @if(!empty($company['tax_number']))
+            @if(!empty($company['tax_number']) && $customerReturn->prefix === 'RTN')
                 <div class="tax-number">{{ $company['tax_number'] }}</div>
             @endif
         </div>
@@ -203,13 +203,17 @@
                         <td class="info-label">Print Date:</td>
                         <td class="info-value">{{ now()->format('d/m/Y') }}</td>
                     </tr>
+                    <tr>
+                        <td class="info-label">Currency:</td>
+                        <td class="info-value">{{ $customerReturn->currency?->name ?? '-' }}</td>
+                    </tr>
                 </table>
             </td>
         </tr>
     </table>
 
     {{-- ── Currency Info (only when multi-currency) ── --}}
-    @if($customerReturn->currency && $customerReturn->currency->code !== 'USD')
+    @if($customerReturn->currency && $customerReturn->currency->code !== 'USD' && false)
     <div class="currency-box">
         <table class="currency-grid">
             <tr>
@@ -254,14 +258,22 @@
 
     {{-- ── Return Items Table ── --}}
     <div class="section-title">Return Items</div>
-    @php $isTax = $customerReturn->prefix === 'RTN'; @endphp
+    @php
+        $isTax   = $customerReturn->prefix === 'RTN';
+        $hasSale = $customerReturn->items->contains(fn($i) => !is_null($i->sale));
+    @endphp
     <table class="items-table">
         <thead>
             @if($isTax)
             <tr>
                 <th style="width:4%;">#</th>
                 <th style="width:8%;">SKU</th>
+                @if($hasSale)
+                <th style="width:35%;">Description</th>
+                <th class="text-right" style="width:10%;">Return from</th>
+                @else
                 <th style="width:45%;">Description</th>
+                @endif
                 <th class="text-right" style="width:10%;">Price</th>
                 <th class="text-right" style="width:8%;">Disc.%</th>
                 <th class="text-right" style="width:8%;">Tax %</th>
@@ -272,7 +284,12 @@
             <tr>
                 <th style="width:4%;">#</th>
                 <th style="width:8%;">Item Code</th>
+                @if($hasSale)
                 <th style="width:53%;">Item Details</th>
+                <th class="text-right" style="width:10%;">Return from</th>
+                @else
+                <th style="width:63%;">Item Details</th>
+                @endif
                 <th class="text-right" style="width:10%;">Price</th>
                 <th class="text-right" style="width:8%;">Disc.</th>
                 <th class="text-right" style="width:7%;">Qty.</th>
@@ -287,6 +304,7 @@
                 <td class="text-center">{{ $index + 1 }}</td>
                 <td>{{ $item->item->code ?? $item->item_code ?? '-' }}</td>
                 <td>{{ $item->item->description ?? $item->item->short_name ?? '-' }}</td>
+                @if($hasSale)<td>{{ $item->sale?->code ? $item->sale->prefix . $item->sale->code : '-' }}</td>@endif
                 <td class="text-right">{{ number_format($item->price ?? $item->unit_price, 2) }}</td>
                 <td class="text-right">{{ number_format($item->discount_percent ?? 0, 2) }}%</td>
                 <td class="text-right">{{ number_format($item->tax_percent ?? $item->item->taxCode->tax_percent ?? 0, 2) }}%</td>
@@ -298,6 +316,7 @@
                 <td class="text-center">{{ $index + 1 }}</td>
                 <td>{{ $item->item->code ?? $item->item_code ?? '-' }}</td>
                 <td>{{ $item->item->description ?? $item->item->short_name ?? '-' }}</td>
+                @if($hasSale)<td>{{ $item->sale?->code ? $item->sale->prefix . $item->sale->code : '-' }}</td>@endif
                 <td class="text-right">{{ number_format($item->price ?? $item->unit_price, 2) }}</td>
                 <td class="text-right">{{ number_format($item->discount_percent ?? 0, 2) }}%</td>
                 <td class="text-right">{{ $item->quantity }}</td>
@@ -309,27 +328,27 @@
         <tfoot>
             @if($isTax)
             <tr>
-                <td colspan="{{ $isTax ? 7 : 6 }}" class="text-right">Subtotal:</td>
+                <td colspan="{{ $isTax ? ($hasSale ? 8 : 7) : ($hasSale ? 7 : 6) }}" class="text-right">Subtotal:</td>
                 <td class="text-right">
-                    {{ $customerReturn->currency->symbol ?? '' }} {{ number_format($customerReturn->subtotal_taxable_amount, 2) }}
+                    {{ $customerReturn->currency?->symbol ?? '' }} {{ number_format($customerReturn->subtotal_taxable_amount, 2) }}
                 </td>
             </tr>
             <tr>
-                <td colspan="{{ $isTax ? 7 : 6 }}" class="text-right">Tax:</td>
+                <td colspan="{{ $isTax ? ($hasSale ? 8 : 7) : ($hasSale ? 7 : 6) }}" class="text-right">Tax:</td>
                 <td class="text-right">
-                    {{ $customerReturn->currency->symbol ?? '' }} {{ number_format($customerReturn->total_tax_amount, 2) }}
+                    {{ $customerReturn->currency?->symbol ?? '' }} {{ number_format($customerReturn->total_tax_amount, 2) }}
                 </td>
             </tr>
             @endif
             <tr>
-                <td colspan="{{ $isTax ? 7 : 6 }}" class="text-right">Total:</td>
+                <td colspan="{{ $isTax ? ($hasSale ? 8 : 7) : ($hasSale ? 7 : 6) }}" class="text-right">Total:</td>
                 <td class="text-right">
-                    {{ $customerReturn->currency->symbol ?? '' }} {{ number_format($customerReturn->total, 2) }}
+                    {{ $customerReturn->currency?->symbol ?? '' }} {{ number_format($customerReturn->total, 2) }}
                 </td>
             </tr>
             @if($customerReturn->currency && $customerReturn->currency->code !== 'USD' && $customerReturn->total_usd)
             <tr>
-                <td colspan="{{ $isTax ? 7 : 6 }}" class="text-right">Total (USD):</td>
+                <td colspan="{{ $isTax ? ($hasSale ? 8 : 7) : ($hasSale ? 7 : 6) }}" class="text-right">Total (USD):</td>
                 <td class="text-right">$ {{ number_format($customerReturn->total_usd, 2) }}</td>
             </tr>
             @endif
