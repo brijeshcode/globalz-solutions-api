@@ -35,6 +35,7 @@ use App\Models\Setups\SupplierType;
 use App\Models\Setups\TaxCode;
 use App\Models\Setups\Warehouse;
 use App\Models\Vehicle\Car;
+use App\Models\Vehicle\GasStation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -93,6 +94,7 @@ class ListDataController extends Controller
 
             // vehicles
             'cars' => $this->cars(),
+            'gasStations' => $this->gasStations(),
 
             // generals
             'countries' => $this->countries(),
@@ -408,6 +410,11 @@ class ListDataController extends Controller
     private function cars()
     {
         return Car::where('is_active', true)->orderBy('name')->get(['id', 'name', 'plate_number']);
+    }
+
+    private function gasStations()
+    {
+        return GasStation::where('is_active', true)->orderBy('name')->get(['id', 'name', 'address']);
     }
 
     // generals
