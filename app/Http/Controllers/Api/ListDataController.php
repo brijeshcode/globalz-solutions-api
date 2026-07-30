@@ -266,13 +266,17 @@ class ListDataController extends Controller
 
     private function itemPriceLists()
     {
-        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->active()->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default_inv', 'is_default_inx']);
+        $with = ['priceListItems' => fn($q) => $q->select(['id', 'price_list_id', 'item_code', 'sell_price', 'item_description', 'item_id'])
+            ->whereHas('item', fn($q) => $q->where('is_active', true))];
+
+        return PriceList::with($with)->active()->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default_inv', 'is_default_inx']);
     }
 
     private function itemDefaultPriceList()
     {
         $fields = ['id', 'code', 'description', 'item_count', 'is_default_inv', 'is_default_inx'];
-        $with = 'priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id';
+        $with = ['priceListItems' => fn($q) => $q->select(['id', 'price_list_id', 'item_code', 'sell_price', 'item_description', 'item_id'])
+            ->whereHas('item', fn($q) => $q->where('is_active', true))];
 
         return [
             'inv' => PriceList::with($with)->select($fields)->defaultInv()->first(),
