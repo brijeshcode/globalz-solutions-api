@@ -170,7 +170,7 @@ class PriceListsController extends Controller
     public function show(PriceList $priceList): JsonResponse
     {
         $priceList->load([
-            'items',
+            'items.item',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);

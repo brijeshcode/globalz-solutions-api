@@ -42,8 +42,12 @@ class PriceListResource extends JsonResource
             }),
 
             // Relationships
-            'items' => PriceListItemResource::collection($this->whenLoaded('items')),
-            'price_list_items' => PriceListItemResource::collection($this->whenLoaded('priceListItems')),
+            'items' => PriceListItemResource::collection($this->whenLoaded('items', function () {
+                return $this->items->filter(fn($pli) => $pli->item?->is_active);
+            })),
+            'price_list_items' => PriceListItemResource::collection($this->whenLoaded('priceListItems', function () {
+                return $this->priceListItems->filter(fn($pli) => $pli->item?->is_active);
+            })),
             'createdBy' => $this->whenLoaded('createdBy', function () {
                 return [
                     'id' => $this->createdBy->id,
