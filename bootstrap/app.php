@@ -51,6 +51,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // Return clean JSON response instead of stack trace (reason already logged in OriginTenantFinder)
         $exceptions->renderable(function (NoCurrentTenant $e, $request) {
+            if ($request->attributes->get('tenant_inactive')) {
+                return response()->json([
+                    'message' => 'This account is inactive. Please contact your administrator.',
+                ], 403);
+            }
             return response()->json([
                 'message' => 'Unable to identify system. Please check your domain configuration.',
             ], 403);

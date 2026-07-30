@@ -76,7 +76,6 @@ class OriginTenantFinder extends TenantFinder
 
             $tenant = $tenantModelClass::on($landlordConnection)
                 ->where('domain', $domain)
-                ->where('is_active', true)
                 ->first();
         } catch (QueryException $e) {
             Log::warning('Tenant DB error: ' . $e->getMessage());
@@ -85,6 +84,13 @@ class OriginTenantFinder extends TenantFinder
 
         if (!$tenant) {
             Log::warning('No tenant found for domain', ['domain' => $domain]);
+            return null;
+        }
+
+        if (!$tenant->is_active) {
+            Log::warning('Inactive tenant attempted access', ['domain' => $domain]);
+            $request->attributes->set('tenant_inactive', true);
+            return null;
         }
 
         return $tenant;
