@@ -88,6 +88,66 @@ it('computes a sale rule as net sales (sales - returns)', function () {
     expect(round($result['total_commission'], 2))->toBe(80.0);
 });
 
+it('returns a plain-language note explaining each step of the rule', function () {
+    $employee = Employee::factory()->create();
+    $target = CommissionTarget::factory()->create();
+
+    // Payment rule, capped 10% up to a goal of 1,000. Payment 1,000 − Return 200 => 800 counted.
+    // Progress 80% => 10% × 80% × 800 = 64.
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Rule',
+        'type' => 'payment', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'set', 'minimum_amount' => 0, 'maximum_amount' => 1000, 'is_capped' => true,
+        'reward_calculation_type' => 'dynamic', 'reward_type' => 'percent', 'percent' => 10,
+    ]);
+    assignTarget($employee, $target);
+
+    CustomerPayment::factory()->create([
+        'prefix' => CustomerPayment::TAXFREEPREFIX, 'amount_usd' => 1000,
+        'date' => '2026-06-12', 'approved_by' => User::factory(),
+        'account_id' => \App\Models\Accounts\Account::factory(),
+        'customer_id' => \App\Models\Customers\Customer::factory()->create(['salesperson_id' => $employee->id]),
+    ]);
+    \App\Models\Customers\CustomerReturn::factory()->approved()->received()->create([
+        'salesperson_id' => $employee->id, 'prefix' => \App\Models\Customers\CustomerReturn::TAXFREEPREFIX,
+        'total_usd' => 200, 'date' => '2026-06-14',
+    ]);
+
+    $note = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026)['commissions'][0]['note'];
+
+    expect($note)->toBe([
+        ['step' => 'Month',        'text' => 'For June 2026.'],
+        ['step' => 'What counted', 'text' => 'You collected 1,000.00 in payments. We removed 200.00 for returns. That leaves 800.00.'],
+        ['step' => 'Your goal',    'text' => 'Your goal was 1,000.00.'],
+        ['step' => 'You earned',   'text' => 'You reached 80% of your goal, so you earned 64.00.'],
+    ]);
+});
+
+it('note explains plainly when the minimum is not reached', function () {
+    $employee = Employee::factory()->create();
+    $target = CommissionTarget::factory()->create();
+
+    // Fixed reward gated behind a 1,000 minimum; only 600 in sales => no reward.
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Rule',
+        'type' => 'sale', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'set', 'minimum_amount' => 1000, 'maximum_amount' => 0,
+        'reward_calculation_type' => 'fixed', 'reward_type' => 'fixed', 'fixed_reward' => 500, 'percent' => 0,
+    ]);
+    assignTarget($employee, $target);
+
+    Sale::factory()->create([
+        'salesperson_id' => $employee->id, 'prefix' => Sale::TAXFREEPREFIX,
+        'total_usd' => 600, 'date' => '2026-06-10', 'approved_by' => User::factory(),
+    ]);
+
+    $note = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026)['commissions'][0]['note'];
+
+    expect($note[1]['text'])->toBe('You made 600.00 in sales.');
+    expect($note[2]['text'])->toBe('You needed to reach at least 1,000.00.');
+    expect($note[3]['text'])->toBe('You did not reach the minimum of 1,000.00, so there is no reward this time.');
+});
+
 it('computes a payment rule as net payments (payments - returns)', function () {
     $employee = Employee::factory()->create();
     $target = CommissionTarget::factory()->create();

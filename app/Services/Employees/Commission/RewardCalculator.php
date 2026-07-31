@@ -7,8 +7,11 @@ use InvalidArgumentException;
 
 /**
  * Pure reward math — the four combinations from docs/commission-calculation.md (Step 5 × Step 6).
- * No database access. Given an achievement and the target's min/max, returns the money + a
- * human-readable formula string.
+ * No database access. Given an achievement and the target's min/max, returns the money, a
+ * human-readable formula string (technical), and a plain-language note (for the salesman).
+ *
+ * The plain note is generated right here next to the math, so it can never drift from the
+ * numbers it describes — change the formula and the note changes with it.
  *
  * Gating rule: "fixed" calc types pay only once achievement reaches the minimum; "dynamic"
  * calc types scale from 0 toward the maximum (no minimum gate).
@@ -23,7 +26,7 @@ use InvalidArgumentException;
  */
 class RewardCalculator
 {
-    /** @return array{amount: float, formula: string, effective_percent: float} */
+    /** @return array{amount: float, formula: string, note: string, effective_percent: float} */
     public function calculate(CommissionTargetRule $rule, float $achievement, float $min, float $max): array
     {
         $key = "{$rule->reward_calculation_type}:{$rule->reward_type}";
@@ -48,10 +51,18 @@ class RewardCalculator
         $fixed = (float) $rule->fixed_reward;
 
         if ($achievement < $min) {
-            return ['amount' => 0.0, 'formula' => "Achievement {$achievement} below minimum {$min}; no reward."];
+            return [
+                'amount'  => 0.0,
+                'formula' => "Achievement {$achievement} below minimum {$min}; no reward.",
+                'note'    => "You did not reach the minimum of {$this->money($min)}, so there is no reward this time.",
+            ];
         }
 
-        return ['amount' => $fixed, 'formula' => "Reached minimum {$min}; full fixed reward {$fixed}."];
+        return [
+            'amount'  => $fixed,
+            'formula' => "Reached minimum {$min}; full fixed reward {$fixed}.",
+            'note'    => "You reached the minimum, so you earned the full reward of {$this->money($fixed)}.",
+        ];
     }
 
     /** Fixed reward earned proportionally toward the maximum. Scales from 0; capped at the fixed reward when is_capped. */
@@ -61,27 +72,42 @@ class RewardCalculator
 
         if ($max <= 0) {
             $amount = $achievement > 0 ? $fixed : 0.0;
-            return ['amount' => $amount, 'formula' => "No maximum set; paid full fixed reward {$fixed}."];
+            $note = $achievement > 0
+                ? "You earned the full reward of {$this->money($fixed)}."
+                : "There was nothing to count, so there is no reward this time.";
+            return ['amount' => $amount, 'formula' => "No maximum set; paid full fixed reward {$fixed}.", 'note' => $note];
         }
 
         $ratio = $rule->is_capped ? min($achievement, $max) / $max : $achievement / $max;
         $amount = $ratio * $fixed;
 
-        return ['amount' => $amount, 'formula' => "{$ratio} × {$fixed} = {$amount}."];
+        $note = $ratio >= 1
+            ? "You reached your full goal, so you earned {$this->money($amount)}."
+            : "You reached " . round($ratio * 100) . "% of your goal, so you earned {$this->money($amount)}.";
+
+        return ['amount' => $amount, 'formula' => "{$ratio} × {$fixed} = {$amount}.", 'note' => $note];
     }
 
     /** Percent of the achievement (capped at max when is_capped) once the minimum is reached, else 0. */
     private function fixedPercent(CommissionTargetRule $rule, float $achievement, float $min, float $max): array
     {
         if ($achievement < $min) {
-            return ['amount' => 0.0, 'formula' => "Achievement {$achievement} below minimum {$min}; no reward."];
+            return [
+                'amount'  => 0.0,
+                'formula' => "Achievement {$achievement} below minimum {$min}; no reward.",
+                'note'    => "You did not reach the minimum of {$this->money($min)}, so there is no reward this time.",
+            ];
         }
 
         $percent = (float) $rule->percent;
         $base = ($max > 0 && $rule->is_capped) ? min($achievement, $max) : $achievement;
         $amount = $base * ($percent / 100);
 
-        return ['amount' => $amount, 'formula' => "{$percent}% × {$base} = {$amount}."];
+        return [
+            'amount'  => $amount,
+            'formula' => "{$percent}% × {$base} = {$amount}.",
+            'note'    => "You earned {$percent}% of {$this->money($base)}, which is {$this->money($amount)}.",
+        ];
     }
 
     /**
@@ -97,7 +123,11 @@ class RewardCalculator
 
         if ($max <= 0) {
             $amount = $achievement * ($percent / 100);
-            return ['amount' => $amount, 'formula' => "No target set; {$percent}% × {$achievement} = {$amount}."];
+            return [
+                'amount'  => $amount,
+                'formula' => "No target set; {$percent}% × {$achievement} = {$amount}.",
+                'note'    => "You earned {$percent}% of {$this->money($achievement)}, which is {$this->money($amount)}.",
+            ];
         }
 
         $base     = $rule->is_capped ? min($achievement, $max) : $achievement;
@@ -106,6 +136,16 @@ class RewardCalculator
 
         $progressPct = round($progress * 100, 4);
 
-        return ['amount' => $amount, 'formula' => "{$percent}% × {$progressPct}% progress × {$base} = {$amount}."];
+        return [
+            'amount'  => $amount,
+            'formula' => "{$percent}% × {$progressPct}% progress × {$base} = {$amount}.",
+            'note'    => "You reached " . round($progress * 100) . "% of your goal, so you earned {$this->money($amount)}.",
+        ];
+    }
+
+    /** Money for the plain note: thousands separators, 2 decimals (e.g. 1,000.00). */
+    private function money(float $amount): string
+    {
+        return number_format($amount, 2);
     }
 }
