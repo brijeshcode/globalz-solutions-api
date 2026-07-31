@@ -59,6 +59,9 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // Reuse the landlord connection across requests to stay under Hostinger's
+                // ~20 new-connections/sec cap (see db:measure-churn). Safe: one shared user.
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
             ]) : [],
         ],
 
@@ -79,6 +82,9 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // Separate flag: persistent TENANT connections multiply per tenant x worker,
+                // so only enable after confirming headroom under max_user_connections (75).
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT_TENANT', false),
             ]) : [],
         ],
 
