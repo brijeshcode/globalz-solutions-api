@@ -278,11 +278,12 @@ it('dynamic percent (capped) pays percent scaled by progress toward the target',
     expect($result['commissions'][0]['reward']['effective_percent'])->toBe(2.0);
 });
 
-it('dynamic percent (uncapped) keeps growing past the target', function () {
+it('dynamic percent (uncapped) pays a flat percent of achievement once the target is reached', function () {
     $employee = Employee::factory()->create();
     $target = CommissionTarget::factory()->create();
 
-    // Target 1000, 10%, NOT capped. Achievement 1500 => 150% progress => 10% × 150% × 1500 = 225.
+    // Target 1000, 10%, NOT capped. Achievement 1500 completes the max => progress clamped to 100%
+    // but base stays the full achievement => flat 10% × 1500 = 150.
     CommissionTargetRule::create([
         'commission_target_id' => $target->id, 'comission_label' => 'Rule',
         'type' => 'sale', 'period' => 'monthly', 'include_type' => 'Own',
@@ -299,7 +300,7 @@ it('dynamic percent (uncapped) keeps growing past the target', function () {
     $result = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026);
 
     expect($result['commissions'][0]['achievement'])->toBe(1500.0);
-    expect(round($result['total_commission'], 2))->toBe(225.0);
+    expect(round($result['total_commission'], 2))->toBe(150.0);
 });
 
 it('fixed percent (uncapped) pays percent on the full achievement past the max', function () {
