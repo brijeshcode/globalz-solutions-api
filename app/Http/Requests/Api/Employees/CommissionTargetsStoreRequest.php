@@ -40,6 +40,7 @@ class CommissionTargetsStoreRequest extends FormRequest
             'rules.*.push_target_percent' => 'nullable|numeric|min:-100|max:100',
             'rules.*.minimum_amount' => 'required|numeric|min:0|max:9999999999.9999',
             'rules.*.maximum_amount' => 'required|numeric|min:0|max:9999999999.9999',
+            'rules.*.is_capped' => 'nullable|boolean',
             'rules.*.reward_type' => 'nullable|in:fixed,percent',
             'rules.*.percent' => 'required|numeric|min:0|max:100',
             'rules.*.fixed_reward' => 'nullable|numeric|min:0',
