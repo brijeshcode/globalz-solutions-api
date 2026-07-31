@@ -15,8 +15,10 @@ use InvalidArgumentException;
  * Edge rules: min = 0 means no threshold; max = 0 means no upper cap (use full achievement).
  *
  * Capping: max is the target. When the rule's is_capped is true, the reward stops growing
- * once achievement reaches max (base is clamped to max, progress clamped to 100%). When
- * is_capped is false, max is only the progress target and the reward keeps growing past it.
+ * once achievement reaches max (base is clamped to max). When is_capped is false the base stays
+ * at the full achievement, so the reward keeps growing past max. For dynamic:percent, progress
+ * toward max is always clamped to 100%, so once max is reached an uncapped reward is simply a
+ * flat percent of achievement (linear growth, not quadratic).
  * is_capped has no effect on fixed:fixed (it never uses max).
  */
 class RewardCalculator
@@ -84,7 +86,9 @@ class RewardCalculator
 
     /**
      * Percent of achievement scaled by progress toward max. No minimum gate.
-     * is_capped clamps base and progress at max/100%; otherwise both grow past the target.
+     * Progress is always clamped to 100% (once max is reached). is_capped also clamps the base
+     * to max, so the reward goes flat past max; uncapped keeps base = full achievement, so once
+     * max is reached the reward is a flat percent of achievement (grows linearly, not quadratically).
      * max = 0 means no target, so progress = 1 (flat percent).
      */
     private function dynamicPercent(CommissionTargetRule $rule, float $achievement, float $max): array
@@ -97,7 +101,7 @@ class RewardCalculator
         }
 
         $base     = $rule->is_capped ? min($achievement, $max) : $achievement;
-        $progress = $base / $max;
+        $progress = min($base / $max, 1.0);
         $amount   = $base * ($percent / 100) * $progress;
 
         $progressPct = round($progress * 100, 4);
