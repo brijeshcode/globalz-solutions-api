@@ -88,6 +88,37 @@ it('computes a sale rule as net sales (sales - returns)', function () {
     expect(round($result['total_commission'], 2))->toBe(80.0);
 });
 
+it('computes a payment rule as net payments (payments - returns)', function () {
+    $employee = Employee::factory()->create();
+    $target = CommissionTarget::factory()->create();
+
+    CommissionTargetRule::create([
+        'commission_target_id' => $target->id, 'comission_label' => 'Rule',
+        'type' => 'payment', 'period' => 'monthly', 'include_type' => 'Own',
+        'amount_type' => 'set', 'minimum_amount' => 0, 'maximum_amount' => 0,
+        'reward_calculation_type' => 'dynamic', 'reward_type' => 'percent', 'percent' => 10,
+    ]);
+    assignTarget($employee, $target);
+
+    // Payment 1000 (taxfree) ; Return 200 (taxfree) => net achievement 800.
+    CustomerPayment::factory()->create([
+        'prefix' => CustomerPayment::TAXFREEPREFIX, 'amount_usd' => 1000,
+        'date' => '2026-06-12', 'approved_by' => User::factory(),
+        'account_id' => \App\Models\Accounts\Account::factory(),
+        'customer_id' => \App\Models\Customers\Customer::factory()->create(['salesperson_id' => $employee->id]),
+    ]);
+    \App\Models\Customers\CustomerReturn::factory()->approved()->received()->create([
+        'salesperson_id' => $employee->id, 'prefix' => \App\Models\Customers\CustomerReturn::TAXFREEPREFIX,
+        'total_usd' => 200, 'date' => '2026-06-14',
+    ]);
+
+    $result = app(CommissionCalculator::class)->forEmployee($employee->id, 6, 2026);
+
+    // net 800 ; dynamic percent no cap => 10% * 800 = 80
+    expect($result['commissions'][0]['achievement'])->toBe(800.0);
+    expect(round($result['total_commission'], 2))->toBe(80.0);
+});
+
 it('computes a fuel rule as (payments - returns + sales) / 2, VAT excluded', function () {
     $employee = Employee::factory()->create();
     $target = CommissionTarget::factory()->create();

@@ -70,7 +70,7 @@ class RuleCalculator
     /**
      * Phase 2+3 — net achievement for the collection type (sale/payment/fuel), all VAT-excluded.
      *   sale    = sales − returns
-     *   payment = payments only
+     *   payment = payments − returns
      *   fuel    = (payments − returns + sales) / 2
      *
      * @return array{amount: float, breakdown: array<string, mixed>}
@@ -98,8 +98,12 @@ class RuleCalculator
     private function paymentAchievement(string $include, int $employeeId, Carbon $start, Carbon $end): array
     {
         $payments = $this->aggregator->payments($employeeId, $include, $start, $end);
+        $returns  = $this->aggregator->returns($employeeId, $include, $start, $end);
 
-        return ['amount' => $payments['amount'], 'breakdown' => ['payments' => $payments['daily']]];
+        return [
+            'amount'    => $payments['amount'] - $returns['amount'],
+            'breakdown' => ['payments' => $payments['daily'], 'returns' => $returns['daily']],
+        ];
     }
 
     private function fuelAchievement(string $include, int $employeeId, Carbon $start, Carbon $end): array
