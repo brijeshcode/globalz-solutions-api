@@ -38,6 +38,7 @@ class CommissionTargetResource extends JsonResource
                         'push_target_percent' => $rule->push_target_percent,
                         'minimum_amount' => $rule->minimum_amount,
                         'maximum_amount' => $rule->maximum_amount,
+                        'is_capped' => $rule->is_capped,
                         'reward_type' => $rule->reward_type,
                         'percent' => $rule->percent,
                         'fixed_reward' => $rule->fixed_reward,
