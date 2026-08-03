@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Contracts\ModuleLockable;
 use App\Models\Setting;
 use App\Models\UserSetting;
 use Illuminate\Support\Facades\Auth;
@@ -247,6 +248,30 @@ class SettingsHelper
     }
 
     /**
+     * Bug lock helpers
+     */
+    public static function isBugLockEnabled(): bool
+    {
+        return (bool) self::get('system', 'bug_lock', false);
+    }
+
+    public static function getBugLockMessage(): string
+    {
+        return (string) self::get('system', 'bug_lock_message', \App\Http\Controllers\Api\BugLockController::DEFAULT_MESSAGE);
+    }
+
+    public static function enableBugLock(string $message): void
+    {
+        self::set('system', 'bug_lock', true, Setting::TYPE_BOOLEAN, 'Bug lock toggle');
+        self::set('system', 'bug_lock_message', $message, Setting::TYPE_STRING, 'Bug lock message shown to users');
+    }
+
+    public static function disableBugLock(): void
+    {
+        self::set('system', 'bug_lock', false, Setting::TYPE_BOOLEAN, 'Bug lock toggle');
+    }
+
+    /**
      * Feature flags / toggles
      */
     public static function isFeatureEnabled(string $feature): bool
@@ -330,5 +355,42 @@ class SettingsHelper
         };
 
         return $contextSize;
+    }
+
+    /**
+     * Module lock helpers
+     */
+    public static function moduleLockDays(string $module): int
+    {
+        return (int) self::get('module_locks', $module, 0);
+    }
+
+    /**
+     * When enabled, all edit/delete requests are blocked for everyone except
+     * super admins (enforced by EnforceGlobalEditLock middleware).
+     */
+    public static function isGlobalEditBlocked(): bool
+    {
+        return (bool) self::get('module_locks', 'block_global_edit', false);
+    }
+
+    public static function isRecordLocked(ModuleLockable $record): bool
+    {
+        // Console commands and queued jobs have no authenticated user and must
+        // stay able to modify old records (e.g. sale profit recalculation).
+        if (!Auth::check() || RoleHelper::canSuperAdmin()) {
+            return false;
+        }
+
+        if ($record->isModuleLockExempt()) {
+            return false;
+        }
+
+        $days = self::moduleLockDays($record->moduleLockKey());
+        $date = $record->moduleLockDate();
+
+        return $days > 0
+            && $date !== null
+            && $date->lt(now()->subDays($days)->startOfDay());
     }
 }

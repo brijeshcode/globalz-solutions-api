@@ -15,6 +15,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Sale;
 use App\Models\Customers\SaleItems;
 use App\Models\Customers\Customer;
+use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
 use App\Models\Items\PriceList;
 use App\Services\Inventory\InventoryService;
@@ -148,6 +149,7 @@ class SalesController extends Controller
 
                     // Assign all calculated values to sale item
                     $saleItems[$index]['cost_price'] = $costPrice;
+                    $saleItems[$index]['cost_history_id'] = ItemPriceHistory::currentRowIdFor($itemData['item_id']);
                     $saleItems[$index]['price_usd'] = $sellingPriceUsd;
                     $saleItems[$index]['discount_percent'] = $discountPercent;
                     $saleItems[$index]['unit_discount_amount'] = $unitDiscountAmount;
@@ -222,7 +224,7 @@ class SalesController extends Controller
             return ApiResponse::customError('Sale is not approved', 404);
         }
 
-        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number,google_map', 'salesperson:id,name', 'createdBy:id,name', 'updatedBy:id,name', 'approvedBy:id,name']);
+        $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number,google_map', 'salesperson:id,name', 'createdBy:id,name', 'updatedBy:id,name', 'approvedBy:id,name', 'statusHistories.changedBy', 'statusHistories.car']);
 
         return ApiResponse::show(
             'Sale retrieved successfully',
@@ -327,6 +329,7 @@ class SalesController extends Controller
 
                         // Assign all calculated values to sale item
                         $saleItems[$index]['cost_price'] = $costPrice;
+                        $saleItems[$index]['cost_history_id'] = ItemPriceHistory::currentRowIdFor($itemData['item_id']);
                         $saleItems[$index]['price_usd'] = $sellingPriceUsd;
                         $saleItems[$index]['discount_percent'] = $discountPercent;
                         $saleItems[$index]['unit_discount_amount'] = $unitDiscountAmount;
@@ -571,6 +574,18 @@ class SalesController extends Controller
         }
 
         $sale->update(['status' => $request->status]);
+
+        $historyData = [
+            'status'     => $request->status,
+            'changed_by' => auth()->id(),
+        ];
+
+        if ($request->status === 'Delivered' && $request->filled('car_id')) {
+            $historyData['car_id'] = $request->integer('car_id');
+        }
+
+        $sale->statusHistories()->create($historyData);
+
         return ApiResponse::update(
             'Sale status updated successfully',
             new SaleResource($sale)
@@ -739,7 +754,7 @@ class SalesController extends Controller
     private function saleQuery(Request $request)
     {
         $query = Sale::query()
-            ->with(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name', 'createdBy:id,name', 'updatedBy:id,name', 'approvedBy:id,name'])
+            ->with(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number', 'salesperson:id,name', 'createdBy:id,name', 'updatedBy:id,name', 'approvedBy:id,name', 'statusHistories'])
             ->approved()
             ->searchable($request)
             ;
@@ -782,6 +797,10 @@ class SalesController extends Controller
             }
         } elseif ($request->has('warehouse_id')) {
             $query->byWarehouse($request->warehouse_id);
+        }
+
+        if ($request->has('prefix')) {
+            $query->where('prefix', $request->prefix);
         }
 
         if ($request->has('warehouse_id')) {

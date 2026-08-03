@@ -7,8 +7,9 @@ use App\Services\Mirror\DatabaseMirrorService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Spatie\Multitenancy\Jobs\NotTenantAware;
 
-class MirrorTenantJob implements ShouldQueue
+class MirrorTenantJob implements ShouldQueue, NotTenantAware
 {
     use Queueable;
 

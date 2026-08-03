@@ -12,7 +12,9 @@ use App\Traits\HasDateWithTime;
 use App\Traits\HasDocuments;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -110,6 +112,23 @@ class IncomeTransaction extends Model
     public function scopeByCode($query, $code)
     {
         return $query->where('code', $code);
+    }
+
+    protected function searchInAllFields(Builder $query, string $term): Builder
+    {
+        $searchableFields = $this->getSearchableFields();
+
+        return $query->where(function ($subQuery) use ($searchableFields, $term) {
+            foreach ($searchableFields as $field) {
+                if ($field === 'code') {
+                    // Strip the INC prefix so searching "INC100" matches stored value "100"
+                    $codeTerm = preg_replace('/^' . preg_quote(self::PREFIX, '/') . '/i', '', $term);
+                    $subQuery->orWhere($field, 'LIKE', "%{$codeTerm}%");
+                } else {
+                    $subQuery->orWhere($field, 'LIKE', "%{$term}%");
+                }
+            }
+        });
     }
 
     /**

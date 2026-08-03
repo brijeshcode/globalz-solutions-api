@@ -19,7 +19,13 @@ class CustomerReturnItemFactory extends Factory
         $quantity = $this->faker->randomFloat(3, 1, 100);
         $price = $this->faker->randomFloat(2, 10, 500);
         $discountPercent = $this->faker->optional(0.3)->randomFloat(2, 0, 20);
+        $unitDiscountAmount = $discountPercent ? 0 : ($this->faker->optional(0.2)->randomFloat(2, 1, 50) ?? 0);
         $taxPercent = $this->faker->randomFloat(2, 0, 25);
+
+        // Taxable base = unit price after discount, before tax
+        $unitTaxable = $price - ($discountPercent ? $price * ($discountPercent / 100) : $unitDiscountAmount);
+        $totalTaxable = $unitTaxable * $quantity;
+        $totalTax = $totalTaxable * ($taxPercent / 100);
 
         return [
             'item_code' => $this->faker->bothify('ITEM-####'),
@@ -28,8 +34,14 @@ class CustomerReturnItemFactory extends Factory
             'quantity' => $quantity,
             'price' => $price,
             'discount_percent' => $discountPercent ?? 0,
-            'unit_discount_amount' => $discountPercent ? 0 : $this->faker->optional(0.2)->randomFloat(2, 1, 50),
+            'unit_discount_amount' => $unitDiscountAmount,
             'tax_percent' => $taxPercent,
+            'unit_taxable_amount' => $unitTaxable,
+            'unit_taxable_amount_usd' => $unitTaxable,
+            'total_taxable_amount' => $totalTaxable,
+            'total_taxable_amount_usd' => $totalTaxable,
+            'total_tax_amount' => $totalTax,
+            'total_tax_amount_usd' => $totalTax,
             'total_volume_cbm' => $this->faker->randomFloat(4, 0.01, 1),
             'total_weight_kg' => $this->faker->randomFloat(4, 0.1, 10),
             'note' => $this->faker->optional()->sentence(),

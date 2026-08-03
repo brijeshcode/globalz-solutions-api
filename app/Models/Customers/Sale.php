@@ -2,7 +2,9 @@
 
 namespace App\Models\Customers;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\CommonHelper;
+use Carbon\CarbonInterface;
 use App\Models\Employees\Employee;
 use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
@@ -23,10 +25,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Customers\SaleStatusHistory;
+use App\Models\Inventory\ItemPriceHistory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
-class Sale extends Model
+class Sale extends Model implements ModuleLockable
 {
     public const TAXSALEPREFIX = 'INV';
     public const NOTAXSALEPREFIX = 'INX';
@@ -127,6 +131,11 @@ class Sale extends Model
 
     protected $defaultSortField = 'id';
     protected $defaultSortDirection = 'desc';
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(SaleStatusHistory::class)->orderBy('created_at');
+    }
 
     public function saleItems(): HasMany
     {
@@ -313,6 +322,22 @@ class Sale extends Model
         return is_null($this->approved_by);
     }
 
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return $this->isApproved() ? 'sale' : 'sale_order';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return $this->isApproved() && $this->status !== 'Delivered';
+    }
+
     public function recalculateTotalTax(): void
     {
         $totalTaxAmount = $this->saleItems->sum(function ($item) {
@@ -398,9 +423,14 @@ class Sale extends Model
             $unitProfit = $netSellPriceUsd - $costPrice;
             $itemTotalProfit = $unitProfit * $quantity;
 
-            // Update sale item without firing events
+            // Update sale item without firing events.
+            // cost_history_id is refreshed only when the cost came from the item's
+            // current price; the fallback branch keeps the existing stamp.
             $saleItem->updateQuietly([
                 'cost_price' => $costPrice,
+                'cost_history_id' => $saleItem->item?->itemPrice
+                    ? ItemPriceHistory::currentRowIdFor($saleItem->item_id)
+                    : $saleItem->cost_history_id,
                 'price_usd' => $sellingPriceUsd,
                 'unit_discount_amount' => $unitDiscountAmount,
                 'unit_discount_amount_usd' => $unitDiscountAmountUsd,
@@ -520,6 +550,11 @@ class Sale extends Model
         });
 
         static::created(function ($sale) {
+            $sale->statusHistories()->create([
+                'status' => 'Waiting',
+                'changed_by' => $sale->created_by,
+            ]);
+
             // Only update customer balance if sale is approved
             if ($sale->isApproved()) {
                 CustomersHelper::removeBalance(Customer::find($sale->customer_id), $sale->total_usd);

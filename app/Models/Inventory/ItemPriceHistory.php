@@ -3,8 +3,9 @@
 namespace App\Models\Inventory;
 
 use App\Models\Items\Item;
-use App\Models\Suppliers\Purchase;
+use App\Models\Suppliers\PurchaseItem;
 use App\Traits\HasBooleanFilters;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,13 +26,18 @@ class ItemPriceHistory extends Model
         'source_type',
         'source_id',
         'note',
+        'is_current',
+        'calculation_type',
+        'calculation_inputs',
     ];
 
     protected $casts = [
-        'price_usd' => 'decimal:4',
+        'price_usd'              => 'decimal:4',
         'average_weighted_price' => 'decimal:4',
-        'latest_price' => 'decimal:4',
-        'effective_date' => 'date',
+        'latest_price'           => 'decimal:4',
+        'effective_date'         => 'date',
+        'is_current'             => 'boolean',
+        'calculation_inputs'     => 'array',
     ];
 
     protected $searchable = [];
@@ -59,6 +65,28 @@ class ItemPriceHistory extends Model
         return $this->belongsTo(Item::class);
     }
 
+    public function source(): MorphTo
+    {
+        return $this->morphTo(__FUNCTION__, 'source_type', 'source_id');
+    }
+
+    public function purchaseItemSource(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseItem::class, 'source_id');
+    }
+
+
+    /**
+     * Id of the history row that supplied the item's current price —
+     * used to stamp sale_items.cost_history_id when a sale is created.
+     */
+    public static function currentRowIdFor(int $itemId): ?int
+    {
+        return static::where('item_id', $itemId)
+            ->where('is_current', true)
+            ->orderByDesc('id')
+            ->value('id');
+    }
 
     // Scopes
     public function scopeByItem($query, $itemId)

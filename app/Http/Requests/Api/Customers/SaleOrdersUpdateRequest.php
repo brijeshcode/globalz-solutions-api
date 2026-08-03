@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\ApiHelper;
+use App\Helpers\CurrencyHelper;
 use App\Helpers\RoleHelper;
 use App\Helpers\SettingsHelper;
 use App\Models\Customers\Customer;
@@ -176,6 +177,42 @@ class SaleOrdersUpdateRequest extends FormRequest
                         if ($existingItem && $existingItem->sale_id !== (int) $sale->id) {
                             $validator->errors()->add("items.{$index}.id", 'Item does not belong to this sale');
                         }
+                    }
+                }
+            }
+
+            // Validate selling price is not below cost
+            $allowBelowCost = RoleHelper::isSuperAdmin()
+                ? SettingsHelper::get('sale_settings', 'allow_super_admin_sell_below_cost', false)
+                : (RoleHelper::isAdmin()
+                    ? SettingsHelper::get('sale_settings', 'allow_admin_sell_below_cost', false)
+                    : false);
+
+            if (!$allowBelowCost && $this->input('items')) {
+                $currencyId   = (int) ($this->input('currency_id') ?? $sale?->currency_id);
+                $currencyRate = (float) ($this->input('currency_rate') ?? $sale?->currency_rate ?? 1);
+
+                foreach ($this->input('items') as $index => $itemData) {
+                    $itemId = $itemData['item_id'] ?? null;
+                    if (!$itemId) {
+                        continue;
+                    }
+
+                    $item         = \App\Models\Items\Item::with('itemPrice')->find($itemId);
+                    $costPriceUsd = $item?->itemPrice?->price_usd ?? 0;
+
+                    if ($costPriceUsd <= 0) {
+                        continue;
+                    }
+
+                    $sellingPrice    = (float) ($itemData['price'] ?? 0);
+                    $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice, $currencyRate);
+
+                    if ($sellingPriceUsd < $costPriceUsd) {
+                        $validator->errors()->add(
+                            "items.$index.price",
+                            'Item ' . ($index + 1) . ': selling price cannot be below cost price.'
+                        );
                     }
                 }
             }

@@ -13,6 +13,7 @@ use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Salary extends Model
@@ -81,6 +82,11 @@ class Salary extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    public function items(): HasMany
+    {
+        return $this->hasMany(SalaryItem::class)->orderBy('sort_order');
+    }
+
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
@@ -167,6 +173,7 @@ class Salary extends Model
         static::created(function ($salary) {
             // Salary payment removes balance from account (money going out)
             AccountsHelper::removeBalance(Account::find($salary->account_id), $salary->final_total);
+            $salary->employee->recalculateBalance();
         });
 
         static::updated(function ($salary) {
@@ -186,11 +193,13 @@ class Salary extends Model
                 // If amount increased, remove more; if decreased, add back
                 AccountsHelper::removeBalance(Account::find($salary->account_id), $difference);
             }
+            $salary->employee->recalculateBalance();
         });
 
         static::deleted(function ($salary) {
             // Add balance back to account when salary is deleted
             AccountsHelper::addBalance(Account::find($salary->account_id), $salary->final_total);
+            $salary->employee->recalculateBalance();
         });
     }
 }

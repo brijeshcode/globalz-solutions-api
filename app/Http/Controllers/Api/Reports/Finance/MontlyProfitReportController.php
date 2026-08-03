@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Reports\Finance;
 
+use App\Helpers\FeatureHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -59,11 +60,11 @@ class MontlyProfitReportController extends Controller
         $expensesQuery = DB::table('expense_transactions')
             ->leftJoin('expense_categories', 'expense_transactions.expense_category_id', '=', 'expense_categories.id')
             ->selectRaw('
-                MONTH(expense_transactions.date) as month,
-                YEAR(expense_transactions.date) as year,
+                MONTH(expense_transactions.expense_month) as month,
+                YEAR(expense_transactions.expense_month) as year,
                 SUM(expense_transactions.amount_usd) as total_expenses
             ')
-            ->whereYear('expense_transactions.date', $year)
+            ->whereYear('expense_transactions.expense_month', $year)
             ->whereNull('expense_transactions.deleted_at')
             ->where(function ($query) {
                 $query->whereNull('expense_categories.exclude_from_profit')
@@ -78,13 +79,31 @@ class MontlyProfitReportController extends Controller
             ->selectRaw('
                 month,
                 year,
-                SUM(amount_usd) as total_salaries
+                SUM(net_salary_usd) as total_salaries
             ')
             ->where('year', $year)
             ->whereNull('deleted_at')
             ->groupBy('month', 'year');
 
         $salariesData = $salariesQuery->get()->keyBy('month');
+
+        // Get gas station payments data (only if vehicle module is enabled)
+        $vehicleModuleEnabled = FeatureHelper::isVehicleModule();
+        $gasStationPaymentsData = collect();
+
+        if ($vehicleModuleEnabled) {
+            $gasStationPaymentsData = DB::table('gas_station_payments')
+                ->selectRaw('
+                    MONTH(date) as month,
+                    YEAR(date) as year,
+                    SUM(amount_usd) as total_gas_station_payments
+                ')
+                ->whereYear('date', $year)
+                ->whereNull('deleted_at')
+                ->groupBy('month', 'year')
+                ->get()
+                ->keyBy('month');
+        }
 
         // Get credit notes data (only credit type)
         $creditNotesQuery = DB::table('customer_credit_debit_notes')
@@ -115,6 +134,7 @@ class MontlyProfitReportController extends Controller
             'total_expenses' => 0,
             'total_salaries' => 0,
             'total_credit_notes' => 0,
+            'total_gas_station_payments' => 0,
             'final_net_profit' => 0,
         ];
 
@@ -125,6 +145,7 @@ class MontlyProfitReportController extends Controller
             $expenses = $expensesData->get($month);
             $salaries = $salariesData->get($month);
             $creditNotes = $creditNotesData->get($month);
+            $gasStationPayments = $gasStationPaymentsData->get($month);
 
             $totalSales = $sales ? (float)$sales->total_sales : 0.00;
             $totalSaleTax = $sales ? (float)$sales->total_sale_tax : 0.00;
@@ -135,12 +156,13 @@ class MontlyProfitReportController extends Controller
             $totalExpenses = $expenses ? (float)$expenses->total_expenses : 0.00;
             $totalSalaries = $salaries ? (float)$salaries->total_salaries : 0.00;
             $totalCreditNotes = $creditNotes ? (float)$creditNotes->total_credit_notes : 0.00;
+            $totalGasStationPayments = $gasStationPayments ? (float)$gasStationPayments->total_gas_station_payments : 0.00;
 
             // Calculate net values
             $netSales = $totalSales - $totalReturns;
             $netSaleTax = $totalSaleTax - $totalReturnTax;
             $netProfit = $salesProfit - $returnsProfitAmount;
-            $finalNetProfit = $netProfit - $totalExpenses - $totalSalaries - $totalCreditNotes;
+            $finalNetProfit = $netProfit - $totalExpenses - $totalSalaries - $totalCreditNotes - $totalGasStationPayments;
 
             $months[] = [
                 'month' => $month,
@@ -158,6 +180,7 @@ class MontlyProfitReportController extends Controller
                 'expenses' => round(-$totalExpenses, 2), // negative number
                 'salaries' => round(-$totalSalaries, 2), // negative number
                 'credit_notes' => round(-$totalCreditNotes, 2), // negative number
+                'gas_station_payments' => $vehicleModuleEnabled ? round(-$totalGasStationPayments, 2) : null,
                 'final_net_profit' => round($finalNetProfit, 2),
             ];
 
@@ -174,6 +197,7 @@ class MontlyProfitReportController extends Controller
             $yearTotals['total_expenses'] += $totalExpenses;
             $yearTotals['total_salaries'] += $totalSalaries;
             $yearTotals['total_credit_notes'] += $totalCreditNotes;
+            $yearTotals['total_gas_station_payments'] += $totalGasStationPayments;
             $yearTotals['final_net_profit'] += $finalNetProfit;
         }
 
@@ -191,6 +215,7 @@ class MontlyProfitReportController extends Controller
             'expenses' => round(-$yearTotals['total_expenses'], 2), // negative number
             'salaries' => round(-$yearTotals['total_salaries'], 2), // negative number
             'credit_notes' => round(-$yearTotals['total_credit_notes'], 2), // negative number
+            'gas_station_payments' => $vehicleModuleEnabled ? round(-$yearTotals['total_gas_station_payments'], 2) : null,
             'final_net_profit' => round($yearTotals['final_net_profit'], 2),
         ];
 

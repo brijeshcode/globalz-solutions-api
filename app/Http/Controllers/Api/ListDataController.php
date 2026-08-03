@@ -34,6 +34,8 @@ use App\Models\Setups\SupplierPaymentTerm;
 use App\Models\Setups\SupplierType;
 use App\Models\Setups\TaxCode;
 use App\Models\Setups\Warehouse;
+use App\Models\Vehicle\Car;
+use App\Models\Vehicle\GasStation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,7 +49,7 @@ class ListDataController extends Controller
             'warehouses' => $this->warehouses(),
             'currencies' => $this->currencies(),
             'users' => $this->users(),
-            
+
             'customers' => $this->customers(),
             'customerPaymentTerms'  => $this->customerPaymentTerms(),
             'customerGroups'  => $this->customerGroups(),
@@ -87,7 +89,12 @@ class ListDataController extends Controller
             'employees' => $this->employees(),
             'commissionTargets' => $this->commissionTargets(),
             'all-sales-employees' => $this->salesEmployee(),
+            'all-driver-employees' => $this->driverEmployee(),
             'departments' => $this->departments(),
+
+            // vehicles
+            'cars' => $this->cars(),
+            'gasStations' => $this->gasStations(),
 
             // generals
             'countries' => $this->countries(),
@@ -125,7 +132,7 @@ class ListDataController extends Controller
     // suppliers
     private function suppliers()
     {
-        return Supplier::active()->orderby('name')->get(['id', 'code', 'name', 'currency_id']);
+        return Supplier::active()->orderBy('name')->get(['id', 'code', 'name', 'currency_id']);
     }
 
     //customers
@@ -254,18 +261,22 @@ class ListDataController extends Controller
     private function items()
     {
         $with = ['itemUnit:id,name,short_name', 'itemPrice:id,item_id,price_usd', 'inventories:id,warehouse_id,item_id,quantity', 'taxCode:id,name,tax_percent'];
-        return Item::with($with)->orderBy('description')->active()->get(['id', 'description', 'code', 'short_name', 'item_unit_id', 'tax_code_id']);
+        return Item::with($with)->orderBy('description')->get(['id', 'description', 'code', 'short_name', 'item_unit_id', 'tax_code_id', 'is_active']);
     }
 
     private function itemPriceLists()
     {
-        return PriceList::with('priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id')->active()->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default_inv', 'is_default_inx']);
+        $with = ['priceListItems' => fn($q) => $q->select(['id', 'price_list_id', 'item_code', 'sell_price', 'item_description', 'item_id'])
+            ->whereHas('item', fn($q) => $q->where('is_active', true))];
+
+        return PriceList::with($with)->active()->orderBy('code')->get(['id', 'code', 'description', 'item_count', 'is_default_inv', 'is_default_inx']);
     }
 
     private function itemDefaultPriceList()
     {
         $fields = ['id', 'code', 'description', 'item_count', 'is_default_inv', 'is_default_inx'];
-        $with = 'priceListItems:id,price_list_id,item_code,sell_price,item_description,item_id';
+        $with = ['priceListItems' => fn($q) => $q->select(['id', 'price_list_id', 'item_code', 'sell_price', 'item_description', 'item_id'])
+            ->whereHas('item', fn($q) => $q->where('is_active', true))];
 
         return [
             'inv' => PriceList::with($with)->select($fields)->defaultInv()->first(),
@@ -389,9 +400,25 @@ class ListDataController extends Controller
         return Employee::isSaleDepartment()->orderBy('name')->get(['id', 'name', 'email', 'phone', 'is_active']);
     }
 
+    private function driverEmployee()
+    {
+        return Employee::isDriverDepartment()->orderBy('name')->get(['id', 'name', 'email', 'phone', 'is_active']);
+    }
+
     private function departments()
     {
         return Department::active()->orderBy('name')->get(['id', 'name']);
+    }
+
+    // vehicles
+    private function cars()
+    {
+        return Car::where('is_active', true)->orderBy('name')->get(['id', 'name', 'plate_number']);
+    }
+
+    private function gasStations()
+    {
+        return GasStation::where('is_active', true)->orderBy('name')->get(['id', 'name', 'address']);
     }
 
     // generals

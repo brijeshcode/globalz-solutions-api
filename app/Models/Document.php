@@ -173,21 +173,23 @@ class Document extends Model
      */
     public function getThumbnailUrlAttribute(): string
     {
-        // For images, return a signed URL that doesn't require authentication
+        // For images, return a signed URL that doesn't require authentication.
+        // The tenant domain is included (signature-protected) so native viewers
+        // that send no Origin/Referer headers can still resolve the tenant.
         if (str_starts_with($this->mime_type, 'image/')) {
             return \Illuminate\Support\Facades\URL::temporarySignedRoute(
                 'documents.preview-signed',
                 now()->addHours(24), // Valid for 24 hours
-                ['document' => $this->id]
+                ['document' => $this->id, 'tenant' => \App\Models\Tenant::current()?->domain]
             );
         }
-        
+
         // For PDFs, also use signed URL for preview
         if ($this->mime_type === 'application/pdf') {
             return \Illuminate\Support\Facades\URL::temporarySignedRoute(
                 'documents.preview-signed',
                 now()->addHours(24), // Valid for 24 hours
-                ['document' => $this->id]
+                ['document' => $this->id, 'tenant' => \App\Models\Tenant::current()?->domain]
             );
         }
         
@@ -212,7 +214,7 @@ class Document extends Model
             return \Illuminate\Support\Facades\URL::temporarySignedRoute(
                 'documents.preview-signed',
                 now()->addHours(24),
-                ['document' => $this->id]
+                ['document' => $this->id, 'tenant' => \App\Models\Tenant::current()?->domain]
             );
         }
         

@@ -256,29 +256,33 @@ class CustomerStatmentController extends Controller
     {
         $transactionType = $request->get('transaction_type');
 
+        $childIds = $customer->children()->pluck('id')->toArray();
+        $isParent = !empty($childIds);
+        $customerIds = $isParent ? array_merge([$customer->id], $childIds) : [$customer->id];
+
         $allTransactions = collect();
 
         if (!$transactionType || $transactionType === 'credit_debit_note') {
             $allTransactions = $allTransactions->concat(
-                $this->getCreditDebitNotes($request, $customer, $noteSearch)
+                $this->getCreditDebitNotes($request, $customerIds, $isParent, $noteSearch)
             );
         }
 
         if (!$transactionType || $transactionType === 'sale') {
             $allTransactions = $allTransactions->concat(
-                $this->getSales($request, $customer, $noteSearch)
+                $this->getSales($request, $customerIds, $isParent, $noteSearch)
             );
         }
 
         if (!$transactionType || $transactionType === 'payment') {
             $allTransactions = $allTransactions->concat(
-                $this->getPayments($request, $customer, $noteSearch)
+                $this->getPayments($request, $customerIds, $isParent, $noteSearch)
             );
         }
 
         if (!$transactionType || $transactionType === 'return') {
             $allTransactions = $allTransactions->concat(
-                $this->getReturns($request, $customer, $noteSearch)
+                $this->getReturns($request, $customerIds, $isParent, $noteSearch)
             );
         }
 
@@ -302,15 +306,15 @@ class CustomerStatmentController extends Controller
         return $finalTransactions;
     }
 
-    private function getCreditDebitNotes(Request $request, Customer $customer, ?string $noteSearch = null)
+    private function getCreditDebitNotes(Request $request, array $customerIds, bool $isParent, ?string $noteSearch = null)
     {
         $query = CustomerCreditDebitNote::query()
             ->select('id', 'code', 'prefix', 'date', 'type', 'amount_usd', 'note', 'customer_id', 'created_at');
 
-        $this->applyFilters($query, $request, $customer, $noteSearch);
+        $this->applyFilters($query, $request, $customerIds, $noteSearch);
 
-        return $query->with('customer:id,code,name')->get()->map(function ($item) {
-            return [
+        return $query->with('customer:id,code,name')->get()->map(function ($item) use ($isParent) {
+            $row = [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
                 'prefix' => $item->prefix,
@@ -329,19 +333,23 @@ class CustomerStatmentController extends Controller
                 'source_table' => 'customer_credit_debit_notes',
                 'timestamp' => $item->date->timestamp,
             ];
+            if ($isParent) {
+                $row['group'] = $item->customer->name;
+            }
+            return $row;
         });
     }
 
-    private function getSales(Request $request, Customer $customer, ?string $noteSearch = null)
+    private function getSales(Request $request, array $customerIds, bool $isParent, ?string $noteSearch = null)
     {
         $query = Sale::query()
             ->approved()
             ->select('id', 'code', 'prefix', 'date', 'total_usd', 'note', 'customer_id', 'created_at');
 
-        $this->applyFilters($query, $request, $customer, $noteSearch);
+        $this->applyFilters($query, $request, $customerIds, $noteSearch);
 
-        return $query->with('customer:id,code,name')->get()->map(function ($item) {
-            return [
+        return $query->with('customer:id,code,name')->get()->map(function ($item) use ($isParent) {
+            $row = [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
                 'prefix' => $item->prefix,
@@ -360,19 +368,23 @@ class CustomerStatmentController extends Controller
                 'source_table' => 'sales',
                 'timestamp' => $item->date->timestamp,
             ];
+            if ($isParent) {
+                $row['group'] = $item->customer->name;
+            }
+            return $row;
         });
     }
 
-    private function getPayments(Request $request, Customer $customer, ?string $noteSearch = null)
+    private function getPayments(Request $request, array $customerIds, bool $isParent, ?string $noteSearch = null)
     {
         $query = CustomerPayment::query()
             ->approved()
             ->select('id', 'code', 'prefix', 'date', 'amount_usd', 'note', 'customer_id', 'created_at');
 
-        $this->applyFilters($query, $request, $customer, $noteSearch);
+        $this->applyFilters($query, $request, $customerIds, $noteSearch);
 
-        return $query->with('customer:id,code,name')->get()->map(function ($item) {
-            return [
+        return $query->with('customer:id,code,name')->get()->map(function ($item) use ($isParent) {
+            $row = [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
                 'prefix' => $item->prefix,
@@ -391,20 +403,24 @@ class CustomerStatmentController extends Controller
                 'source_table' => 'customer_payments',
                 'timestamp' => $item->date->timestamp,
             ];
+            if ($isParent) {
+                $row['group'] = $item->customer->name;
+            }
+            return $row;
         });
     }
 
-    private function getReturns(Request $request, Customer $customer, ?string $noteSearch = null)
+    private function getReturns(Request $request, array $customerIds, bool $isParent, ?string $noteSearch = null)
     {
         $query = CustomerReturn::query()
             ->approved()
             ->received()
             ->select('id', 'code', 'prefix', 'date', 'total_usd', 'note', 'customer_id', 'created_at');
 
-        $this->applyFilters($query, $request, $customer, $noteSearch);
+        $this->applyFilters($query, $request, $customerIds, $noteSearch);
 
-        return $query->with('customer:id,code,name')->get()->map(function ($item) {
-            return [
+        return $query->with('customer:id,code,name')->get()->map(function ($item) use ($isParent) {
+            $row = [
                 'id' => $item->id,
                 'code' => $item->prefix . $item->code,
                 'prefix' => $item->prefix,
@@ -423,6 +439,10 @@ class CustomerStatmentController extends Controller
                 'source_table' => 'customer_returns',
                 'timestamp' => $item->date->timestamp,
             ];
+            if ($isParent) {
+                $row['group'] = $item->customer->name;
+            }
+            return $row;
         });
     }
 
@@ -448,11 +468,9 @@ class CustomerStatmentController extends Controller
         ];
     }
 
-    private function applyFilters($query, Request $request, Customer $customer, ?string $noteSearch = null)
+    private function applyFilters($query, Request $request, array $customerIds, ?string $noteSearch = null)
     {
-        if ($customer) {
-            $query->where('customer_id', $customer->id);
-        }
+        $query->whereIn('customer_id', $customerIds);
 
         if ($request->has('from_date')) {
             $query->fromDate($request->get('from_date'));

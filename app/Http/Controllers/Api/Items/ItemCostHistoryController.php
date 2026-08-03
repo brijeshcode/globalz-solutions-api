@@ -2,134 +2,208 @@
 
 namespace App\Http\Controllers\Api\Items;
 
+use App\Exports\ItemCurrentPricesExport;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
-use App\Models\Items\Item;
-use App\Models\Suppliers\PurchaseItem;
+use App\Models\Inventory\ItemPrice;
+use App\Models\Inventory\ItemPriceHistory;
+use App\Models\Suppliers\PurchaseExpense;
+use App\Services\Inventory\PriceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ItemCostHistoryController extends Controller
 {
     use HasPagination;
 
-    /**
-     * Get item cost history from purchases
-     *
-     * Filters: item_id, search (item code/name), from_date, to_date
-     * Columns: purchase date, purchase transaction code with prefix, item cost price, item_cost_price_usd
-     */
     public function index(Request $request): JsonResponse
     {
-        $itemId = $request->get('item_id');
-        $search = $request->get('search');
 
-        // Find item by ID or search term if provided
-        $item = null;
-        if ($itemId) {
-            $item = Item::find($itemId);
-        } elseif ($search) {
-            $item = Item::where('code', $search)
-                ->orWhere('description', 'like', "%{$search}%")
-                ->first();
-        }
+        $rows = ItemPriceHistory::where('item_id', $request->get('item_id'))
+            ->whereIn('source_type', ['purchase_item', 'initial', 'calculation_type_change'])
+            ->orderBy('id', 'desc')
+            ->with(['purchaseItemSource.purchase.currency'])
+            ->get();
 
-        // Return empty if no item specified
-        if (!$item) {
-            if ($request->boolean('withPage')) {
-                return ApiResponse::paginated(
-                    'Item cost history retrieved successfully',
-                    new \Illuminate\Pagination\LengthAwarePaginator([], 0, $this->getPerPage($request))
-                );
-            }
-            return ApiResponse::index('Item cost history retrieved successfully', []);
-        }
+        $expPctMap = $this->buildExpensePctMap($rows);
 
-        // Build query with only necessary columns
-        $query = PurchaseItem::query()
-            ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
-            ->join('currencies', 'purchases.currency_id', '=', 'currencies.id')
-            ->select(
-                'purchase_items.id',
-                'purchase_items.purchase_id',
-                'purchase_items.price as cost_price',
-                'purchase_items.cost_per_item_usd',
-                'purchases.date as purchase_date',
-                'purchases.prefix as purchase_prefix',
-                'purchases.code as purchase_code',
-                'currencies.id as currency_id',
-                'currencies.symbol as currency_symbol',
-                'currencies.symbol_position as currency_symbol_position',
-                'currencies.decimal_places as currency_decimal_places',
-                'currencies.decimal_separator as currency_decimal_separator',
-                'currencies.thousand_separator as currency_thousand_separator'
-            );
-
-        // Apply item filter
-        if ($item) {
-            $query->where('purchase_items.item_id', $item->id);
-        }
-
-        // Apply date range filter
-        if ($request->has('from_date')) {
-            // $query->where('purchases.date', '>=', $request->get('from_date'));
-            $query->fromDate( $request->get('from_date'), 'purchases.date');
-        }
-        if ($request->has('to_date')) {
-            // $query->where('purchases.date', '<=', $request->get('to_date'));
-            $query->toDate( $request->get('to_date'), 'purchases.date');
-        }
-
-        // Order by purchase date descending (latest on top)
-        $query->orderBy('purchases.date', 'desc');
-
-        // Check if pagination is requested
-        if ($request->boolean('withPage')) {
-            $paginated = $query->paginate($this->getPerPage($request));
-
-            // Transform paginated data
-            $transformedData = $paginated->through(function ($purchaseItem) {
-                return $this->transformPurchaseItem($purchaseItem);
-            });
-
-            return ApiResponse::paginated(
-                'Item cost history retrieved successfully',
-                $transformedData
-            );
-        }
-
-        // Get all results
-        $purchaseItems = $query->get();
-        $transformedItems = $purchaseItems->map(fn($pi) => $this->transformPurchaseItem($pi))->toArray();
-
-        return ApiResponse::index(
-            'Item cost history retrieved successfully',
-            $transformedItems
+        return ApiResponse::index('Item cost history retrieved successfully',
+            $rows->map(fn($row) => $this->transformRow($row, $expPctMap))->toArray()
         );
     }
 
-    /**
-     * Transform purchase item for response
-     */
-    private function transformPurchaseItem($purchaseItem): array
+    public function currentPrices(Request $request): JsonResponse
+    {   
+        $rows = ItemPrice::with($this->priceEagerLoads())
+            ->when($request->get('item_id'), fn($q, $id) => $q->where('item_id', $id))
+            ->when($request->get('search'), fn($q, $s) => $q->whereHas('item', fn($q) =>
+                $q->where('code', 'like', "%{$s}%")->orWhere('short_name', 'like', "%{$s}%")
+            ))
+            ->orderBy('effective_date', 'desc')
+            ->paginate($request->get('per_page', 50));
+
+        // When ?verify=1, run the audit and attach a price_check to each row showing
+        // whether the stored price matches the recomputed price.
+        $auditIndex = null;
+        if ($request->boolean('verify')) {
+            $tolerance  = (float) $request->input('tolerance', 0.0);
+            $audit      = PriceService::auditItemPrices($tolerance);
+            $auditIndex = collect($audit['changes'])
+                ->concat($audit['missing'])
+                ->keyBy('item_id');
+        }
+
+        $allHistories = $rows->getCollection()->flatMap(
+            fn($row) => $row->item?->priceHistories?->take(5) ?? collect()
+        );
+        $expPctMap = $this->buildExpensePctMap($allHistories);
+
+        return ApiResponse::paginated('Current item prices retrieved successfully',
+            $rows->through(fn($row) => $this->transformCurrentPriceRow($row, $auditIndex, $expPctMap))
+        );
+    }
+
+    public function exportCurrentPrices(Request $request): BinaryFileResponse
+    {
+        $rows = ItemPrice::with($this->priceEagerLoads())
+            ->when($request->get('item_id'), fn($q, $id) => $q->where('item_id', $id))
+            ->when($request->get('search'), fn($q, $s) => $q->whereHas('item', fn($q) =>
+                $q->where('code', 'like', "%{$s}%")->orWhere('short_name', 'like', "%{$s}%")
+            ))
+            ->orderBy('effective_date', 'desc')
+            ->get();
+
+        $allHistories = $rows->flatMap(fn($row) => $row->item?->priceHistories?->take(5) ?? collect());
+        $expPctMap    = $this->buildExpensePctMap($allHistories);
+
+        return Excel::download(
+            new ItemCurrentPricesExport($rows->map(fn($row) => $this->transformCurrentPriceRow($row, null, $expPctMap))),
+            'items-cost-list-' . now()->format('Y-m-d') . '.xlsx'
+        );
+    }
+
+    private function priceEagerLoads(): array
     {
         return [
-            'id' => $purchaseItem->id,
-            'purchase_id' => $purchaseItem->purchase_id,
-            'purchase_date' => $purchaseItem->purchase_date,
-            'purchase_prefix' => $purchaseItem->purchase_prefix,
-            'purchase_code' => $purchaseItem->purchase_code,
-            'cost_price' => $purchaseItem->cost_price,
-            'cost_price_usd' => $purchaseItem->cost_per_item_usd,
-            'currency' => [
-                'id' => $purchaseItem->currency_id,
-                'symbol' => $purchaseItem->currency_symbol,
-                'symbol_position' => $purchaseItem->currency_symbol_position,
-                'decimal_places' => $purchaseItem->currency_decimal_places,
-                'decimal_separator' => $purchaseItem->currency_decimal_separator,
-                'thousand_separator' => $purchaseItem->currency_thousand_separator,
-            ],
+            'item:id,code,short_name,description,item_unit_id,cost_calculation',
+            'item.itemUnit:id,name,short_name',
+            'item.priceHistories' => fn($q) => $q
+                ->whereIn('source_type', ['purchase_item', 'initial', 'calculation_type_change'])
+                ->orderBy('id', 'desc')
+                ->with(['purchaseItemSource.purchase.currency']),
+        ];
+    }
+
+    private function transformCurrentPriceRow(ItemPrice $row, ?\Illuminate\Support\Collection $auditIndex = null, array $expPctMap = []): array
+    {
+        $histories      = $row->item?->priceHistories ?? collect();
+        $currentHistory = $histories->firstWhere('is_current', true);
+        $auditRow       = $auditIndex?->get($row->item_id);
+
+        return [
+            'item_id'          => $row->item_id,
+            'calculation_type' => $currentHistory?->calculation_type ?? $row->item?->cost_calculation,
+            'item_code'        => $row->item?->code,
+            'item_name'        => $row->item?->description,
+            'unit'             => $row->item?->itemUnit?->only(['id', 'name', 'short_name']),
+            'price_usd'        => $row->price_usd,
+            'effective_date'   => $row->effective_date,
+            'history'          => $histories->take(5)->map(fn($h) => $this->transformRow($h, $expPctMap))->values(),
+            'price_check'      => $auditIndex !== null ? [
+                'correct_price' => $auditRow['correct_price'] ?? null,
+                'difference'    => $auditRow['difference'] ?? 0,
+                'diff_percent'  => $auditRow['diff_percent'] ?? '0%',
+                'needs_fix'     => $auditRow !== null,
+            ] : null,
+        ];
+    }
+
+    private function buildExpensePctMap(Collection $histories): array
+    {
+        $purchaseData = [];
+        foreach ($histories as $history) {
+            $purchase = $history->purchaseItemSource?->purchase;
+            if (!$purchase) continue;
+            $purchaseData[$purchase->id] = (float) $purchase->total_usd;
+        }
+
+        if (empty($purchaseData)) return [];
+
+        $distributable = PurchaseExpense::join('expense_transactions', 'purchase_expenses.expense_transaction_id', '=', 'expense_transactions.id')
+            ->whereNull('expense_transactions.deleted_at')
+            ->where('purchase_expenses.exclude_from_item_cost', false)
+            ->whereIn('purchase_expenses.purchase_id', array_keys($purchaseData))
+            ->groupBy('purchase_expenses.purchase_id')
+            ->selectRaw('purchase_expenses.purchase_id, SUM(expense_transactions.amount_usd) as distributable_usd')
+            ->pluck('distributable_usd', 'purchase_id');
+
+        $map = [];
+        foreach ($purchaseData as $purchaseId => $totalUsd) {
+            $distributableUsd    = (float) ($distributable[$purchaseId] ?? 0);
+            $map[$purchaseId] = $totalUsd > 0 ? round($distributableUsd / $totalUsd * 100, 2) : 0;
+        }
+
+        return $map;
+    }
+
+    private function transformRow(ItemPriceHistory $history, array $expPctMap = []): array
+    {
+        $inputs = $history->calculation_inputs;
+
+        // Fallback to live relationship for records created before calculation_inputs was added
+        if (!$inputs && $history->source_type === 'purchase_item') {
+            $purchaseItem = $history->purchaseItemSource;
+            $purchase     = $purchaseItem?->purchase;
+            $currency     = $purchase?->currency;
+
+            $qty             = $purchaseItem?->quantity ?? 0;
+            $totalExpenseUsd = $purchaseItem?->total_expense_usd ?? 0;
+
+            $inputs = [
+                'quantity'                => $qty,
+                'discount_percent'        => $purchaseItem?->discount_percent ?? 0,
+                'cost_price'              => $purchaseItem?->price,
+                'final_cost_per_item_usd' => $purchaseItem?->cost_per_item_usd,
+                'expense_per_item_usd'    => $qty > 0 ? $totalExpenseUsd / $qty : 0,
+                'total_expense_usd'       => $totalExpenseUsd,
+                'final_total_cost_usd'    => $purchaseItem?->final_total_cost_usd,
+                'currency_rate'           => $purchase?->currency_rate ?? 1,
+                'purchase_id'             => $purchase?->id,
+                'purchase_prefix'         => $purchase?->prefix,
+                'purchase_code'           => $purchase?->code,
+                'currency'                => $currency?->only(['id', 'symbol', 'symbol_position', 'decimal_places', 'decimal_separator', 'thousand_separator']),
+            ];
+        }
+
+        $totalExpense = $inputs['total_expense_usd'] ?? 0;
+        $purchaseId   = $history->purchaseItemSource?->purchase?->id;
+        $expPct       = isset($inputs['purchase_exp_pct'])
+            ? (float) $inputs['purchase_exp_pct']
+            : ($purchaseId ? ($expPctMap[$purchaseId] ?? 0) : 0);
+
+        return [
+            'id'               => $history->id,
+            'source_type'      => $history->source_type,
+            'calculation_type' => $history->calculation_type,
+            'is_current'       => $history->is_current,
+            'effective_date'   => $history->effective_date,
+            'source_date'      => $history->created_at,
+            'source_id'        => $inputs['purchase_id'] ?? null,
+            'source_prefix'    => $inputs['purchase_prefix'] ?? null,
+            'source_code'      => $inputs['purchase_code'] ?? $history->source_type,
+            'cost_price'       => $inputs['cost_price'] ?? $history->price_usd,
+            'price_usd'        => $inputs['final_cost_per_item_usd'] ?? $history->price_usd,
+            'discount_percent' => $inputs['discount_percent'] ?? 0,
+            'currency_rate'    => $inputs['currency_rate'] ?? 1,
+            'exp_share'        => round($inputs['expense_per_item_usd'] ?? 0, 4),
+            'exp_share_total'  => $totalExpense,
+            'purchase_exp_pct'          => $expPct,
+            'remark'           => $history->note,
+            'currency'         => $inputs['currency'] ?? null,
         ];
     }
 }

@@ -16,42 +16,30 @@ class BackupAllTenantsCommand extends Command
 
     public function handle(BackupService $backupService, BackupStorageService $storageService): int
     {
-        $tenants = Tenant::on('mysql')->where('is_active', true)->get();
+        $this->info('Starting backup check...');
 
-        if ($tenants->isEmpty()) {
-            $this->info('No active tenants found.');
-            return self::SUCCESS;
-        }
+        Tenant::runForEachActive('Tenant backup', function (Tenant $tenant) use ($backupService, $storageService) {
+            $skip = $this->skipReason($tenant, $backupService);
 
-        $this->info("Starting backup check for {$tenants->count()} tenant(s)...");
-
-        foreach ($tenants as $tenant) {
-            try {
-                $tenant->makeCurrent();
-
-                $skip = $this->skipReason($tenant, $backupService);
-
-                if ($skip !== null) {
-                    $this->info("  ↷ Skipped {$tenant->tenant_key}: {$skip}");
-                    continue;
-                }
-
-                $this->info("Backing up tenant: {$tenant->tenant_key}");
-
-                $log = $backupService->run($tenant);
-
-                if ($log->status === BackupLog::STATUS_SUCCESS) {
-                    $this->info("  ✓ Success — {$log->file_name} ({$this->formatBytes($log->file_size)}) in {$log->duration_seconds}s");
-                    $storageService->pushToRemote($tenant, $log);
-                } else {
-                    $this->error("  ✗ Failed — {$log->error_message}");
-                }
-            } catch (\Throwable $e) {
-                $this->error("  ✗ Exception for tenant {$tenant->tenant_key}: {$e->getMessage()}");
-            } finally {
-                Tenant::forgetCurrent();
+            if ($skip !== null) {
+                $this->info("  ↷ Skipped {$tenant->tenant_key}: {$skip}");
+                return ['skipped' => $skip];
             }
-        }
+
+            $this->info("Backing up tenant: {$tenant->tenant_key}");
+
+            $log = $backupService->run($tenant);
+
+            if ($log->status !== BackupLog::STATUS_SUCCESS) {
+                $this->error("  ✗ Failed — {$log->error_message}");
+                return ['failed' => $log->error_message];
+            }
+
+            $this->info("  ✓ Success — {$log->file_name} ({$this->formatBytes($log->file_size)}) in {$log->duration_seconds}s");
+            $storageService->pushToRemote($tenant, $log);
+
+            return ['file' => $log->file_name, 'size' => $log->file_size, 'duration_seconds' => $log->duration_seconds];
+        });
 
         $this->info('Backup run complete.');
         return self::SUCCESS;
@@ -79,11 +67,16 @@ class BackupAllTenantsCommand extends Command
             return "not preferred hour ({$preferredHour}:00)";
         }
 
-        // Check that enough time has elapsed since the last backup
+        // Check that enough time has elapsed since the last backup.
+        // Use a 5-minute grace window to absorb cron scheduling variance — without it,
+        // a cron that fires even 1 second late produces 59m59s elapsed which truncates
+        // to 59 minutes, causing a skip and doubling the effective interval.
         if ($lastBackup) {
-            $elapsed = (int) $lastBackup->created_at->diffInHours(now());
-            if ($elapsed < $frequencyHours) {
-                return "frequency not reached ({$elapsed}h elapsed, need {$frequencyHours}h)";
+            $elapsedMinutes = $lastBackup->created_at->diffInMinutes(now());
+            $thresholdMinutes = ($frequencyHours * 60) - 5;
+            if ($elapsedMinutes < $thresholdMinutes) {
+                $elapsedHours = round($elapsedMinutes / 60, 1);
+                return "frequency not reached ({$elapsedHours}h elapsed, need {$frequencyHours}h)";
             }
         }
 

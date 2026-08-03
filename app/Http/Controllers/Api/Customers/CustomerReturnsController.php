@@ -13,6 +13,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Services\Customers\CustomerReturnService;
+use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class CustomerReturnsController extends Controller
 {
     use HasPagination;
 
-    protected $customerReturnService;
+    protected CustomerReturnService $customerReturnService;
 
     public function __construct(CustomerReturnService $customerReturnService)
     {
@@ -97,6 +98,10 @@ class CustomerReturnsController extends Controller
             // Recalculate return totals
             $customerReturn->total = $customerReturn->items->sum('total_price');
             $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->subtotal_taxable_amount = $customerReturn->items->sum('total_taxable_amount');
+            $customerReturn->subtotal_taxable_amount_usd = $customerReturn->items->sum('total_taxable_amount_usd');
+            $customerReturn->total_tax_amount = $customerReturn->items->sum('total_tax_amount');
+            $customerReturn->total_tax_amount_usd = $customerReturn->items->sum('total_tax_amount_usd');
             $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
             $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
             $customerReturn->save();
@@ -162,13 +167,37 @@ class CustomerReturnsController extends Controller
 
     public function update(CustomerReturnsUpdateRequest $request, CustomerReturn $customerReturn): JsonResponse
     {
-        $isReceived = $customerReturn->isReceived();
+        $isReceived   = $customerReturn->isReceived();
+        $isSuperAdmin = RoleHelper::canSuperAdmin();
 
-        if ($isReceived && !RoleHelper::canSuperAdmin()) {
+        if ($isReceived && !$isSuperAdmin) {
             return ApiResponse::customError('Only super admins can update received returns', 403);
         }
 
         $data = $request->validated();
+
+        // Non-super-admin admins: only date and note on non-received returns
+        if (!$isSuperAdmin) {
+            $customerReturn->update(array_filter([
+                'date' => $data['date'] ?? null,
+                'note' => $data['note'] ?? null,
+            ], fn($v) => !is_null($v)));
+
+            $customerReturn->load([
+                'customer:id,name,code,address,city,mobile,mof_tax_number',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'warehouse:id,name,address_line_1',
+                'salesperson:id,name',
+                'approvedBy:id,name',
+                'returnReceivedBy:id,name',
+                'items.item:id,short_name,code,description',
+                'items.saleItem',
+                'createdBy:id,name',
+                'updatedBy:id,name',
+            ]);
+
+            return ApiResponse::update('Customer return updated successfully', new CustomerReturnResource($customerReturn));
+        }
 
         // Capture old values before update for balance adjustment
         $oldCustomerId = $customerReturn->customer_id;
@@ -179,6 +208,14 @@ class CustomerReturnsController extends Controller
             $itemsInput = $data['items'];
             $currencyRate = $data['currency_rate'] ?? $customerReturn->currency_rate;
             unset($data['items']);
+
+            // Snapshot current item quantities before any changes (for re-syncing inventory on received returns)
+            $oldItemSnapshots = $isReceived
+                ? $customerReturn->items()->get()->map(fn($item) => [
+                    'item_id'  => $item->item_id,
+                    'quantity' => (int) $item->quantity,
+                ])->all()
+                : [];
 
             // Update the return order
             $customerReturn->update($data);
@@ -210,9 +247,27 @@ class CustomerReturnsController extends Controller
             $customerReturn->refresh();
             $customerReturn->total = $customerReturn->items->sum('total_price');
             $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->subtotal_taxable_amount = $customerReturn->items->sum('total_taxable_amount');
+            $customerReturn->subtotal_taxable_amount_usd = $customerReturn->items->sum('total_taxable_amount_usd');
+            $customerReturn->total_tax_amount = $customerReturn->items->sum('total_tax_amount');
+            $customerReturn->total_tax_amount_usd = $customerReturn->items->sum('total_tax_amount_usd');
             $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
             $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
             $customerReturn->save();
+
+            // Re-sync warehouse inventory for received returns: reverse old quantities, apply new
+            if ($isReceived) {
+                foreach ($oldItemSnapshots as $old) {
+                    if ($old['item_id'] && $old['quantity'] > 0) {
+                        InventoryService::subtract($old['item_id'], $customerReturn->warehouse_id, $old['quantity']);
+                    }
+                }
+                foreach ($customerReturn->items as $returnItem) {
+                    if ($returnItem->item_id && $returnItem->quantity > 0) {
+                        InventoryService::add($returnItem->item_id, $customerReturn->warehouse_id, (int) $returnItem->quantity);
+                    }
+                }
+            }
 
             // Adjust customer balance when updating a received return (super admin only)
             if ($isReceived) {
@@ -300,10 +355,8 @@ class CustomerReturnsController extends Controller
 
     public function destroy(CustomerReturn $customerReturn): JsonResponse
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
 
-        if (!$user->isAdmin()) {
+        if (!RoleHelper::canSuperAdmin()) {
             return ApiResponse::customError('Only admins can delete returns', 403);
         }
 

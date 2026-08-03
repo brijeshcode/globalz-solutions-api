@@ -13,27 +13,13 @@ class BackupRetentionCleanupCommand extends Command
 
     public function handle(BackupRetentionService $retentionService): int
     {
-        $tenants = Tenant::on('mysql')->where('is_active', true)->get();
+        $this->info('Running retention cleanup...');
 
-        if ($tenants->isEmpty()) {
-            $this->info('No active tenants found.');
-            return self::SUCCESS;
-        }
-
-        $this->info("Running retention cleanup for {$tenants->count()} tenant(s)...");
-
-        foreach ($tenants as $tenant) {
-            try {
-                // Must be current so Setting::get() reads from the correct tenant DB
-                $tenant->makeCurrent();
-                $retentionService->runForTenant($tenant->id);
-                $this->info("  ✓ Cleaned up: {$tenant->tenant_key}");
-            } catch (\Throwable $e) {
-                $this->error("  ✗ Failed for tenant {$tenant->tenant_key}: {$e->getMessage()}");
-            } finally {
-                Tenant::forgetCurrent();
-            }
-        }
+        // Tenant must be current so Setting::get() reads from the correct tenant DB
+        Tenant::runForEachActive('Backup retention cleanup', function (Tenant $tenant) use ($retentionService) {
+            $retentionService->runForTenant($tenant->id);
+            $this->info("  ✓ Cleaned up: {$tenant->tenant_key}");
+        });
 
         $this->info('Retention cleanup complete.');
         return self::SUCCESS;

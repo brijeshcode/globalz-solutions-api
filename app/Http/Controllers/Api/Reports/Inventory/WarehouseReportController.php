@@ -4,19 +4,19 @@ namespace App\Http\Controllers\Api\Reports\Inventory;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
-use App\Models\Inventory\Inventory;
 use App\Models\Items\Item;
+use App\Models\Items\PriceList;
 use App\Models\Setups\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Mpdf\Mpdf;
 
 class WarehouseReportController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        // $this->fixAllInventory($request);
         $perPage = $request->get('per_page', 50);
         $search = $request->get('search');
         $warehouseId = $request->get('warehouse_id');
@@ -201,6 +201,85 @@ class WarehouseReportController extends Controller
         );
     }
 
+    public function priceListReport(Request $request): JsonResponse
+    {
+        $perPage     = $request->get('per_page', 50);
+        $search      = $request->get('search');
+        $warehouseId = $request->get('warehouse_id');
+
+        $warehouses       = Warehouse::active()->orderBy('name')->get(['id', 'name']);
+        $defaultPriceList = PriceList::getDefaultInv();
+
+        $query = Item::query()
+            ->with(['inventories.warehouse:id,name'])
+            ->where('items.is_active', true)
+            ->select('items.id', 'items.code', 'items.short_name', 'items.description')
+            ->leftJoin('price_list_items', function ($join) use ($defaultPriceList) {
+                $join->on('price_list_items.item_id', '=', 'items.id')
+                    ->where('price_list_items.price_list_id', $defaultPriceList?->id)
+                    ->whereNull('price_list_items.deleted_at');
+            })
+            ->addSelect('price_list_items.sell_price');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('items.code', 'like', "%{$search}%")
+                    ->orWhere('items.short_name', 'like', "%{$search}%")
+                    ->orWhere('items.description', 'like', "%{$search}%")
+                    ->orWhere('items.barcode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($warehouseId) {
+            $query->whereHas('inventories', fn($q) => $q->where('warehouse_id', $warehouseId));
+        }
+
+        $query->orderBy('items.code');
+
+        $items = $query->paginate($perPage);
+
+        $transformedData = $items->through(function ($item) use ($warehouses, $warehouseId) {
+            $warehouseQuantities = [];
+            $totalQuantity       = 0;
+
+            $warehousesToShow = $warehouseId
+                ? $warehouses->where('id', $warehouseId)
+                : $warehouses;
+
+            foreach ($warehousesToShow as $warehouse) {
+                $inventory = $item->inventories->firstWhere('warehouse_id', $warehouse->id);
+                $quantity  = $inventory ? (float) $inventory->quantity : 0;
+                $warehouseQuantities[] = [
+                    'warehouse_id'   => $warehouse->id,
+                    'warehouse_name' => $warehouse->name,
+                    'quantity'       => $quantity,
+                ];
+                $totalQuantity += $quantity;
+            }
+
+            return [
+                'id'                  => $item->id,
+                'code'                => $item->code,
+                'short_name'          => $item->short_name,
+                'description'         => $item->description,
+                'sell_price'          => $item->sell_price !== null ? (float) $item->sell_price : null,
+                'total_quantity'      => $totalQuantity,
+                'warehouse_quantities' => $warehouseQuantities,
+            ];
+        });
+
+        return ApiResponse::paginated(
+            'Price list inventory report retrieved successfully',
+            $transformedData,
+            null,
+            [
+                'warehouses'    => $warehouses->map(fn($w) => ['id' => $w->id, 'name' => $w->name]),
+                'price_list_id' => $defaultPriceList?->id,
+                'price_list'    => $defaultPriceList ? ['id' => $defaultPriceList->id, 'code' => $defaultPriceList->code, 'description' => $defaultPriceList->description] : null,
+            ]
+        );
+    }
+
     public function show(Request $request, Item $item): JsonResponse
     {
         $warehouseId = $request->get('warehouse_id');
@@ -250,6 +329,104 @@ class WarehouseReportController extends Controller
         ];
 
         return ApiResponse::show('Item warehouse inventory retrieved successfully', $data);
+    }
+
+    public function priceListExport(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $search      = $request->get('search');
+        $warehouseId = $request->get('warehouse_id');
+
+        $warehouses       = Warehouse::active()->orderBy('name')->get(['id', 'name']);
+        $defaultPriceList = PriceList::getDefaultInv();
+
+        $query = Item::query()
+            ->with(['inventories'])
+            ->where('items.is_active', true)
+            ->select('items.id', 'items.code', 'items.short_name', 'items.description')
+            ->leftJoin('price_list_items', function ($join) use ($defaultPriceList) {
+                $join->on('price_list_items.item_id', '=', 'items.id')
+                    ->where('price_list_items.price_list_id', $defaultPriceList?->id)
+                    ->whereNull('price_list_items.deleted_at');
+            })
+            ->addSelect('price_list_items.sell_price');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('items.code', 'like', "%{$search}%")
+                    ->orWhere('items.short_name', 'like', "%{$search}%")
+                    ->orWhere('items.description', 'like', "%{$search}%")
+                    ->orWhere('items.barcode', 'like', "%{$search}%");
+            });
+        }
+
+        if ($warehouseId) {
+            $query->whereHas('inventories', fn($q) => $q->where('warehouse_id', $warehouseId));
+        }
+
+        $query->orderBy('items.code');
+        $items = $query->get();
+
+        $warehousesToShow = $warehouseId ? $warehouses->where('id', $warehouseId) : $warehouses;
+
+        $rows = $items->map(function ($item) use ($warehousesToShow) {
+            $warehouseQuantities = [];
+            $totalQuantity       = 0;
+
+            foreach ($warehousesToShow as $warehouse) {
+                $inventory = $item->inventories->firstWhere('warehouse_id', $warehouse->id);
+                $quantity  = $inventory ? (float) $inventory->quantity : 0;
+                $warehouseQuantities[] = [
+                    'warehouse_id'   => $warehouse->id,
+                    'warehouse_name' => $warehouse->name,
+                    'quantity'       => $quantity,
+                ];
+                $totalQuantity += $quantity;
+            }
+
+            return [
+                'code'                 => $item->code,
+                'short_name'           => $item->short_name,
+                'description'          => $item->description,
+                'sell_price'           => $item->sell_price !== null ? (float) $item->sell_price : null,
+                'total_quantity'       => $totalQuantity,
+                'warehouse_quantities' => $warehouseQuantities,
+            ];
+        });
+
+        $html = view('pdfs.inventory-price-list-report', [
+            'rows'             => $rows,
+            'warehouses'       => $warehousesToShow->values(),
+            'defaultPriceList' => $defaultPriceList,
+            'generatedAt'      => now()->format('Y-m-d H:i'),
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L',
+            'margin_left'   => 8,
+            'margin_right'  => 8,
+            'margin_top'    => 10,
+            'margin_bottom' => 15,
+            'margin_header' => 5,
+            'margin_footer' => 5,
+        ]);
+
+        $mpdf->SetHTMLFooter('
+            <table width="100%" style="font-size: 8pt; border-top: 1px solid #000; padding-top: 4px;">
+                <tr>
+                    <td style="text-align: left;">Price List Inventory Report</td>
+                    <td style="text-align: center;">Page {PAGENO} of {nbpg}</td>
+                    <td style="text-align: right;">' . now()->format('Y-m-d') . '</td>
+                </tr>
+            </table>');
+
+        $mpdf->WriteHTML($html);
+
+        $filename = 'price-list-inventory-' . now()->format('Y-m-d') . '.pdf';
+
+        return response()->streamDownload(function () use ($mpdf) {
+            echo $mpdf->Output('', 'S');
+        }, $filename, ['Content-Type' => 'application/pdf']);
     }
 
     private function getStockStatus(float $quantity, ?float $lowAlert): string
@@ -415,29 +592,13 @@ class WarehouseReportController extends Controller
         ];
     }
 
-    /**
-     * Fix inventory for all items based on transaction history
-     */
     public function fixAllInventory(Request $request): JsonResponse
     {
-        $dryRun = $request->boolean('dry_run', false);
-        $warehouseId = $request->get('warehouse_id');
+        $dryRun      = $request->boolean('dry_run', false);
+        $warehouseId = $request->filled('warehouse_id') ? (int) $request->get('warehouse_id') : null;
 
         try {
-            Log::info('=== INVENTORY FIX STARTED (ALL ITEMS) ===', [
-                'dry_run' => $dryRun,
-                'warehouse_id' => $warehouseId,
-                'initiated_by' => auth()->user()?->name ?? 'System',
-                'initiated_at' => now()->toDateTimeString(),
-            ]);
-
-            $fixResults = $this->performInventoryFix(null, $warehouseId, $dryRun);
-
-            Log::info('=== INVENTORY FIX COMPLETED ===', [
-                'total_checked' => $fixResults['total_checked'],
-                'total_fixed' => $fixResults['total_fixed'],
-                'total_errors' => count($fixResults['errors']),
-            ]);
+            $fixResults = QuantityAuditService::auditAndFixQuantities($warehouseId, $dryRun);
 
             $message = $dryRun
                 ? 'Inventory fix dry run completed (no changes made)'
@@ -445,42 +606,17 @@ class WarehouseReportController extends Controller
 
             return ApiResponse::send($message, 200, $fixResults);
         } catch (\Exception $e) {
-            Log::error('INVENTORY FIX FAILED', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-
-            return ApiResponse::send('Inventory fix failed: ' . $e->getMessage(), 500, [
-                'error' => $e->getMessage(),
-            ]);
+            Log::error('INVENTORY FIX FAILED', ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+            return ApiResponse::send('Inventory fix failed: ' . $e->getMessage(), 500, ['error' => $e->getMessage()]);
         }
     }
 
-    /**
-     * Fix inventory for a specific item based on transaction history
-     */
     public function fixItemInventory(Request $request, Item $item): JsonResponse
     {
-        $dryRun = $request->boolean('dry_run', false);
-        $warehouseId = $request->get('warehouse_id');
+        $dryRun      = $request->boolean('dry_run', false);
+        $warehouseId = $request->filled('warehouse_id') ? (int) $request->get('warehouse_id') : null;
 
-        Log::channel('daily')->info('=== INVENTORY FIX STARTED (SINGLE ITEM) ===', [
-            'item_id' => $item->id,
-            'item_code' => $item->code,
-            'dry_run' => $dryRun,
-            'warehouse_id' => $warehouseId,
-            'initiated_by' => auth()->user()?->name ?? 'System',
-            'initiated_at' => now()->toDateTimeString(),
-        ]);
-
-        $fixResults = $this->performInventoryFix($item->id, $warehouseId, $dryRun);
-
-        Log::channel('daily')->info('=== INVENTORY FIX COMPLETED (SINGLE ITEM) ===', [
-            'item_id' => $item->id,
-            'item_code' => $item->code,
-            'total_fixed' => $fixResults['total_fixed'],
-        ]);
+        $fixResults = QuantityAuditService::auditAndFixSingleItemQuantity($item->id, $warehouseId, $dryRun);
 
         $message = $dryRun
             ? 'Inventory fix dry run completed for item (no changes made)'
@@ -489,267 +625,15 @@ class WarehouseReportController extends Controller
         return ApiResponse::send($message, 200, $fixResults);
     }
 
-    /**
-     * Perform the actual inventory fix
-     */
-    private function performInventoryFix(?int $itemId, ?int $warehouseId, bool $dryRun): array
-    {
-        $results = [
-            'total_checked' => 0,
-            'total_fixed' => 0,
-            'fixes' => [],
-            'errors' => [],
-        ];
-
-        // Build query to get expected quantities from item_movements_view
-        $query = DB::table('item_movements_view')
-            ->select(
-                'item_id',
-                'warehouse_id',
-                DB::raw('SUM(credit) - SUM(debit) as expected_quantity')
-            )
-            ->groupBy('item_id', 'warehouse_id');
-
-        if ($itemId) {
-            $query->where('item_id', $itemId);
-        }
-
-        if ($warehouseId) {
-            $query->where('warehouse_id', $warehouseId);
-        }
-
-        $expectedQuantities = $query->get();
-
-        // Get all current inventory records
-        $currentInventoryQuery = Inventory::query();
-        if ($itemId) {
-            $currentInventoryQuery->where('item_id', $itemId);
-        }
-        if ($warehouseId) {
-            $currentInventoryQuery->where('warehouse_id', $warehouseId);
-        }
-        $currentInventories = $currentInventoryQuery->get()->keyBy(function ($inv) {
-            return $inv->item_id . '_' . $inv->warehouse_id;
-        });
-
-        // Get item codes for logging
-        $itemIds = $expectedQuantities->pluck('item_id')->unique()->toArray();
-        $items = Item::whereIn('id', $itemIds)->pluck('code', 'id');
-
-        // Get warehouse names for logging
-        $warehouseIds = $expectedQuantities->pluck('warehouse_id')->unique()->toArray();
-        $warehouses = Warehouse::whereIn('id', $warehouseIds)->pluck('name', 'id');
-
-        // Track which item-warehouse combinations we've processed from movements
-        $processedKeys = [];
-
-        foreach ($expectedQuantities as $expected) {
-            $results['total_checked']++;
-            $key = $expected->item_id . '_' . $expected->warehouse_id;
-            $processedKeys[] = $key;
-
-            $currentInventory = $currentInventories->get($key);
-            $currentQty = $currentInventory ? (float) $currentInventory->quantity : 0;
-            $expectedQty = (float) $expected->expected_quantity;
-
-            // Check if there's a discrepancy
-            if (abs($currentQty - $expectedQty) > 0.0001) {
-                $itemCode = $items[$expected->item_id] ?? 'Unknown';
-                $warehouseName = $warehouses[$expected->warehouse_id] ?? 'Unknown';
-
-                $fixRecord = [
-                    'item_id' => $expected->item_id,
-                    'item_code' => $itemCode,
-                    'warehouse_id' => $expected->warehouse_id,
-                    'warehouse_name' => $warehouseName,
-                    'from_quantity' => $currentQty,
-                    'to_quantity' => $expectedQty,
-                    'difference' => $expectedQty - $currentQty,
-                ];
-
-                if (!$dryRun) {
-                    try {
-                        if ($currentInventory) {
-                            // Update existing inventory
-                            $currentInventory->update(['quantity' => $expectedQty]);
-                        } else {
-                            // Create new inventory record
-                            Inventory::create([
-                                'item_id' => $expected->item_id,
-                                'warehouse_id' => $expected->warehouse_id,
-                                'quantity' => $expectedQty,
-                            ]);
-                        }
-
-                        Log::channel('daily')->info('INVENTORY FIXED', $fixRecord);
-                        $fixRecord['status'] = 'fixed';
-                    } catch (\Exception $e) {
-                        Log::channel('daily')->error('INVENTORY FIX ERROR', [
-                            ...$fixRecord,
-                            'error' => $e->getMessage(),
-                        ]);
-                        $fixRecord['status'] = 'error';
-                        $fixRecord['error'] = $e->getMessage();
-                        $results['errors'][] = $fixRecord;
-                        continue;
-                    }
-                } else {
-                    $fixRecord['status'] = 'dry_run';
-                    Log::channel('daily')->info('INVENTORY FIX (DRY RUN)', $fixRecord);
-                }
-
-                $results['fixes'][] = $fixRecord;
-                $results['total_fixed']++;
-            }
-        }
-
-        // Check for inventory records that exist but have no movements (orphaned records)
-        // These should be set to 0 if they have quantity > 0
-        foreach ($currentInventories as $key => $inventory) {
-            if (!in_array($key, $processedKeys) && $inventory->quantity != 0) {
-                $results['total_checked']++;
-
-                $itemCode = $items[$inventory->item_id] ?? Item::find($inventory->item_id)?->code ?? 'Unknown';
-                $warehouseName = $warehouses[$inventory->warehouse_id] ?? Warehouse::find($inventory->warehouse_id)?->name ?? 'Unknown';
-
-                $fixRecord = [
-                    'item_id' => $inventory->item_id,
-                    'item_code' => $itemCode,
-                    'warehouse_id' => $inventory->warehouse_id,
-                    'warehouse_name' => $warehouseName,
-                    'from_quantity' => (float) $inventory->quantity,
-                    'to_quantity' => 0,
-                    'difference' => -(float) $inventory->quantity,
-                    'note' => 'No transactions found - reset to 0',
-                ];
-
-                if (!$dryRun) {
-                    try {
-                        $inventory->update(['quantity' => 0]);
-                        Log::channel('daily')->info('INVENTORY FIXED (ORPHANED)', $fixRecord);
-                        $fixRecord['status'] = 'fixed';
-                    } catch (\Exception $e) {
-                        Log::channel('daily')->error('INVENTORY FIX ERROR (ORPHANED)', [
-                            ...$fixRecord,
-                            'error' => $e->getMessage(),
-                        ]);
-                        $fixRecord['status'] = 'error';
-                        $fixRecord['error'] = $e->getMessage();
-                        $results['errors'][] = $fixRecord;
-                        continue;
-                    }
-                } else {
-                    $fixRecord['status'] = 'dry_run';
-                    Log::channel('daily')->info('INVENTORY FIX (DRY RUN - ORPHANED)', $fixRecord);
-                }
-
-                $results['fixes'][] = $fixRecord;
-                $results['total_fixed']++;
-            }
-        }
-
-        return $results;
-    }
-
-    /**
-     * Preview inventory discrepancies without fixing
-     */
     public function previewDiscrepancies(Request $request): JsonResponse
     {
-        $warehouseId = $request->get('warehouse_id');
-        $itemId = $request->get('item_id');
+        $warehouseId = $request->filled('warehouse_id') ? (int) $request->get('warehouse_id') : null;
+        $itemId      = $request->filled('item_id') ? (int) $request->get('item_id') : null;
 
-        // Get expected quantities from movements view
-        $query = DB::table('item_movements_view')
-            ->select(
-                'item_id',
-                'warehouse_id',
-                DB::raw('SUM(credit) as total_credit'),
-                DB::raw('SUM(debit) as total_debit'),
-                DB::raw('SUM(credit) - SUM(debit) as expected_quantity')
-            )
-            ->groupBy('item_id', 'warehouse_id');
+        $result = $itemId
+            ? QuantityAuditService::auditSingleItemQuantity($itemId, $warehouseId)
+            : QuantityAuditService::auditQuantities($warehouseId);
 
-        if ($itemId) {
-            $query->where('item_id', $itemId);
-        }
-
-        if ($warehouseId) {
-            $query->where('warehouse_id', $warehouseId);
-        }
-
-        $expectedQuantities = $query->get();
-
-        // Get all current inventory records
-        $currentInventoryQuery = Inventory::query();
-        if ($itemId) {
-            $currentInventoryQuery->where('item_id', $itemId);
-        }
-        if ($warehouseId) {
-            $currentInventoryQuery->where('warehouse_id', $warehouseId);
-        }
-        $currentInventories = $currentInventoryQuery->get()->keyBy(function ($inv) {
-            return $inv->item_id . '_' . $inv->warehouse_id;
-        });
-
-        // Get item codes and warehouse names
-        $itemIds = $expectedQuantities->pluck('item_id')->unique()->toArray();
-        $items = Item::whereIn('id', $itemIds)->get()->keyBy('id');
-
-        $warehouseIds = $expectedQuantities->pluck('warehouse_id')->unique()->toArray();
-        $warehouses = Warehouse::whereIn('id', $warehouseIds)->pluck('name', 'id');
-
-        $discrepancies = [];
-        $processedKeys = [];
-
-        foreach ($expectedQuantities as $expected) {
-            $key = $expected->item_id . '_' . $expected->warehouse_id;
-            $processedKeys[] = $key;
-
-            $currentInventory = $currentInventories->get($key);
-            $currentQty = $currentInventory ? (float) $currentInventory->quantity : 0;
-            $expectedQty = (float) $expected->expected_quantity;
-
-            if (abs($currentQty - $expectedQty) > 0.0001) {
-                $item = $items[$expected->item_id] ?? null;
-                $discrepancies[] = [
-                    'item_id' => $expected->item_id,
-                    'item_code' => $item?->code ?? 'Unknown',
-                    'item_name' => $item?->short_name ?? 'Unknown',
-                    'warehouse_id' => $expected->warehouse_id,
-                    'warehouse_name' => $warehouses[$expected->warehouse_id] ?? 'Unknown',
-                    'current_quantity' => $currentQty,
-                    'expected_quantity' => $expectedQty,
-                    'difference' => $expectedQty - $currentQty,
-                    'total_credit' => (float) $expected->total_credit,
-                    'total_debit' => (float) $expected->total_debit,
-                ];
-            }
-        }
-
-        // Check for orphaned inventory records
-        foreach ($currentInventories as $key => $inventory) {
-            if (!in_array($key, $processedKeys) && $inventory->quantity != 0) {
-                $item = Item::find($inventory->item_id);
-                $discrepancies[] = [
-                    'item_id' => $inventory->item_id,
-                    'item_code' => $item?->code ?? 'Unknown',
-                    'item_name' => $item?->short_name ?? 'Unknown',
-                    'warehouse_id' => $inventory->warehouse_id,
-                    'warehouse_name' => $warehouses[$inventory->warehouse_id] ?? Warehouse::find($inventory->warehouse_id)?->name ?? 'Unknown',
-                    'current_quantity' => (float) $inventory->quantity,
-                    'expected_quantity' => 0,
-                    'difference' => -(float) $inventory->quantity,
-                    'total_credit' => 0,
-                    'total_debit' => 0,
-                    'note' => 'No transactions found',
-                ];
-            }
-        }
-
-        return ApiResponse::send('Inventory discrepancies retrieved', 200, [
-            'total_discrepancies' => count($discrepancies),
-            'discrepancies' => $discrepancies,
-        ]);
+        return ApiResponse::send('Inventory discrepancies retrieved', 200, $result);
     }
 }

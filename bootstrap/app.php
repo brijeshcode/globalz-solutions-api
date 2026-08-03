@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Route;
 use Spatie\Multitenancy\Exceptions\NoCurrentTenant;
 
@@ -24,6 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'feature' => \App\Http\Middleware\RequireFeature::class,
+            'bug-lock' => \App\Http\Middleware\BugLockMiddleware::class,
+            'module.lock' => \App\Http\Middleware\EnforceModuleLock::class,
+            'global-edit-lock' => \App\Http\Middleware\EnforceGlobalEditLock::class,
         ]);
         // Add CORS and session middleware for API (needed for CSRF and tenant session validation)
         $middleware->api(prepend: [
@@ -35,7 +37,6 @@ return Application::configure(basePath: dirname(__DIR__))
         // Add tenant middleware to all API routes
         $middleware->api(append: [
             \App\Http\Middleware\AttachCacheVersion::class,
-            \App\Http\Middleware\LogApiHits::class,
             \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
         ]);
@@ -139,6 +140,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // Return clean JSON response instead of stack trace (reason already logged in OriginTenantFinder)
         $exceptions->renderable(function (NoCurrentTenant $e, $request) {
+            if ($request->attributes->get('tenant_inactive')) {
+                return response()->json([
+                    'message' => 'This account is inactive. Please contact your administrator.',
+                ], 403);
+            }
             return response()->json([
                 'message' => 'Unable to identify system. Please check your domain configuration.',
             ], 403);

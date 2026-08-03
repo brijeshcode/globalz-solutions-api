@@ -136,24 +136,6 @@ return [
 
     'customer_code_start' => (int) env('CUSTOMER_CODE_START', 41101364),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Default Departments
-    |--------------------------------------------------------------------------
-    |
-    | These are the default departments that will be created during seeding.
-    | When selecting salespersons, only employees from Sales department will
-    | be shown to maintain proper role segregation.
-    |
-    */
-
-    'default_departments' => [
-        'Sales',
-        'Accounting', 
-        'Shipping',
-        'Administration',
-        'Warehouse'
-    ],
 
     /*
     |--------------------------------------------------------------------------

@@ -237,5 +237,29 @@ class ExpenseCategorySeeder extends Seeder
         foreach ($childCategories as $category) {
             ExpenseCategory::create($category);
         }
+
+        // System category — purchase-linked expenses
+        $purchaseExpensesParent = ExpenseCategory::firstOrCreate(
+            ['name' => 'Purchase Expenses'],
+            [
+                'description' => 'Expenses automatically created from purchases',
+                'is_active'   => true,
+                'is_system'   => true,
+            ]
+        );
+
+        $purchaseExpenseSubcategories = [
+            ['name' => 'Shipping',  'description' => 'Shipping and freight charges'],
+            ['name' => 'Customs',   'description' => 'Customs duties and border fees'],
+            ['name' => 'Other',     'description' => 'Other purchase-related charges'],
+            ['name' => 'Tax',       'description' => 'Tax applied on purchase'],
+        ];
+
+        foreach ($purchaseExpenseSubcategories as $sub) {
+            ExpenseCategory::firstOrCreate(
+                ['name' => $sub['name'], 'parent_id' => $purchaseExpensesParent->id],
+                array_merge($sub, ['is_active' => true, 'parent_id' => $purchaseExpensesParent->id])
+            );
+        }
     }
 }

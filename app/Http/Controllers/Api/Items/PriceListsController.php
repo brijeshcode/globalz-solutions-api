@@ -170,7 +170,7 @@ class PriceListsController extends Controller
     public function show(PriceList $priceList): JsonResponse
     {
         $priceList->load([
-            'items',
+            'items.item',
             'createdBy:id,name',
             'updatedBy:id,name'
         ]);
@@ -424,29 +424,37 @@ class PriceListsController extends Controller
             'sell_price' => 'required|numeric|min:0',
         ]);
 
-        $priceListItem = DB::transaction(function () use ($validated, $priceList, $user) {
-            $priceListItemData = [
+        $itemId = $validated['item_id'] ?? null;
+        $itemCode = $validated['item_code'];
+        $itemDescription = $validated['item_description'] ?? null;
+
+        if ($itemId) {
+            $item = Item::find($itemId);
+            if ($item) {
+                $itemCode = $item->code;
+                $itemDescription = $item->description;
+            }
+        }
+
+        $alreadyExists = $priceList->items()
+            ->when($itemId, fn($q) => $q->where('item_id', $itemId), fn($q) => $q->where('item_code', $itemCode))
+            ->exists();
+
+        if ($alreadyExists) {
+            return ApiResponse::customError('This item already exists in the price list', 422);
+        }
+
+        $priceListItem = DB::transaction(function () use ($validated, $priceList, $user, $itemId, $itemCode, $itemDescription) {
+            $priceListItem = PriceListItem::create([
                 'price_list_id' => $priceList->id,
-                'item_code' => $validated['item_code'],
-                'item_id' => $validated['item_id'] ?? null,
-                'item_description' => $validated['item_description'] ?? null,
+                'item_code' => $itemCode,
+                'item_id' => $itemId,
+                'item_description' => $itemDescription,
                 'sell_price' => $validated['sell_price'],
                 'created_by' => $user->id,
                 'updated_by' => $user->id,
-            ];
+            ]);
 
-            // If item_id is provided, fetch item details
-            if (isset($validated['item_id'])) {
-                $item = Item::find($validated['item_id']);
-                if ($item) {
-                    $priceListItemData['item_code'] = $item->code;
-                    $priceListItemData['item_description'] = $item->description;
-                }
-            }
-
-            $priceListItem = PriceListItem::create($priceListItemData);
-
-            // Update item count on the price list
             $priceList->updateItemCount();
 
             return $priceListItem;
@@ -524,6 +532,33 @@ class PriceListsController extends Controller
             'Price list item updated successfully',
             new PriceListItemResource($priceListItem)
         );
+    }
+
+    /**
+     * Reorder items within a price list.
+     * Accepts: { "ids": [3, 1, 2] } — ordered array of price list item IDs.
+     */
+    public function reorderItems(Request $request, PriceList $priceList): JsonResponse
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'required|integer|exists:price_list_items,id',
+        ]);
+
+        $ids = $request->input('ids');
+
+        $belongsToList = $priceList->items()->whereIn('id', $ids)->count();
+        if ($belongsToList !== count($ids)) {
+            return ApiResponse::customError('Some items do not belong to this price list', 422);
+        }
+
+        DB::transaction(function () use ($ids) {
+            foreach ($ids as $position => $id) {
+                PriceListItem::where('id', $id)->update(['sort_order' => $position + 1]);
+            }
+        });
+
+        return ApiResponse::update('Price list items reordered successfully');
     }
 
     /**

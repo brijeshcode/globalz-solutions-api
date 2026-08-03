@@ -14,9 +14,12 @@ class SaleSettingsController extends Controller
     private const GROUP = 'sale_settings';
 
     private const DEFAULTS = [
-        'block_new_sale'         => ['value' => false,       'type' => Setting::TYPE_BOOLEAN],
-        'block_new_sale_order'   => ['value' => false,       'type' => Setting::TYPE_BOOLEAN],
-        'block_return_sale_received'   => ['value' => false,       'type' => Setting::TYPE_BOOLEAN],
+        'block_new_sale'                        => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'block_new_sale_order'                  => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'block_return_sale_received'            => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'cost_price_decimals'                   => ['value' => 2,     'type' => Setting::TYPE_NUMBER],
+        'allow_super_admin_sell_below_cost'     => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'allow_admin_sell_below_cost'           => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
     ];
     
     /**

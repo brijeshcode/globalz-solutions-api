@@ -37,14 +37,9 @@ class PurchaseItemFactory extends Factory
             $discountAmount;
         $totalPrice = $grossTotal - $totalDiscount;
         
-        // USD amounts (assuming conversion already applied)
         $totalPriceUsd = $totalPrice;
-        $shippingPerItem = $this->faker->randomFloat(2, 0, 50);
-        $customsPerItem = $this->faker->randomFloat(2, 0, 30);
-        $otherPerItem = $this->faker->randomFloat(2, 0, 10);
-        
-        $finalTotalCostUsd = $totalPriceUsd + $shippingPerItem + $customsPerItem + $otherPerItem;
-        $costPerItemUsd = $finalTotalCostUsd / $quantity;
+        $finalTotalCostUsd = $totalPriceUsd;
+        $costPerItemUsd = $quantity > 0 ? $finalTotalCostUsd / $quantity : 0;
 
         return [
             'item_code' => function (array $attributes) {
@@ -59,9 +54,7 @@ class PurchaseItemFactory extends Factory
             'discount_amount' => $discountAmount,
             'total_price' => $totalPrice,
             'total_price_usd' => $totalPriceUsd,
-            'total_shipping_usd' => $shippingPerItem,
-            'total_customs_usd' => $customsPerItem,
-            'total_other_usd' => $otherPerItem,
+            'total_expense_usd' => 0,
             'final_total_cost_usd' => $finalTotalCostUsd,
             'cost_per_item_usd' => $costPerItemUsd,
             'note' => $this->faker->optional(0.3)->sentence(),
@@ -172,23 +165,6 @@ class PurchaseItemFactory extends Factory
                 'quantity' => $quantity,
                 'total_price' => $totalPrice,
                 'total_price_usd' => $totalPrice,
-            ];
-        });
-    }
-
-    /**
-     * Purchase item with high shipping costs
-     */
-    public function withHighShipping(): static
-    {
-        return $this->state(function (array $attributes) {
-            $shippingCost = $this->faker->randomFloat(2, 100, 500);
-            $finalTotal = $attributes['total_price_usd'] + $shippingCost;
-            
-            return [
-                'total_shipping_usd' => $shippingCost,
-                'final_total_cost_usd' => $finalTotal,
-                'cost_per_item_usd' => $finalTotal / $attributes['quantity'],
             ];
         });
     }

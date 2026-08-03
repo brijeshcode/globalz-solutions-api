@@ -9,6 +9,7 @@ use App\Models\Setups\Warehouse;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,7 +22,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Employee extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\EmployeeFactory> */
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDocuments, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDocuments, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'employees';
 
     protected $fillable = [
         'code',
@@ -31,6 +34,7 @@ class Employee extends Model
         'mobile',
         'email',
         'base_salary',
+        'current_balance',
         'start_date',
         'department_id',
         'is_active',
@@ -40,6 +44,11 @@ class Employee extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'current_balance' => 'decimal:2',
+    ];
+
+    protected $attributes = [
+        'current_balance' => 0,
     ];
 
     protected $searchable = [
@@ -72,6 +81,13 @@ class Employee extends Model
     {
         return $query->whereHas('department', function ($q) {
             $q->where('name', 'Sales');
+        });
+    }
+
+    public function scopeIsDriverDepartment($query)
+    {
+        return $query->whereHas('department', function ($q) {
+            $q->where('name', 'Drivers');
         });
     }
 
@@ -119,6 +135,23 @@ class Employee extends Model
     public function employeeCommissionTargets(): HasMany
     {
         return $this->hasMany(EmployeeCommissionTarget::class);
+    }
+
+    public function recalculateBalance(): void
+    {
+        $totalDebit = EmployeeCreditDebitNote::where('employee_id', $this->id)
+                ->where('type', 'debit')->sum('amount_usd')
+            + AdvanceLoan::where('employee_id', $this->id)->sum('amount_usd');
+
+        $totalCredit = EmployeeCreditDebitNote::where('employee_id', $this->id)
+                ->where('type', 'credit')->sum('amount_usd')
+            + Salary::where('employee_id', $this->id)->where('advance_payment', '>', 0)->sum('advance_payment');
+
+        $balance = $totalCredit - $totalDebit;
+
+        if ($this->current_balance != $balance) {
+            $this->update(['current_balance' => $balance]);
+        }
     }
 
     public static function reserveNextCode(): int

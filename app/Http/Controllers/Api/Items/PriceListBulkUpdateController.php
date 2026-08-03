@@ -237,4 +237,57 @@ class PriceListBulkUpdateController extends Controller
             PriceListResource::collection($priceLists)
         );
     }
+
+    public function addItemsToPricelists(Request $request): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!RoleHelper::canAdmin()) {
+            return ApiResponse::customError('Only admin users can perform bulk add', 403);
+        }
+
+        $validated = $request->validate([
+            'price_lists'                        => 'required|array|min:1',
+            'price_lists.*.price_list_id'        => 'required|integer|exists:price_lists,id',
+            'price_lists.*.items'                => 'required|array|min:1',
+            'price_lists.*.items.*.item_id'      => 'required|integer|exists:items,id',
+            'price_lists.*.items.*.sell_price'   => 'required|numeric|min:0',
+        ]);
+
+        $inserted = 0;
+        $skipped  = 0;
+
+        DB::transaction(function () use ($validated, $user, &$inserted, &$skipped) {
+            foreach ($validated['price_lists'] as $priceListData) {
+                $priceListId = $priceListData['price_list_id'];
+
+                foreach ($priceListData['items'] as $itemData) {
+                    $alreadyExists = PriceListItem::where('price_list_id', $priceListId)
+                        ->where('item_id', $itemData['item_id'])
+                        ->exists();
+
+                    if ($alreadyExists) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    PriceListItem::create([
+                        'price_list_id' => $priceListId,
+                        'item_id'       => $itemData['item_id'],
+                        'sell_price'    => $itemData['sell_price'],
+                        'created_by'    => $user->id,
+                        'updated_by'    => $user->id,
+                    ]);
+
+                    $inserted++;
+                }
+            }
+        });
+
+        return ApiResponse::store('Items added to price lists successfully', [
+            'inserted' => $inserted,
+            'skipped'  => $skipped,
+        ]);
+    }
 }

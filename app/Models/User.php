@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,9 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable;
+    use HasFactory, Notifiable, HasApiTokens, SoftDeletes, Authorable, HasBooleanFilters, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'users';
 
     /**
      * The attributes that are mass assignable.

@@ -3,6 +3,8 @@
 namespace App\Models\Items;
 
 use App\Models\Inventory\Inventory;
+use App\Models\Inventory\ItemPrice;
+use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Setting;
 use App\Models\Setups\ItemBrand;
 use App\Models\Setups\ItemCategory;
@@ -17,17 +19,21 @@ use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
+use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Item extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDocuments, Searchable, Sortable;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDocuments, Searchable, Sortable, InvalidatesCacheVersion;
+
+    protected static string $cacheVersionKey = 'items';
 
     protected $fillable = [
         'code',
@@ -158,7 +164,12 @@ class Item extends Model
 
     public function itemPrice(): HasOne
     {
-        return $this->hasOne(\App\Models\Inventory\ItemPrice::class);
+        return $this->hasOne(ItemPrice::class);
+    }
+
+    public function priceHistories(): HasMany
+    {
+        return $this->hasMany(ItemPriceHistory::class);
     }
 
     public function lastPurchaseItem(): HasOne

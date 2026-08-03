@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Api\Expenses;
 
+use App\Exports\ExpenseCategorySummaryExport;
+use App\Exports\ExpenseTransactionsExport;
 use App\Helpers\CurrencyHelper;
 use App\Services\Currency\CurrencyService;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Expenses\ExpenseTransactionsStoreRequest;
 use App\Http\Requests\Api\Expenses\ExpenseTransactionsUpdateRequest;
@@ -12,6 +15,7 @@ use App\Models\Accounts\Account;
 use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\TenantFeature;
+use App\Models\Suppliers\PurchaseExpense;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setups\Expenses\ExpenseCategory;
@@ -38,8 +42,6 @@ class ExpenseTransactionsController extends Controller
                 'currency:id,name,code,symbol,calculation_type,thousand_separator,decimal_separator,decimal_places'
             ])
         ->sortable($request);
-
-        
 
         $expenseTransactions = $this->applyPagination($query, $request);
 
@@ -178,8 +180,31 @@ class ExpenseTransactionsController extends Controller
     /**
      * Update the specified resource in storage.
      */
+    private function guardIfPurchaseLinked(ExpenseTransaction $expenseTransaction): ?JsonResponse
+    {
+        $pe = PurchaseExpense::where('expense_transaction_id', $expenseTransaction->id)->first();
+
+        if (!$pe) {
+            return null;
+        }
+
+        $purchaseCode = \DB::table('purchases')
+            ->where('id', $pe->purchase_id)
+            ->selectRaw("CONCAT(prefix, code) as purchase_code")
+            ->value('purchase_code');
+
+        return ApiResponse::customError(
+            "This expense is linked to purchase {$purchaseCode} and can only be edited from there.",
+            403
+        );
+    }
+
     public function update(ExpenseTransactionsUpdateRequest $request, ExpenseTransaction $expenseTransaction): JsonResponse
     {
+        if ($guard = $this->guardIfPurchaseLinked($expenseTransaction)) {
+            return $guard;
+        }
+
         $data           = $request->validated();
         $featureEnabled = TenantFeature::isEnabled('expense_deferred_payment');
 
@@ -295,6 +320,10 @@ class ExpenseTransactionsController extends Controller
      */
     public function destroy(ExpenseTransaction $expenseTransaction): JsonResponse
     {
+        if ($guard = $this->guardIfPurchaseLinked($expenseTransaction)) {
+            return $guard;
+        }
+
         $expenseTransaction->delete();
 
         return ApiResponse::delete('Expense transaction deleted successfully');
@@ -331,6 +360,11 @@ class ExpenseTransactionsController extends Controller
     public function restore(int $id): JsonResponse
     {
         $expenseTransaction = ExpenseTransaction::onlyTrashed()->findOrFail($id);
+
+        if ($guard = $this->guardIfPurchaseLinked($expenseTransaction)) {
+            return $guard;
+        }
+
         $expenseTransaction->restore();
 
         return ApiResponse::update('Expense transaction restored successfully');
@@ -342,6 +376,11 @@ class ExpenseTransactionsController extends Controller
     public function forceDelete(int $id): JsonResponse
     {
         $expenseTransaction = ExpenseTransaction::onlyTrashed()->findOrFail($id);
+
+        if ($guard = $this->guardIfPurchaseLinked($expenseTransaction)) {
+            return $guard;
+        }
+
         $expenseTransaction->forceDelete();
 
         return ApiResponse::delete('Expense transaction permanently deleted successfully');
@@ -463,18 +502,18 @@ class ExpenseTransactionsController extends Controller
 
         $stats = [
             'total_transactions'      => (clone $query)->count(),
-            'total_amount_usd'        => (clone $query)->sum('amount_usd'),
+            'total_amount_usd'        => (clone $query)->selectRaw('COALESCE(SUM(amount_usd + vat_amount_usd), 0) as total')->value('total'),
             'this_month_transactions' => (clone $query)->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
                 ->count(),
             'this_month_amount_usd'   => (clone $query)->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
-                ->sum('amount_usd'),
+                ->selectRaw('COALESCE(SUM(amount_usd + vat_amount_usd), 0) as total')->value('total'),
         ];
 
         if ($featureEnabled) {
             $stats['total_paid'] = (clone $query)->sum('paid_amount_usd');
-            $stats['total_due']      = (clone $query)->selectRaw('COALESCE(SUM(amount_usd - paid_amount_usd), 0) as due')->value('due');
+            $stats['total_due']      = (clone $query)->selectRaw('COALESCE(SUM((amount_usd + vat_amount_usd) - paid_amount_usd), 0) as due')->value('due');
         }
 
         return ApiResponse::show('Expense transaction statistics retrieved successfully', $stats);
@@ -482,13 +521,28 @@ class ExpenseTransactionsController extends Controller
 
     public function categorySummary(Request $request): JsonResponse
     {
+        $summary = $this->buildCategorySummaryData($request);
+
+        return ApiResponse::show('Expense category summary retrieved successfully', $summary);
+    }
+
+    public function exportCategorySummary(Request $request)
+    {
+        $summary  = $this->buildCategorySummaryData($request);
+        $filename = 'expense-category-summary_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new ExpenseCategorySummaryExport($summary), $filename);
+    }
+
+    private function buildCategorySummaryData(Request $request): \Illuminate\Support\Collection
+    {
         $aggregates = ExpenseTransaction::query()
             ->searchable($request)
             ->when($request->has('account_id'),          fn($q) => $q->where('account_id', $request->input('account_id')))
             ->when($request->has('expense_category_id'), fn($q) => $q->where('expense_category_id', $request->input('expense_category_id')))
             ->when($request->has('date_from'),           fn($q) => $q->fromDate($request->input('date_from')))
             ->when($request->has('date_to'),             fn($q) => $q->toDate($request->input('date_to')))
-            ->selectRaw('expense_category_id, COUNT(*) as transactions_count, COALESCE(SUM(amount_usd), 0) as sum_amount_usd, COALESCE(SUM(paid_amount_usd), 0) as sum_paid_usd')
+            ->selectRaw('expense_category_id, COUNT(*) as transactions_count, COALESCE(SUM(amount_usd + vat_amount_usd), 0) as sum_amount_usd, COALESCE(SUM(paid_amount_usd), 0) as sum_paid_usd')
             ->groupBy('expense_category_id')
             ->get()
             ->keyBy('expense_category_id');
@@ -498,12 +552,10 @@ class ExpenseTransactionsController extends Controller
             ->active()
             ->get();
 
-        $summary = $categories
+        return $categories
             ->map(fn($cat) => $this->buildCategoryNode($cat, $aggregates))
             ->filter(fn($node) => $node['total_amount_usd'] > 0)
             ->values();
-
-        return ApiResponse::show('Expense category summary retrieved successfully', $summary);
     }
 
     private function buildCategoryNode(ExpenseCategory $category, $aggregates): array
@@ -545,6 +597,24 @@ class ExpenseTransactionsController extends Controller
         return $node;
     }
 
+    private function resolveDescendantCategoryIds(int $categoryId): array
+    {
+        $ids = [$categoryId];
+        $children = ExpenseCategory::where('parent_id', $categoryId)->pluck('id')->toArray();
+        foreach ($children as $childId) {
+            $ids = array_merge($ids, $this->resolveDescendantCategoryIds($childId));
+        }
+        return $ids;
+    }
+
+    public function export(Request $request)
+    {
+        $query    = $this->query($request);
+        $filename = 'expense-transactions_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new ExpenseTransactionsExport($query), $filename);
+    }
+
     private function query(Request $request)
     {
         $search = $request->input('search');
@@ -556,7 +626,9 @@ class ExpenseTransactionsController extends Controller
             ->searchable($request);
 
         if ($request->has('expense_category_id')) {
-            $query->where('expense_category_id', $request->input('expense_category_id'));
+            $categoryId  = (int) $request->input('expense_category_id');
+            $categoryIds = $this->resolveDescendantCategoryIds($categoryId);
+            $query->whereIn('expense_category_id', $categoryIds);
         }
 
         if ($request->has('account_id')) {
@@ -572,8 +644,28 @@ class ExpenseTransactionsController extends Controller
         } 
         
         if ($request->has('date_to')) {
-            $query->toDate( $request->date_to);
+            $query->toDate($request->date_to);
         }
+
+        if ($request->has('min_amount')) {
+            $query->where('amount', '>=', $request->input('min_amount'));
+        }
+
+        if ($request->has('max_amount')) {
+            $query->where('amount', '<=', $request->input('max_amount'));
+        }
+
+        if ($request->has('payment_status')) {
+            if ($request->input('payment_status') === 'paid') {
+                $query->whereRaw('paid_amount >= (amount + COALESCE(vat_amount, 0))');
+            } elseif ($request->input('payment_status') === 'unpaid') {
+                $query->where(fn($q) => $q->whereNull('paid_amount')->orWhere('paid_amount', '<=', 0));
+            } elseif ($request->input('payment_status') === 'partial') {
+                $query->where('paid_amount', '>', 0)
+                      ->whereRaw('paid_amount < (amount + COALESCE(vat_amount, 0))');
+            }
+        }
+
         return $query;
 
     }

@@ -23,9 +23,12 @@ class CustomerSaleSettingsUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'block_new_sale'               => 'required|boolean',
-            'block_new_sale_order'         => 'required|boolean',
-            'block_return_sale_received'   => 'required|boolean',
+            'block_new_sale'                    => 'required|boolean',
+            'block_new_sale_order'              => 'required|boolean',
+            'block_return_sale_received'        => 'required|boolean',
+            'cost_price_decimals'               => 'required|integer|min:0|max:8',
+            'allow_super_admin_sell_below_cost' => 'required|boolean',
+            'allow_admin_sell_below_cost'       => 'required|boolean',
         ];
     }
 }

@@ -27,6 +27,15 @@ class FeatureHelper {
         return Config::get("features.{$key}", false);
     }
 
+    /**
+     * No-op: features are read directly from config here (no per-request cache to
+     * clear). Kept for API-compatibility with callers that flush the feature cache.
+     */
+    public static function flush(): void
+    {
+        // Config-based resolution holds no state, so there is nothing to flush.
+    }
+
     // ─── Convenience methods ──────────────────────────────────────────────────
 
     public static function isMultiCurrency(): bool
@@ -42,5 +51,30 @@ class FeatureHelper {
     public static function isDatabaseMirror(): bool
     {
         return self::isEnabled('database_mirror');
+    }
+
+    public static function isVehicleModule(): bool
+    {
+        return self::isEnabled('vehicle_module');
+    }
+
+    public static function isBugLock(): bool
+    {
+        return self::isEnabled('bug_lock');
+    }
+
+    public static function expensePaymentEnabled(): bool
+    {
+        return self::isEnabled('expense_deferred_payment');
+    }
+
+    public static function isSaleProfitRecalculation(): bool
+    {
+        return self::isEnabled('sale_profit_recalculation');
+    }
+
+    public static function isProformaInvoice(): bool
+    {
+        return self::isEnabled('proforma_invoice');
     }
 }

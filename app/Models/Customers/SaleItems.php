@@ -29,6 +29,7 @@ class SaleItems extends Model
         'item_id',
         'quantity',
         'cost_price',
+        'cost_history_id',
         'price',
         'price_usd',
         'net_sell_price',
@@ -46,9 +47,9 @@ class SaleItems extends Model
         'tax_amount_usd',
         'total_tax_amount',
         'total_tax_amount_usd',
-        'total_net_sell_price',
+        'total_net_sell_price',// without tax
         'total_net_sell_price_usd',
-        'total_price',
+        'total_price', // with tax
         'total_price_usd',
         'unit_profit',
         'total_profit',
@@ -61,7 +62,7 @@ class SaleItems extends Model
 
     protected $casts = [
         'quantity' => 'decimal:0',
-        'cost_price' => 'decimal:2',
+        'cost_price' => 'decimal:8',
         'price' => 'decimal:8',
         'price_usd' => 'decimal:8',
         'net_sell_price' => 'decimal:8',

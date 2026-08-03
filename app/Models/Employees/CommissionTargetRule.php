@@ -2,6 +2,7 @@
 
 namespace App\Models\Employees;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,32 +11,74 @@ class CommissionTargetRule extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\CommissionTargetRuleFactory> */
     use HasFactory;
-    public const TYPES= ['fuel', 'payment', 'sale'];
-    public const INCLUDE_TYPE = ['Own', 'All', 'All except own'];
-    public const PERCENTAGE_TYPE = ['fixed', 'dynamic'];
+    public const TYPE_FUEL = 'fuel';
+    public const TYPE_PAYMENT = 'payment';
+    public const TYPE_SALE = 'sale';
 
+    public const TYPES = [
+        self::TYPE_FUEL,
+        self::TYPE_PAYMENT,
+        self::TYPE_SALE,
+    ];
+
+    public const PERIOD_MONTHLY = 'monthly';
+    public const PERIOD_YEARLY = 'yearly';
+
+    public const PERIODS = [
+        self::PERIOD_MONTHLY,
+        self::PERIOD_YEARLY,
+    ];
+
+    public const INCLUDE_TYPE = ['Own', 'All', 'All except own'];
     public const INCLUDE_TYPE_OWN = 'Own';
     public const INCLUDE_TYPE_ALL = 'All';
     public const INCLUDE_TYPE_ALL_EXCEPT_OWN = 'All except own';
 
-    public const PERCENTAGE_TYPE_FIXED = 'fixed';
-    public const PERCENTAGE_TYPE_DYNAMIC = 'dynamic';
+    public const AMOUNT_TYPE = ['set', 'auto'];
+    public const AMOUNT_TYPE_AUTO = 'auto';
+    public const AMOUNT_TYPE_SET = 'set';
+
+    // How an 'auto' target is applied (see the migration/RuleCalculator for semantics).
+    public const AUTO_TARGET_TYPE = ['min', 'max', 'both'];
+    public const AUTO_TARGET_MIN = 'min';
+    public const AUTO_TARGET_MAX = 'max';
+    public const AUTO_TARGET_BOTH = 'both';
+
+    public const REWARD_CALCULATION_TYPE = ['fixed', 'dynamic'];
+    public const REWARD_CALCULATION_TYPE_FIXED = 'fixed';
+    public const REWARD_CALCULATION_TYPE_DYNAMIC = 'dynamic';
+
+    public const REWARD_TYPE = ['fixed', 'percent'];
+    public const REWARD_TYPE_FIXED = 'fixed';
+    public const REWARD_TYPE_PERCENT = 'percent';
 
     protected $fillable = [
         'commission_target_id',
         'type',
+        'period',
         'include_type',
-        'percent_type',
+        'amount_type',
+        'auto_target_type',
+        'number_of_months',
+        'push_target_percent',
         'minimum_amount',
         'maximum_amount',
+        'is_capped',
+        'reward_type',
         'percent',
+        'fixed_reward',
+        'reward_calculation_type',
         'comission_label',
     ];
 
     protected $casts = [
-        'minimum_amount' => 'decimal:4',
-        'maximum_amount' => 'decimal:4',
-        'percent' => 'decimal:4',
+        'minimum_amount'      => 'decimal:4',
+        'maximum_amount'      => 'decimal:4',
+        'is_capped'           => 'boolean',
+        'percent'             => 'decimal:4',
+        'fixed_reward'        => 'decimal:4',
+        'push_target_percent' => 'decimal:2',
+        'number_of_months'    => 'integer',
     ];
 
     // Relationships
@@ -45,22 +88,22 @@ class CommissionTargetRule extends Model
     }
 
     // Scopes
-    public function scopeByCommissionTarget($query, $commissionTargetId)
+    public function scopeByCommissionTarget(Builder $query, int $commissionTargetId)
     {
         return $query->where('commission_target_id', $commissionTargetId);
     }
 
-    public function scopeByType($query, $type)
+    public function scopeByType(Builder $query, string $type)
     {
         return $query->where('type', $type);
     }
 
-    public function scopeByPercentType($query, $type)
+    public function scopeByRewardCalculationType(Builder $query, string $type)
     {
-        return $query->where('percent_type', $type);
+        return $query->where('reward_calculation_type', $type);
     }
 
-    public function scopeInAmountRange($query, $amount)
+    public function scopeInAmountRange(Builder $query, float $amount)
     {
         return $query->where('minimum_amount', '<=', $amount)
                      ->where('maximum_amount', '>=', $amount);

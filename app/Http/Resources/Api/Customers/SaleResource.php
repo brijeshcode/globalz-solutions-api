@@ -50,6 +50,19 @@ class SaleResource extends JsonResource
             
             // Shipping status
             'status' => $this->status,
+            'status_histories' => $this->when(
+                $this->relationLoaded('statusHistories'),
+                fn() => $this->statusHistories->map(fn($h) => [
+                    'status'     => $h->status,
+                    'changed_at' => $h->created_at,
+                    'changed_by' => $h->relationLoaded('changedBy') && $h->changedBy
+                        ? ['id' => $h->changedBy->id, 'name' => $h->changedBy->name]
+                        : null,
+                    'car' => $h->relationLoaded('car') && $h->car
+                        ? ['id' => $h->car->id, 'name' => $h->car->name, 'plate_number' => $h->car->plate_number]
+                        : null,
+                ])
+            ),
             
             'sale_items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
             'items' => SaleItemResource::collection($this->whenLoaded('saleItems')),

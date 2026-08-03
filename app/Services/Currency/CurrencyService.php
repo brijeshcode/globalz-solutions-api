@@ -233,8 +233,10 @@ class CurrencyService
     {
         if (!self::$localCurrencyLoaded) {
             $code = self::getLocalCurrencyCode();
+            $tenantId = \App\Models\Tenant::current()?->getKey() ?? 0;
+            $cacheKey = self::LOCAL_CURRENCY_CACHE_KEY . ':t:' . $tenantId;
             self::$localCurrency = $code
-                ? Cache::remember(self::LOCAL_CURRENCY_CACHE_KEY, self::CACHE_DURATION, function () use ($code) {
+                ? Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($code) {
                     return Currency::where('code', $code)->first();
                 })
                 : null;

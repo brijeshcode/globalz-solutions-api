@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\Reports\Customer\CustomerAgingReportResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
+use App\Models\Customers\CustomerPayment;
+use App\Models\Customers\Sale;
 use App\Traits\HasPagination;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class CustomerAgingReportController extends Controller
@@ -39,6 +42,8 @@ class CustomerAgingReportController extends Controller
         $this->applySort($query, $request);
 
         $paginated = $query->paginate($this->getPerPage($request));
+        $this->loadLastPayments($paginated->getCollection());
+        $this->loadLastInvoices($paginated->getCollection());
 
         $stats = [
             'total_balance' => (float) $this->buildQuery($request)->sum('customers.current_balance'),
@@ -58,6 +63,8 @@ class CustomerAgingReportController extends Controller
         $this->applySort($query, $request);
 
         $rows = $query->get();
+        $this->loadLastPayments($rows);
+        $this->loadLastInvoices($rows);
 
         return ApiResponse::show(
             'Customer aging report exported successfully',
@@ -85,12 +92,22 @@ class CustomerAgingReportController extends Controller
               AND cp.deleted_at  IS NULL
         )';
 
+        $lastPaymentAmountSub = '(
+            SELECT cp.amount FROM customer_payments cp
+            WHERE cp.customer_id = customers.id
+              AND cp.approved_by IS NOT NULL
+              AND cp.deleted_at  IS NULL
+            ORDER BY cp.date DESC
+            LIMIT 1
+        )';
+
         $query = Customer::query()
             ->select('customers.*')
             ->addSelect(DB::raw("{$lastInvoiceSub} as last_invoice_date"))
             ->addSelect(DB::raw("DATEDIFF(NOW(), {$lastInvoiceSub}) as invoice_age"))
             ->addSelect(DB::raw("{$lastPaymentSub} as last_payment_date"))
             ->addSelect(DB::raw("CASE WHEN customers.current_balance BETWEEN -2 AND 2 THEN 0 ELSE DATEDIFF(NOW(), {$lastPaymentSub}) END as payment_age"))
+            ->addSelect(DB::raw("{$lastPaymentAmountSub} as last_payment_amount"))
             ->addSelect(DB::raw('employees.name as salesperson_name'))
             ->leftJoin('employees', 'employees.id', '=', 'customers.salesperson_id')
             ->with('salesperson:id,code,name')
@@ -144,6 +161,40 @@ class CustomerAgingReportController extends Controller
         $column = self::SORTABLE[$sortBy] ?? self::SORTABLE[self::DEFAULT_SORT];
 
         $query->orderBy(DB::raw($column), $sortDir);
+    }
+
+    private function loadLastInvoices(Collection $customers): void
+    {
+        $ids = $customers->pluck('id');
+
+        $invoices = Sale::whereIn('customer_id', $ids)
+            ->whereNotNull('approved_by')
+            ->whereNull('deleted_at')
+            ->orderByDesc('date')
+            ->get(['id', 'customer_id', 'prefix', 'code', 'date', 'total', 'total_usd'])
+            ->groupBy('customer_id')
+            ->map(fn ($group) => $group->take(5));
+
+        $customers->each(function ($customer) use ($invoices) {
+            $customer->setRelation('lastInvoices', $invoices->get($customer->id, collect()));
+        });
+    }
+
+    private function loadLastPayments(Collection $customers): void
+    {
+        $ids = $customers->pluck('id');
+
+        $payments = CustomerPayment::whereIn('customer_id', $ids)
+            ->whereNotNull('approved_by')
+            ->whereNull('deleted_at')
+            ->orderByDesc('date')
+            ->get(['id', 'customer_id', 'prefix', 'code', 'date', 'amount', 'amount_usd'])
+            ->groupBy('customer_id')
+            ->map(fn ($group) => $group->take(5));
+
+        $customers->each(function ($customer) use ($payments) {
+            $customer->setRelation('lastPayments', $payments->get($customer->id, collect()));
+        });
     }
 
 

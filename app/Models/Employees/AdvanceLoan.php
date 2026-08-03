@@ -138,6 +138,7 @@ class AdvanceLoan extends Model
         static::created(function ($advanceLoan) {
             // AdvanceLoan removes balance from account (money going out)
             AccountsHelper::removeBalance(Account::find($advanceLoan->account_id), $advanceLoan->amount_usd);
+            $advanceLoan->employee->recalculateBalance();
         });
 
         static::updated(function ($advanceLoan) {
@@ -157,11 +158,13 @@ class AdvanceLoan extends Model
                 // If amount increased, remove more; if decreased, add back
                 AccountsHelper::removeBalance(Account::find($advanceLoan->account_id), $difference);
             }
+            $advanceLoan->employee->recalculateBalance();
         });
 
         static::deleted(function ($advanceLoan) {
             // Add balance back to account when advanceLoan is deleted
             AccountsHelper::addBalance(Account::find($advanceLoan->account_id), $advanceLoan->amount_usd);
+            $advanceLoan->employee->recalculateBalance();
         });
     }
 }

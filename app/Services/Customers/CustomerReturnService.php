@@ -3,6 +3,8 @@
 namespace App\Services\Customers;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\CustomersHelper;
+use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\CustomerReturnItem;
 use App\Models\Customers\SaleItems;
@@ -22,15 +24,22 @@ class CustomerReturnService
         $returnQuantity = $itemInput['quantity'];
 
 
-        $discountFactor = 1 - ($saleItem->discount_percent / 100);
+        $isTaxFree = $prefix === CustomerReturn::TAXFREEPREFIX;
 
-        $price = $prefix === CustomerReturn::TAXFREEPREFIX
-            ? $saleItem->price * $discountFactor
-            : $saleItem->ttc_price;
+        // Taxable base = unit price after discount, before tax (mirrors sale_items.net_sell_price).
+        // Prefix-independent.
+        $unitTaxable    = $saleItem->net_sell_price;
+        $unitTaxableUsd = $saleItem->net_sell_price_usd;
 
-        $priceUsd = $prefix === CustomerReturn::TAXFREEPREFIX
-            ? $saleItem->price_usd * $discountFactor
-            : $saleItem->ttc_price_usd;
+        // Tax fields follow INX (tax-free sale) behaviour: a tax-free (RTX) return strips all tax,
+        // clears the label, and its TTC collapses to the taxable base (no tax added).
+        $taxPercent   = $isTaxFree ? 0 : $saleItem->tax_percent;
+        $taxAmount    = $isTaxFree ? 0 : $saleItem->tax_amount;
+        $taxAmountUsd = $isTaxFree ? 0 : $saleItem->tax_amount_usd;
+        $taxLabel     = $isTaxFree ? '' : ($saleItem->tax_label ?? 'TVA');
+
+        $ttcPrice    = $isTaxFree ? $unitTaxable    : $saleItem->ttc_price;
+        $ttcPriceUsd = $isTaxFree ? $unitTaxableUsd : $saleItem->ttc_price_usd;
 
         // Copy all data from sale item and recalculate based on return quantity
         return [
@@ -45,14 +54,24 @@ class CustomerReturnService
             'price_usd' => $saleItem->price_usd,
 
             // Tax details
-            'tax_percent' => $saleItem->tax_percent,
-            'tax_label' => $saleItem->tax_label ?? 'TVA',
-            'tax_amount' => $saleItem->tax_amount,
-            'tax_amount_usd' => $saleItem->tax_amount_usd,
+            'tax_percent' => $taxPercent,
+            'tax_label' => $taxLabel,
+            'tax_amount' => $taxAmount,
+            'tax_amount_usd' => $taxAmountUsd,
 
             // TTC price (per unit)
-            'ttc_price' => $saleItem->ttc_price,
-            'ttc_price_usd' => $saleItem->ttc_price_usd,
+            'ttc_price' => $ttcPrice,
+            'ttc_price_usd' => $ttcPriceUsd,
+
+            // Taxable base per unit / line total
+            'unit_taxable_amount' => $unitTaxable,
+            'unit_taxable_amount_usd' => $unitTaxableUsd,
+            'total_taxable_amount' => $unitTaxable * $returnQuantity,
+            'total_taxable_amount_usd' => $unitTaxableUsd * $returnQuantity,
+
+            // Tax total = per-unit tax * quantity (0 for tax-free RTX)
+            'total_tax_amount' => $taxAmount * $returnQuantity,
+            'total_tax_amount_usd' => $taxAmountUsd * $returnQuantity,
 
             // Discount details
             'discount_percent' => $saleItem->discount_percent,
@@ -63,12 +82,9 @@ class CustomerReturnService
             'discount_amount' => $saleItem->unit_discount_amount * $returnQuantity,
             'discount_amount_usd' => $saleItem->unit_discount_amount_usd * $returnQuantity,
 
-            // Calculate total prices for return quantity
-            // 'total_price' => $saleItem->price * $returnQuantity - ($saleItem->unit_discount_amount * $returnQuantity),
-            // 'total_price_usd' => $saleItem->price_usd * $returnQuantity - ($saleItem->unit_discount_amount_usd * $returnQuantity),
-
-            'total_price' => $price * $returnQuantity ,
-            'total_price_usd' => $priceUsd * $returnQuantity,
+            // Total price = TTC per unit * quantity (tax-inclusive; equals taxable base for RTX)
+            'total_price' => $ttcPrice * $returnQuantity,
+            'total_price_usd' => $ttcPriceUsd * $returnQuantity,
 
             // Calculate return profit (negative because it's a return)
             // total_price_usd - (cost_price * quantity) - we use the cost from sale item
@@ -81,6 +97,43 @@ class CustomerReturnService
 
             // Note
             'note' => $itemInput['note'] ?? null,
+        ];
+    }
+
+    /**
+     * Compute the taxable-base / tax breakdown for a direct return item (no linked sale item),
+     * from its own price/discount/total figures. Enforces net + tax = total_price.
+     *
+     * @return array{unit_taxable_amount: float, unit_taxable_amount_usd: float, total_taxable_amount: float, total_taxable_amount_usd: float, total_tax_amount: float, total_tax_amount_usd: float}
+     */
+    public static function directTaxableBreakdown(array $item): array
+    {
+        $quantity        = (float) ($item['quantity'] ?? 0);
+        $price           = (float) ($item['price'] ?? 0);
+        $priceUsd        = (float) ($item['price_usd'] ?? 0);
+        $discountPercent = (float) ($item['discount_percent'] ?? 0);
+
+        // Unit discount: percent-based if given, otherwise the fixed per-unit amount
+        $unitDiscount    = $discountPercent > 0 ? $price * ($discountPercent / 100) : (float) ($item['unit_discount_amount'] ?? 0);
+        $unitDiscountUsd = $discountPercent > 0 ? $priceUsd * ($discountPercent / 100) : (float) ($item['unit_discount_amount_usd'] ?? 0);
+
+        // Taxable base = unit price after discount, before tax
+        $unitTaxable     = $price - $unitDiscount;
+        $unitTaxableUsd  = $priceUsd - $unitDiscountUsd;
+        $totalTaxable    = $unitTaxable * $quantity;
+        $totalTaxableUsd = $unitTaxableUsd * $quantity;
+
+        // Tax = tax-inclusive line total - taxable base (0 for tax-free lines)
+        $totalPrice    = (float) ($item['total_price'] ?? 0);
+        $totalPriceUsd = (float) ($item['total_price_usd'] ?? 0);
+
+        return [
+            'unit_taxable_amount'      => $unitTaxable,
+            'unit_taxable_amount_usd'  => $unitTaxableUsd,
+            'total_taxable_amount'     => $totalTaxable,
+            'total_taxable_amount_usd' => $totalTaxableUsd,
+            'total_tax_amount'         => $totalPrice - $totalTaxable,
+            'total_tax_amount_usd'     => $totalPriceUsd - $totalTaxableUsd,
         ];
     }
 
@@ -326,8 +379,7 @@ class CustomerReturnService
                 $returnItems = $customerReturn->items;
                 $wasReceived = $customerReturn->isReceived();
 
-                // If the return was received, we need to subtract inventory
-                // (canceling a received return means items go back out of stock)
+                // If the return was received, reverse inventory and customer balance
                 if ($wasReceived) {
                     foreach ($returnItems as $returnItem) {
                         if ($returnItem->item_id && $returnItem->quantity > 0) {
@@ -338,6 +390,11 @@ class CustomerReturnService
                             );
                         }
                     }
+
+                    CustomersHelper::removeBalance(
+                        Customer::find($customerReturn->customer_id),
+                        (float) $customerReturn->total_usd
+                    );
                 }
 
                 // Delete the customer return

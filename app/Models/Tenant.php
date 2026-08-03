@@ -72,6 +72,18 @@ class Tenant extends BaseTenant
      */
     public function makeCurrent(): static
     {
+        // Already current with the tenant connection active — nothing to switch.
+        // Skipping matters: queued jobs call makeCurrent() on every process, and the
+        // purge below would needlessly drop live connections (and, on the sync
+        // driver, destroy any open transaction — e.g. the one wrapping each test).
+        // Context is still (re)stamped so job payloads dispatched after this call
+        // always carry the tenant id.
+        if (static::current()?->getKey() === $this->getKey() && config('database.default') === 'tenant') {
+            \Illuminate\Support\Facades\Context::add(config('multitenancy.current_tenant_context_key'), $this->getKey());
+
+            return $this;
+        }
+
         parent::makeCurrent();
 
         // Set custom database connection with tenant-specific credentials
@@ -83,10 +95,54 @@ class Tenant extends BaseTenant
 
         // Set tenant connection as default for migrations and queries
         config(['database.default' => 'tenant']);
-        DB::purge('mysql'); // Also purge default connection
+        DB::purge('mysql'); // Release landlord connection slot — no longer needed for this request
         DB::reconnect('tenant'); // Reconnect tenant connection
 
         return $this;
+    }
+
+    /**
+     * Counterpart to the makeCurrent() override: restore the landlord connection
+     * as default. Without this, long-running CLI/queue processes keep pointing at
+     * the last tenant's database after the tenant is forgotten.
+     */
+    public static function forgetCurrent(): ?static
+    {
+        $tenant = parent::forgetCurrent();
+
+        config(['database.default' => 'mysql']);
+        DB::purge('tenant');
+
+        return $tenant;
+    }
+
+    /**
+     * Run a callback once per active tenant, making each tenant current in turn.
+     * Failures are logged per tenant and do not stop the loop. If the callback
+     * returns an array, it is included in the completion log entry.
+     * Pass $tenantIds to limit the run to specific tenants (e.g. from a --tenant option).
+     */
+    public static function runForEachActive(string $taskName, callable $callback, array $tenantIds = []): void
+    {
+        $tenants = static::on('mysql')
+            ->where('is_active', true)
+            ->when(!empty($tenantIds), fn ($query) => $query->whereIn('id', $tenantIds))
+            ->get();
+
+        foreach ($tenants as $tenant) {
+            try {
+                $tenant->makeCurrent();
+                $result = $callback($tenant);
+                info("{$taskName} completed for tenant {$tenant->tenant_key}", is_array($result) ? $result : []);
+                // Destruct any PendingDispatch NOW — queued jobs capture the current
+                // tenant at push time, which must happen before forgetCurrent() below.
+                unset($result);
+            } catch (\Throwable $e) {
+                info("{$taskName} failed for tenant {$tenant->tenant_key}", ['error' => $e->getMessage()]);
+            } finally {
+                static::forgetCurrent();
+            }
+        }
     }
 
     /**

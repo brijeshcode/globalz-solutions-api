@@ -11,6 +11,7 @@ use App\Services\Currency\CurrencyService;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Mpdf\Mpdf;
 
 class SalePdfController extends Controller
@@ -47,6 +48,9 @@ class SalePdfController extends Controller
             $localCurrency    = CurrencyService::getLocalCurrency();
             $invoiceGroup     = Setting::getGroup('invoice');
             $notLocalCurrency = ($sale->currency->code ?? '') !== ($localCurrency?->code ?? '');
+            $template = $invoiceGroup['template'] ?? 'template-1';
+            $language = $invoiceGroup['language'] ?? 'en';
+
             $invoiceSettings  = [
                 'local_currency_code'       => $localCurrency?->code,
                 'local_currency_symbol'     => $localCurrency?->symbol,
@@ -55,17 +59,19 @@ class SalePdfController extends Controller
                 'show_local_currency_total' => $notLocalCurrency && ($invoiceGroup['show_local_currency_total'] ?? false),
                 'show_note_1'               => $invoiceGroup['show_note_1'] ?? true,
                 'show_note_2'               => $invoiceGroup['show_note_2'] ?? true,
-                'is_multi_currency'   => $isMultiCurrency,
+                'is_multi_currency'         => $isMultiCurrency,
+                'unit_price_decimals'       => min(max((int) ($invoiceGroup['unit_price_decimals'] ?? 2), 0), 6),
+                'total_decimals'            => min(max((int) ($invoiceGroup['total_decimals'] ?? 2), 0), 6),
             ];
 
             // Generate catalog QR code based on per-prefix show setting and catalog link
             $catalogQrCodeBase64 = null;
             $catalogGroup        = Setting::getGroup('item_catalog');
             $isInv               = $sale->prefix === Sale::TAXPREFIX;
-            $showKey             = $isInv ? 'inv_show_qrcode' : 'inx_show_qrcode';
-            $linkKey             = $isInv ? 'inv_catalog_link' : 'inx_catalog_link';
-            if (!empty($catalogGroup[$showKey])) {
-                $catalogLink = $catalogGroup[$linkKey] ?? null;
+            $prefix              = $isInv ? 'inv' : 'inx';
+            if (!empty($catalogGroup["{$prefix}_show_qrcode"])) {
+                $activeLink  = $catalogGroup["{$prefix}_active_link"] ?? 'internal';
+                $catalogLink = $catalogGroup["{$prefix}_{$activeLink}_link"] ?? null;
                 if (!empty($catalogLink)) {
                     $result              = (new PngWriter())->write(new QrCode($catalogLink));
                     $catalogQrCodeBase64 = base64_encode($result->getString());
@@ -100,12 +106,23 @@ class SalePdfController extends Controller
                 'invoiceSettings'     => $invoiceSettings,
                 'qrCodeBase64'        => $qrCodeBase64,
                 'catalogQrCodeBase64' => $catalogQrCodeBase64,
-                'catalogLabel'        => $catalogGroup[$isInv ? 'inv_catalog_label' : 'inx_catalog_label'] ?? null,
+                'catalogLabel'        => $catalogGroup["{$prefix}_label"] ?? null,
                 // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
            
-            // Render the Blade view to HTML
-            $html = view('pdfs.sale-invoice', $data)->render();
+            // Resolve template and locale, then render
+            $viewName = "pdfs.sale-invoice-{$template}";
+            if (!view()->exists($viewName)) {
+                Log::warning("Invoice template '{$viewName}' not found, falling back to template-1", [
+                    'tenant' => \App\Models\Tenant::current()?->getKey(),
+                ]);
+                $viewName = 'pdfs.sale-invoice-template-1';
+            }
+
+            $previousLocale = app()->getLocale();
+            app()->setLocale($language);
+            $html = view($viewName, $data)->render();
+            app()->setLocale($previousLocale);
 
             // Create mPDF instance with optimized margins
             $mpdf = new Mpdf([

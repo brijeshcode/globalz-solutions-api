@@ -330,12 +330,14 @@ class Setting extends Model
             $cacheKey = self::CACHE_PREFIX . $setting->group_name . ':' . $setting->key_name;
             Cache::forget($cacheKey);
             Cache::forget(self::CACHE_PREFIX . 'group:' . $setting->group_name);
+            Cache::forget('settings_override_config');
         });
 
         static::deleted(function ($setting) {
             $cacheKey = self::CACHE_PREFIX . $setting->group_name . ':' . $setting->key_name;
             Cache::forget($cacheKey);
             Cache::forget(self::CACHE_PREFIX . 'group:' . $setting->group_name);
+            Cache::forget('settings_override_config');
         });
     }
 }

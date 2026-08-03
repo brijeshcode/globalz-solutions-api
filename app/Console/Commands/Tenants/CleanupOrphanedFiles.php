@@ -3,15 +3,12 @@
 namespace App\Console\Commands\Tenants;
 
 use App\Models\Document;
+use App\Models\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Spatie\Multitenancy\Commands\Concerns\TenantAware;
 
 class CleanupOrphanedFiles extends Command
 {
-    use TenantAware;
-
     protected $signature = 'documents:cleanup-orphaned
                             {--tenant=* : Tenant ID(s), defaults to all tenants}
                             {--dry-run : Show what would be deleted without actually deleting}
@@ -27,13 +24,30 @@ class CleanupOrphanedFiles extends Command
         $force = $this->option('force');
 
         $this->info('Starting document cleanup process...');
-        $this->newLine();
 
+        Tenant::runForEachActive('Document cleanup', function (Tenant $tenant) use ($dryRun, $days, $force) {
+            $this->newLine();
+            $this->info("Tenant: {$tenant->tenant_key}");
+
+            return $this->cleanupCurrentTenant($dryRun, $days, $force);
+        }, $this->option('tenant'));
+
+        $this->info('Document cleanup completed');
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Runs the full cleanup for whichever tenant is currently active.
+     * Returns a summary array for the per-tenant log entry.
+     */
+    private function cleanupCurrentTenant(bool $dryRun, int $days, bool $force): array
+    {
         $this->info('Scanning for orphaned files...');
         $orphanedFiles = $this->findOrphanedFiles();
 
         if (count($orphanedFiles) > 0) {
-            $this->warn("Found {count($orphanedFiles)} orphaned files:");
+            $this->warn('Found ' . count($orphanedFiles) . ' orphaned files:');
 
             foreach ($orphanedFiles as $file) {
                 $this->line("  - {$file}");
@@ -114,14 +128,15 @@ class CleanupOrphanedFiles extends Command
         $this->info("   Records without files: " . count($recordsWithoutFiles));
 
         if ($dryRun) {
-            $this->newLine();
             $this->info('This was a DRY RUN - no changes were made');
-            $this->info('Run without --dry-run to perform actual cleanup');
         }
 
-        $this->info('Document cleanup completed');
-
-        return Command::SUCCESS;
+        return [
+            'dry_run'                    => $dryRun,
+            'orphaned_files'             => count($orphanedFiles),
+            'old_soft_deleted_documents' => count($oldDeletedDocuments),
+            'records_without_files'      => count($recordsWithoutFiles),
+        ];
     }
 
     private function findOrphanedFiles(): array

@@ -16,9 +16,13 @@ use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerReturnsController;
 use App\Http\Controllers\Api\Customers\CustomerReturnOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerStatmentController;
+use App\Http\Controllers\Api\Customers\CustomerStatementPdfController;
+use App\Http\Controllers\Api\Customers\CustomerReturnPdfController;
 use App\Http\Controllers\Api\Customers\SalesController;
 use App\Http\Controllers\Api\Customers\SalePdfController;
 use App\Http\Controllers\Api\Customers\SaleOrdersController;
+use App\Http\Controllers\Api\Customers\ProformaInvoicesController;
+use App\Http\Controllers\Api\Customers\ProformaInvoicePdfController;
 use App\Http\Controllers\Api\Setups\ItemBrandsController;
 use App\Http\Controllers\Api\Setups\ItemCategoriesController;
 use App\Http\Controllers\Api\Setups\ItemFamiliesController;
@@ -37,6 +41,8 @@ use App\Http\Controllers\Api\Items\ItemTransfersController;
 use App\Http\Controllers\Api\Items\ItemAdjustsController;
 use App\Http\Controllers\Api\Items\ItemMovementsController;
 use App\Http\Controllers\Api\Items\ItemCostHistoryController;
+use App\Http\Controllers\Api\Items\ItemPriceAuditController;
+use App\Http\Controllers\Api\Items\ItemQuantityAuditController;
 use App\Http\Controllers\Api\Items\PriceListsController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\ActivityLogController;
@@ -47,16 +53,23 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
+use App\Http\Controllers\Api\Setups\Expenses\PurchaseExpenseSubcategoryController;
+use App\Http\Controllers\Api\Vehicle\CarRefillsController;
+use App\Http\Controllers\Api\Vehicle\CarsController;
+use App\Http\Controllers\Api\Vehicle\GasStationPaymentsController;
+use App\Http\Controllers\Api\Vehicle\GasStationsController;
 use App\Http\Controllers\Api\Expenses\ExpenseTransactionsController;
 use App\Http\Controllers\Api\Expenses\ExpensePaymentsController;
 use App\Http\Controllers\Api\Employees\EmployeesController;
 use App\Http\Controllers\Api\Employees\AdvanceLoansController;
 use App\Http\Controllers\Api\Employees\CommissionTargetsController;
+use App\Http\Controllers\Api\Employees\EmployeeCreditDebitNotesController;
 use App\Http\Controllers\Api\ListDataController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
 use App\Http\Controllers\Api\Setups\Generals\CompanyController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
+use App\Http\Controllers\Api\Suppliers\PurchasePdfController;
 use App\Http\Controllers\Api\Suppliers\PurchasesController;
 use App\Http\Controllers\Api\Suppliers\PurchaseReturnsController;
 use App\Http\Controllers\Api\Suppliers\SupplierCreditDebitNotesController;
@@ -65,7 +78,8 @@ use App\Http\Controllers\Api\Suppliers\SupplierStatmentController;
 use App\Http\Controllers\Api\Suppliers\SuppliersController;
 use App\Http\Controllers\Api\CacheVersionController;
 use App\Http\Controllers\Api\ClearDataController;
-use App\Http\Controllers\Api\Employees\EmployeeCommissionsController;
+use App\Http\Controllers\Api\Employees\CommissionsCalculationController;
+use App\Http\Controllers\Api\Employees\EmployeeStatmentsController;
 use App\Http\Controllers\Api\Employees\SalaryController;
 use App\Http\Controllers\Api\Items\PriceListBulkUpdateController;
 use App\Http\Controllers\Api\Reports\Customer\CustomerAgingReportController;
@@ -76,6 +90,7 @@ use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use App\Http\Controllers\Api\Settings\EmployeeSettingsController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
 use App\Http\Controllers\Api\Settings\Items\ItemCatalogSettingsController;
+use App\Http\Controllers\Api\Settings\ModuleLockSettingsController;
 use App\Http\Controllers\Api\Settings\SaleSettingsController;
 use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Backup\BackupController;
@@ -109,7 +124,14 @@ Route::get('/cache-versions', [CacheVersionController::class, 'index'])
     ->name('cache-versions.index');
 
 // Protected routes (authentication required)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(function () {
+
+    // Bug Lock Management
+    Route::controller(\App\Http\Controllers\Api\BugLockController::class)->prefix('bug-lock')->name('bug-lock.')->group(function () {
+        Route::get('/status', 'status')->name('status');
+        Route::post('/enable', 'enable')->name('enable');
+        Route::post('/disable', 'disable')->name('disable');
+    });
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
@@ -147,6 +169,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Employees Controller
     Route::controller(EmployeesController::class)->prefix('employees')->name('employees.')->group(function () {
+        Route::post('refresh-balances', 'refreshBalances')->name('refresh-balances');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
@@ -163,6 +186,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // AdvanceLoans Controller
     Route::controller(AdvanceLoansController::class)->prefix('advanceLoans')->name('advanceLoans.')->group(function () {
         Route::get('stats', 'stats')->name('stats');
+        Route::get('employee-loan-summary', 'employeeLoanSummary')->name('employee-loan-summary');
+        Route::get('employee-loan-for', 'employeeLoanFor')->name('employee-loan-for');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
@@ -176,11 +201,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Salaries Controller
     Route::controller(SalaryController::class)->prefix('salaries')->name('salaries.')->group(function () {
         Route::get('stats', 'stats')->name('stats');
+        Route::post('backfill-items', 'backfillSalaryItems')->name('backfill-items');
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('pending-loans/{employeeId}', 'getPendingLoans')->name('pendingLoans');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
         Route::get('my', 'mySalaries')->name('mySalaries');
+        Route::get('{salary}/pdf', 'downloadPdf')->name('pdf');
+        Route::get('{salary}/pdf/stream', 'streamPdf')->name('pdf.stream');
         Route::get('{salary}', 'show')->name('show');
         Route::get('my/show/{salary}', 'mySalaryDetail')->name('mySalaryDetail');
         Route::put('{salary}', 'update')->name('update');
@@ -189,9 +217,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });
 
-    Route::controller(EmployeeCommissionsController::class)->prefix('employee/business')->name('employee.business.')->group(function () {
-        Route::get('monthly/commission', 'getMonthlyCommission')->name('getMonthlyCommission');
-        Route::get('my-monthly/commission', 'getEmployeeMonthlyCommission')->name('myMonthlyCommission');
+    Route::controller(CommissionsCalculationController::class)->prefix('employee/business')->name('employee.business.')->group(function () {
+        Route::get('commission', 'getEmployeeCommission')->name('getEmployeeCommission');
+        Route::get('my/commission', 'getMyCommission')->name('getMyCommission');
     });
 
     // Commission Targets Controller
@@ -207,12 +235,38 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
     });
 
+    // Employee Credit/Debit Notes Controller
+    Route::controller(EmployeeCreditDebitNotesController::class)->prefix('employee-credit-debit-notes')->name('employee-credit-debit-notes.')->group(function () {
+        Route::get('balance', 'balance')->name('balance');
+        Route::get('stats', 'stats')->name('stats');
+        Route::get('trashed', 'trashed')->name('trashed');
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('{employeeCreditDebitNote}', 'show')->name('show');
+        Route::put('{employeeCreditDebitNote}', 'update')->name('update');
+        Route::delete('{employeeCreditDebitNote}', 'destroy')->name('destroy');
+        Route::patch('{id}/restore', 'restore')->name('restore');
+        Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+    });
+
+    // Employee Statements Controller
+    Route::controller(EmployeeStatmentsController::class)->prefix('employee-statements')->name('employee-statements.')->group(function () {
+        Route::get('/', 'statements')->name('index');
+        Route::get('{employee}', 'employeeStatements')->name('employee');
+    });
+
     Route::prefix('customers')->name('customers.')->group(function () {
 
         // Customer Statements Controller - Must be defined BEFORE {customer} routes to avoid conflicts
         Route::controller(CustomerStatmentController::class)->prefix('statements')->name('statements.')->group(function () {
             Route::get('/', 'statements')->name('index');
             Route::get('{customer}', 'customerStatements')->name('customer');
+        });
+
+        // Customer Statement PDF Routes
+        Route::controller(CustomerStatementPdfController::class)->prefix('statements')->name('statements.')->group(function () {
+            Route::get('{customer}/pdf/{type}/download', 'generate')->defaults('action', 'download')->name('pdf.download');
+            Route::get('{customer}/pdf/{type}/stream', 'generate')->defaults('action', 'stream')->name('pdf.stream');
         });
 
         // Sales Controller (for approved sales) - Must be defined BEFORE {customer} routes to avoid conflicts
@@ -222,10 +276,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{sale}', 'show')->name('show');
-            Route::put('{sale}', 'update')->name('update');
-            Route::delete('{sale}', 'destroy')->name('destroy');
-            Route::patch('{sale}/changeStatus', 'changeStatus')->name('changeStatus');
-            Route::patch('{sale}/unapprove', 'unapprove')->name('unapprove');
+            Route::put('{sale}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{sale}', 'destroy')->name('destroy')->middleware('module.lock');
+            Route::patch('{sale}/changeStatus', 'changeStatus')->name('changeStatus')->middleware('module.lock');
+            Route::patch('{sale}/unapprove', 'unapprove')->name('unapprove')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
 
@@ -248,12 +302,41 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{sale}', 'show')->name('show');
-            Route::put('{sale}', 'update')->name('update');
-            Route::delete('{sale}', 'destroy')->name('destroy');
+            Route::put('{sale}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{sale}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{sale}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
+
+        // Proforma Invoices
+        Route::middleware('feature:proforma_invoice')
+            ->controller(ProformaInvoicesController::class)
+            ->prefix('proforma-invoices')
+            ->name('proforma-invoices.')
+            ->group(function () {
+                Route::get('stats', 'stats')->name('stats');
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{proformaInvoice}', 'show')->name('show');
+                Route::put('{proformaInvoice}', 'update')->name('update');
+                Route::delete('{proformaInvoice}', 'destroy')->name('destroy');
+                Route::patch('{proformaInvoice}/changeStatus', 'changeStatus')->name('changeStatus');
+                Route::post('{proformaInvoice}/convert-to-sale', 'convertToSale')->name('convertToSale');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+        // Proforma Invoice PDF Routes
+        Route::middleware('feature:proforma_invoice')
+            ->controller(ProformaInvoicePdfController::class)
+            ->prefix('proforma-invoices')
+            ->name('proforma-invoices.')
+            ->group(function () {
+                Route::get('{proformaInvoice}/pdf/download', 'generateInvoice')->defaults('action', 'download')->name('pdf.download');
+                Route::get('{proformaInvoice}/pdf/stream', 'generateInvoice')->defaults('action', 'stream')->name('pdf.stream');
+            });
 
         // Customer Payments Controller (for approved payments) - Must be defined BEFORE {customer} routes to avoid conflicts
         Route::controller(CustomerPaymentsController::class)->prefix('payments')->name('payments.')->group(function () {
@@ -263,9 +346,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerPayment}', 'show')->name('show');
-            Route::put('{customerPayment}', 'update')->name('update');
-            Route::delete('{customerPayment}', 'destroy')->name('destroy');
-            Route::patch('{customerPayment}/unapprove', 'unapprove')->name('unapprove');
+            Route::put('{customerPayment}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{customerPayment}', 'destroy')->name('destroy')->middleware('module.lock');
+            Route::patch('{customerPayment}/unapprove', 'unapprove')->name('unapprove')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
@@ -277,8 +360,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerPayment}', 'show')->name('show');
-            Route::put('{customerPayment}', 'update')->name('update');
-            Route::delete('{customerPayment}', 'destroy')->name('destroy');
+            Route::put('{customerPayment}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{customerPayment}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{customerPayment}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
@@ -291,12 +374,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerReturn}', 'show')->name('show');
-            Route::put('{customerReturn}', 'update')->name('update');
-            Route::delete('{customerReturn}', 'destroy')->name('destroy');
+            Route::put('{customerReturn}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{customerReturn}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             Route::patch('{customerReturn}/mark-received', 'markReceived')->name('markReceived');
-
+            Route::get('{customerReturn}/pdf/{action}', [CustomerReturnPdfController::class, 'generate'])->name('pdf');
         });
 
         // Customer Return Orders Controller (for pending return orders) - Must be defined BEFORE {customer} routes to avoid conflicts
@@ -308,9 +391,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/', 'store')->name('store');
             Route::post('direct', 'storeDirectReturn')->name('store-direct');
             Route::get('{customerReturn}', 'show')->name('show');
-            Route::put('{customerReturn}', 'update')->name('update');
-            Route::put('direct/{customerReturn}', 'updateDirectReturn')->name('update-direct');
-            Route::delete('{customerReturn}', 'destroy')->name('destroy');
+            Route::put('{customerReturn}', 'update')->name('update')->middleware('module.lock');
+            Route::put('direct/{customerReturn}', 'updateDirectReturn')->name('update-direct')->middleware('module.lock');
+            Route::delete('{customerReturn}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{customerReturn}/approve', 'approve')->name('approve');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
@@ -323,8 +406,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerCreditDebitNote}', 'show')->name('show');
-            Route::put('{customerCreditDebitNote}', 'update')->name('update');
-            Route::delete('{customerCreditDebitNote}', 'destroy')->name('destroy');
+            Route::put('{customerCreditDebitNote}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{customerCreditDebitNote}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
@@ -413,11 +496,17 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{purchase}', 'show')->name('show');
-            Route::put('{purchase}', 'update')->name('update');
-            Route::patch('{purchase}/changeStatus', 'changeStatus')->name('changeStatus');
-            Route::delete('{purchase}', 'destroy')->name('destroy');
-            Route::patch('{id}/restore', 'restore')->name('restore');
-            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::put('{purchase}', 'update')->name('update')->middleware('module.lock');
+            Route::patch('{purchase}/changeStatus', 'changeStatus')->name('changeStatus')->middleware('module.lock');
+            Route::get('{purchase}/recalculate-sale-profit/preview', 'recalculateSaleProfitPreview')->name('recalculate-sale-profit.preview')->middleware('feature:sale_profit_recalculation');
+            Route::post('{purchase}/recalculate-sale-profit', 'recalculateSaleProfit')->name('recalculate-sale-profit')->middleware('feature:sale_profit_recalculation');
+            Route::delete('{purchase}', 'destroy')->name('destroy')->middleware('module.lock');
+        });
+
+        // Purchase PDF Routes
+        Route::controller(PurchasePdfController::class)->prefix('purchases')->name('purchases.')->group(function () {
+            Route::get('{purchase}/pdf/download', 'generatePurchase')->defaults('action', 'download')->name('pdf.download');
+            Route::get('{purchase}/pdf/stream', 'generatePurchase')->defaults('action', 'stream')->name('pdf.stream');
         });
 
         Route::controller(PurchaseReturnsController::class)->prefix('purchase-returns')->name('purchase-returns.')->group(function () {
@@ -444,8 +533,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{supplierCreditDebitNote}', 'show')->name('show');
-            Route::put('{supplierCreditDebitNote}', 'update')->name('update');
-            Route::delete('{supplierCreditDebitNote}', 'destroy')->name('destroy');
+            Route::put('{supplierCreditDebitNote}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{supplierCreditDebitNote}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
@@ -457,8 +546,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{supplierPayment}', 'show')->name('show');
-            Route::put('{supplierPayment}', 'update')->name('update');
-            Route::delete('{supplierPayment}', 'destroy')->name('destroy');
+            Route::put('{supplierPayment}', 'update')->name('update')->middleware('module.lock');
+            Route::delete('{supplierPayment}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
@@ -475,6 +564,24 @@ Route::middleware('auth:sanctum')->group(function () {
         // Item Cost History Controller
         Route::controller(ItemCostHistoryController::class)->prefix('cost-history')->name('cost-history.')->group(function () {
             Route::get('/', 'index')->name('index');
+            Route::get('/current-prices', 'currentPrices')->name('current-prices');
+            Route::get('/current-prices/export', 'exportCurrentPrices')->name('current-prices.export');
+        });
+
+        // Item Price Audit Controller
+        Route::controller(ItemPriceAuditController::class)->prefix('price-audit')->name('price-audit.')->group(function () {
+            Route::get('/', 'audit')->name('index');
+            Route::get('{itemId}', 'auditItem')->name('item');
+            Route::post('fix', 'fix')->name('fix');
+            Route::post('fix/{itemId}', 'fixItem')->name('fix-item');
+        });
+
+        // Item Quantity Audit Controller
+        Route::controller(ItemQuantityAuditController::class)->prefix('quantity-audit')->name('quantity-audit.')->group(function () {
+            Route::get('/', 'audit')->name('index');
+            Route::get('{item}', 'auditItem')->name('item');
+            Route::post('fix', 'fix')->name('fix');
+            Route::post('fix/{item}', 'fixItem')->name('fix-item');
         });
 
         // Item Transfers Controller
@@ -851,11 +958,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('{priceList}/items', 'addItem')->name('items.store');
             Route::put('{priceList}/items/{priceListItem}', 'updateItem')->name('items.update');
             Route::delete('items/{priceListItem}', 'deleteItem')->name('items.delete');
+            Route::post('{priceList}/items/reorder', 'reorderItems')->name('items.reorder');
         });
 
         // Price List Bulk Updates Controller
         Route::controller(PriceListBulkUpdateController::class)->prefix('price-list-bulk-updates')->name('price-list-bulk-updates.')->group(function () {
             Route::get('filter-by-items', 'filterByItems')->name('filterByItems');
+            Route::post('add-items', 'addItemsToPricelists')->name('addItemsToPricelists');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{bulkUpdate}', 'show')->name('show');
@@ -885,7 +994,17 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         
         Route::prefix('expenses')->name('expenses.')->group(function() {
-            
+
+            // Purchase expense subcategories — must be registered before categories/{expenseCategory} catch-all
+            Route::prefix('categories/purchase-expense-subcategories')
+                ->name('purchase-expense-subcategories.')
+                ->group(function () {
+                    Route::get('/', [PurchaseExpenseSubcategoryController::class, 'index'])->name('index');
+                    Route::post('/', [PurchaseExpenseSubcategoryController::class, 'store'])->name('store');
+                    Route::put('/{purchaseExpenseSubcategory}', [PurchaseExpenseSubcategoryController::class, 'update'])->name('update');
+                    Route::delete('/{purchaseExpenseSubcategory}', [PurchaseExpenseSubcategoryController::class, 'destroy'])->name('destroy');
+                });
+
             // Expense Categories Controller
             Route::controller(ExpenseCategoriesController::class)->prefix('categories')->name('categories.')->group(function () {
                 Route::get('roots', 'roots')->name('roots');
@@ -904,6 +1023,62 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });
         });
+
+    });
+
+    // Vehicles
+    Route::prefix('vehicles')->name('vehicles.')->group(function () {
+
+        // Gas Stations
+        Route::controller(GasStationsController::class)->prefix('gas-stations')->name('gas-stations.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{gasStation}', 'show')->name('show');
+            Route::put('{gasStation}', 'update')->name('update');
+            Route::delete('{gasStation}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::get('{id}/transactions', 'transactions')->name('transactions');
+        });
+
+        // Cars
+        Route::controller(CarsController::class)->prefix('cars')->name('cars.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{car}', 'show')->name('show');
+            Route::put('{car}', 'update')->name('update');
+            Route::delete('{car}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::get('{id}/transactions', 'transactions')->name('transactions');
+        });
+
+        // Car Refills
+        Route::controller(CarRefillsController::class)->prefix('car-refills')->name('car-refills.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{carRefill}', 'show')->name('show');
+            Route::put('{carRefill}', 'update')->name('update');
+            Route::delete('{carRefill}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Gas Station Payments
+        Route::controller(GasStationPaymentsController::class)->prefix('gas-station-payments')->name('gas-station-payments.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{gasStationPayment}', 'show')->name('show');
+            Route::put('{gasStationPayment}', 'update')->name('update');
+            Route::delete('{gasStationPayment}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
     });
 
     // Expense Transactions Controller
@@ -911,11 +1086,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('trashed', 'trashed')->name('trashed');
         Route::get('stats', 'stats')->name('stats');
         Route::get('category-summary', 'categorySummary')->name('category-summary');
+        Route::get('category-summary/export', 'exportCategorySummary')->name('category-summary.export');
+        Route::get('export', 'export')->name('export');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
         Route::get('{expenseTransaction}', 'show')->name('show');
-        Route::put('{expenseTransaction}', 'update')->name('update');
-        Route::delete('{expenseTransaction}', 'destroy')->name('destroy');
+        Route::put('{expenseTransaction}', 'update')->name('update')->middleware('module.lock');
+        Route::delete('{expenseTransaction}', 'destroy')->name('destroy')->middleware('module.lock');
         Route::patch('{id}/restore', 'restore')->name('restore');
         Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
 
@@ -923,8 +1100,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Expense Payments — standalone endpoints (no expense transaction in URL)
     Route::get('expense-payments', [ExpensePaymentsController::class, 'listAll'])->name('expense-payments.index');
-    Route::put('expense-payments/{payment}', [ExpensePaymentsController::class, 'updatePayment'])->name('expense-payments.update');
-    Route::delete('expense-payments/{payment}', [ExpensePaymentsController::class, 'destroyPayment'])->name('expense-payments.destroy');
+    Route::put('expense-payments/{payment}', [ExpensePaymentsController::class, 'updatePayment'])->name('expense-payments.update')->middleware('module.lock');
+    Route::delete('expense-payments/{payment}', [ExpensePaymentsController::class, 'destroyPayment'])->name('expense-payments.destroy')->middleware('module.lock');
 
     // Expense Payments (deferred / partial payment feature)
     Route::controller(ExpensePaymentsController::class)
@@ -1021,9 +1198,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Inventory Reports
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('warehouse', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'index'])->name('warehouse.index');
-            Route::get('warehouse/discrepancies', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'previewDiscrepancies'])->name('warehouse.discrepancies');
-            Route::post('warehouse/fix-all', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'fixAllInventory'])->name('warehouse.fix-all');
-            Route::post('warehouse/fix/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'fixItemInventory'])->name('warehouse.fix-item');
+            Route::get('warehouse/price-list', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'priceListReport'])->name('warehouse.price-list');
+            Route::get('warehouse/price-list/export', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'priceListExport'])->name('warehouse.price-list.export');
             Route::get('warehouse/{item}', [\App\Http\Controllers\Api\Reports\Inventory\WarehouseReportController::class, 'show'])->name('warehouse.show');
         });
     });
@@ -1043,6 +1219,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', [SaleSettingsController::class, 'get'])->name('get');
             Route::put('/', [SaleSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [SaleSettingsController::class, 'reset'])->name('reset');
+        });
+
+        // Module Lock Settings (block edit/delete of aged records)
+        Route::prefix('module-locks')->name('settings.module-locks.')->group(function () {
+            Route::get('/', [ModuleLockSettingsController::class, 'get'])->name('get');
+            Route::put('/', [ModuleLockSettingsController::class, 'update'])->name('update');
+            Route::post('/reset', [ModuleLockSettingsController::class, 'reset'])->name('reset');
         });
 
         // Employee Settings

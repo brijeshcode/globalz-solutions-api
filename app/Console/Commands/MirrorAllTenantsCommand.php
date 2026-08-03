@@ -14,33 +14,25 @@ class MirrorAllTenantsCommand extends Command
 
     public function handle(): int
     {
-        $tenants = Tenant::on('mysql')->where('is_active', true)->get();
-
-        if ($tenants->isEmpty()) {
-            $this->info('No active tenants found.');
-            return self::SUCCESS;
-        }
-
-        $this->info("Dispatching mirror jobs for {$tenants->count()} tenant(s)...");
+        $this->info('Dispatching mirror jobs...');
 
         $dispatched = 0;
 
-        foreach ($tenants as $tenant) {
-            $tenant->makeCurrent();
+        Tenant::runForEachActive('Mirror dispatch', function (Tenant $tenant) use (&$dispatched) {
+            $enabled = FeatureHelper::isDatabaseMirror();
+            FeatureHelper::flush();
 
-            if (!FeatureHelper::isDatabaseMirror()) {
-                FeatureHelper::flush();
-                Tenant::forgetCurrent();
-                continue;
+            if (!$enabled) {
+                return ['skipped' => 'database mirror feature disabled'];
             }
 
-            FeatureHelper::flush();
-            Tenant::forgetCurrent();
-
+            // MirrorTenantJob is NotTenantAware — it resolves the tenant itself from the id
             MirrorTenantJob::dispatch($tenant->id);
             $this->info("  → Queued: {$tenant->tenant_key}");
             $dispatched++;
-        }
+
+            return ['dispatched' => true];
+        });
 
         $this->info("Done — {$dispatched} job(s) dispatched.");
         return self::SUCCESS;

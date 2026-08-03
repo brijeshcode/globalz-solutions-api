@@ -2,9 +2,12 @@
 
 namespace App\Models\Customers;
 
+use App\Contracts\ModuleLockable;
 use App\Helpers\AccountsHelper;
 use App\Helpers\CustomersHelper;
 use App\Models\Accounts\Account;
+use App\Models\Employees\Employee;
+use Carbon\CarbonInterface;
 use App\Models\Setting;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Setups\Generals\Currencies\Currency;
@@ -15,12 +18,13 @@ use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class CustomerPayment extends Model
+class CustomerPayment extends Model implements ModuleLockable
 {
     use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
 
@@ -32,6 +36,7 @@ class CustomerPayment extends Model
         'prefix',
         'code',
         'customer_id',
+        'salesperson_id',
         'customer_payment_term_id',
         'currency_id',
         'currency_rate',
@@ -86,6 +91,11 @@ class CustomerPayment extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function salesperson(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'salesperson_id');
+    }
+
     public function customerPaymentTerm(): BelongsTo
     {
         return $this->belongsTo(CustomerPaymentTerm::class);
@@ -130,37 +140,42 @@ class CustomerPayment extends Model
     }
 
     // Scopes
-    public function scopeApproved($query)
+    public function scopeApproved(Builder $query)
     {
         return $query->whereNotNull('approved_by');
     }
 
-    public function scopePending($query)
+    public function scopePending(Builder $query)
     {
         return $query->whereNull('approved_by');
     }
 
-    public function scopeByCustomer($query, $customerId)
+    public function scopeByCustomer(Builder $query, int $customerId)
     {
         return $query->where('customer_id', $customerId);
     }
 
-    public function scopeByCurrency($query, $currencyId)
+    public function scopeBySalesperson(Builder $query, int $salespersonId)
+    {
+        return $query->where('salesperson_id', $salespersonId);
+    }
+
+    public function scopeByCurrency(Builder $query, int $currencyId)
     {
         return $query->where('currency_id', $currencyId);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, $startDate, $endDate)
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }
 
-    public function scopeByPrefix($query, $prefix)
+    public function scopeByPrefix(Builder $query, string $prefix)
     {
         return $query->where('prefix', $prefix);
     }
@@ -203,6 +218,12 @@ class CustomerPayment extends Model
             if (!$payment->code) {
                 $payment->setPaymentCode();
             }
+
+            // Snapshot the customer's salesperson at creation so commission crediting stays
+            // fixed even if the customer is later reassigned. Only set when not provided.
+            if (is_null($payment->salesperson_id) && $payment->customer_id) {
+                $payment->salesperson_id = Customer::whereKey($payment->customer_id)->value('salesperson_id');
+            }
         });
 
         static::created(function ($payment) {
@@ -212,6 +233,14 @@ class CustomerPayment extends Model
                 AccountsHelper::addBalance(Account::find($payment->account_id), $payment->amount_usd);
                 // Add to customer balance (payment reduces what customer owes)
                 CustomersHelper::addBalance(Customer::find($payment->customer_id), $payment->amount_usd);
+            }
+        });
+
+        static::updating(function ($payment) {
+            // If the payment is moved to a different customer, re-snapshot the salesperson from
+            // the new customer — unless the editor explicitly set a salesperson in the same edit.
+            if ($payment->isDirty('customer_id') && !$payment->isDirty('salesperson_id') && $payment->customer_id) {
+                $payment->salesperson_id = Customer::whereKey($payment->customer_id)->value('salesperson_id');
             }
         });
 
@@ -257,5 +286,21 @@ class CustomerPayment extends Model
                 CustomersHelper::removeBalance(Customer::find($payment->customer_id), $payment->amount_usd);
             }
         });
+    }
+
+    // Module lock (see App\Contracts\ModuleLockable)
+    public function moduleLockKey(): string
+    {
+        return is_null($this->approved_by) ? 'customer_payment_order' : 'customer_payment';
+    }
+
+    public function moduleLockDate(): ?CarbonInterface
+    {
+        return $this->date;
+    }
+
+    public function isModuleLockExempt(): bool
+    {
+        return false;
     }
 }
