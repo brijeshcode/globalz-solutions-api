@@ -13,7 +13,8 @@ return [
     */
 
     // Sales & Customers
-    'sale_orders'                       => true,
+    'sale_orders'                        => true,
+    'sale_profit_recalculation' => true,
     'customer_payment_orders'           => true,
     'customer_returns'                  => true,
     'customer_return_orders'            => true,
@@ -45,6 +46,9 @@ return [
     'employee_commissions'              => true,
     'advance_loans'                     => true,
 
+    // Vehicle Module
+    'vehicle_module'                    => true,
+    
     // Reports
     'report_capital'                    => true,
     'report_profit'                     => true,
@@ -56,9 +60,11 @@ return [
     'report_customer_aging'             => true,
     'report_item_sales'                 => true,
     'vat_report'                        => true,
+    'report_vat'                        => true,
 
     // System
     'activity_logs'                     => true,
+    'bug_lock'                     => true,
     'tax_codes'                         => true,
     'export_customers'                  => true,
     'database_mirror'                   => true,

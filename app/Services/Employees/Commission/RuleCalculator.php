@@ -145,8 +145,8 @@ class RuleCalculator
         $net = ($payments['amount'] - $returns['amount'] + $sales['amount']) / 2;
 
         $note = $returns['amount'] > 0
-            ? "We combined your payments {$this->money($payments['amount'])} and sales {$this->money($sales['amount'])}, removed {$this->money($returns['amount'])} for returns, then took half. That leaves {$this->money($net)}."
-            : "We combined your payments {$this->money($payments['amount'])} and sales {$this->money($sales['amount'])}, then took half. That leaves {$this->money($net)}.";
+            ? "We combined your payments {$this->money($payments['amount'])} and sales {$this->money($sales['amount'])}, removed {$this->money($returns['amount'])} for returns, Divide by 2. That leaves {$this->money($net)}."
+            : "We combined your payments {$this->money($payments['amount'])} and sales {$this->money($sales['amount'])}, Divide by 2. That leaves {$this->money($net)}.";
 
         return [
             'amount'    => $net,
