@@ -123,17 +123,13 @@ class RuleCalculator
     private function paymentAchievement(string $include, int $employeeId, Carbon $start, Carbon $end): array
     {
         $payments = $this->aggregator->payments($employeeId, $include, $start, $end);
-        $returns  = $this->aggregator->returns($employeeId, $include, $start, $end);
-        $net = $payments['amount'] - $returns['amount'];
 
-        $note = $returns['amount'] > 0
-            ? "You collected {$this->money($payments['amount'])} in payments. We removed {$this->money($returns['amount'])} for returns. That leaves {$this->money($net)}."
-            : "You collected {$this->money($net)} in payments.";
+        $note = "You collected {$this->money($payments['amount'])} in payments.";
 
         return [
-            'amount'    => $net,
+            'amount'    => $payments['amount'],
             'note'      => $note,
-            'breakdown' => ['payments' => $payments['daily'], 'returns' => $returns['daily']],
+            'breakdown' => ['payments' => $payments['daily']],
         ];
     }
 
