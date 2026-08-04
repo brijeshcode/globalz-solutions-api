@@ -31,8 +31,8 @@ return new class extends Migration
             $table->money('unit_discount_amount')->default(0)->comment('in selected_currency');
             $table->money('unit_discount_amount_usd')->default(0)->comment('in usd');
             
-            $table->money('discount_amount')->default(0)->comment('in usd');
-            $table->money('discount_amount_usd')->default(0)->comment('in selected_currency');
+            $table->money('discount_amount')->default(0)->comment('total discount in selected_currency');
+            $table->money('discount_amount_usd')->default(0)->comment('total discount in usd');
             
             $table->money('tax_percent')->default(0)->comment('tax percent from the items table');
             $table->string('tax_label')->default('TVA')->comment('can be TVA and No');
