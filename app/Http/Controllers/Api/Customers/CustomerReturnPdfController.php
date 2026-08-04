@@ -50,11 +50,16 @@ class CustomerReturnPdfController extends Controller
 
             $returnCode = $customerReturn->prefix . $customerReturn->code;
 
+            // Company contact line only appears on tax returns (RTN); tax-free omits it.
+            $isTax = $customerReturn->prefix === 'RTN';
+
             $companyFooterParts = [];
-            if (!empty($companyData['address'])) $companyFooterParts[] = $companyData['address'];
-            if (!empty($companyData['phone']))   $companyFooterParts[] = 'Tel: ' . $companyData['phone'];
-            if (!empty($companyData['email']))   $companyFooterParts[] = 'Email: ' . $companyData['email'];
-            if (!empty($companyData['website'])) $companyFooterParts[] = $companyData['website'];
+            if ($isTax) {
+                if (!empty($companyData['address'])) $companyFooterParts[] = $companyData['address'];
+                if (!empty($companyData['phone']))   $companyFooterParts[] = 'Tel: ' . $companyData['phone'];
+                if (!empty($companyData['email']))   $companyFooterParts[] = 'Email: ' . $companyData['email'];
+                if (!empty($companyData['website'])) $companyFooterParts[] = $companyData['website'];
+            }
             $companyFooterLine = htmlspecialchars(implode(' | ', $companyFooterParts));
 
             $pageNumberRowHtml = '

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\FeatureFlagsController;
 use App\Http\Controllers\Api\HomePageController;
 use App\Http\Controllers\Api\Customers\CustomersController;
 use App\Http\Controllers\Api\Customers\CustomerCreditDebitNotesController;
+use App\Http\Controllers\Api\Customers\CustomerCreditDebitNotePdfController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentsController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentPdfController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
@@ -412,6 +413,7 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::delete('{customerCreditDebitNote}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::get('{customerCreditDebitNote}/pdf/{action}', [CustomerCreditDebitNotePdfController::class, 'generate'])->name('pdf');
         });
 
         Route::controller(CustomersController::class)->group(function () {

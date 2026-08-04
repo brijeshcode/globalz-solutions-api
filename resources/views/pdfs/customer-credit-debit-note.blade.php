@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>Payment Receipt {{ $payment->prefix }}-{{ $payment->code }}</title>
+    <title>{{ $note->isCredit() ? 'Credit' : 'Debit' }} Note {{ $note->prefix }}-{{ $note->code }}</title>
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;
@@ -31,7 +31,7 @@
             color: #000000;
             margin: 0;
         }
-        .payment-code {
+        .note-code {
             font-size: 11pt;
             font-weight: bold;
             color: #444444;
@@ -57,7 +57,7 @@
         .info-label { color: #555555; font-weight: bold; width: 110px; white-space: nowrap; padding-right: 12px; }
         .info-value { color: #111111; }
 
-        /* ── Payment summary panel ── */
+        /* ── Amount summary panel ── */
         .summary-panel {
             width: 100%;
             border-collapse: collapse;
@@ -104,6 +104,23 @@
         .sa-value { font-size: 21pt; font-weight: bold; color: #000000; }
         .sa-usd { font-size: 8pt; color: #555555; margin-top: 4px; }
 
+        /* ── Notes ── */
+        .section-title {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #111111;
+            border-bottom: 1px solid #cccccc;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+        }
+        .notes-box {
+            border: 1px solid #111111;
+            padding: 6px 8px;
+            font-size: 8pt;
+            color: #111111;
+            margin-bottom: 12px;
+        }
+
         .text-right { text-align: right; }
         .text-center { text-align: center; }
 
@@ -115,9 +132,10 @@
 <body>
 
     @php
-        $isTax = $payment->prefix === 'RCT';
-        $currency = $payment->currency;
+        $isTax = in_array($note->prefix, ['CRN', 'DBN'], true);
+        $currency = $note->currency;
         $isUsd = !$currency || $currency->code === 'USD';
+        $docTitle = $note->isCredit() ? 'CREDIT NOTE' : 'DEBIT NOTE';
 
         $formatMoney = function ($amount, $sym = null, $decimals = 2) {
             $value = number_format((float) $amount, $decimals);
@@ -129,7 +147,7 @@
 
         $currencySymbol = $currency->symbol ?? '';
         $currencyDecimals = $currency->decimal_places ?? 2;
-        $receivedLabel = 'Received Amount (' . ($isUsd ? 'USD' : $currency->code) . ')';
+        $amountLabel = 'Amount (' . ($isUsd ? 'USD' : $currency->code) . ')';
     @endphp
 
     {{-- ── Header ── --}}
@@ -146,14 +164,14 @@
         </div>
 
         <div class="header-right">
-            <div class="doc-title">PAYMENT RECEIPT</div>
-            <div class="payment-code">{{ $payment->prefix }}-{{ $payment->code }}</div>
+            <div class="doc-title">{{ $docTitle }}</div>
+            <div class="note-code">{{ $note->prefix }}-{{ $note->code }}</div>
         </div>
     </div>
 
     <hr class="header-divider">
 
-    {{-- ── Customer & Payment Info Grid ── --}}
+    {{-- ── Customer & Note Info Grid ── --}}
     <table class="info-grid">
         <tr>
             <td class="info-col-left">
@@ -161,32 +179,26 @@
                 <table class="info-row">
                     <tr>
                         <td class="info-label">Customer:</td>
-                        <td class="info-value">{{ $payment->customer->name ?? '-' }}</td>
+                        <td class="info-value">{{ $note->customer->name ?? '-' }}</td>
                     </tr>
-                    @if($payment->customer->code ?? null)
+                    @if($note->customer->code ?? null)
                     <tr>
                         <td class="info-label">Customer Code:</td>
-                        <td class="info-value">{{ $payment->customer->code }}</td>
-                    </tr>
-                    @endif
-                    @if($isTax && $payment->salesperson)
-                    <tr>
-                        <td class="info-label">Salesperson:</td>
-                        <td class="info-value">{{ $payment->salesperson->name }}</td>
+                        <td class="info-value">{{ $note->customer->code }}</td>
                     </tr>
                     @endif
                 </table>
             </td>
             <td class="info-col-right">
-                <div class="info-section-title">Payment Details</div>
+                <div class="info-section-title">{{ $note->isCredit() ? 'Credit' : 'Debit' }} Note Details</div>
                 <table class="info-row">
                     <tr>
-                        <td class="info-label">Payment Date:</td>
-                        <td class="info-value">{{ $payment->date->format('d/m/Y') }}</td>
+                        <td class="info-label">Note Date:</td>
+                        <td class="info-value">{{ $note->date->format('d/m/Y') }}</td>
                     </tr>
                     <tr>
-                        <td class="info-label">RCT Book Number:</td>
-                        <td class="info-value">{{ $payment->rtc_book_number ?: '-' }}</td>
+                        <td class="info-label">Type:</td>
+                        <td class="info-value">{{ ucfirst($note->type) }}</td>
                     </tr>
                     <tr>
                         <td class="info-label">Print Date:</td>
@@ -197,10 +209,10 @@
         </tr>
     </table>
 
-    {{-- ── Payment Summary Panel ── --}}
+    {{-- ── Amount Summary Panel ── --}}
     <table class="summary-panel">
         <tr class="summary-head">
-            <td colspan="2">Payment Summary</td>
+            <td colspan="2">{{ $docTitle }} Summary</td>
         </tr>
         <tr>
             <td class="summary-currency">
@@ -212,22 +224,22 @@
                         </td>
                         <td>
                             <div class="sc-label">Exchange Rate</div>
-                            <div class="sc-value">{{ number_format($payment->currency_rate, 4) }}</div>
+                            <div class="sc-value">{{ number_format($note->currency_rate, 4) }}</div>
                         </td>
                     </tr>
                 </table>
             </td>
             <td class="summary-amount">
-                <div class="sa-label">{{ $receivedLabel }}</div>
+                <div class="sa-label">{{ $amountLabel }}</div>
                 <div class="sa-value">
                     @if($isUsd)
-                        {{ $formatMoney($payment->amount_usd, '$', 2) }}
+                        {{ $formatMoney($note->amount_usd, '$', 2) }}
                     @else
-                        {{ $formatMoney($payment->amount, $currencySymbol, $currencyDecimals) }}
+                        {{ $formatMoney($note->amount, $currencySymbol, $currencyDecimals) }}
                     @endif
                 </div>
                 @if(!$isUsd)
-                <div class="sa-usd">&#8776; {{ $formatMoney($payment->amount_usd, '$', 2) }} USD</div>
+                <div class="sa-usd">&#8776; {{ $formatMoney($note->amount_usd, '$', 2) }} USD</div>
                 @endif
             </td>
         </tr>
@@ -236,7 +248,7 @@
     {{-- ── Signature ── --}}
     <table class="sig-table">
         <tr>
-            <td style="font-size: 8pt; color: #444444; font-weight: bold;">Received By</td>
+            <td style="font-size: 8pt; color: #444444; font-weight: bold;">Authorized By</td>
         </tr>
         <tr>
             <td style="height: 60px; border-bottom: 1.5px solid #555555;"></td>

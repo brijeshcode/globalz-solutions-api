@@ -3,33 +3,31 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customers\CustomerPayment;
+use App\Models\Customers\CustomerCreditDebitNote;
 use App\Traits\ResolvesCompanyPdfData;
 use Mpdf\Mpdf;
 
-class CustomerPaymentPdfController extends Controller
+class CustomerCreditDebitNotePdfController extends Controller
 {
     use ResolvesCompanyPdfData;
 
-    public function generate(CustomerPayment $customerPayment, string $action = 'download')
+    public function generate(CustomerCreditDebitNote $customerCreditDebitNote, string $action = 'download')
     {
         try {
-            $customerPayment->load([
+            $customerCreditDebitNote->load([
                 'customer:id,name,code,address,city,mobile,mof_tax_number',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'salesperson:id,name',
-                'approvedBy:id,name',
                 'createdBy:id,name',
             ]);
 
             $companyData = $this->getCompanyData();
 
             $data = [
-                'payment' => $customerPayment,
+                'note'    => $customerCreditDebitNote,
                 'company' => $companyData,
             ];
 
-            $html = view('pdfs.customer-payment-receipt', $data)->render();
+            $html = view('pdfs.customer-credit-debit-note', $data)->render();
 
             $mpdf = new Mpdf([
                 'mode'          => 'utf-8',
@@ -42,10 +40,10 @@ class CustomerPaymentPdfController extends Controller
                 'margin_footer' => 8,
             ]);
 
-            $paymentCode = $customerPayment->prefix . '-' . $customerPayment->code;
+            $noteCode = $customerCreditDebitNote->prefix . '-' . $customerCreditDebitNote->code;
 
-            // Company contact line only appears on tax receipts (RCT); tax-free (RCX) omits it.
-            $isTax = $customerPayment->prefix === 'RCT';
+            // Company contact line only appears on tax notes (CRN/DBN); tax-free (CRX/DBX) omits it.
+            $isTax = in_array($customerCreditDebitNote->prefix, ['CRN', 'DBN'], true);
 
             $companyFooterParts = [];
             if ($isTax) {
@@ -59,7 +57,7 @@ class CustomerPaymentPdfController extends Controller
             $pageNumberRowHtml = '
                 <table width="100%" style="font-size: 9pt; border-top: 1px solid #000000; padding-top: 5px;">
                     <tr>
-                        <td width="33%" style="text-align: left;">' . htmlspecialchars($paymentCode) . '</td>
+                        <td width="33%" style="text-align: left;">' . htmlspecialchars($noteCode) . '</td>
                         <td width="33%" style="text-align: center;">Page {PAGENO} of {nbpg}</td>
                         <td width="33%" style="text-align: right;">' . date('Y-m-d') . '</td>
                     </tr>
@@ -78,7 +76,8 @@ class CustomerPaymentPdfController extends Controller
             $mpdf->SetHTMLFooter($footerHtml);
             $mpdf->WriteHTML($html);
 
-            $filename = 'payment-' . $paymentCode . '-' . date('Y-m-d_H-i') . '.pdf';
+            $typeLabel = $customerCreditDebitNote->isCredit() ? 'credit-note' : 'debit-note';
+            $filename = $typeLabel . '-' . $noteCode . '-' . date('Y-m-d_H-i') . '.pdf';
 
             if ($action === 'download') {
                 return response()->streamDownload(function () use ($mpdf) {

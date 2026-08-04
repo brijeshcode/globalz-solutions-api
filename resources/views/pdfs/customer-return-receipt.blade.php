@@ -17,18 +17,18 @@
         .header-left  { width: 50%; float: left; }
         .header-right { width: 50%; float: right; text-align: right; }
         .company-logo { max-height: 70px; max-width: 200px; }
-        .company-name { font-size: 16pt; font-weight: bold; color: #1e40af; }
+        .company-name { font-size: 16pt; font-weight: bold; color: #000000; }
         .tax-number   { font-size: 8pt; font-weight: bold; }
 
         .header-divider {
             border: none;
-            border-top: 2px solid #1e40af;
+            border-top: 2px solid #000000;
             margin: 10px 0 14px 0;
         }
         .doc-title {
             font-size: 18pt;
             font-weight: bold;
-            color: #1e40af;
+            color: #000000;
             margin: 0;
         }
         .return-code {
@@ -47,7 +47,7 @@
         .info-section-title {
             font-size: 9pt;
             font-weight: bold;
-            color: #1e40af;
+            color: #000000;
             border-bottom: 1px solid #cccccc;
             padding-bottom: 3px;
             margin-bottom: 6px;
@@ -59,8 +59,8 @@
 
         /* ── Currency info box ── */
         .currency-box {
-            border: 1px solid #bfdbfe;
-            background-color: #eff6ff;
+            border: 1px solid #cccccc;
+            background-color: #f2f2f2;
             padding: 8px 10px;
             margin-bottom: 12px;
         }
@@ -217,7 +217,7 @@
     <div class="currency-box">
         <table class="currency-grid">
             <tr>
-                <td style="border-right: 1px solid #bfdbfe;">
+                <td style="border-right: 1px solid #cccccc;">
                     <div class="currency-section-title">Currency Information</div>
                     <table class="currency-row">
                         <tr>
