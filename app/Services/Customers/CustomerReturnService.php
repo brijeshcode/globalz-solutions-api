@@ -27,9 +27,12 @@ class CustomerReturnService
         $isTaxFree = $prefix === CustomerReturn::TAXFREEPREFIX;
 
         // Taxable base = unit price after discount, before tax (mirrors sale_items.net_sell_price).
+        // Derive it from the full-precision price/discount rather than the stored net_sell_price:
+        // some legacy sale rows have net_sell_price rounded to 2 dp, and multiplying a rounded
+        // per-unit by quantity accumulates the error (e.g. 0.58*24=13.92 instead of 0.584*24=14.02).
         // Prefix-independent.
-        $unitTaxable    = $saleItem->net_sell_price;
-        $unitTaxableUsd = $saleItem->net_sell_price_usd;
+        $unitTaxable    = $saleItem->price     - $saleItem->unit_discount_amount;
+        $unitTaxableUsd = $saleItem->price_usd - $saleItem->unit_discount_amount_usd;
 
         // Tax fields follow INX (tax-free sale) behaviour: a tax-free (RTX) return strips all tax,
         // clears the label, and its TTC collapses to the taxable base (no tax added).
