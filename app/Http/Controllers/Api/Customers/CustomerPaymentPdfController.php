@@ -3,39 +3,33 @@
 namespace App\Http\Controllers\Api\Customers;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customers\CustomerReturn;
+use App\Models\Customers\CustomerPayment;
 use App\Traits\ResolvesCompanyPdfData;
 use Mpdf\Mpdf;
 
-class CustomerReturnPdfController extends Controller
+class CustomerPaymentPdfController extends Controller
 {
     use ResolvesCompanyPdfData;
 
-    public function generate(CustomerReturn $customerReturn, string $action = 'download')
+    public function generate(CustomerPayment $customerPayment, string $action = 'download')
     {
         try {
-            $customerReturn->load([
+            $customerPayment->load([
                 'customer:id,name,code,address,city,mobile,mof_tax_number',
                 'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
-                'warehouse:id,name,address_line_1',
                 'salesperson:id,name',
                 'approvedBy:id,name',
-                'returnReceivedBy:id,name',
-                'items.item:id,short_name,code,description',
-                'items.item.itemUnit:id,name,symbol',
-                'items.item.taxCode:id,name,code,description,tax_percent',
-                'items.sale:id,code,date,prefix',
                 'createdBy:id,name',
             ]);
 
             $companyData = $this->getCompanyData();
 
             $data = [
-                'customerReturn' => $customerReturn,
-                'company'        => $companyData,
+                'payment' => $customerPayment,
+                'company' => $companyData,
             ];
 
-            $html = view('pdfs.customer-return-receipt', $data)->render();
+            $html = view('pdfs.customer-payment-receipt', $data)->render();
 
             $mpdf = new Mpdf([
                 'mode'          => 'utf-8',
@@ -48,7 +42,7 @@ class CustomerReturnPdfController extends Controller
                 'margin_footer' => 8,
             ]);
 
-            $returnCode = $customerReturn->prefix . $customerReturn->code;
+            $paymentCode = $customerPayment->prefix . '-' . $customerPayment->code;
 
             $companyFooterParts = [];
             if (!empty($companyData['address'])) $companyFooterParts[] = $companyData['address'];
@@ -60,7 +54,7 @@ class CustomerReturnPdfController extends Controller
             $pageNumberRowHtml = '
                 <table width="100%" style="font-size: 9pt; border-top: 1px solid #000000; padding-top: 5px;">
                     <tr>
-                        <td width="33%" style="text-align: left;">' . htmlspecialchars($returnCode) . '</td>
+                        <td width="33%" style="text-align: left;">' . htmlspecialchars($paymentCode) . '</td>
                         <td width="33%" style="text-align: center;">Page {PAGENO} of {nbpg}</td>
                         <td width="33%" style="text-align: right;">' . date('Y-m-d') . '</td>
                     </tr>
@@ -79,7 +73,7 @@ class CustomerReturnPdfController extends Controller
             $mpdf->SetHTMLFooter($footerHtml);
             $mpdf->WriteHTML($html);
 
-            $filename = 'return-' . $returnCode . '-' . date('Y-m-d_H-i') . '.pdf';
+            $filename = 'payment-' . $paymentCode . '-' . date('Y-m-d_H-i') . '.pdf';
 
             if ($action === 'download') {
                 return response()->streamDownload(function () use ($mpdf) {

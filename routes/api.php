@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\HomePageController;
 use App\Http\Controllers\Api\Customers\CustomersController;
 use App\Http\Controllers\Api\Customers\CustomerCreditDebitNotesController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentsController;
+use App\Http\Controllers\Api\Customers\CustomerPaymentPdfController;
 use App\Http\Controllers\Api\Customers\CustomerPaymentOrdersController;
 use App\Http\Controllers\Api\Customers\CustomerReturnsController;
 use App\Http\Controllers\Api\Customers\CustomerReturnOrdersController;
@@ -351,6 +352,7 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::patch('{customerPayment}/unapprove', 'unapprove')->name('unapprove')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            Route::get('{customerPayment}/pdf/{action}', [CustomerPaymentPdfController::class, 'generate'])->name('pdf');
         });
 
         // Customer Payment Orders Controller (for pending payment orders) - Must be defined BEFORE {customer} routes to avoid conflicts
