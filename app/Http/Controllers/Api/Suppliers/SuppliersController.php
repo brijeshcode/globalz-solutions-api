@@ -28,7 +28,8 @@ class SuppliersController extends Controller
         return ApiResponse::paginated(
             'Suppliers retrieved successfully',
             $suppliers,
-            SupplierResource::class
+            SupplierResource::class,
+            $this->buildStats($request)
         );
     }
 
@@ -242,35 +243,26 @@ class SuppliersController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
-        $isMultiCurrencyEnabled = FeatureHelper::isMultiCurrency();
+        return ApiResponse::show('Supplier statistics retrieved successfully', $this->buildStats($request));
+    }
+
+    /**
+     * Build supplier statistics for the given filtered query.
+     */
+    private function buildStats(Request $request): array
+    {
         $query = $this->supplierQuery($request);
 
-        if ($isMultiCurrencyEnabled) {
+        if (FeatureHelper::isMultiCurrency()) {
             $suppliers = (clone $query)->with('currency:id,code')->get();
             $totalBalance = round($this->sumBalanceInUsd($suppliers, true), 2);
         } else {
             $totalBalance = round((clone $query)->sum('current_balance'), 2);
         }
 
-        $stats = [
-            // 'total_suppliers' => (clone $query)->count(),
-            // 'active_suppliers' => (clone $query)->where('is_active', true)->count(),
-            // 'inactive_suppliers' => (clone $query)->where('is_active', false)->count(),
-            // 'trashed_suppliers' => Supplier::onlyTrashed()->count(),
+        return [
             'total_supplier_balance_usd' => $totalBalance,
-            // 'suppliers_by_country' => (clone $query)->with('country:id,name')
-            //     ->selectRaw('country_id, count(*) as count')
-            //     ->groupBy('country_id')
-            //     ->having('count', '>', 0)
-            //     ->get(),
-            // 'suppliers_by_type' => (clone $query)->with('supplierType:id,name')
-            //     ->selectRaw('supplier_type_id, count(*) as count')
-            //     ->groupBy('supplier_type_id')
-            //     ->having('count', '>', 0)
-            //     ->get(),
         ];
-
-        return ApiResponse::show('Supplier statistics retrieved successfully', $stats);
     }
 
     private function sumBalanceInUsd($suppliers, bool $convertCurrency): float
