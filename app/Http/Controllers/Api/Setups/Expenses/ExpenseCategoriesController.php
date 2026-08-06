@@ -26,7 +26,13 @@ class ExpenseCategoriesController extends Controller
         $query = ExpenseCategory::query()
             ->when($purchaseExpenseParentId, fn($q) => $q
                 ->where('id', '!=', $purchaseExpenseParentId)
-                ->where('parent_id', '!=', $purchaseExpenseParentId)
+                // Exclude direct children of the "Purchase Expenses" system category,
+                // but keep root categories: `parent_id != X` is NULL (not true) for
+                // rows where parent_id IS NULL, which would drop every root category.
+                ->where(fn($sub) => $sub
+                    ->whereNull('parent_id')
+                    ->orWhere('parent_id', '!=', $purchaseExpenseParentId)
+                )
             )
             ->with(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name'])
             ->searchable($request)
