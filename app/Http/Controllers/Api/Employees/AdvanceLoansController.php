@@ -248,7 +248,7 @@ class AdvanceLoansController extends Controller
             ->sum('advance_payment');
 
         $stats = [
-            'total_advanceLoans' => (clone $query)->count(),
+            // 'total_advanceLoans' => (clone $query)->count(),
             'total_amount_usd'   => (float) $loanTaken,
             'loan_taken'         => (float) $loanTaken,
             'loan_returned'      => (float) $loanReturned,
