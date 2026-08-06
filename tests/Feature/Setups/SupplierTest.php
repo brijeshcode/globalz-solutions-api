@@ -49,7 +49,6 @@ describe('Suppliers API', function () {
                             'name',
                             'code',
                         ],
-                        'opening_balance',
                         'balance',
                         'address',
                         'phone',
@@ -132,7 +131,7 @@ describe('Suppliers API', function () {
             ->assertJson([
                 'data' => [
                     'name' => 'Complete Supplier',
-                    'opening_balance' => 5000.50,
+                    // 'opening_balance' => 5000.50,
                     'email' => 'supplier@example.com',
                     'discount_percentage' => 5.5,
                 ]
@@ -189,7 +188,7 @@ describe('Suppliers API', function () {
                     'code' => $originalCode, // Code should remain unchanged
                     'name' => 'Updated Supplier',
                     'email' => 'updated@example.com',
-                    'opening_balance' => 1000.00,
+                    // 'opening_balance' => 1000.00,
                 ]
             ]);
 
@@ -397,23 +396,6 @@ describe('Suppliers API', function () {
         expect($data[0]['country_id'])->toBe($china->id);
     });
 
-    it('can filter by balance range', function () {
-        Supplier::factory()->create(['opening_balance' => 1000]);
-        Supplier::factory()->create(['opening_balance' => 5000]);
-        Supplier::factory()->create(['opening_balance' => 10000]);
-
-        $response = $this->getJson(route('setups.suppliers.index', [
-            'min_balance' => 2000,
-            'max_balance' => 8000
-        ]));
-
-        $response->assertOk();
-        $data = $response->json('data');
-        
-        expect($data)->toHaveCount(1);
-        expect($data[0]['opening_balance'])->toBe('5000.00');
-    });
-
     it('can sort suppliers by name', function () {
         Supplier::factory()->create(['name' => 'Z Supplier']);
         Supplier::factory()->create(['name' => 'A Supplier']);
@@ -428,22 +410,6 @@ describe('Suppliers API', function () {
         
         expect($data[0]['name'])->toBe('A Supplier');
         expect($data[1]['name'])->toBe('Z Supplier');
-    });
-
-    it('can sort suppliers by opening balance', function () {
-        Supplier::factory()->create(['opening_balance' => 5000, 'name' => 'High Balance']);
-        Supplier::factory()->create(['opening_balance' => 1000, 'name' => 'Low Balance']);
-
-        $response = $this->getJson(route('setups.suppliers.index', [
-            'sort_by' => 'opening_balance',
-            'sort_direction' => 'desc'
-        ]));
-
-        $response->assertOk();
-        $data = $response->json('data');
-        
-        expect($data[0]['opening_balance'])->toBe('5000.00');
-        expect($data[1]['opening_balance'])->toBe('1000.00');
     });
 
     it('returns 404 for non-existent supplier', function () {

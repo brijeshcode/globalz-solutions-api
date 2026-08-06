@@ -13,6 +13,19 @@ abstract class TestCase extends BaseTestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Wrap BOTH connections in a per-test transaction that is rolled back on teardown.
+     *
+     * RefreshDatabase only transacts the default connection (tenant) by default, which
+     * left the landlord (mysql) connection un-isolated: any test that wrote to a landlord
+     * table (e.g. toggling a flag in tenant_features) leaked that change into every later
+     * test in the same process. Listing 'mysql' here rolls those writes back too.
+     *
+     * The tenant record and seeded feature flags are created in initTenant() BEFORE the
+     * transaction opens, so they are committed and survive the per-test rollbacks.
+     */
+    protected $connectionsToTransact = ['tenant', 'mysql'];
+
     protected Tenant $tenant;
 
     /** Shared across all tests — created once per suite. */

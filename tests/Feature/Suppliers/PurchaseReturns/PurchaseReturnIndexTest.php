@@ -4,6 +4,8 @@ use App\Models\Setups\Supplier;
 use App\Models\Suppliers\PurchaseReturn;
 use Tests\Feature\Suppliers\PurchaseReturns\Concerns\HasPurchaseReturnSetup;
 
+uses()->group('api', 'purchases', 'suppliers');
+
 beforeEach(function () {
     $this->setUpPurchaseReturns();
 });

@@ -6,7 +6,10 @@ use App\Models\User;
 uses()->group('api', 'setup', 'setup.warehouses', 'warehouses');
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
+    // Warehouse create/update/delete require super_admin or developer
+    // (WarehousesStoreRequest::authorize → RoleHelper::canSuperAdmin). The User
+    // factory assigns a RANDOM role, so pin it here to keep this suite deterministic.
+    $this->user = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
     $this->actingAs($this->user, 'sanctum');
 });
 
