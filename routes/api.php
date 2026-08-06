@@ -1191,6 +1191,7 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::get('expense', [\App\Http\Controllers\Api\Reports\Finance\ExpenseReportController::class, 'index'])->name('expense');
             Route::get('capital', [\App\Http\Controllers\Api\Reports\Finance\CapitalReportController::class, 'index'])->name('capital');
             Route::get('vat', [\App\Http\Controllers\Api\Reports\Finance\VatReportController::class, 'index'])->name('vat');
+            Route::get('balance-sheet', [\App\Http\Controllers\Api\Reports\Finance\BalanceSheetController::class, 'index'])->name('balance-sheet');
         });
 
         // Customer Reports
