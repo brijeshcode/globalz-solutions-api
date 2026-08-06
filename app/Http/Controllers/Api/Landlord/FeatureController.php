@@ -67,6 +67,7 @@ class FeatureController extends Controller
         ['key' => 'report_customer_aging',     'name' => 'Customer Aging Report',       'description' => 'Customer outstanding balance aging by last invoice and payment date.'],
         ['key' => 'report_item_sales',     'name' => 'Item Sales Report',           'description' => 'Aggregated sales report per item showing quantity sold, sale amount, profit, and profit percentage.'],
         ['key' => 'report_vat',            'name' => 'VAT Report',                  'description' => 'VAT summary report showing collected VAT on sales, VAT returned on customer returns, VAT paid via purchases and expenses, and the net VAT difference.'],
+        ['key' => 'report_balance_sheet',            'name' => 'Balance sheet',                  'description' => 'Balance sheet report'],
 
         // Exports
         ['key' => 'export_customers',      'name' => 'Export Customers',            'description' => 'Allow exporting the customer list to an Excel file.'],
