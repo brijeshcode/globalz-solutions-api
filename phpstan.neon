@@ -1,0 +1,10 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    # Uncomment after generating the baseline (step 4):
+    - phpstan-baseline.neon
+
+parameters:
+    level: 1
+
+    paths:
+        - app
