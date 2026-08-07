@@ -144,7 +144,7 @@ class ActivityLogDetail extends Model
         $config = config("activitylog.model_relations.{$this->model}");
 
         // No relations configured for this model
-        if (!$config || empty($config)) {
+        if (!$config) {
             return null;
         }
 

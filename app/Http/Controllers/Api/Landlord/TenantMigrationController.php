@@ -195,10 +195,6 @@ class TenantMigrationController extends Controller
         $info       = '';
 
         foreach ($lines as $line) {
-            if (empty($line)) {
-                continue;
-            }
-
             if (stripos($line, 'INFO') !== false) {
                 $info = trim(str_replace('INFO', '', $line));
                 continue;

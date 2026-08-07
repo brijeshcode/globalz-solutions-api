@@ -68,7 +68,7 @@ class ItemsController extends Controller
         $data = $request->validated();
 
         // Create item in a transaction to handle all related operations
-        $item = DB::transaction(function () use ($data, $request) {
+        $item = DB::transaction(function () use ($data) {
             // Create the item
             $item = Item::create($data);
 

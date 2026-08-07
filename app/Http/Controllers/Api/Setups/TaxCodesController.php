@@ -201,44 +201,6 @@ class TaxCodesController extends Controller
         );
     }
 
-    /**
-     * Bulk delete tax codes.
-     */
-    public function bulkDestroy(Request $request): JsonResponse
-    {
-        $request->validate([
-            'tax_code_ids' => 'required|array',
-            'tax_code_ids.*' => 'required|integer|exists:tax_codes,id',
-        ]);
-
-        $taxCodeIds = $request->tax_code_ids;
-        $taxCodes = TaxCode::whereIn('id', $taxCodeIds)->get();
-        $deletedCount = 0;
-        $errors = [];
-
-        foreach ($taxCodes as $taxCode) {
-            // Check if tax code is being used
-            // if ($taxCode->items()->exists()) {
-            //     $errors[] = "Tax code '{$taxCode->code}' cannot be deleted as it is being used by items.";
-            //     continue;
-            // }
-
-            if ($taxCode->delete()) {
-                $deletedCount++;
-            }
-        }
-
-        $message = "Successfully deleted {$deletedCount} tax codes";
-        if (!empty($errors)) {
-            $message .= ". Some tax codes could not be deleted.";
-        }
-
-        return ApiResponse::delete($message, [
-            'deleted_count' => $deletedCount,
-            'errors' => $errors
-        ]);
-    }
-
     /***
      * in future we will add filter also like for give category, type , family change the tax from this to given. 
      */

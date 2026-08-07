@@ -821,7 +821,6 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
         Route::controller(TaxCodesController::class)->prefix('tax-codes')->name('tax-codes.')->group(function () {
             Route::get('active', 'active')->name('active');
             Route::get('default', 'getDefault')->name('default');
-            Route::post('bulk-destroy', 'bulkDestroy')->name('bulk-destroy');
             Route::post('{taxCode}/calculate-tax', 'calculateTax')->name('calculate-tax');
             Route::patch('{taxCode}/set-default', 'setDefault')->name('set-default');
             Route::get('/', 'index')->name('index');

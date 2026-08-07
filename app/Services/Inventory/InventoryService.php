@@ -17,7 +17,7 @@ class InventoryService
     {
         self::validateItemAndWarehouse($itemId, $warehouseId);
 
-        return DB::transaction(function () use ($itemId, $warehouseId, $newQuantity, $operation, $reason) {
+        return DB::transaction(function () use ($itemId, $warehouseId, $newQuantity, $operation) {
             $inventory = self::findOrCreateInventory($itemId, $warehouseId);
             $oldQuantity = $inventory->quantity;
 

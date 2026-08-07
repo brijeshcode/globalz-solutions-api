@@ -736,7 +736,7 @@ class CustomerBalanceService
 
                 // Get all monthly balance records within the date range, ordered from oldest to newest
                 $monthlyBalances = CustomerBalanceMonthly::where('customer_id', $customerId)
-                    ->where(function ($query) use ($startDate, $endDate) {
+                    ->where(function ($query) use ($startDate) {
                         $query->where('year', '>', $startDate->year)
                             ->orWhere(function ($q) use ($startDate) {
                                 $q->where('year', $startDate->year)

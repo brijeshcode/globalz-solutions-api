@@ -12,3 +12,10 @@ parameters:
 
     paths:
         - app
+
+    # new static() in these traits is safe: every consumer is an Eloquent
+    # model with the standard (array $attributes = []) constructor.
+    ignoreErrors:
+        -
+            identifier: new.static
+            path: app/Traits/*.php

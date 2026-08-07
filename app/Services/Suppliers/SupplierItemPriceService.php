@@ -264,7 +264,7 @@ class SupplierItemPriceService
 
         foreach ($itemsWithoutPrices as $item) {
             try {
-                $supplierPrice = self::initializeFromItem($supplierId, $item, $currencyId, $currencyRate);
+                $supplierPrice = self::initializeFromItem($supplierId, $item);
                 if ($supplierPrice) {
                     $results[] = [
                         'item_id' => $item->id,
