@@ -86,7 +86,7 @@ class ExpenseTransaction extends Model implements ModuleLockable
 
     // ─── Accessors ────────────────────────────────────────────────────────────
 
-    public function getCodeAttribute(string $value): ?string
+    public function getCodeAttribute(?string $value): ?string
     {
         return $value ? self::PREFIX . $value : null;
     }

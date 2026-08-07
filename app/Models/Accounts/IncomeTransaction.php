@@ -73,7 +73,7 @@ class IncomeTransaction extends Model
     /**
      * Get the code attribute with "INC" prefix
      */
-    public function getCodeAttribute(string $value): ?string
+    public function getCodeAttribute(?string $value): ?string
     {
         return $value ? self::PREFIX . $value : null;
     }

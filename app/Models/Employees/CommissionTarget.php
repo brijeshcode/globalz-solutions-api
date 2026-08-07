@@ -95,7 +95,7 @@ class CommissionTarget extends Model
     }
 
     // Helper Methods
-    public function getCommissionTargetCodeAttribute(): string
+    public function getCommissionTargetCodeAttribute(): ?string
     {
         return $this->prefix . $this->code;
     }
