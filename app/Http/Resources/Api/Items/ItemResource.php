@@ -7,6 +7,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * @mixin \App\Models\Items\Item
+ *
+ * @property float|int|string|null $sell_price Computed at query time (addSelect subquery), not a model column
  */
 class ItemResource extends JsonResource
 {

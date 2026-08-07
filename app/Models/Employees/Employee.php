@@ -116,7 +116,7 @@ class Employee extends Model
         return $this->belongsTo(\App\Models\User::class);
     }
     
-    public function warehouses()
+    public function warehouses(): BelongsToMany
     {
         return $this->belongsToMany(Warehouse::class, 'employee_warehouses')
                     ->withTimestamps()

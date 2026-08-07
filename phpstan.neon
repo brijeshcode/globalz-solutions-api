@@ -1,7 +1,7 @@
 includes:
     - vendor/larastan/larastan/extension.neon
     # Uncomment after generating the baseline (step 4):
-    - phpstan-baseline.neon
+    # - phpstan-baseline.neon
 
 parameters:
     level: 1
@@ -19,3 +19,8 @@ parameters:
         -
             identifier: new.static
             path: app/Traits/*.php
+        # Report resources wrap aggregated query rows (no backing model),
+        # so magic-property access can't be resolved; ignore just those.
+        -
+            identifier: property.notFound
+            path: app/Http/Resources/Api/Reports/*

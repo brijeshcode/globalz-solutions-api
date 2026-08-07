@@ -7,6 +7,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * @mixin \App\Models\Customers\Customer
+ *
+ * @property float|int|string|null $sales_sum_total_usd Computed at query time (addSelect / loadSum), not a model column
  */
 class CustomerResource extends JsonResource
 {
