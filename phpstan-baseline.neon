@@ -1,262 +1,10 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Relation ''activeRate'' is not found in App\\Models\\Setups\\Generals\\Currencies\\Currency model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Helpers/CurrencyHelper.php
-
-		-
-			message: '#^Relation ''gasStation'' is not found in App\\Models\\Vehicle\\GasStationPayment model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Accounts/AccountStatementController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:delete\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Accounts/IncomeTransactionsController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:delete\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Customers/CustomersController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:delete\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/DocumentController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:notFound\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/DocumentController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:delete\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Expenses/ExpenseTransactionsController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:error\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/HomePageController.php
-
-		-
-			message: '#^Anonymous function has an unused use \$request\.$#'
-			identifier: closure.unusedUse
-			count: 1
-			path: app/Http/Controllers/Api/Items/ItemsController.php
-
-		-
-			message: '#^Relation ''inventories'' is not found in App\\Models\\Items\\Item model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Items/ItemsController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:delete\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Items/ItemsController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:error\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Items/PriceListsController.php
-
-		-
-			message: '#^Relation ''tenantFeatures'' is not found in App\\Models\\Landlord\\Feature model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Landlord/FeatureController.php
-
-		-
-			message: '#^Relation ''activeRate'' is not found in App\\Models\\Setups\\Generals\\Currencies\\Currency model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Landlord/TenantCurrencyController.php
-
-		-
-			message: '#^Variable \$line in empty\(\) always exists and is not falsy\.$#'
-			identifier: empty.variable
-			count: 1
-			path: app/Http/Controllers/Api/Landlord/TenantMigrationController.php
-
-		-
-			message: '#^Relation ''activeRate'' is not found in App\\Models\\Setups\\Generals\\Currencies\\Currency model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/ListDataController.php
-
-		-
-			message: '#^Relation ''employees'' is not found in App\\Models\\Setups\\Warehouse model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/ListDataController.php
-
-		-
-			message: '#^Relation ''inventories'' is not found in App\\Models\\Items\\Item model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/ListDataController.php
-
-		-
-			message: '#^Call to static method auditAndFixQuantities\(\) on an unknown class App\\Http\\Controllers\\Api\\Reports\\Inventory\\QuantityAuditService\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Reports/Inventory/WarehouseReportController.php
-
-		-
-			message: '#^Call to static method auditAndFixSingleItemQuantity\(\) on an unknown class App\\Http\\Controllers\\Api\\Reports\\Inventory\\QuantityAuditService\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Reports/Inventory/WarehouseReportController.php
-
-		-
-			message: '#^Call to static method auditQuantities\(\) on an unknown class App\\Http\\Controllers\\Api\\Reports\\Inventory\\QuantityAuditService\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Reports/Inventory/WarehouseReportController.php
-
-		-
-			message: '#^Call to static method auditSingleItemQuantity\(\) on an unknown class App\\Http\\Controllers\\Api\\Reports\\Inventory\\QuantityAuditService\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Reports/Inventory/WarehouseReportController.php
-
-		-
-			message: '#^Relation ''inventories'' is not found in App\\Models\\Items\\Item model\.$#'
-			identifier: larastan.relationExistence
-			count: 27
-			path: app/Http/Controllers/Api/Reports/Inventory/WarehouseReportController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:error\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Settings/SettingsController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:error\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Setups/Customers/ImportCustomerSetupController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:error\(\) invoked with 3 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 2
-			path: app/Http/Controllers/Api/Setups/Customers/ImportCustomerSetupController.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Controllers\\Api\\Setups\\Generals\\CompanyController\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 3
 			path: app/Http/Controllers/Api/Setups/Generals/CompanyController.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Controllers\\Api\\Setups\\Generals\\CompanyController\:\:morphMany\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/Api/Setups/Generals/CompanyController.php
-
-		-
-			message: '#^Relation ''activeRate'' is not found in App\\Models\\Setups\\Generals\\Currencies\\Currency model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Setups/Generals/Currencies/CurrenciesController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:delete\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Setups/TaxCodesController.php
-
-		-
-			message: '#^Variable \$errors in empty\(\) always exists and is always falsy\.$#'
-			identifier: empty.variable
-			count: 1
-			path: app/Http/Controllers/Api/Setups/TaxCodesController.php
-
-		-
-			message: '#^Relation ''employee'' is not found in App\\Models\\User model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Api/Setups/Users/UsersController.php
-
-		-
-			message: '#^Static method App\\Http\\Responses\\ApiResponse\:\:delete\(\) invoked with 2 parameters, 0\-1 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Http/Controllers/Api/Suppliers/PurchaseReturnsController.php
-
-		-
-			message: '#^Relation ''car'' is not found in App\\Models\\Vehicle\\CarRefill model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Api/Vehicle/CarRefillsController.php
-
-		-
-			message: '#^Relation ''driver'' is not found in App\\Models\\Vehicle\\CarRefill model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Api/Vehicle/CarRefillsController.php
-
-		-
-			message: '#^Relation ''gasStation'' is not found in App\\Models\\Vehicle\\CarRefill model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Api/Vehicle/CarRefillsController.php
-
-		-
-			message: '#^Relation ''driver'' is not found in App\\Models\\Vehicle\\CarRefill model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Vehicle/CarsController.php
-
-		-
-			message: '#^Relation ''gasStation'' is not found in App\\Models\\Vehicle\\CarRefill model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Vehicle/CarsController.php
-
-		-
-			message: '#^Relation ''account'' is not found in App\\Models\\Vehicle\\GasStationPayment model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Api/Vehicle/GasStationPaymentsController.php
-
-		-
-			message: '#^Relation ''gasStation'' is not found in App\\Models\\Vehicle\\GasStationPayment model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Http/Controllers/Api/Vehicle/GasStationPaymentsController.php
-
-		-
-			message: '#^Relation ''account'' is not found in App\\Models\\Vehicle\\GasStationPayment model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Vehicle/GasStationsController.php
-
-		-
-			message: '#^Relation ''car'' is not found in App\\Models\\Vehicle\\CarRefill model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Vehicle/GasStationsController.php
-
-		-
-			message: '#^Relation ''driver'' is not found in App\\Models\\Vehicle\\CarRefill model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Http/Controllers/Api/Vehicle/GasStationsController.php
 
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\ActivityLogDetailResource\:\:\$activity_log_id\.$#'
@@ -367,12 +115,6 @@ parameters:
 			path: app/Http/Resources/ActivityLogResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\ActivityLogResource\:\:relationLoaded\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/ActivityLogResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Accounts\\AccountAdjustResource\:\:\$account\.$#'
 			identifier: property.notFound
 			count: 4
@@ -460,12 +202,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Accounts\\AccountAdjustResource\:\:\$updated_at\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Http/Resources/Api/Accounts/AccountAdjustResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Accounts\\AccountAdjustResource\:\:relationLoaded\(\)\.$#'
-			identifier: method.notFound
-			count: 3
 			path: app/Http/Resources/Api/Accounts/AccountAdjustResource.php
 
 		-
@@ -919,18 +655,6 @@ parameters:
 			path: app/Http/Resources/Api/Customers/CustomerCreditDebitNoteResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerCreditDebitNoteResource\:\:isCredit\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerCreditDebitNoteResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerCreditDebitNoteResource\:\:isDebit\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerCreditDebitNoteResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Customers\\CustomerPaymentOrderResource\:\:\$amount\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1077,18 +801,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Customers\\CustomerPaymentOrderResource\:\:\$updated_by\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerPaymentOrderResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerPaymentOrderResource\:\:isApproved\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Resources/Api/Customers/CustomerPaymentOrderResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerPaymentOrderResource\:\:isPending\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Customers/CustomerPaymentOrderResource.php
 
@@ -1275,18 +987,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Customers\\CustomerPaymentResource\:\:\$updated_by\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerPaymentResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerPaymentResource\:\:isApproved\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Resources/Api/Customers/CustomerPaymentResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerPaymentResource\:\:isPending\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Customers/CustomerPaymentResource.php
 
@@ -1515,42 +1215,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Customers\\CustomerResource\:\:\$url\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerResource.php
-
-		-
-			message: '#^Array has 2 duplicate keys with value ''name'' \(''name'', ''name''\)\.$#'
-			identifier: array.duplicateKey
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerResource\:\:getBalanceStatusAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerResource\:\:getFormattedGpsAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerResource\:\:hasChildren\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerResource\:\:hasParent\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerResource\:\:isOverCreditLimit\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Customers/CustomerResource.php
 
@@ -1789,24 +1453,6 @@ parameters:
 			path: app/Http/Resources/Api/Customers/CustomerReturnOrderResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerReturnOrderResource\:\:isApproved\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Resources/Api/Customers/CustomerReturnOrderResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerReturnOrderResource\:\:isPending\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerReturnOrderResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerReturnOrderResource\:\:isReceived\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Resources/Api/Customers/CustomerReturnOrderResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Customers\\CustomerReturnResource\:\:\$approve_note\.$#'
 			identifier: property.notFound
 			count: 1
@@ -2038,24 +1684,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Customers\\CustomerReturnResource\:\:\$warehouse_id\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerReturnResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerReturnResource\:\:isApproved\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Resources/Api/Customers/CustomerReturnResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerReturnResource\:\:isPending\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/CustomerReturnResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\CustomerReturnResource\:\:isReceived\(\)\.$#'
-			identifier: method.notFound
-			count: 2
 			path: app/Http/Resources/Api/Customers/CustomerReturnResource.php
 
 		-
@@ -2541,18 +2169,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Customers\\ProformaInvoiceResource\:\:\$warehouse_id\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/ProformaInvoiceResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\ProformaInvoiceResource\:\:isConverted\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/ProformaInvoiceResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\ProformaInvoiceResource\:\:relationLoaded\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Customers/ProformaInvoiceResource.php
 
@@ -3049,18 +2665,6 @@ parameters:
 			path: app/Http/Resources/Api/Customers/SaleOrderResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\SaleOrderResource\:\:isApproved\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/SaleOrderResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\SaleOrderResource\:\:isPending\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/SaleOrderResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Customers\\SaleResource\:\:\$approvedBy\.$#'
 			identifier: property.notFound
 			count: 1
@@ -3325,12 +2929,6 @@ parameters:
 			path: app/Http/Resources/Api/Customers/SaleResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Customers\\SaleResource\:\:relationLoaded\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Customers/SaleResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\DocumentResource\:\:\$created_at\.$#'
 			identifier: property.notFound
 			count: 2
@@ -3472,36 +3070,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\DocumentResource\:\:\$uploadedBy\.$#'
 			identifier: property.notFound
 			count: 3
-			path: app/Http/Resources/Api/DocumentResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\DocumentResource\:\:getFileCategory\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/DocumentResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\DocumentResource\:\:isImage\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Resources/Api/DocumentResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\DocumentResource\:\:isPdf\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Resources/Api/DocumentResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\DocumentResource\:\:isSpreadsheet\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/DocumentResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\DocumentResource\:\:isWordDocument\(\)\.$#'
-			identifier: method.notFound
-			count: 1
 			path: app/Http/Resources/Api/DocumentResource.php
 
 		-
@@ -3849,18 +3417,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Employees\\EmployeeCreditDebitNoteResource\:\:\$updated_by\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Employees/EmployeeCreditDebitNoteResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Employees\\EmployeeCreditDebitNoteResource\:\:isCredit\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Employees/EmployeeCreditDebitNoteResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Employees\\EmployeeCreditDebitNoteResource\:\:isDebit\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Employees/EmployeeCreditDebitNoteResource.php
 
@@ -4513,30 +4069,6 @@ parameters:
 			path: app/Http/Resources/Api/Items/ItemAdjustResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemAdjustResource\:\:getHasItemsAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemAdjustResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemAdjustResource\:\:getItemAdjustCodeAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemAdjustResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemAdjustResource\:\:getTotalItemsCountAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemAdjustResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemAdjustResource\:\:getTotalQuantityAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemAdjustResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Items\\ItemListResource\:\:\$barcode\.$#'
 			identifier: property.notFound
 			count: 1
@@ -4677,42 +4209,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Items\\ItemListResource\:\:\$weight\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemListResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemListResource\:\:getCurrentCostAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemListResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemListResource\:\:getCurrentPriceAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemListResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemListResource\:\:getCurrentQuantityAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemListResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemListResource\:\:getIsLowStockAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemListResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemListResource\:\:isCostCalculatedByLastCost\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemListResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemListResource\:\:isCostCalculatedByWeightedAverage\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Items/ItemListResource.php
 
@@ -4933,12 +4429,6 @@ parameters:
 			path: app/Http/Resources/Api/Items/ItemResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemResource\:\:getAttributes\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Items\\ItemTransferResource\:\:\$code\.$#'
 			identifier: property.notFound
 			count: 1
@@ -5025,30 +4515,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Items\\ItemTransferResource\:\:\$updated_at\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemTransferResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemTransferResource\:\:getHasItemsAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemTransferResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemTransferResource\:\:getItemTransferCodeAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemTransferResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemTransferResource\:\:getTotalItemsCountAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Items/ItemTransferResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Items\\ItemTransferResource\:\:getTotalQuantityAttribute\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Items/ItemTransferResource.php
 
@@ -5619,12 +5085,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Setups\\CurrencyResource\:\:\$updated_at\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Setups/CurrencyResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Setups\\CurrencyResource\:\:getCurrentRate\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Setups/CurrencyResource.php
 
@@ -7165,24 +6625,6 @@ parameters:
 			path: app/Http/Resources/Api/Suppliers/PurchaseResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Suppliers\\PurchaseResource\:\:getHasItemsAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Suppliers/PurchaseResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Suppliers\\PurchaseResource\:\:getTotalItemsCountAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Suppliers/PurchaseResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Suppliers\\PurchaseResource\:\:getTotalQuantityAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Suppliers/PurchaseResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Suppliers\\PurchaseReturnResource\:\:\$additional_charge_amount\.$#'
 			identifier: property.notFound
 			count: 1
@@ -7399,24 +6841,6 @@ parameters:
 			path: app/Http/Resources/Api/Suppliers/PurchaseReturnResource.php
 
 		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Suppliers\\PurchaseReturnResource\:\:getHasItemsAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Suppliers/PurchaseReturnResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Suppliers\\PurchaseReturnResource\:\:getTotalItemsCountAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Suppliers/PurchaseReturnResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Suppliers\\PurchaseReturnResource\:\:getTotalQuantityAttribute\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Suppliers/PurchaseReturnResource.php
-
-		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Suppliers\\SupplierCreditDebitNoteResource\:\:\$amount\.$#'
 			identifier: property.notFound
 			count: 1
@@ -7539,18 +6963,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Http\\Resources\\Api\\Suppliers\\SupplierCreditDebitNoteResource\:\:\$updated_by\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Resources/Api/Suppliers/SupplierCreditDebitNoteResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Suppliers\\SupplierCreditDebitNoteResource\:\:isCredit\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Resources/Api/Suppliers/SupplierCreditDebitNoteResource.php
-
-		-
-			message: '#^Call to an undefined method App\\Http\\Resources\\Api\\Suppliers\\SupplierCreditDebitNoteResource\:\:isDebit\(\)\.$#'
-			identifier: method.notFound
 			count: 1
 			path: app/Http/Resources/Api/Suppliers/SupplierCreditDebitNoteResource.php
 
@@ -8179,469 +7591,13 @@ parameters:
 			path: app/Http/Resources/LoginLogResource.php
 
 		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Accounts/Account.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Accounts/AccountAdjust.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Accounts/AccountTransfer.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Accounts/IncomeTransaction.php
-
-		-
-			message: '#^Variable \$config in empty\(\) always exists and is not falsy\.$#'
-			identifier: empty.variable
-			count: 1
-			path: app/Models/ActivityLog/ActivityLogDetail.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/Customer.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/CustomerCreditDebitNote.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/CustomerPayment.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/CustomerReturn.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/CustomerReturnItem.php
-
-		-
-			message: '#^Relation ''activeRate'' is not found in App\\Models\\Setups\\Generals\\Currencies\\Currency model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Models/Customers/ProformaInvoice.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/ProformaInvoice.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/ProformaInvoiceItem.php
-
-		-
-			message: '#^Relation ''activeRate'' is not found in App\\Models\\Setups\\Generals\\Currencies\\Currency model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Models/Customers/Sale.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/Sale.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Customers/SaleItems.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Employees/AdvanceLoan.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Employees/CommissionTarget.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Employees/Employee.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Employees/EmployeeCreditDebitNote.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Employees/Salary.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Expenses/ExpensePayment.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Expenses/ExpenseTransaction.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Inventory/Inventory.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Inventory/ItemPrice.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Inventory/ItemPriceHistory.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Items\\Item\:\:\$inventories\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Models/Items/Item.php
 
 		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Items/Item.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Items/ItemAdjust.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Items/ItemAdjustItem.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Items/ItemTransfer.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Items/ItemTransferItem.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Items/PriceList.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Items/PriceListBulkUpdate.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Items/PriceListItem.php
-
-		-
-			message: '#^Relation ''feature'' is not found in App\\Models\\Landlord\\TenantFeature model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Models/Landlord/TenantFeature.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Accounts/AccountType.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Accounts/IncomeCategory.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Country.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Customers/CustomerGroup.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Customers/CustomerPaymentTerm.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Customers/CustomerProvince.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Customers/CustomerType.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Customers/CustomerZone.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Employees/Department.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Expenses/ExpenseCategory.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Setups\\Generals\\Currencies\\Currency\:\:\$activeRate\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Models/Setups/Generals/Currencies/Currency.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Generals/Currencies/Currency.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Generals/Currencies/currencyRate.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/ItemBrand.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/ItemCategory.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/ItemFamily.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/ItemGroup.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/ItemProfitMargin.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/ItemType.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/ItemUnit.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Supplier.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/SupplierPaymentTerm.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/SupplierType.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/TaxCode.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Setups/Warehouse.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Suppliers/Purchase.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Suppliers/PurchaseItem.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Suppliers/PurchaseReturn.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Suppliers/PurchaseReturnItem.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Suppliers/SupplierCreditDebitNote.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Suppliers/SupplierItemPrice.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Suppliers/SupplierPayment.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/User.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Vehicle/Car.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Vehicle/CarRefill.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Vehicle/GasStation.php
-
-		-
-			message: '#^Unsafe usage of new static\(\)\.$#'
-			identifier: new.static
-			count: 2
-			path: app/Models/Vehicle/GasStationPayment.php
-
-		-
-			message: '#^Relation ''activeRate'' is not found in App\\Models\\Setups\\Generals\\Currencies\\Currency model\.$#'
-			identifier: larastan.relationExistence
-			count: 3
-			path: app/Services/Currency/CurrencyService.php
-
-		-
-			message: '#^Anonymous function has an unused use \$endDate\.$#'
-			identifier: closure.unusedUse
-			count: 1
-			path: app/Services/Customers/CustomerBalanceService.php
-
-		-
-			message: '#^Anonymous function has an unused use \$reason\.$#'
-			identifier: closure.unusedUse
-			count: 1
-			path: app/Services/Inventory/InventoryService.php
-
-		-
-			message: '#^Relation ''supplierItemPrices'' is not found in App\\Models\\Items\\Item model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Services/Suppliers/SupplierItemPriceService.php
-
-		-
-			message: '#^Static method App\\Services\\Suppliers\\SupplierItemPriceService\:\:initializeFromItem\(\) invoked with 4 parameters, 2 required\.$#'
-			identifier: arguments.count
-			count: 1
-			path: app/Services/Suppliers/SupplierItemPriceService.php
