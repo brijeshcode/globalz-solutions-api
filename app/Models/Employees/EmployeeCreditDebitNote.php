@@ -62,11 +62,17 @@ class EmployeeCreditDebitNote extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);

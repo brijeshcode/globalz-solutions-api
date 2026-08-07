@@ -19,6 +19,9 @@ class SalaryItem extends Model
         'sort_order' => 'integer',
     ];
 
+    /**
+     * @return BelongsTo<Salary, $this>
+     */
     public function salary(): BelongsTo
     {
         return $this->belongsTo(Salary::class);

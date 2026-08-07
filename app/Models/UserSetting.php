@@ -170,6 +170,8 @@ class UserSetting extends Model
 
     /**
      * Relationship
+     *
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {

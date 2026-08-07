@@ -93,31 +93,49 @@ class CustomerReturn extends Model implements ModuleLockable
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Customer, $this>
+     */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function salesperson(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'salesperson_id');
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
     }
 
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function returnReceivedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'return_received_by');

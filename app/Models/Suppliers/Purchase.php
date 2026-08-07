@@ -103,16 +103,25 @@ class Purchase extends Model implements ModuleLockable
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
@@ -123,26 +132,41 @@ class Purchase extends Model implements ModuleLockable
     //     return $this->belongsTo(Account::class);
     // }
 
+    /**
+     * @return HasMany<PurchaseItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseItem::class);
     }
-    
+
+    /**
+     * @return HasMany<PurchaseItem, $this>
+     */
     public function purchaseItems(): HasMany
     {
         return $this->hasMany(PurchaseItem::class);
     }
 
+    /**
+     * @return HasMany<PurchaseExpense, $this>
+     */
     public function purchaseExpenses(): HasMany
     {
         return $this->hasMany(PurchaseExpense::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');

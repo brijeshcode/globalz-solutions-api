@@ -108,41 +108,65 @@ class ProformaInvoice extends Model
 
     // ─── Relationships ────────────────────────────────────────────────────────
 
+    /**
+     * @return HasMany<ProformaInvoiceItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(ProformaInvoiceItem::class);
     }
 
+    /**
+     * @return HasMany<ProformaInvoiceStatusHistory, $this>
+     */
     public function statusHistories(): HasMany
     {
         return $this->hasMany(ProformaInvoiceStatusHistory::class)->orderBy('created_at');
     }
 
+    /**
+     * @return BelongsTo<Sale, $this>
+     */
     public function convertedSale(): BelongsTo
     {
         return $this->belongsTo(Sale::class, 'converted_sale_id');
     }
 
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
     }
 
+    /**
+     * @return BelongsTo<Customer, $this>
+     */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /**
+     * @return BelongsTo<PriceList, $this>
+     */
     public function priceList(): BelongsTo
     {
         return $this->belongsTo(PriceList::class);
     }
 
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function salesperson(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

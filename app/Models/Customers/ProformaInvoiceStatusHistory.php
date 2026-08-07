@@ -10,11 +10,17 @@ class ProformaInvoiceStatusHistory extends Model
 {
     protected $fillable = ['proforma_invoice_id', 'status', 'changed_by'];
 
+    /**
+     * @return BelongsTo<ProformaInvoice, $this>
+     */
     public function proformaInvoice(): BelongsTo
     {
         return $this->belongsTo(ProformaInvoice::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function changedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');

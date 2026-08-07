@@ -83,21 +83,33 @@ class Salary extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return HasMany<SalaryItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(SalaryItem::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);

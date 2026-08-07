@@ -82,6 +82,9 @@ class CommissionTargetRule extends Model
     ];
 
     // Relationships
+    /**
+     * @return BelongsTo<CommissionTarget, $this>
+     */
     public function commissionTarget(): BelongsTo
     {
         return $this->belongsTo(CommissionTarget::class);

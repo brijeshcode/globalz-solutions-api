@@ -37,52 +37,51 @@ class AdvanceLoanResource extends JsonResource
             'updated_by' => $this->updated_by,
 
             'employee' => $this->whenLoaded('employee', function () {
-                return [
+                return $this->employee ? [
                     'id' => $this->employee->id,
                     'name' => $this->employee->name,
                     'code' => $this->employee->code,
-                    'address' => $this->when($this->employee->address, $this->employee->address),
-                    'phone' => $this->when($this->employee->phone, $this->employee->phone),
-                    'mobile' => $this->when($this->employee->mobile, $this->employee->mobile),
-                    'email' => $this->when($this->employee->email, $this->employee->email),
+                    'address' => $this->when((bool) $this->employee->address, $this->employee->address),
+                    'phone' => $this->when((bool) $this->employee->phone, $this->employee->phone),
+                    'mobile' => $this->when((bool) $this->employee->mobile, $this->employee->mobile),
+                    'email' => $this->when((bool) $this->employee->email, $this->employee->email),
                     'is_active' => $this->employee->is_active,
-                ];
+                ] : null;
             }),
 
             'currency' => $this->whenLoaded('currency', function () {
-                return [
+                return $this->currency ? [
                     'id' => $this->currency->id,
                     'name' => $this->currency->name,
                     'code' => $this->currency->code,
-                    'symbol' => $this->when($this->currency->symbol, $this->currency->symbol),
+                    'symbol' => $this->when((bool) $this->currency->symbol, $this->currency->symbol),
                     'calculation_type' => $this->currency->calculation_type,
                     'symbol_position' => $this->currency->symbol_position,
                     'decimal_places' => $this->currency->decimal_places,
                     'decimal_separator' => $this->currency->decimal_separator,
                     'thousand_separator' => $this->currency->thousand_separator,
-                ];
+                ] : null;
             }),
 
             'account' => $this->whenLoaded('account', function () {
-                return [
+                return $this->account ? [
                     'id' => $this->account->id,
                     'name' => $this->account->name,
-                    'code' => $this->when($this->account->code, $this->account->code),
-                ];
+                ] : null;
             }),
 
             'created_by_user' => $this->whenLoaded('createdBy', function () {
-                return [
+                return $this->createdBy ? [
                     'id' => $this->createdBy->id,
                     'name' => $this->createdBy->name,
-                ];
+                ] : null;
             }),
 
             'updated_by_user' => $this->whenLoaded('updatedBy', function () {
-                return [
+                return $this->updatedBy ? [
                     'id' => $this->updatedBy->id,
                     'name' => $this->updatedBy->name,
-                ];
+                ] : null;
             }),
         ];
     }

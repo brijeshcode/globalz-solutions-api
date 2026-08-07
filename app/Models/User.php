@@ -198,6 +198,8 @@ class User extends Authenticatable
 
     /**
      * Get the employee associated with this user
+     *
+     * @return HasOne<Employee, $this>
      */
     public function employee(): HasOne
     {

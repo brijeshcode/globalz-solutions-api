@@ -15,6 +15,7 @@ use App\Models\Setups\ItemType;
 use App\Models\Setups\ItemUnit;
 use App\Models\Setups\Supplier;
 use App\Models\Setups\TaxCode;
+use App\Models\Suppliers\PurchaseItem;
 use App\Models\Suppliers\SupplierItemPrice;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
@@ -118,64 +119,100 @@ class Item extends Model
     }
 
     // Relationships
+    /**
+     * @return BelongsTo<ItemType, $this>
+     */
     public function itemType(): BelongsTo
     {
         return $this->belongsTo(ItemType::class);
     }
 
+    /**
+     * @return BelongsTo<ItemFamily, $this>
+     */
     public function itemFamily(): BelongsTo
     {
         return $this->belongsTo(ItemFamily::class);
     }
 
+    /**
+     * @return BelongsTo<ItemGroup, $this>
+     */
     public function itemGroup(): BelongsTo
     {
         return $this->belongsTo(ItemGroup::class);
     }
 
+    /**
+     * @return BelongsTo<ItemCategory, $this>
+     */
     public function itemCategory(): BelongsTo
     {
         return $this->belongsTo(ItemCategory::class);
     }
 
+    /**
+     * @return BelongsTo<ItemBrand, $this>
+     */
     public function itemBrand(): BelongsTo
     {
         return $this->belongsTo(ItemBrand::class);
     }
 
+    /**
+     * @return BelongsTo<ItemUnit, $this>
+     */
     public function itemUnit(): BelongsTo
     {
         return $this->belongsTo(ItemUnit::class);
     }
 
+    /**
+     * @return BelongsTo<ItemProfitMargin, $this>
+     */
     public function itemProfitMargin(): BelongsTo
     {
         return $this->belongsTo(ItemProfitMargin::class);
     }
 
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * @return BelongsTo<TaxCode, $this>
+     */
     public function taxCode(): BelongsTo
     {
         return $this->belongsTo(TaxCode::class);
     }
 
+    /**
+     * @return HasOne<ItemPrice, $this>
+     */
     public function itemPrice(): HasOne
     {
         return $this->hasOne(ItemPrice::class);
     }
 
+    /**
+     * @return HasMany<ItemPriceHistory, $this>
+     */
     public function priceHistories(): HasMany
     {
         return $this->hasMany(ItemPriceHistory::class);
     }
 
+    /**
+     * @return HasOne<PurchaseItem, $this>
+     */
     public function lastPurchaseItem(): HasOne
     {
-        return $this->hasOne(\App\Models\Suppliers\PurchaseItem::class)->latestOfMany('id');
+        return $this->hasOne(PurchaseItem::class)->latestOfMany('id');
     }
 
     // Accessors & Mutators

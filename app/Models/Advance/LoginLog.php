@@ -43,6 +43,8 @@ class LoginLog extends Model
 
     /**
      * Get the user that owns the login log.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {

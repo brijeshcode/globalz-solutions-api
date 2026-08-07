@@ -57,21 +57,33 @@ class PriceList extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return HasMany<PriceListItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(PriceListItem::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return HasMany<PriceListItem, $this>
+     */
     public function priceListItems(): HasMany
     {
         return $this->hasMany(PriceListItem::class);
     }
 
+    /**
+     * @return HasMany<Customer, $this>
+     */
     public function customersInv(): HasMany
     {
         return $this->hasMany(Customer::class, 'price_list_id_INV');
     }
 
+    /**
+     * @return HasMany<Customer, $this>
+     */
     public function customersInx(): HasMany
     {
         return $this->hasMany(Customer::class, 'price_list_id_INX');

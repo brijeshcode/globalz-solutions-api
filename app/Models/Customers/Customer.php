@@ -105,71 +105,113 @@ class Customer extends Model
     protected string $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Customer, $this>
+     */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'parent_id');
     }
 
+    /**
+     * @return HasMany<Customer, $this>
+     */
     public function children(): HasMany
     {
         return $this->hasMany(Customer::class, 'parent_id');
     }
 
+    /**
+     * @return BelongsTo<CustomerType, $this>
+     */
     public function customerType(): BelongsTo
     {
         return $this->belongsTo(CustomerType::class);
     }
 
+    /**
+     * @return BelongsTo<CustomerGroup, $this>
+     */
     public function customerGroup(): BelongsTo
     {
         return $this->belongsTo(CustomerGroup::class);
     }
 
+    /**
+     * @return BelongsTo<CustomerProvince, $this>
+     */
     public function customerProvince(): BelongsTo
     {
         return $this->belongsTo(CustomerProvince::class);
     }
 
+    /**
+     * @return BelongsTo<CustomerZone, $this>
+     */
     public function customerZone(): BelongsTo
     {
         return $this->belongsTo(CustomerZone::class);
     }
 
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function salesperson(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'salesperson_id', 'id');
     }
 
+    /**
+     * @return BelongsTo<CustomerPaymentTerm, $this>
+     */
     public function customerPaymentTerm(): BelongsTo
     {
         return $this->belongsTo(CustomerPaymentTerm::class);
     }
 
+    /**
+     * @return BelongsTo<PriceList, $this>
+     */
     public function priceListINV(): BelongsTo
     {
         return $this->belongsTo(PriceList::class, 'price_list_id_INV');
     }
 
+    /**
+     * @return BelongsTo<PriceList, $this>
+     */
     public function priceListINX(): BelongsTo
     {
         return $this->belongsTo(PriceList::class, 'price_list_id_INX');
     }
 
+    /**
+     * @return HasMany<CustomerBalanceMonthly, $this>
+     */
     public function monthlyBalances(): HasMany
     {
         return $this->hasMany(CustomerBalanceMonthly::class);
     }
 
+    /**
+     * @return HasMany<Sale, $this>
+     */
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class);
     }
 
+    /**
+     * @return HasMany<CustomerPayment, $this>
+     */
     public function customerPayments(): HasMany
     {
         return $this->hasMany(CustomerPayment::class);
     }
 
+    /**
+     * @return HasMany<CustomerReturn, $this>
+     */
     public function customerReturns(): HasMany
     {
         return $this->hasMany(CustomerReturn::class);

@@ -46,6 +46,8 @@ class ActivityLog extends Model
 
     /**
      * Get all detail records for this activity log
+     *
+     * @return HasMany<ActivityLogDetail, $this>
      */
     public function details(): HasMany
     {
@@ -64,6 +66,8 @@ class ActivityLog extends Model
 
     /**
      * Get the user who made the last change
+     *
+     * @return BelongsTo<User, $this>
      */
     public function lastChangedBy(): BelongsTo
     {

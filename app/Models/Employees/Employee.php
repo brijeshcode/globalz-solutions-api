@@ -106,16 +106,25 @@ class Employee extends Model
         });
     }
 
+    /**
+     * @return BelongsTo<Department, $this>
+     */
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class);
     }
-    
+
+    /**
+     * @return BelongsToMany<Warehouse, $this>
+     */
     public function warehouses(): BelongsToMany
     {
         return $this->belongsToMany(Warehouse::class, 'employee_warehouses')
@@ -123,6 +132,9 @@ class Employee extends Model
                     ->withPivot('is_primary');
     }
 
+    /**
+     * @return BelongsToMany<CustomerZone, $this>
+     */
     public function zones():BelongsToMany
     {
         return $this->belongsToMany(
@@ -133,6 +145,9 @@ class Employee extends Model
         );
     }
 
+    /**
+     * @return HasMany<EmployeeCommissionTarget, $this>
+     */
     public function employeeCommissionTargets(): HasMany
     {
         return $this->hasMany(EmployeeCommissionTarget::class);

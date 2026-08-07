@@ -21,11 +21,17 @@ class PurchaseExpense extends Model
         'exclude_from_item_cost' => 'boolean',
     ];
 
+    /**
+     * @return BelongsTo<Purchase, $this>
+     */
     public function purchase(): BelongsTo
     {
         return $this->belongsTo(Purchase::class);
     }
 
+    /**
+     * @return BelongsTo<ExpenseTransaction, $this>
+     */
     public function expenseTransaction(): BelongsTo
     {
         return $this->belongsTo(ExpenseTransaction::class);

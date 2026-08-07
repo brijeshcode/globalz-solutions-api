@@ -134,26 +134,41 @@ class ExpenseTransaction extends Model implements ModuleLockable
 
     // ─── Relationships ────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<ExpenseCategory, $this>
+     */
     public function expenseCategory(): BelongsTo
     {
         return $this->belongsTo(ExpenseCategory::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
     }
 
+    /**
+     * @return HasMany<ExpensePayment, $this>
+     */
     public function payments(): HasMany
     {
         return $this->hasMany(ExpensePayment::class);
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<PurchaseExpense, $this>
+     */
     public function purchaseExpense(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(\App\Models\Suppliers\PurchaseExpense::class);

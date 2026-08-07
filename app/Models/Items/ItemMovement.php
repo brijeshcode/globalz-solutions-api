@@ -46,6 +46,8 @@ class ItemMovement extends Model
 
     /**
      * Get the item associated with the movement.
+     *
+     * @return BelongsTo<Item, $this>
      */
     public function item(): BelongsTo
     {
@@ -54,6 +56,8 @@ class ItemMovement extends Model
 
     /**
      * Get the warehouse associated with the movement.
+     *
+     * @return BelongsTo<Warehouse, $this>
      */
     public function warehouse(): BelongsTo
     {
@@ -62,6 +66,8 @@ class ItemMovement extends Model
 
     /**
      * Get the user who created the movement.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function createdBy(): BelongsTo
     {

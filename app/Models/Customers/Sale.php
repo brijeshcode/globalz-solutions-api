@@ -132,46 +132,73 @@ class Sale extends Model implements ModuleLockable
     protected $defaultSortField = 'id';
     protected $defaultSortDirection = 'desc';
 
+    /**
+     * @return HasMany<SaleStatusHistory, $this>
+     */
     public function statusHistories(): HasMany
     {
         return $this->hasMany(SaleStatusHistory::class)->orderBy('created_at');
     }
 
+    /**
+     * @return HasMany<SaleItems, $this>
+     */
     public function saleItems(): HasMany
     {
         return $this->hasMany(SaleItems::class);
     }
-
+    
+    /**
+     * @return HasMany<SaleItems, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(SaleItems::class);
     }
 
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
     }
 
+    /**
+     * @return BelongsTo<Customer, $this>
+     */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /**
+     * @return BelongsTo<PriceList, $this>
+     */
     public function priceList(): BelongsTo
     {
         return $this->belongsTo(PriceList::class);
     }
 
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function salesperson(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');

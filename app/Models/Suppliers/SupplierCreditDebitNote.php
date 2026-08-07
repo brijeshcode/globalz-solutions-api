@@ -65,11 +65,17 @@ class SupplierCreditDebitNote extends Model implements ModuleLockable
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);

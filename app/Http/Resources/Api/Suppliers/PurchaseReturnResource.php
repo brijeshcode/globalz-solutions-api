@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\Suppliers;
 
+use App\Http\Resources\Api\EmbeddedDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -125,20 +126,7 @@ class PurchaseReturnResource extends JsonResource
                 });
             }),
 
-            'documents' => $this->whenLoaded('documents', function () {
-                return $this->documents->map(function ($doc) {
-                    return [
-                        'id' => $doc->id,
-                        'original_name' => $doc->original_name,
-                        'file_name' => $doc->file_name,
-                        'file_size' => $doc->file_size,
-                        'file_size_human' => $doc->file_size_human ?? null,
-                        'thumbnail_url' => $doc->thumbnail_url ?? null,
-                        'download_url' => $doc->download_url ?? null,
-                        'uploaded_at' => $doc->created_at?->format('Y-m-d H:i:s'),
-                    ];
-                });
-            }),
+            'documents' => EmbeddedDocumentResource::collection($this->whenLoaded('documents')),
 
             // Audit fields
             'created_by' => $this->whenLoaded('createdBy', function () {

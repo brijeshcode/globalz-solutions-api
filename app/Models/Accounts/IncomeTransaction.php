@@ -78,16 +78,25 @@ class IncomeTransaction extends Model
         return $value ? self::PREFIX . $value : null;
     }
 
+    /**
+     * @return BelongsTo<IncomeCategory, $this>
+     */
     public function incomeCategory(): BelongsTo
     {
         return $this->belongsTo(IncomeCategory::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * @return BelongsTo<\App\Models\Setups\Generals\Currencies\Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);

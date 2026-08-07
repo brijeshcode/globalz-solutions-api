@@ -42,6 +42,9 @@ class ItemPrice extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);

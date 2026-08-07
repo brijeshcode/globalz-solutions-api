@@ -12,16 +12,25 @@ class SaleStatusHistory extends Model
 {
     protected $fillable = ['sale_id', 'status', 'changed_by', 'car_id'];
 
+    /**
+     * @return BelongsTo<Sale, $this>
+     */
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function changedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');
     }
 
+    /**
+     * @return BelongsTo<Car, $this>
+     */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);

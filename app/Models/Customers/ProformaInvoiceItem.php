@@ -94,11 +94,17 @@ class ProformaInvoiceItem extends Model
     protected $defaultSortField = 'id';
     protected $defaultSortDirection = 'desc';
 
+    /**
+     * @return BelongsTo<ProformaInvoice, $this>
+     */
     public function proformaInvoice(): BelongsTo
     {
         return $this->belongsTo(ProformaInvoice::class);
     }
 
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);

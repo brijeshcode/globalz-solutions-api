@@ -47,11 +47,17 @@ class ItemAdjustItem extends Model
     protected $defaultSortDirection = 'asc';
 
     // Relationships
+    /**
+     * @return BelongsTo<ItemAdjust, $this>
+     */
     public function itemAdjust(): BelongsTo
     {
         return $this->belongsTo(ItemAdjust::class);
     }
 
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);

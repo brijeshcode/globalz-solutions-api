@@ -74,6 +74,9 @@ class Department extends Model
         return $query->where('is_active', true);
     }
 
+    /**
+     * @return HasMany<Employee, $this>
+     */
     public function employees(): HasMany
     {
         return $this->hasMany(Employee::class);

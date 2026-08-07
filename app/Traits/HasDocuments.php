@@ -14,6 +14,8 @@ trait HasDocuments
 {
     /**
      * Get all documents for this model
+     *
+     * @return MorphMany<Document, $this>
      */
     public function documents(): MorphMany
     {
@@ -22,6 +24,8 @@ trait HasDocuments
 
     /**
      * Get active (non-deleted) documents
+     *
+     * @return MorphMany<Document, $this>
      */
     public function activeDocuments(): MorphMany
     {
@@ -30,6 +34,8 @@ trait HasDocuments
 
     /**
      * Get documents by type
+     *
+     * @return MorphMany<Document, $this>
      */
     public function documentsByType(string $type): MorphMany
     {

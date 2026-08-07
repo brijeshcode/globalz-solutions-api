@@ -86,31 +86,49 @@ class CustomerPayment extends Model implements ModuleLockable
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Customer, $this>
+     */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function salesperson(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'salesperson_id');
     }
 
+    /**
+     * @return BelongsTo<CustomerPaymentTerm, $this>
+     */
     public function customerPaymentTerm(): BelongsTo
     {
         return $this->belongsTo(CustomerPaymentTerm::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

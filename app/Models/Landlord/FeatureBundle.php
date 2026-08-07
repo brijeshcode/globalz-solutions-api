@@ -22,6 +22,8 @@ class FeatureBundle extends Model
 
     /**
      * Features included in this bundle.
+     *
+     * @return BelongsToMany<Feature, $this>
      */
     public function features(): BelongsToMany
     {

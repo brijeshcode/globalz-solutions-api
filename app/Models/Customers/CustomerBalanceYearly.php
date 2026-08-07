@@ -42,6 +42,9 @@ class CustomerBalanceYearly extends Model
         'updated_by_entry_id' => 'integer',
     ];
 
+    /**
+     * @return BelongsTo<Customer, $this>
+     */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

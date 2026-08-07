@@ -38,6 +38,9 @@ class currencyRate extends Model
     protected $defaultSortField = 'currency_id';
     protected $defaultSortDirection = 'desc';
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);

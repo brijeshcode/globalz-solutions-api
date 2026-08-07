@@ -111,10 +111,17 @@ class SaleItems extends Model
     protected $defaultSortField = 'id';
     protected $defaultSortDirection = 'desc';
 
+    /**
+     * @return BelongsTo<Sale, $this>
+     */
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);
     }
+
+    /**
+     * @return BelongsTo<Item, $this>
+     */
 
     public function item(): BelongsTo
     {

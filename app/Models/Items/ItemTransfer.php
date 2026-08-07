@@ -55,21 +55,33 @@ class ItemTransfer extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function fromWarehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'from_warehouse_id');
     }
 
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function toWarehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'to_warehouse_id');
     }
 
+    /**
+     * @return HasMany<ItemTransferItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(ItemTransferItem::class);
     }
 
+    /**
+     * @return HasMany<ItemTransferItem, $this>
+     */
     public function itemTransferItems(): HasMany
     {
         return $this->hasMany(ItemTransferItem::class);

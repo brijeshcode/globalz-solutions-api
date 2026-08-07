@@ -57,11 +57,17 @@ class CommissionTarget extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return HasMany<CommissionTargetRule, $this>
+     */
     public function rules(): HasMany
     {
         return $this->hasMany(CommissionTargetRule::class);
     }
 
+    /**
+     * @return HasMany<EmployeeCommissionTarget, $this>
+     */
     public function employeeCommissionTargets(): HasMany
     {
         return $this->hasMany(EmployeeCommissionTarget::class);

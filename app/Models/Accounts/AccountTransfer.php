@@ -59,21 +59,33 @@ class AccountTransfer extends Model
     protected $defaultSortField = 'date';
     protected $defaultSortDirection = 'desc';
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function fromAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'from_account_id');
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function toAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'to_account_id');
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function fromCurrency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'from_currency_id');
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function toCurrency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'to_currency_id');

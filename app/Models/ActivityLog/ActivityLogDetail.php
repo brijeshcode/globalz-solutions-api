@@ -45,6 +45,8 @@ class ActivityLogDetail extends Model
 
     /**
      * Get the parent activity log
+     *
+     * @return BelongsTo<ActivityLog, $this>
      */
     public function activityLog(): BelongsTo
     {
@@ -53,6 +55,8 @@ class ActivityLogDetail extends Model
 
     /**
      * Get the user who made this change
+     *
+     * @return BelongsTo<User, $this>
      */
     public function changedBy(): BelongsTo
     {

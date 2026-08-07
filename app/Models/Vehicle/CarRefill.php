@@ -53,16 +53,25 @@ class CarRefill extends Model
         return CarRefillFactory::new();
     }
 
+    /**
+     * @return BelongsTo<Car, $this>
+     */
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
+    /**
+     * @return BelongsTo<GasStation, $this>
+     */
     public function gasStation(): BelongsTo
     {
         return $this->belongsTo(GasStation::class);
     }
 
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function driver(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'driver_id');

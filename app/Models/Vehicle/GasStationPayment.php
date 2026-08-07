@@ -48,11 +48,17 @@ class GasStationPayment extends Model
         return GasStationPaymentFactory::new();
     }
 
+    /**
+     * @return BelongsTo<GasStation, $this>
+     */
     public function gasStation(): BelongsTo
     {
         return $this->belongsTo(GasStation::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

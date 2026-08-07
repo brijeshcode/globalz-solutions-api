@@ -33,6 +33,8 @@ class Feature extends Model
 
     /**
      * Get tenant features pivot records
+     *
+     * @return HasMany<TenantFeature, $this>
      */
     public function tenantFeatures(): HasMany
     {
@@ -41,6 +43,8 @@ class Feature extends Model
 
     /**
      * Bundles that include this feature.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<FeatureBundle, $this>
      */
     public function bundles()
     {

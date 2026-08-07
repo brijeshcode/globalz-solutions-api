@@ -50,6 +50,9 @@ class AccountAdjust extends Model
     protected $defaultSortField = 'date';
     protected $defaultSortDirection = 'desc';
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'account_id');

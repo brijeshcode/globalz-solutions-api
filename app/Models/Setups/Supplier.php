@@ -80,21 +80,33 @@ class Supplier extends Model
     protected $defaultSortDirection = 'asc';
 
     // Relationships
+    /**
+     * @return BelongsTo<SupplierType, $this>
+     */
     public function supplierType(): BelongsTo
     {
         return $this->belongsTo(SupplierType::class);
     }
 
+    /**
+     * @return BelongsTo<Country, $this>
+     */
     public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
     }
 
+    /**
+     * @return BelongsTo<SupplierPaymentTerm, $this>
+     */
     public function paymentTerm(): BelongsTo
     {
         return $this->belongsTo(SupplierPaymentTerm::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);

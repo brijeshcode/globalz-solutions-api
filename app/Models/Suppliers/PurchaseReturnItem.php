@@ -79,21 +79,33 @@ class PurchaseReturnItem extends Model
     protected $defaultSortDirection = 'asc';
 
     // Relationships
+    /**
+     * @return BelongsTo<PurchaseReturn, $this>
+     */
     public function purchaseReturn(): BelongsTo
     {
         return $this->belongsTo(PurchaseReturn::class);
     }
 
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');

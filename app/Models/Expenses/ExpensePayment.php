@@ -63,16 +63,25 @@ class ExpensePayment extends Model implements ModuleLockable
 
     // ─── Relationships ────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<ExpenseTransaction, $this>
+     */
     public function expenseTransaction(): BelongsTo
     {
         return $this->belongsTo(ExpenseTransaction::class);
     }
 
+    /**
+     * @return BelongsTo<Account, $this>
+     */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);

@@ -47,6 +47,10 @@ class PriceListBulkUpdate extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+
+    /**
+     * @return HasMany<PriceListBulkUpdateItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(PriceListBulkUpdateItem::class, 'bulk_update_id');

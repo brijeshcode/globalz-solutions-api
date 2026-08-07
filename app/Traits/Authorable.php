@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,9 +46,9 @@ trait Authorable
             $model->updated_by = static::resolveAuthorId();
         });
     }
-
     /**
-     * Get the user who created this record
+     * @return BelongsTo<User, $this>
+     * * Get the user who created this record
      */
     public function createdBy(): BelongsTo
     {
@@ -55,6 +56,7 @@ trait Authorable
     }
 
     /**
+     * @return BelongsTo<User, $this>
      * Get the user who last updated this record
      */
     public function updatedBy(): BelongsTo
@@ -65,7 +67,7 @@ trait Authorable
     /**
      * Scope to filter by creator
      */
-    public function scopeCreatedBy($query, $userId)
+    public function scopeCreatedBy(Builder $query, int $userId)
     {
         return $query->where('created_by', $userId);
     }
@@ -73,7 +75,7 @@ trait Authorable
     /**
      * Scope to filter by updater
      */
-    public function scopeUpdatedBy($query, $userId)
+    public function scopeUpdatedBy(Builder $query, int $userId)
     {
         return $query->where('updated_by', $userId);
     }

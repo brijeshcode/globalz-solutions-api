@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\Suppliers;
 
+use App\Http\Resources\Api\EmbeddedDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -93,22 +94,7 @@ class SupplierPaymentResource extends JsonResource
             }),
 
             // Documents
-            'documents' => $this->whenLoaded('documents', function () {
-                return $this->documents->map(function ($document) {
-                    return [
-                        'id' => $document->id,
-                        'documentable_type' => $document->documentable_type,
-                        'file_name' => $document->file_name,
-                        'file_size' => $document->file_size,
-                        'documentable_id' => $document->documentable_id,
-                        // Appended attributes from Document model
-                        'thumbnail_url' => $document->thumbnail_url,
-                        'download_url' => $document->download_url,
-                        'preview_url' => $document->preview_url,
-                         
-                    ];
-                });
-            }),
+            'documents' => EmbeddedDocumentResource::collection($this->whenLoaded('documents')),
         ];
     }
 }

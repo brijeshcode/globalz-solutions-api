@@ -104,26 +104,41 @@ class PurchaseReturn extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
     }
 
+    /**
+     * @return HasMany<PurchaseReturnItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseReturnItem::class);
     }
 
+    /**
+     * @return HasMany<PurchaseReturnItem, $this>
+     */
     public function purchaseReturnItems(): HasMany
     {
         return $this->hasMany(PurchaseReturnItem::class);

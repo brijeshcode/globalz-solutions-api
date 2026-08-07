@@ -46,6 +46,9 @@ class CustomerBalanceMonthly extends Model
         'last_verified_at' => 'datetime',
     ];
 
+    /**
+     * @return BelongsTo<Customer, $this>
+     */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

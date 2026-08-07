@@ -73,12 +73,18 @@ class Account extends Model
         return $query->where('include_in_total', true);
     }
 
-    public function currency(): BelongsTo 
+    /**
+     * @return BelongsTo<Currency, $this>
+     */
+    public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
     }
 
-    public function accountType(): BelongsTo 
+    /**
+     * @return BelongsTo<AccountType, $this>
+     */
+    public function accountType(): BelongsTo
     {
         return $this->belongsTo(AccountType::class);
     }

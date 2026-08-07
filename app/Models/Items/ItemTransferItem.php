@@ -47,11 +47,17 @@ class ItemTransferItem extends Model
     protected $defaultSortDirection = 'asc';
 
     // Relationships
+    /**
+     * @return BelongsTo<ItemTransfer, $this>
+     */
     public function itemTransfer(): BelongsTo
     {
         return $this->belongsTo(ItemTransfer::class);
     }
 
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);

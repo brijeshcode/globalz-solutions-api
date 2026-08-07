@@ -58,16 +58,25 @@ class ItemAdjust extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * @return HasMany<ItemAdjustItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(ItemAdjustItem::class);
     }
 
+    /**
+     * @return HasMany<ItemAdjustItem, $this>
+     */
     public function itemAdjustItems(): HasMany
     {
         return $this->hasMany(ItemAdjustItem::class);

@@ -61,16 +61,25 @@ class ItemPriceHistory extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
     }
 
+    /**
+     * @return MorphTo
+     */
     public function source(): MorphTo
     {
         return $this->morphTo(__FUNCTION__, 'source_type', 'source_id');
     }
 
+    /**
+     * @return BelongsTo<PurchaseItem, $this>
+     */
     public function purchaseItemSource(): BelongsTo
     {
         return $this->belongsTo(PurchaseItem::class, 'source_id');

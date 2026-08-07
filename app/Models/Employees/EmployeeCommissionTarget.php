@@ -16,11 +16,17 @@ class EmployeeCommissionTarget extends Model
         'note',
     ];
 
+    /**
+     * @return BelongsTo<CommissionTarget, $this>
+     */
     public function commissionTarget(): BelongsTo
     {
         return $this->belongsTo(CommissionTarget::class);
     }
 
+    /**
+     * @return BelongsTo<Employee, $this>
+     */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);

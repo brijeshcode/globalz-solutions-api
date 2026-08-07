@@ -10,6 +10,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class SaleResource extends JsonResource
 {
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [
@@ -72,17 +77,17 @@ class SaleResource extends JsonResource
             'warehouse' => $this->whenLoaded('warehouse'),
             'priceList' => $this->whenLoaded('priceList'),
             'currency' => $this->whenLoaded('currency', function () {
-                return [
+                return $this->currency ? [
                     'id' => $this->currency->id,
                     'name' => $this->currency->name,
                     'code' => $this->currency->code,
-                    'symbol' => $this->when($this->currency->symbol, $this->currency->symbol),
+                    'symbol' => $this->when((bool) $this->currency->symbol, $this->currency->symbol),
                     'calculation_type' => $this->currency->calculation_type,
                     'symbol_position' => $this->currency->symbol_position,
                     'decimal_places' => $this->currency->decimal_places,
                     'decimal_separator' => $this->currency->decimal_separator,
                     'thousand_separator' => $this->currency->thousand_separator,
-                ];
+                ] : null;
             }),
             'salesperson' => $this->whenLoaded('salesperson'),
             'customer' => $this->whenLoaded('customer'),

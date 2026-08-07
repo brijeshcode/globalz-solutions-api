@@ -31,21 +31,33 @@ class PriceListBulkUpdateItem extends Model
     ];
 
     // Relationships
+    /**
+     * @return BelongsTo<PriceListBulkUpdate, $this>
+     */
     public function bulkUpdate(): BelongsTo
     {
         return $this->belongsTo(PriceListBulkUpdate::class, 'bulk_update_id');
     }
 
+    /**
+     * @return BelongsTo<PriceListItem, $this>
+     */
     public function priceListItem(): BelongsTo
     {
         return $this->belongsTo(PriceListItem::class);
     }
 
+    /**
+     * @return BelongsTo<PriceList, $this>
+     */
     public function priceList(): BelongsTo
     {
         return $this->belongsTo(PriceList::class);
     }
 
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);

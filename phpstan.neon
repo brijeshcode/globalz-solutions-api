@@ -4,7 +4,7 @@ includes:
     # - phpstan-baseline.neon
 
 parameters:
-    level: 1
+    level: 2
 
     # Baseline is a noise bucket; don't flag when baselined errors occur
     # fewer times than recorded (that just means you cleaned some up).
@@ -24,3 +24,4 @@ parameters:
         -
             identifier: property.notFound
             path: app/Http/Resources/Api/Reports/*
+            

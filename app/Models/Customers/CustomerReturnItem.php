@@ -98,21 +98,33 @@ class CustomerReturnItem extends Model
     protected $defaultSortDirection = 'desc';
 
     // Relationships
+    /**
+     * @return BelongsTo<CustomerReturn, $this>
+     */
     public function customerReturn(): BelongsTo
     {
         return $this->belongsTo(CustomerReturn::class);
     }
 
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
     }
 
+    /**
+     * @return BelongsTo<Sale, $this>
+     */
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class, 'sale_id');
     }
 
+    /**
+     * @return BelongsTo<SaleItems, $this>
+     */
     public function saleItem(): BelongsTo
     {
         return $this->belongsTo(SaleItems::class, 'sale_item_id');

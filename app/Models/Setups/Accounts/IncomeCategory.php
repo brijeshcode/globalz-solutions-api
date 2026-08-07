@@ -43,16 +43,25 @@ class IncomeCategory extends Model
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
 
+    /**
+     * @return BelongsTo<IncomeCategory, $this>
+     */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(IncomeCategory::class, 'parent_id');
     }
 
+    /**
+     * @return HasMany<IncomeCategory, $this>
+     */
     public function children(): HasMany
     {
         return $this->hasMany(IncomeCategory::class, 'parent_id');
     }
 
+    /**
+     * @return HasMany<IncomeCategory, $this>
+     */
     public function childrenRecursive(): HasMany
     {
         return $this->children()->with('childrenRecursive');

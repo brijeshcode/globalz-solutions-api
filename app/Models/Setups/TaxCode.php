@@ -128,6 +128,9 @@ class TaxCode extends Model
         return static::where('code', $code)->where('is_active', true)->first();
     }
 
+    /**
+     * @return HasMany<Item, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(Item::class);

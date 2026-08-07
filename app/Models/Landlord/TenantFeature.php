@@ -23,11 +23,17 @@ class TenantFeature extends Model
         'settings'   => 'array',
     ];
 
+    /**
+     * @return BelongsTo<Tenant, $this>
+     */
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * @return BelongsTo<Feature, $this>
+     */
     public function feature(): BelongsTo
     {
         return $this->belongsTo(Feature::class);
