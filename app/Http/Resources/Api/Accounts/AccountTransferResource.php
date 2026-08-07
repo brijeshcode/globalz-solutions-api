@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Accounts;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Accounts\AccountTransfer
+ */
 class AccountTransferResource extends JsonResource
 {
     /**

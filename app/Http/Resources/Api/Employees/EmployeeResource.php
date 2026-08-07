@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Employees;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Employees\Employee
+ */
 class EmployeeResource extends JsonResource
 {
     /**

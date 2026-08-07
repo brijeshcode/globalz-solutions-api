@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Setups;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Setups\ItemBrand
+ */
 class ItemBrandResource extends JsonResource
 {
     public function toArray(Request $request): array

@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Jenssegers\Agent\Agent;
 
+/**
+ * @mixin \App\Models\Advance\LoginLog
+ */
 class LoginLogResource extends JsonResource
 {
     /**

@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Expenses;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Expenses\ExpensePayment
+ */
 class ExpensePaymentResource extends JsonResource
 {
     public function toArray(Request $request): array

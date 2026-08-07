@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Setups\Customers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Setups\Customers\CustomerGroup
+ */
 class CustomerGroupResource extends JsonResource
 {
     /**

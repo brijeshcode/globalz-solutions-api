@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Setups\Expenses;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Setups\Expenses\ExpenseCategory
+ */
 class ExpenseCategoryResource extends JsonResource
 {
     /**

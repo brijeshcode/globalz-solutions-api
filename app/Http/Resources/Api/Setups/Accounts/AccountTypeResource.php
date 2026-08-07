@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Setups\Accounts;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Setups\Accounts\AccountType
+ */
 class AccountTypeResource extends JsonResource
 {
     /**

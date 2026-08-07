@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Vehicle\GasStationPayment
+ */
 class GasStationPaymentResource extends JsonResource
 {
     public function toArray(Request $request): array

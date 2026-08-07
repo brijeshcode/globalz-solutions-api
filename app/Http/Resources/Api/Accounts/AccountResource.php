@@ -6,6 +6,9 @@ use App\Helpers\CurrencyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Accounts\Account
+ */
 class AccountResource extends JsonResource
 {
     /**

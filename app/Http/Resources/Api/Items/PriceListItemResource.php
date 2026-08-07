@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Items;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Items\PriceListItem
+ */
 class PriceListItemResource extends JsonResource
 {
     /**

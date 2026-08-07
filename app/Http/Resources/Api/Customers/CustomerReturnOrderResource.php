@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Customers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Customers\CustomerReturn
+ */
 class CustomerReturnOrderResource extends JsonResource
 {
     /**

@@ -5,6 +5,9 @@ namespace App\Http\Resources\Api\Setups\Generals\Currencies;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\Setups\Generals\Currencies\currencyRate
+ */
 class currencyRateResource extends JsonResource
 {
     /**
