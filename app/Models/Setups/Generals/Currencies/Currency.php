@@ -4,6 +4,8 @@ namespace App\Models\Setups\Generals\Currencies;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Authorable;
 use Illuminate\Database\Eloquent\Builder;
@@ -89,12 +91,12 @@ class Currency extends Model
     }
 
     // Relationships
-    public function rates()
+    public function rates(): HasMany
     {
         return $this->hasMany(currencyRate::class);
     }
 
-    public function activeRate()
+    public function activeRate(): HasOne
     {
         return $this->hasOne(currencyRate::class)->where('is_active', true)->latest();
     }

@@ -12,6 +12,7 @@ use App\Traits\Sortable;
 use Database\Factories\Vehicle\GasStationPaymentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class GasStationPayment extends Model
@@ -47,12 +48,12 @@ class GasStationPayment extends Model
         return GasStationPaymentFactory::new();
     }
 
-    public function gasStation()
+    public function gasStation(): BelongsTo
     {
         return $this->belongsTo(GasStation::class);
     }
 
-    public function account()
+    public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }

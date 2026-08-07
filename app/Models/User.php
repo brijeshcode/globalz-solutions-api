@@ -8,6 +8,7 @@ use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
@@ -198,7 +199,7 @@ class User extends Authenticatable
     /**
      * Get the employee associated with this user
      */
-    public function employee()
+    public function employee(): HasOne
     {
         return $this->hasOne(\App\Models\Employees\Employee::class);
     }

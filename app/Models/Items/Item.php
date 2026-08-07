@@ -15,6 +15,7 @@ use App\Models\Setups\ItemType;
 use App\Models\Setups\ItemUnit;
 use App\Models\Setups\Supplier;
 use App\Models\Setups\TaxCode;
+use App\Models\Suppliers\SupplierItemPrice;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
@@ -283,9 +284,15 @@ class Item extends Model
     }
 
     // Relationship to get all warehouse inventories
-    public function inventories()
+    public function inventories(): HasMany
     {
         return $this->hasMany(Inventory::class);
+    }
+
+    // Supplier-specific prices for this item
+    public function supplierItemPrices(): HasMany
+    {
+        return $this->hasMany(SupplierItemPrice::class);
     }
 
     // Get total inventory across all warehouses (using relationship if loaded, otherwise query)

@@ -3,6 +3,7 @@
 namespace App\Models\Landlord;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Tenant;
 
 class Feature extends Model
@@ -33,7 +34,7 @@ class Feature extends Model
     /**
      * Get tenant features pivot records
      */
-    public function tenantFeatures()
+    public function tenantFeatures(): HasMany
     {
         return $this->hasMany(TenantFeature::class);
     }

@@ -10,6 +10,7 @@ use App\Traits\Sortable;
 use Database\Factories\Vehicle\CarRefillFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CarRefill extends Model
@@ -52,17 +53,17 @@ class CarRefill extends Model
         return CarRefillFactory::new();
     }
 
-    public function car()
+    public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
     }
 
-    public function gasStation()
+    public function gasStation(): BelongsTo
     {
         return $this->belongsTo(GasStation::class);
     }
 
-    public function driver()
+    public function driver(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'driver_id');
     }

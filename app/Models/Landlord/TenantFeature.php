@@ -4,6 +4,7 @@ namespace App\Models\Landlord;
 
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
 
 class TenantFeature extends Model
@@ -27,7 +28,7 @@ class TenantFeature extends Model
         return $this->belongsTo(Tenant::class);
     }
 
-    public function feature()
+    public function feature(): BelongsTo
     {
         return $this->belongsTo(Feature::class);
     }

@@ -6,6 +6,7 @@ use App\Models\Employees\Employee;
 use App\Traits\InvalidatesCacheVersion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Authorable;
 use Illuminate\Database\Eloquent\Builder;
@@ -92,7 +93,7 @@ class Warehouse extends Model
         return $query->where('include_in_total_stock', true);
     }
 
-    public function employees()
+    public function employees(): BelongsToMany
     {
         return $this->belongsToMany(Employee::class, 'employee_warehouses')
                     ->withTimestamps()
