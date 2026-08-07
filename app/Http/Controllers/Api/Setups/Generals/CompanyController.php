@@ -8,14 +8,11 @@ use App\Http\Middleware\AttachCacheVersion;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setting;
 use App\Services\Currency\CurrencyModeService;
-use App\Traits\HasDocuments;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class CompanyController extends Controller
 {
-    use HasDocuments;
-
     private const TENANT_DETAILS_GROUP = 'tenant_details';
     private const COMPANY_DETAILS = 'company';
 
