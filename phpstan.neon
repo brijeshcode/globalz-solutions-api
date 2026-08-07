@@ -6,5 +6,9 @@ includes:
 parameters:
     level: 1
 
+    # Baseline is a noise bucket; don't flag when baselined errors occur
+    # fewer times than recorded (that just means you cleaned some up).
+    reportUnmatchedIgnoredErrors: false
+
     paths:
         - app
