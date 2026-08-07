@@ -107,9 +107,9 @@ class ApiResponse
         return self::send($message, 200, $result);
     }
 
-    public static function delete(string $message = 'Deleted successfully'): JsonResponse
+    public static function delete(string $message = 'Deleted successfully', mixed $data = []): JsonResponse
     {
-        return self::send($message, 204);
+        return self::send($message, empty($data) ? 204 : 200, $data);
     }
 
     public static function notFound(string $message = 'Not found!'): JsonResponse
@@ -132,9 +132,9 @@ class ApiResponse
         return self::send($message, 500);
     }
 
-    public static function error(string $message = 'Something went wrong'): JsonResponse
+    public static function error(string $message = 'Something went wrong', int $code = 500, mixed $data = []): JsonResponse
     {
-        return self::send($message, 500);
+        return self::send($message, $code, $data);
     }
 
     public static function failValidation(mixed $errors, string $message = 'Validation failed'): JsonResponse

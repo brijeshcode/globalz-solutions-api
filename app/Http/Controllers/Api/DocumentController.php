@@ -423,7 +423,7 @@ class DocumentController extends Controller
         $document = Document::withTrashed()->find($id);
         
         if (!$document) {
-            return ApiResponse::notFound('Document not found', 404);
+            return ApiResponse::notFound('Document not found');
         }
         
         // Delete physical file
