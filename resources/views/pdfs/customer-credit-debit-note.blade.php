@@ -65,8 +65,8 @@
             margin-bottom: 18px;
         }
         .summary-head td {
-            background-color: #000000;
-            color: #ffffff;
+            background-color: #E0E0E0;
+            color: #555555;
             font-size: 8.5pt;
             font-weight: bold;
             letter-spacing: 1px;

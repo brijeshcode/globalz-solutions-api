@@ -65,13 +65,14 @@
             margin-bottom: 18px;
         }
         .summary-head td {
-            background-color: #000000;
-            color: #ffffff;
+            background-color: #E0E0E0;
+            color: #555555;
             font-size: 8.5pt;
             font-weight: bold;
             letter-spacing: 1px;
             text-transform: uppercase;
             padding: 6px 14px;
+            margin-bottom: 5px;
         }
         .summary-currency { padding: 14px 16px; vertical-align: middle; }
         .summary-currency table { width: 100%; border-collapse: collapse; }
