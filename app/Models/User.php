@@ -10,6 +10,7 @@ use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -173,7 +174,7 @@ class User extends Authenticatable
     /**
      * Scope to get only active users
      */
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }
@@ -181,7 +182,7 @@ class User extends Authenticatable
     /**
      * Scope to get users by role
      */
-    public function scopeByRole($query, string $role)
+    public function scopeByRole(Builder $query, string $role)
     {
         return $query->where('role', $role);
     }

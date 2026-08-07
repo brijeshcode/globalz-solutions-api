@@ -3,6 +3,7 @@
 namespace App\Models\Setups;
 
 use App\Traits\Authorable;
+use Illuminate\Database\Eloquent\Builder;
 use App\Traits\HasBooleanFilters;
 use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
@@ -43,7 +44,7 @@ class ItemType extends Model
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }

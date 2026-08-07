@@ -27,8 +27,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Customers\SaleStatusHistory;
 use App\Models\Inventory\ItemPriceHistory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Collection;
 
 class Sale extends Model implements ModuleLockable
 {
@@ -210,47 +210,48 @@ class Sale extends Model implements ModuleLockable
 
     // local scopes 
 
-    public function scopeByWarehouse($query, $warehouseId)
+    public function scopeByWarehouse(Builder $query, int $warehouseId)
     {
         return $query->where('warehouse_id', $warehouseId);
     }
 
-    public function scopeApproved($query)
+    public function scopeApproved(Builder $query)
     {
         return $query->whereNotNull('approved_by');
     }
 
-    public function scopePending($query)
+    public function scopePending(Builder $query)
     {
         return $query->whereNull('approved_by');
     }
 
-    public function scopeByCurrency($query, $currencyId)
+    public function scopeByCurrency(Builder $query, int $currencyId)
     {
         return $query->where('currency_id', $currencyId);
     }
 
-    public function scopeByCustomer($query, $customerId)
+    public function scopeByCustomer(Builder $query, int $customerId)
     {
         return $query->where('customer_id', $customerId);
     }
 
-    public function scopeBySalesperson($query, $salepersonId)
+    public function scopeBySalesperson(Builder $query, int $salepersonId)
     {
         return $query->where('salesperson_id', $salepersonId);
     }
 
-    public function scopeByWaiting($query)
+    public function scopeByWaiting(Builder $query)
     {
         return $query->where('status', self::STATUS_WAITING);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }
@@ -271,7 +272,7 @@ class Sale extends Model implements ModuleLockable
      * Automatically converts total_tax_amount to USD based on currency_id.
      * If currency is already USD, uses the same value as total_tax_amount.
      */
-    public function setTotalTaxAmountUsdAttribute($value): void
+    public function setTotalTaxAmountUsdAttribute(string | float $value): void
     {
         // Check if currency_id is set
         if (!$this->currency_id) {

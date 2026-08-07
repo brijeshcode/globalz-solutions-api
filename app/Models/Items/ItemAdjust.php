@@ -4,13 +4,13 @@ namespace App\Models\Items;
 
 use App\Models\Setting;
 use App\Models\Setups\Warehouse;
-use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -74,22 +74,22 @@ class ItemAdjust extends Model
     }
 
     // Scopes
-    public function scopeByWarehouse($query, $warehouseId)
+    public function scopeByWarehouse(Builder $query, int $warehouseId)
     {
         return $query->where('warehouse_id', $warehouseId);
     }
 
-    public function scopeByType($query, $type)
+    public function scopeByType(Builder $query, string $type)
     {
         return $query->where('type', $type);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }

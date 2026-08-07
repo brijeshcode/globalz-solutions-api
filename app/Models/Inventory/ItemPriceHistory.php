@@ -8,6 +8,7 @@ use App\Traits\HasBooleanFilters;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -89,38 +90,39 @@ class ItemPriceHistory extends Model
     }
 
     // Scopes
-    public function scopeByItem($query, $itemId)
+    public function scopeByItem(Builder $query, int $itemId)
     {
         return $query->where('item_id', $itemId);
     }
 
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('effective_date', [$startDate, $endDate]);
     }
 
-    public function scopeLatestFirst($query)
+    public function scopeLatestFirst(Builder $query)
     {
         return $query->orderBy('effective_date', 'desc');
     }
 
-    public function scopeOldestFirst($query)
+    public function scopeOldestFirst(Builder $query)
     {
         return $query->orderBy('effective_date', 'asc');
     }
 
-    public function scopeWithPriceChanges($query)
+    public function scopeWithPriceChanges(Builder $query)
     {
         return $query->whereRaw('price_usd != latest_price');
     }
 
-    public function scopeSignificantChanges($query, float $thresholdPercent = 10.0)
+    public function scopeSignificantChanges(Builder $query, float $thresholdPercent = 10.0)
     {
         return $query->whereRaw('ABS((price_usd - latest_price) / latest_price * 100) >= ?', [$thresholdPercent]);
     }
 
-    public function scopeByPriceRange($query, $minPrice, $maxPrice)
+    public function scopeByPriceRange(Builder $query, float $minPrice, float $maxPrice)
     {
         return $query->whereBetween('price_usd', [$minPrice, $maxPrice]);
     }

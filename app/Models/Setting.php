@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Builder;
 
 class Setting extends Model
 {
@@ -263,22 +264,22 @@ class Setting extends Model
     /**
      * Scopes
      */
-    public function scopeByGroup($query, string $group)
+    public function scopeByGroup(Builder $query, string $group)
     {
         return $query->where('group_name', $group);
     }
 
-    public function scopeByKey($query, string $key)
+    public function scopeByKey(Builder $query, string $key)
     {
         return $query->where('key_name', $key);
     }
 
-    public function scopeByType($query, string $type)
+    public function scopeByType(Builder $query, string $type)
     {
         return $query->where('data_type', $type);
     }
 
-    public function scopeEncrypted($query)
+    public function scopeEncrypted(Builder $query)
     {
         return $query->where('is_encrypted', true);
     }

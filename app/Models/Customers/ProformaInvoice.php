@@ -18,6 +18,7 @@ use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use App\Traits\TracksActivity;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -183,37 +184,37 @@ class ProformaInvoice extends Model
 
     // ─── Scopes ───────────────────────────────────────────────────────────────
 
-    public function scopeByCustomer($query, $customerId)
+    public function scopeByCustomer(Builder $query, int $customerId)
     {
         return $query->where('customer_id', $customerId);
     }
 
-    public function scopeByWarehouse($query, $warehouseId)
+    public function scopeByWarehouse(Builder $query, int $warehouseId)
     {
         return $query->where('warehouse_id', $warehouseId);
     }
 
-    public function scopeByCurrency($query, $currencyId)
+    public function scopeByCurrency(Builder $query, int $currencyId)
     {
         return $query->where('currency_id', $currencyId);
     }
 
-    public function scopeBySalesperson($query, $salespersonId)
+    public function scopeBySalesperson(Builder $query, int $salespersonId)
     {
         return $query->where('salesperson_id', $salespersonId);
     }
 
-    public function scopeByStatus($query, $status)
+    public function scopeByStatus(Builder $query, int $status)
     {
         return $query->where('status', $status);
     }
 
-    public function scopeConverted($query)
+    public function scopeConverted(Builder $query)
     {
         return $query->whereNotNull('converted_at');
     }
 
-    public function scopeNotConverted($query)
+    public function scopeNotConverted(Builder $query)
     {
         return $query->whereNull('converted_at');
     }

@@ -12,6 +12,7 @@ use App\Traits\HasDocuments;
 use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -72,33 +73,33 @@ class Employee extends Model
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeIsSaleDepartment($query)
+    public function scopeIsSaleDepartment(Builder $query)
     {
         return $query->whereHas('department', function ($q) {
             $q->where('name', 'Sales');
         });
     }
 
-    public function scopeIsDriverDepartment($query)
+    public function scopeIsDriverDepartment(Builder $query)
     {
         return $query->whereHas('department', function ($q) {
             $q->where('name', 'Drivers');
         });
     }
 
-    public function scopeIsWarehouseDepartment($query)
+    public function scopeIsWarehouseDepartment(Builder $query)
     {
         return $query->whereHas('department', function ($q) {
             $q->where('name', 'Warehouse');
         });
     }
 
-    public function scopeIsDepartment($query, $departmentName)
+    public function scopeIsDepartment(Builder $query, string $departmentName)
     {
         return $query->whereHas('department', function ($q) use ($departmentName) {
             $q->where('name', $departmentName);

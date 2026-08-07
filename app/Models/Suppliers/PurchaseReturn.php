@@ -7,7 +7,6 @@ use App\Models\Setting;
 use App\Models\Setups\Supplier;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Warehouse;
-use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDateFilters;
@@ -15,6 +14,7 @@ use App\Traits\HasDateWithTime;
 use App\Traits\HasDocuments;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -131,42 +131,43 @@ class PurchaseReturn extends Model
 
 
     // Scopes
-    public function scopeBySupplier($query, $supplierId)
+    public function scopeBySupplier(Builder $query, int $supplierId)
     {
         return $query->where('supplier_id', $supplierId);
     }
 
-    public function scopeByWarehouse($query, $warehouseId)
+    public function scopeByWarehouse(Builder $query, int $warehouseId)
     {
         return $query->where('warehouse_id', $warehouseId);
     }
 
-    public function scopeByCurrency($query, $currencyId)
+    public function scopeByCurrency(Builder $query, int $currencyId)
     {
         return $query->where('currency_id', $currencyId);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }
 
-    public function scopeByWaiting($query)
+    public function scopeByWaiting(Builder $query)
     {
         return $query->where('shipping_status', self::STATUS_WAITING);
     }
 
-    public function scopeBySupplierPurchaseReturnNumber($query, $supplierPurchaseReturnNumber)
+    public function scopeBySupplierPurchaseReturnNumber(Builder $query, string $supplierPurchaseReturnNumber)
     {
         return $query->where('supplier_purchase_return_number', $supplierPurchaseReturnNumber);
     }
 
-    public function scopeByShippingStatus($query, $shippingStatus)
+    public function scopeByShippingStatus(Builder $query, string $shippingStatus)
     {
         return $query->where('shipping_status', $shippingStatus);
     }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Authorable;
+use Illuminate\Database\Eloquent\Builder;
 use App\Traits\HasBooleanFilters;
 use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
@@ -92,7 +93,7 @@ class Country extends Model
         return $display;
     }
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }

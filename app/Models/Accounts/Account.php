@@ -8,6 +8,7 @@ use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
+use Illuminate\Database\Eloquent\Builder;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -57,17 +58,17 @@ class Account extends Model
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeHideFromTransaction($query)
+    public function scopeHideFromTransaction(Builder $query)
     {
         return $query->where('hide_from_transaction', true);
     }
 
-    public function scopeIncludeInTotal($query)
+    public function scopeIncludeInTotal(Builder $query)
     {
         return $query->where('include_in_total', true);
     }

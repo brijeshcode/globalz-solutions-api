@@ -9,6 +9,7 @@ use App\Traits\HasDocuments;
 use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -106,17 +107,17 @@ class Supplier extends Model
     }
 
     // Scopes
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeByCountry($query, $countryId)
+    public function scopeByCountry(Builder $query, int $countryId)
     {
         return $query->where('country_id', $countryId);
     }
 
-    public function scopeByType($query, $typeId)
+    public function scopeByType(Builder $query, int $typeId)
     {
         return $query->where('supplier_type_id', $typeId);
     }

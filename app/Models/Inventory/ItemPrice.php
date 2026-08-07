@@ -6,6 +6,7 @@ use App\Models\Items\Item;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,22 +49,23 @@ class ItemPrice extends Model
 
 
     // Scopes
-    public function scopeByItem($query, $itemId)
+    public function scopeByItem(Builder $query, int $itemId)
     {
         return $query->where('item_id', $itemId);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('effective_date', [$startDate, $endDate]);
     }
 
-    public function scopeLatestPrices($query)
+    public function scopeLatestPrices(Builder $query)
     {
         return $query->orderBy('effective_date', 'desc');
     }
 
-    public function scopeByPriceRange($query, $minPrice, $maxPrice)
+    public function scopeByPriceRange(Builder $query, float $minPrice, float $maxPrice)
     {
         return $query->whereBetween('price_usd', [$minPrice, $maxPrice]);
     }

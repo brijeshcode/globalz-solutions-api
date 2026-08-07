@@ -5,6 +5,7 @@ namespace App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
 
 class ActivityLogDetail extends Model
 {
@@ -113,7 +114,7 @@ class ActivityLogDetail extends Model
     /**
      * Scope to filter by batch number
      */
-    public function scopeInBatch($query, int $batchNo)
+    public function scopeInBatch(Builder $query, int $batchNo)
     {
         return $query->where('batch_no', $batchNo);
     }
@@ -121,7 +122,7 @@ class ActivityLogDetail extends Model
     /**
      * Scope to filter by event type
      */
-    public function scopeEvent($query, string $event)
+    public function scopeEvent(Builder $query, string $event)
     {
         return $query->where('event', $event);
     }
@@ -129,7 +130,7 @@ class ActivityLogDetail extends Model
     /**
      * Scope to order by most recent
      */
-    public function scopeRecent($query)
+    public function scopeRecent(Builder $query)
     {
         return $query->orderBy('timestamp', 'desc');
     }

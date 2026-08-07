@@ -5,6 +5,7 @@ namespace App\Models\Setups;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\InvalidatesCacheVersion;
+use Illuminate\Database\Eloquent\Builder;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,7 +45,7 @@ class ItemGroup extends Model
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }

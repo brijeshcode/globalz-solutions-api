@@ -2,11 +2,11 @@
 
 namespace App\Models\Items;
 
-use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -58,12 +58,12 @@ class ItemTransferItem extends Model
     }
 
     // Scopes
-    public function scopeByItem($query, $itemId)
+    public function scopeByItem(Builder $query, int $itemId)
     {
         return $query->where('item_id', $itemId);
     }
 
-    public function scopeByItemCode($query, $itemCode)
+    public function scopeByItemCode(Builder $query, string $itemCode)
     {
         return $query->where('item_code', $itemCode);
     }

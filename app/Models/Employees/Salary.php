@@ -10,6 +10,7 @@ use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -103,37 +104,38 @@ class Salary extends Model
     }
 
     // Scopes
-    public function scopeByEmployee($query, $employeeId)
+    public function scopeByEmployee(Builder $query, int $employeeId)
     {
         return $query->where('employee_id', $employeeId);
     }
 
-    public function scopeByMonth($query, $month)
+    public function scopeByMonth(Builder $query, int | string $month)
     {
         return $query->where('month', $month);
     }
 
-    public function scopeByYear($query, $year)
+    public function scopeByYear(Builder $query, int $year)
     {
         return $query->where('year', $year);
     }
 
-    public function scopeByMonthYear($query, $month, $year)
+    public function scopeByMonthYear(Builder $query, int $month, int $year)
     {
         return $query->where('month', $month)->where('year', $year);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }
 
-    public function scopeByPrefix($query, $prefix)
+    public function scopeByPrefix(Builder $query, string $prefix)
     {
         return $query->where('prefix', $prefix);
     }

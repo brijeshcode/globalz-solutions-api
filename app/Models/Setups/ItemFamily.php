@@ -7,6 +7,7 @@ use App\Traits\HasBooleanFilters;
 use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -44,7 +45,7 @@ class ItemFamily extends Model
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
     
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }

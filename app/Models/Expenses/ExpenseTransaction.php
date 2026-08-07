@@ -14,6 +14,7 @@ use App\Traits\HasDateWithTime;
 use App\Traits\HasDocuments;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -85,7 +86,7 @@ class ExpenseTransaction extends Model implements ModuleLockable
 
     // ─── Accessors ────────────────────────────────────────────────────────────
 
-    public function getCodeAttribute($value): ?string
+    public function getCodeAttribute(string $value): ?string
     {
         return $value ? self::PREFIX . $value : null;
     }
@@ -126,7 +127,7 @@ class ExpenseTransaction extends Model implements ModuleLockable
 
     // ─── Mutators ─────────────────────────────────────────────────────────────
 
-    public function setExpenseMonthAttribute($value): void
+    public function setExpenseMonthAttribute(string $value): void
     {
         $this->attributes['expense_month'] = $value ? $value . '-01' : null;
     }
@@ -160,22 +161,23 @@ class ExpenseTransaction extends Model implements ModuleLockable
 
     // ─── Scopes ───────────────────────────────────────────────────────────────
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByExpenseCategory($query, $categoryId)
+    public function scopeByExpenseCategory(Builder $query, int $categoryId)
     {
         return $query->where('expense_category_id', $categoryId);
     }
 
-    public function scopeByAccount($query, $accountId)
+    public function scopeByAccount(Builder $query, int $accountId)
     {
         return $query->where('account_id', $accountId);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }

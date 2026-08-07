@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 class Document extends Model
 {
@@ -81,7 +81,7 @@ class Document extends Model
     /**
      * Scope a query to only include images.
      */
-    public function scopeImages($query)
+    public function scopeImages(Builder $query)
     {
         return $query->where('mime_type', 'LIKE', 'image/%');
     }
@@ -89,7 +89,7 @@ class Document extends Model
     /**
      * Scope a query to only include documents (PDFs, Word docs).
      */
-    public function scopeDocuments($query)
+    public function scopeDocuments(Builder $query)
     {
         return $query->whereIn('mime_type', [
             'application/pdf',
@@ -101,7 +101,7 @@ class Document extends Model
     /**
      * Scope a query to only include spreadsheets.
      */
-    public function scopeSpreadsheets($query)
+    public function scopeSpreadsheets(Builder $query)
     {
         return $query->whereIn('mime_type', [
             'application/vnd.ms-excel',
@@ -112,7 +112,7 @@ class Document extends Model
     /**
      * Scope a query to filter by document type.
      */
-    public function scopeByType($query, $type)
+    public function scopeByType(Builder $query, string $type)
     {
         return $query->where('document_type', $type);
     }
@@ -120,7 +120,7 @@ class Document extends Model
     /**
      * Scope a query to filter by module.
      */
-    public function scopeByModule($query, $module)
+    public function scopeByModule(Builder $query, string $module)
     {
         return $query->where('documentable_type', $module);
     }
@@ -128,7 +128,7 @@ class Document extends Model
     /**
      * Scope a query to only include featured documents.
      */
-    public function scopeFeatured($query)
+    public function scopeFeatured(Builder $query)
     {
         return $query->where('is_featured', true);
     }
@@ -136,7 +136,7 @@ class Document extends Model
     /**
      * Scope a query to only include public documents.
      */
-    public function scopePublic($query)
+    public function scopePublic(Builder $query)
     {
         return $query->where('is_public', true);
     }
@@ -144,7 +144,7 @@ class Document extends Model
     /**
      * Scope a query to search documents.
      */
-    public function scopeSearch($query, $search)
+    public function scopeSearch(Builder $query, string $search)
     {
         return $query->where(function ($q) use ($search) {
             $q->where('original_name', 'LIKE', "%{$search}%")

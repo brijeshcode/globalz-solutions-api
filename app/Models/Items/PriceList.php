@@ -8,6 +8,7 @@ use App\Traits\HasDateFilters;
 use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -77,22 +78,22 @@ class PriceList extends Model
     }
 
     // Scopes
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }
 
-    public function scopeDefaultInv($query)
+    public function scopeDefaultInv(Builder $query)
     {
         return $query->where('is_default_inv', true);
     }
 
-    public function scopeDefaultInx($query)
+    public function scopeDefaultInx(Builder $query)
     {
         return $query->where('is_default_inx', true);
     }
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }

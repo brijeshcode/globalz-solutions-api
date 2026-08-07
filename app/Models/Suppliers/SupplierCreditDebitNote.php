@@ -8,12 +8,12 @@ use App\Models\Setting;
 use Carbon\CarbonInterface;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Setups\Supplier;
-use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -76,42 +76,43 @@ class SupplierCreditDebitNote extends Model implements ModuleLockable
     }
 
     // Scopes
-    public function scopeCredit($query)
+    public function scopeCredit(Builder $query)
     {
         return $query->where('type', 'credit');
     }
 
-    public function scopeDebit($query)
+    public function scopeDebit(Builder $query)
     {
         return $query->where('type', 'debit');
     }
 
-    public function scopeBySupplier($query, $supplierId)
+    public function scopeBySupplier(Builder $query, int $supplierId)
     {
         return $query->where('supplier_id', $supplierId);
     }
 
-    public function scopeByCurrency($query, $currencyId)
+    public function scopeByCurrency(Builder $query, int $currencyId)
     {
         return $query->where('currency_id', $currencyId);
     }
 
-    public function scopeByType($query, $type)
+    public function scopeByType(Builder $query, string $type)
     {
         return $query->where('type', $type);
     }
 
-    public function scopeByPrefix($query, $prefix)
+    public function scopeByPrefix(Builder $query, string $prefix)
     {
         return $query->where('prefix', $prefix);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }

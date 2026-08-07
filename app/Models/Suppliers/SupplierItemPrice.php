@@ -10,6 +10,7 @@ use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -93,43 +94,44 @@ class SupplierItemPrice extends Model
     }
 
     // Scopes
-    public function scopeBySupplier($query, $supplierId)
+    public function scopeBySupplier(Builder $query, int $supplierId)
     {
         return $query->where('supplier_id', $supplierId);
     }
 
-    public function scopeByItem($query, $itemId)
+    public function scopeByItem(Builder $query, int $itemId)
     {
         return $query->where('item_id', $itemId);
     }
 
-    public function scopeByCurrency($query, $currencyId)
+    public function scopeByCurrency(Builder $query, int $currencyId)
     {
         return $query->where('currency_id', $currencyId);
     }
 
-    public function scopeCurrent($query)
+    public function scopeCurrent(Builder $query)
     {
         return $query->where('is_current', true);
     }
 
-    public function scopeBySupplierAndItem($query, $supplierId, $itemId)
+    public function scopeBySupplierAndItem(Builder $query, int $supplierId, int $itemId)
     {
         return $query->where('supplier_id', $supplierId)
                     ->where('item_id', $itemId);
     }
 
-    public function scopeCurrentPrices($query)
+    public function scopeCurrentPrices(Builder $query)
     {
         return $query->where('is_current', true);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('last_purchase_date', [$startDate, $endDate]);
     }
 
-    public function scopeBestPricesForItem($query, $itemId, $limit = 5)
+    public function scopeBestPricesForItem(Builder $query, int $itemId, int $limit = 5)
     {
         return $query->where('item_id', $itemId)
                     ->where('is_current', true)

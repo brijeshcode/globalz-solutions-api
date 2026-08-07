@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class ActivityLog extends Model
 {
@@ -117,7 +118,7 @@ class ActivityLog extends Model
     /**
      * Scope to filter by model type
      */
-    public function scopeForModel($query, string $modelClass)
+    public function scopeForModel(Builder $query, string $modelClass)
     {
         return $query->where('model', $modelClass);
     }
@@ -125,7 +126,7 @@ class ActivityLog extends Model
     /**
      * Scope to filter unseen logs
      */
-    public function scopeUnseen($query)
+    public function scopeUnseen(Builder $query)
     {
         return $query->where('seen_all', false);
     }
@@ -133,7 +134,7 @@ class ActivityLog extends Model
     /**
      * Scope to order by most recent
      */
-    public function scopeRecent($query)
+    public function scopeRecent(Builder $query)
     {
         return $query->orderBy('timestamp', 'desc');
     }

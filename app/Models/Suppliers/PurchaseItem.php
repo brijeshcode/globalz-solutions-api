@@ -9,6 +9,7 @@ use App\Traits\HasBooleanFilters;
 use App\Traits\HasDateFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -93,22 +94,22 @@ class PurchaseItem extends Model
     }
 
     // Scopes
-    public function scopeByPurchase($query, $purchaseId)
+    public function scopeByPurchase(Builder $query, int $purchaseId)
     {
         return $query->where('purchase_id', $purchaseId);
     }
 
-    public function scopeByItem($query, $itemId)
+    public function scopeByItem(Builder $query, int $itemId)
     {
         return $query->where('item_id', $itemId);
     }
 
-    public function scopeByItemCode($query, $itemCode)
+    public function scopeByItemCode(Builder $query, string $itemCode)
     {
         return $query->where('item_code', $itemCode);
     }
 
-    public function scopeWithDiscounts($query)
+    public function scopeWithDiscounts(Builder $query)
     {
         return $query->where(function($q) {
             $q->where('discount_percent', '>', 0)

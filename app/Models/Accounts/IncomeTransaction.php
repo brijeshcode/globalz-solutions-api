@@ -14,7 +14,6 @@ use App\Traits\Searchable;
 use App\Traits\Sortable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -74,7 +73,7 @@ class IncomeTransaction extends Model
     /**
      * Get the code attribute with "INC" prefix
      */
-    public function getCodeAttribute($value): ?string
+    public function getCodeAttribute(string $value): ?string
     {
         return $value ? self::PREFIX . $value : null;
     }
@@ -94,22 +93,23 @@ class IncomeTransaction extends Model
         return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
     }
 
-    public function scopeByDateRange($query, $startDate, $endDate)
+    public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)
+
     {
         return $query->whereBetween('date', [$startDate, $endDate]);
     }
 
-    public function scopeByIncomeCategory($query, $categoryId)
+    public function scopeByIncomeCategory(Builder $query, int $categoryId)
     {
         return $query->where('income_category_id', $categoryId);
     }
 
-    public function scopeByAccount($query, $accountId)
+    public function scopeByAccount(Builder $query, int $accountId)
     {
         return $query->where('account_id', $accountId);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class MirrorLog extends Model
 {
@@ -31,12 +32,12 @@ class MirrorLog extends Model
     public const STATUS_FAILED  = 'failed';
     public const STATUS_SKIPPED = 'skipped';
 
-    public function scopeLatestFirst($query)
+    public function scopeLatestFirst(Builder $query)
     {
         return $query->orderByDesc('started_at');
     }
 
-    public function scopeSuccessful($query)
+    public function scopeSuccessful(Builder $query)
     {
         return $query->where('status', self::STATUS_SUCCESS);
     }

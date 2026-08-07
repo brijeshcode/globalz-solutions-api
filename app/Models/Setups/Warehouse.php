@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Authorable;
+use Illuminate\Database\Eloquent\Builder;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -76,17 +77,17 @@ class Warehouse extends Model
         return $this->update(['is_active' => false]);
     }
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeIsAvailableForSale($query)
+    public function scopeIsAvailableForSale(Builder $query)
     {
         return $query->where('is_available_for_sales', true);
     }
 
-    public function scopeIncludeInStockCount($query)
+    public function scopeIncludeInStockCount(Builder $query)
     {
         return $query->where('include_in_total_stock', true);
     }

@@ -15,13 +15,13 @@ use App\Models\Setups\ItemType;
 use App\Models\Setups\ItemUnit;
 use App\Models\Setups\Supplier;
 use App\Models\Setups\TaxCode;
-use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDocuments;
 use App\Traits\InvalidatesCacheVersion;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -187,59 +187,59 @@ class Item extends Model
     }
 
     // Scopes
-    public function scopeActive($query)
+    public function scopeActive(Builder $query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeByType($query, $typeId)
+    public function scopeByType(Builder $query, int $typeId)
     {
         return $query->where('item_type_id', $typeId);
     }
 
-    public function scopeByFamily($query, $familyId)
+    public function scopeByFamily(Builder $query,int  $familyId)
     {
         return $query->where('item_family_id', $familyId);
     }
 
-    public function scopeByGroup($query, $groupId)
+    public function scopeByGroup(Builder $query, int $groupId)
     {
         return $query->where('item_group_id', $groupId);
     }
 
-    public function scopeByProfitMargin($query, $profitMarginId)
+    public function scopeByProfitMargin(Builder $query, int $profitMarginId)
     {
         return $query->where('item_profit_margin_id', $profitMarginId);
     }
 
-    public function scopeByCategory($query, $categoryId)
+    public function scopeByCategory(Builder $query, int $categoryId)
     {
         return $query->where('item_category_id', $categoryId);
     }
 
-    public function scopeByBrand($query, $brandId)
+    public function scopeByBrand(Builder $query, int $brandId)
     {
         return $query->where('item_brand_id', $brandId);
     }
 
-    public function scopeBySupplier($query, $supplierId)
+    public function scopeBySupplier(Builder $query, int $supplierId)
     {
         return $query->where('supplier_id', $supplierId);
     }
 
-    public function scopeLowStock($query)
+    public function scopeLowStock(Builder $query)
     {
         return $query->whereNotNull('low_quantity_alert')
                      ->whereHas('inventories')
                      ->whereRaw('(SELECT COALESCE(SUM(quantity), 0) FROM inventories WHERE inventories.item_id = items.id) <= items.low_quantity_alert');
     }
 
-    public function scopeByBarcode($query, $barcode)
+    public function scopeByBarcode(Builder $query, string $barcode)
     {
         return $query->where('barcode', $barcode);
     }
 
-    public function scopeByCode($query, $code)
+    public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
     }

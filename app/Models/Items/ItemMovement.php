@@ -4,6 +4,7 @@ namespace App\Models\Items;
 
 use App\Models\Setups\Warehouse;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -70,7 +71,7 @@ class ItemMovement extends Model
     /**
      * Scope a query to filter by item ID.
      */
-    public function scopeByItem($query, int $itemId)
+    public function scopeByItem(Builder $query, int $itemId)
     {
         return $query->where('item_id', $itemId);
     }
@@ -78,7 +79,7 @@ class ItemMovement extends Model
     /**
      * Scope a query to filter by warehouse ID.
      */
-    public function scopeByWarehouse($query, int $warehouseId)
+    public function scopeByWarehouse(Builder $query, int $warehouseId)
     {
         return $query->where('warehouse_id', $warehouseId);
     }
@@ -86,7 +87,7 @@ class ItemMovement extends Model
     /**
      * Scope a query to filter by date range.
      */
-    public function scopeByDateRange($query, ?string $fromDate, ?string $toDate)
+    public function scopeByDateRange(Builder $query, ?string $fromDate, ?string $toDate)
     {
         if ($fromDate) {
             $query->where('transaction_date', '>=', $fromDate);
@@ -103,7 +104,7 @@ class ItemMovement extends Model
     /**
      * Scope a query to filter by transaction type.
      */
-    public function scopeByTransactionType($query, string $transactionType)
+    public function scopeByTransactionType(Builder $query, string $transactionType)
     {
         return $query->where('transaction_type_key', $transactionType);
     }
@@ -111,7 +112,7 @@ class ItemMovement extends Model
     /**
      * Scope a query to order by date (descending by default).
      */
-    public function scopeOrderByDate($query, string $direction = 'desc')
+    public function scopeOrderByDate(Builder $query, string $direction = 'desc')
     {
         return $query->orderBy('transaction_date', $direction)
                      ->orderBy('id', $direction);

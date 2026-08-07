@@ -7,6 +7,7 @@ use App\Models\Setups\Warehouse;
 use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -51,33 +52,33 @@ class Inventory extends Model
     }
 
     // Scopes
-    public function scopeByWarehouse($query, $warehouseId)
+    public function scopeByWarehouse(Builder $query, int $warehouseId)
     {
         return $query->where('warehouse_id', $warehouseId);
     }
 
-    public function scopeByItem($query, $itemId)
+    public function scopeByItem(Builder $query, int $itemId)
     {
         return $query->where('item_id', $itemId);
     }
 
-    public function scopeByWarehouseAndItem($query, $warehouseId, $itemId)
+    public function scopeByWarehouseAndItem(Builder $query, int $warehouseId, int $itemId)
     {
         return $query->where('warehouse_id', $warehouseId)
                     ->where('item_id', $itemId);
     }
 
-    public function scopeInStock($query)
+    public function scopeInStock(Builder $query)
     {
         return $query->where('quantity', '>', 0);
     }
 
-    public function scopeOutOfStock($query)
+    public function scopeOutOfStock(Builder $query)
     {
         return $query->where('quantity', '<=', 0);
     }
 
-    public function scopeLowStock($query, $threshold = null)
+    public function scopeLowStock(Builder $query, $threshold = null)
     {
         if ($threshold !== null) {
             return $query->where('quantity', '<=', $threshold)
@@ -92,12 +93,12 @@ class Inventory extends Model
                     ->select('inventories.*');
     }
 
-    public function scopeByQuantityRange($query, $minQuantity, $maxQuantity)
+    public function scopeByQuantityRange(Builder $query, float $minQuantity, float $maxQuantity)
     {
         return $query->whereBetween('quantity', [$minQuantity, $maxQuantity]);
     }
 
-    public function scopeNegativeQuantity($query)
+    public function scopeNegativeQuantity(Builder $query)
     {
         return $query->where('quantity', '<', 0);
     }
