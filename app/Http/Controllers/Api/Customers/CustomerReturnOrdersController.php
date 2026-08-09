@@ -29,7 +29,7 @@ class CustomerReturnOrdersController extends Controller
 {
     use HasPagination;
 
-    protected $customerReturnService;
+    protected CustomerReturnService $customerReturnService;
 
     public function __construct(CustomerReturnService $customerReturnService)
     {
@@ -80,6 +80,10 @@ class CustomerReturnOrdersController extends Controller
             // Recalculate return totals
             $return->total = $return->items->sum('total_price');
             $return->total_usd = $return->items->sum('total_price_usd');
+            $return->subtotal_taxable_amount = $return->items->sum('total_taxable_amount');
+            $return->subtotal_taxable_amount_usd = $return->items->sum('total_taxable_amount_usd');
+            $return->total_tax_amount = $return->items->sum('total_tax_amount');
+            $return->total_tax_amount_usd = $return->items->sum('total_tax_amount_usd');
             $return->total_volume_cbm = $return->items->sum('total_volume_cbm');
             $return->total_weight_kg = $return->items->sum('total_weight_kg');
             $return->save();
@@ -186,6 +190,10 @@ class CustomerReturnOrdersController extends Controller
             $customerReturn->refresh();
             $customerReturn->total = $customerReturn->items->sum('total_price');
             $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->subtotal_taxable_amount = $customerReturn->items->sum('total_taxable_amount');
+            $customerReturn->subtotal_taxable_amount_usd = $customerReturn->items->sum('total_taxable_amount_usd');
+            $customerReturn->total_tax_amount = $customerReturn->items->sum('total_tax_amount');
+            $customerReturn->total_tax_amount_usd = $customerReturn->items->sum('total_tax_amount_usd');
             $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
             $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
             $customerReturn->save();
