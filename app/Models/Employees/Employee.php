@@ -3,6 +3,8 @@
 namespace App\Models\Employees;
 
 use App\Models\Setting;
+use App\Models\User;
+use App\Models\Pivots\EmployeeWarehouse;
 use App\Models\Setups\Customers\CustomerZone;
 use App\Models\Setups\Employees\Department;
 use App\Models\Setups\Warehouse;
@@ -20,6 +22,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property-read EmployeeWarehouse $pivot
+ */
 class Employee extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\EmployeeFactory> */
@@ -119,7 +124,7 @@ class Employee extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     /**

@@ -181,7 +181,6 @@ class SaleOrderResource extends JsonResource
                             'unit' => $item->item->relationLoaded('itemUnit') ? [
                                 'id' => $item->item->itemUnit?->id,
                                 'name' => $item->item->itemUnit?->name,
-                                'symbol' => $item->item->itemUnit?->symbol,
                             ] : null,
                         ] : null,
                     ];

@@ -63,7 +63,6 @@ class PurchaseResource extends JsonResource
                 return [
                     'id' => $this->warehouse->id,
                     'name' => $this->warehouse->name,
-                    'address' => $this->when($this->warehouse->address, $this->warehouse->address),
                 ];
             }),
             'currency_id' => $this->currency_id,

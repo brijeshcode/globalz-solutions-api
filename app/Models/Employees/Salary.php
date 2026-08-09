@@ -5,6 +5,7 @@ namespace App\Models\Employees;
 use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
 use App\Traits\HasDateFilters;
 use App\Traits\HasDateWithTime;
@@ -112,7 +113,7 @@ class Salary extends Model
      */
     public function currency(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
+        return $this->belongsTo(Currency::class);
     }
 
     // Scopes

@@ -5,6 +5,7 @@ namespace App\Models\Accounts;
 use App\Helpers\AccountsHelper;
 use App\Models\Setting;
 use App\Models\Setups\Accounts\IncomeCategory;
+use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDateFilters;
@@ -95,11 +96,11 @@ class IncomeTransaction extends Model
     }
 
     /**
-     * @return BelongsTo<\App\Models\Setups\Generals\Currencies\Currency, $this>
+     * @return BelongsTo<Currency, $this>
      */
     public function currency(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
+        return $this->belongsTo(Currency::class);
     }
 
     public function scopeByDateRange(Builder $query, \DateTimeInterface|string $startDate, \DateTimeInterface|string $endDate)

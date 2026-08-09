@@ -3,6 +3,7 @@
 namespace App\Models\Setups;
 
 use App\Models\Employees\Employee;
+use App\Models\Pivots\EmployeeWarehouse;
 use App\Traits\InvalidatesCacheVersion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,9 @@ use App\Traits\HasBooleanFilters;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
 
+/**
+ * @property-read EmployeeWarehouse $pivot
+ */
 class Warehouse extends Model
 {
     /** @use HasFactory<\Database\Factories\Setups\WarehouseFactory> */
@@ -93,6 +97,9 @@ class Warehouse extends Model
         return $query->where('include_in_total_stock', true);
     }
 
+    /**
+     * @return BelongsToMany<Employee, $this>
+     */
     public function employees(): BelongsToMany
     {
         return $this->belongsToMany(Employee::class, 'employee_warehouses')

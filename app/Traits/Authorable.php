@@ -15,7 +15,7 @@ trait Authorable
      * Returns null when the authenticated user (e.g. a cross-tenant developer)
      * does not exist in this tenant's users table, preventing FK violations.
      */
-    private static function resolveAuthorId(): ?int
+    protected static function resolveAuthorId(): ?int
     {
         if (!Auth::check()) {
             return null;

@@ -91,11 +91,17 @@ class Currency extends Model
     }
 
     // Relationships
+    /**
+     * @return HasMany<currencyRate, $this>
+     */
     public function rates(): HasMany
     {
         return $this->hasMany(currencyRate::class);
     }
 
+    /**
+     * @return HasOne<currencyRate, $this>
+     */
     public function activeRate(): HasOne
     {
         return $this->hasOne(currencyRate::class)->where('is_active', true)->latest();

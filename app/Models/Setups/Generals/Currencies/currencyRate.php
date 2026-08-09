@@ -13,6 +13,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $rate
+ */
 class currencyRate extends Model
 {
     /** @use HasFactory<\Database\Factories\Setups\Generals\Currencies\currencyRateFactory> */

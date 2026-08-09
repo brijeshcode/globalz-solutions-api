@@ -5,6 +5,7 @@ namespace App\Models\Expenses;
 use App\Contracts\ModuleLockable;
 use App\Helpers\AccountsHelper;
 use App\Models\Accounts\Account;
+use App\Models\Setups\Generals\Currencies\Currency;
 use Carbon\CarbonInterface;
 use App\Traits\Authorable;
 use App\Traits\HasDateFilters;
@@ -84,7 +85,7 @@ class ExpensePayment extends Model implements ModuleLockable
      */
     public function currency(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
+        return $this->belongsTo(Currency::class);
     }
 
     // ─── Boot hooks ───────────────────────────────────────────────────────────
@@ -149,8 +150,8 @@ class ExpensePayment extends Model implements ModuleLockable
             ->first();
 
         $expense->updateQuietly([
-            'paid_amount'     => $totals->total_paid,
-            'paid_amount_usd' => $totals->total_paid_usd,
+            'paid_amount'     => $totals->getAttribute('total_paid'),
+            'paid_amount_usd' => $totals->getAttribute('total_paid_usd'),
         ]);
     }
 

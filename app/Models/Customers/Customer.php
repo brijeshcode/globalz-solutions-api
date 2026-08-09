@@ -23,6 +23,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Computed presentation attributes set in CustomersController@show for serialization.
+ *
+ * @property string|null $last_invoice_date
+ * @property float|null $invoice_age
+ * @property string|null $last_payment_date
+ * @property float|null $payment_age
+ */
 class Customer extends Model
 {
     use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDocuments, Searchable, Sortable, InvalidatesCacheVersion;

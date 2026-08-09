@@ -128,7 +128,7 @@ class ItemMovementsController extends Controller
             'item' => [
                 'id' => $movement->item->id,
                 'code' => $movement->item->code,
-                'name' => $movement->item->name,
+                'name' => $movement->item->short_name,
             ],
             'warehouse' => [
                 'id' => $movement->warehouse->id,

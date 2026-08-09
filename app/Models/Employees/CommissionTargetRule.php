@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $reward_calculation_type
+ */
 class CommissionTargetRule extends Model
 {
     /** @use HasFactory<\Database\Factories\Employees\CommissionTargetRuleFactory> */

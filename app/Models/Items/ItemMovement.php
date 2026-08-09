@@ -8,6 +8,28 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Read-only model over the `item_movements_view` SQL view.
+ *
+ * @property int $id
+ * @property int $item_id
+ * @property string $item_code
+ * @property int $warehouse_id
+ * @property int $parent_id
+ * @property string $transaction_code
+ * @property string $transaction_number
+ * @property string $transaction_prefix
+ * @property string $transaction_type
+ * @property string $transaction_type_key
+ * @property \Illuminate\Support\Carbon $transaction_date
+ * @property int $quantity
+ * @property string $debit
+ * @property string $credit
+ * @property string|null $note
+ * @property int|null $created_by
+ * @property string $source_table
+ * @property int $timestamp
+ */
 class ItemMovement extends Model
 {
     /**

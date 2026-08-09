@@ -55,7 +55,6 @@ class SalaryResource extends JsonResource
                 return [
                     'id' => $this->account->id,
                     'name' => $this->account->name,
-                    'code' => $this->when($this->account->code, $this->account->code),
                 ];
             }),
 

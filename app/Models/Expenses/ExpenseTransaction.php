@@ -6,6 +6,7 @@ use App\Contracts\ModuleLockable;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Expenses\ExpenseCategory;
+use App\Models\Setups\Generals\Currencies\Currency;
 use Carbon\CarbonInterface;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
@@ -155,7 +156,7 @@ class ExpenseTransaction extends Model implements ModuleLockable
      */
     public function currency(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Setups\Generals\Currencies\Currency::class);
+        return $this->belongsTo(Currency::class);
     }
 
     /**

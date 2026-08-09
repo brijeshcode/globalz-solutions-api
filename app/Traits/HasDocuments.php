@@ -44,9 +44,14 @@ trait HasDocuments
 
     /**
      * Create documents from uploaded files
+     *
+     * @param  array<UploadedFile>  $files
+     * @param  array<string, mixed>  $metadata
+     * @return Collection<int, Document>
      */
     public function createDocuments(array $files, array $metadata = []): Collection
     {
+        /** @var Collection<int, Document> $uploadedDocuments */
         $uploadedDocuments = new Collection();
 
         foreach ($files as $file) {

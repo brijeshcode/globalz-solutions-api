@@ -141,6 +141,9 @@ class CustomerReturn extends Model implements ModuleLockable
         return $this->belongsTo(User::class, 'return_received_by');
     }
 
+    /**
+     * @return HasMany<CustomerReturnItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(CustomerReturnItem::class);

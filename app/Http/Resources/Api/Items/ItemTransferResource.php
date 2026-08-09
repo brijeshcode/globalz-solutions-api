@@ -37,7 +37,6 @@ class ItemTransferResource extends JsonResource
                 return [
                     'id' => $this->fromWarehouse->id,
                     'name' => $this->fromWarehouse->name,
-                    'address' => $this->when($this->fromWarehouse->address, $this->fromWarehouse->address),
                 ];
             }),
 
@@ -46,7 +45,6 @@ class ItemTransferResource extends JsonResource
                 return [
                     'id' => $this->toWarehouse->id,
                     'name' => $this->toWarehouse->name,
-                    'address' => $this->when($this->toWarehouse->address, $this->toWarehouse->address),
                 ];
             }),
 

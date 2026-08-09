@@ -40,7 +40,6 @@ class SupplierCreditDebitNoteResource extends JsonResource
                     'name' => $this->supplier->name,
                     'code' => $this->supplier->code,
                     'address' => $this->when($this->supplier->address, $this->supplier->address),
-                    'city' => $this->when($this->supplier->city, $this->supplier->city),
                     'mobile' => $this->when($this->supplier->mobile, $this->supplier->mobile),
                 ];
             }),

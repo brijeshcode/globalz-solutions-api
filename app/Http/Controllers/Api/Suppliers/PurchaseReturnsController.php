@@ -18,7 +18,7 @@ class PurchaseReturnsController extends Controller
 {
     use HasPagination;
 
-    protected $purchaseReturnService;
+    protected PurchaseReturnService $purchaseReturnService;
 
     public function __construct(PurchaseReturnService $purchaseReturnService)
     {

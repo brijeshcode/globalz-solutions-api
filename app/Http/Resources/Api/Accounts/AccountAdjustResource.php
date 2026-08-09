@@ -28,7 +28,6 @@ class AccountAdjustResource extends JsonResource
             'account' => $this->when($this->relationLoaded('account'), [
                 'id' => $this->account?->id,
                 'name' => $this->account?->name,
-                'code' => $this->account?->code,
                 'current_balance' => $this->account?->current_balance,
             ]),
             'amount' => $this->amount,

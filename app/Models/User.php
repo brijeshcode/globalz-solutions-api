@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Employees\Employee;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\InvalidatesCacheVersion;
@@ -203,6 +204,6 @@ class User extends Authenticatable
      */
     public function employee(): HasOne
     {
-        return $this->hasOne(\App\Models\Employees\Employee::class);
+        return $this->hasOne(Employee::class);
     }
 }

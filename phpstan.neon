@@ -24,4 +24,28 @@ parameters:
         -
             identifier: property.notFound
             path: app/Http/Resources/Api/Reports/*
-            
+
+        # --- Dynamic Eloquent access (not real bugs) ---------------------------
+        # Aggregate/join/DB-view queries (SUM(..) as x, "col as alias", UNION
+        # views, MorphTo) hydrate into a generic Eloquent model, or a specific
+        # model carrying alias columns that don't exist on its table. That access
+        # is correct at runtime but unprovable statically. We relax the
+        # column-existence check in the procedural layers where such rows are
+        # consumed (controllers/services/console). Models and (non-report)
+        # Resources keep it ON — that's where a genuine "missing column" bug
+        # (e.g. a resource exposing a field that isn't on the table) shows up.
+
+        # Type was lost entirely (generic base Model) — can't prove anything.
+        -
+            identifier: property.notFound
+            message: '#Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:#'
+        -
+            identifier: property.notFound
+            path: app/Http/Controllers/*
+        -
+            identifier: property.notFound
+            path: app/Services/*
+        -
+            identifier: property.notFound
+            path: app/Console/*
+

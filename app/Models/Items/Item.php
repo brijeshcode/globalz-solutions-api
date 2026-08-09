@@ -320,13 +320,17 @@ class Item extends Model
         return (string) $nextNumber;
     }
 
-    // Relationship to get all warehouse inventories
+    /**
+     * @return HasMany<Inventory, $this>
+     */
     public function inventories(): HasMany
     {
         return $this->hasMany(Inventory::class);
     }
 
-    // Supplier-specific prices for this item
+    /**
+     * @return HasMany<SupplierItemPrice, $this>
+     */
     public function supplierItemPrices(): HasMany
     {
         return $this->hasMany(SupplierItemPrice::class);
