@@ -36,15 +36,15 @@ class PurchaseItem extends Model
     ];
 
     protected $casts = [
-        'price' => 'decimal:5',
+        'price' => 'float',
         'quantity' => 'integer',
         'discount_percent' => 'decimal:2',
-        'discount_amount' => 'decimal:5',
-        'total_price' => 'decimal:5',
-        'total_price_usd' => 'decimal:2',
-        'total_expense_usd' => 'decimal:2',
-        'final_total_cost_usd' => 'decimal:2',
-        'cost_per_item_usd' => 'decimal:4',
+        'discount_amount' => 'float',
+        'total_price' => 'float',
+        'total_price_usd' => 'float',
+        'total_expense_usd' => 'float',
+        'final_total_cost_usd' => 'float',
+        'cost_per_item_usd' => 'float',
     ];
 
     protected $searchable = [

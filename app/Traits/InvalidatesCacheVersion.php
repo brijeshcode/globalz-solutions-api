@@ -8,7 +8,7 @@ trait InvalidatesCacheVersion
 {
     public static function getCacheVersionKey(): string
     {
-        return static::$cacheVersionKey ?? 'global';
+        return static::$cacheVersionKey ?? 'global'; // @phpstan-ignore nullCoalesce.property
     }
 
     public static function bootInvalidatesCacheVersion(): void

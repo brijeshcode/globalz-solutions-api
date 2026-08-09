@@ -25,7 +25,7 @@ class currencyRateResource extends JsonResource
                     'id' => $this->currency->id,
                     'name' => $this->currency->name,
                     'code' => $this->currency->code,
-                    'symbol' => $this->when($this->currency->symbol, $this->currency->symbol),
+                    'symbol' => $this->when(filled($this->currency->symbol), $this->currency->symbol),
                     'calculation_type' => $this->currency->calculation_type,
                     'symbol_position' => $this->currency->symbol_position,
                     'decimal_places' => $this->currency->decimal_places,
@@ -38,7 +38,7 @@ class currencyRateResource extends JsonResource
                 'id' => $this->createdBy?->id,
                 'name' => $this->createdBy?->name,
             ],
-            'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
+            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
         ];
     }
 }

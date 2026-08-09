@@ -38,7 +38,7 @@ class AccountTransfer extends Model
         'date' => 'datetime',
         'received_amount' => 'decimal:2',
         'sent_amount' => 'decimal:2',
-        'currency_rate' => 'decimal:4',
+        'currency_rate' => 'float',
     ];
 
     protected $searchable = [
@@ -97,7 +97,7 @@ class AccountTransfer extends Model
         $settingKey = 'account_transfers';
         $defaultValue = config('app.account_transfer_code_start', 1000);
         $newValue = \App\Models\Setting::incrementValue($settingKey, 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setTransferCode(): string

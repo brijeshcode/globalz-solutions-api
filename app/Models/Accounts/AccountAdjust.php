@@ -64,7 +64,7 @@ class AccountAdjust extends Model
         $settingKey = 'account_adjusts';
         $defaultValue = config('app.account_adjust_code_start', 1000);
         $newValue = \App\Models\Setting::incrementValue($settingKey, 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setTransferCode(): string

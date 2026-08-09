@@ -48,7 +48,7 @@ class SupplierPayment extends Model implements ModuleLockable
 
     protected $casts = [
         'date' => 'datetime',
-        'currency_rate' => 'decimal:4',
+        'currency_rate' => 'float',
         'amount' => 'decimal:2',
         'amount_usd' => 'decimal:2',
         'last_payment_amount_usd' => 'decimal:2',
@@ -153,7 +153,7 @@ class SupplierPayment extends Model implements ModuleLockable
     {
         $defaultValue = config('app.supplier_payment_code_start', 1000);
         $newValue = Setting::incrementValue('supplier_payments', 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setPaymentCode(): string

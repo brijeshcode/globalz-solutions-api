@@ -184,7 +184,7 @@ class PurchaseReturnService
                     ]);
 
                     // Update related data if quantity changed
-                    if ((float)$oldQuantity != (float)$quantity) {
+                    if ((int)$oldQuantity != (int)$quantity) {
                         $this->processPurchaseReturnItemRelatedData($purchaseReturn, $purchaseReturnItem, true, $oldQuantity);
                     }
 

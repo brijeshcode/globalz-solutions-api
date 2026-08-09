@@ -26,7 +26,7 @@ class ProformaInvoiceResource extends JsonResource
             'warehouse_id'             => $this->warehouse_id,
             'customer_payment_term_id' => $this->customer_payment_term_id,
             'client_po_number'         => $this->client_po_number,
-            'currency_rate'            => $this->currency_rate + 0,
+            'currency_rate'            => number_format($this->currency_rate, 4, '.', ''),
             'sub_total'                => $this->sub_total + 0,
             'sub_total_usd'            => $this->sub_total_usd + 0,
             'discount_amount'          => $this->discount_amount + 0,

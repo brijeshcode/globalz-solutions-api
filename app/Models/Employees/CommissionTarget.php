@@ -111,7 +111,7 @@ class CommissionTarget extends Model
     {
         $defaultValue = config('app.commission_target_code_start', 1000);
         $newValue = Setting::incrementValue('commission_targets', 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setCommissionTargetCode(): string

@@ -35,14 +35,14 @@ class CustomerReturnResource extends JsonResource
             'total_tax_amount_usd' => $this->total_tax_amount_usd,
             'total_volume_cbm' => $this->total_volume_cbm,
             'total_weight_kg' => $this->total_weight_kg,
-            'currency_rate' => $this->currency_rate,
+            'currency_rate' => number_format($this->currency_rate, 4, '.', ''),
             'note' => $this->note,
 
             // Status fields
             'is_approved' => $this->isApproved(),
             'is_pending' => $this->isPending(),
             'is_received' => $this->isReceived(),
-            'status' => $this->getStatusAttribute(),
+            'status' => $this->status,
 
             // Approval fields
             'approved_by' => $this->approved_by,
@@ -67,10 +67,10 @@ class CustomerReturnResource extends JsonResource
                     'id' => $this->customer->id,
                     'name' => $this->customer->name,
                     'code' => $this->customer->code,
-                    'address' => $this->when($this->customer->address, $this->customer->address),
-                    'city' => $this->when($this->customer->city, $this->customer->city),
-                    'mobile' => $this->when($this->customer->mobile, $this->customer->mobile),
-                    'mof_tax_number' => $this->when($this->customer->mof_tax_number, $this->customer->mof_tax_number),
+                    'address' => $this->when(filled($this->customer->address), $this->customer->address),
+                    'city' => $this->when(filled($this->customer->city), $this->customer->city),
+                    'mobile' => $this->when(filled($this->customer->mobile), $this->customer->mobile),
+                    'mof_tax_number' => $this->when(filled($this->customer->mof_tax_number), $this->customer->mof_tax_number),
                 ];
             }),
 
@@ -79,7 +79,7 @@ class CustomerReturnResource extends JsonResource
                     'id' => $this->currency->id,
                     'name' => $this->currency->name,
                     'code' => $this->currency->code,
-                    'symbol' => $this->when($this->currency->symbol, $this->currency->symbol),
+                    'symbol' => $this->when(filled($this->currency->symbol), $this->currency->symbol),
                     'calculation_type' => $this->currency->calculation_type,
                     'symbol_position' => $this->currency->symbol_position,
                     'decimal_places' => $this->currency->decimal_places,
@@ -92,7 +92,7 @@ class CustomerReturnResource extends JsonResource
                 return [
                     'id' => $this->warehouse->id,
                     'name' => $this->warehouse->name,
-                    'address' => $this->when($this->warehouse->address_line_1, $this->warehouse->address_line_1),
+                    'address' => $this->when(filled($this->warehouse->address_line_1), $this->warehouse->address_line_1),
                 ];
             }),
 

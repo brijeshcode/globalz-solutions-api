@@ -19,7 +19,7 @@ class AccountAdjustResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'date' => $this->date?->format('Y-m-d H:i:s'),
+            'date' => $this->date->format('Y-m-d H:i:s'),
             'code' => $this->code,
             'prefix' => $this->prefix,
             'transfer_code' => $this->transfer_code,

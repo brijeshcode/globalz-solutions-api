@@ -25,7 +25,7 @@ class ItemTransferItem extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:4',
+        'quantity' => 'integer',
     ];
 
     protected $searchable = [

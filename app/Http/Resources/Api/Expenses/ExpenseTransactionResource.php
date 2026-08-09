@@ -20,7 +20,7 @@ class ExpenseTransactionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'date' => $this->date?->format('Y-m-d'),
+            'date' => $this->date->format('Y-m-d'),
             'expense_month' => $this->expense_month?->format('Y-m'),
             'code' => $this->code,
             'subject' => $this->subject,
@@ -29,6 +29,7 @@ class ExpenseTransactionResource extends JsonResource
             'paid_amount_usd' => $this->paid_amount_usd,
             'due_amount'      => $this->due_amount,
             'payment_status'  => $this->payment_status,
+            'currency_rate'   => number_format($this->currency_rate, 4, '.', ''),
             'amount_usd'      => $this->amount_usd,
             'vat_amount'       => $this->vat_amount,
             'vat_amount_usd'   => $this->vat_amount_usd,

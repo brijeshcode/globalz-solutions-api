@@ -23,7 +23,7 @@ class ItemPrice extends Model
     ];
 
     protected $casts = [
-        'price_usd' => 'decimal:4',
+        'price_usd' => 'float',
         'effective_date' => 'date',
     ];
 

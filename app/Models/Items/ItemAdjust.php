@@ -130,7 +130,7 @@ class ItemAdjust extends Model
         $settingKey = 'item_adjusts';
         $defaultValue = config('app.item_adjust_code_start', 1000);
         $newValue = Setting::incrementValue($settingKey, 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setItemAdjustCode(): string

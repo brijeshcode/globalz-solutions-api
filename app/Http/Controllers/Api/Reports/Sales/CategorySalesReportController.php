@@ -270,9 +270,7 @@ class CategorySalesReportController extends Controller
             );
 
             // Round category totals
-            $categoryTotals = array_map(function($value) {
-                return is_numeric($value) ? round($value, 2) : $value;
-            }, $categoryTotals);
+            $categoryTotals = array_map(fn($value) => round($value, 2), $categoryTotals);
 
             $category['totals'] = $categoryTotals;
             $category['months'] = $months;
@@ -302,9 +300,7 @@ class CategorySalesReportController extends Controller
         );
 
         // Round year totals
-        $yearTotals = array_map(function($value) {
-            return is_numeric($value) ? round($value, 2) : $value;
-        }, $yearTotals);
+        $yearTotals = array_map(fn($value) => round($value, 2), $yearTotals);
 
         return [
             'categories' => array_values($categorizedData),

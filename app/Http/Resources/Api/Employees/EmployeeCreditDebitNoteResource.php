@@ -21,7 +21,7 @@ class EmployeeCreditDebitNoteResource extends JsonResource
             'note_code' => $this->note_code,
             'employee_id' => $this->employee_id,
             'currency_id' => $this->currency_id,
-            'currency_rate' => $this->currency_rate,
+            'currency_rate' => number_format($this->currency_rate, 4, '.', ''),
             'amount' => $this->amount,
             'amount_usd' => $this->amount_usd,
             'note' => $this->note,

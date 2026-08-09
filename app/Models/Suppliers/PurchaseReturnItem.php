@@ -39,7 +39,7 @@ class PurchaseReturnItem extends Model
 
     protected $casts = [
         'price' => 'decimal:4',
-        'quantity' => 'decimal:4',
+        'quantity' => 'integer',
         'discount_percent' => 'decimal:2',
         'unit_discount_amount' => 'decimal:4',
         'discount_amount' => 'decimal:4',

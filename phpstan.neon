@@ -1,10 +1,10 @@
 includes:
     - vendor/larastan/larastan/extension.neon
     # Uncomment after generating the baseline (step 4):
-    # - phpstan-baseline.neon
+    - phpstan-baseline.neon
 
 parameters:
-    level: 2
+    level: 5
 
     # Baseline is a noise bucket; don't flag when baselined errors occur
     # fewer times than recorded (that just means you cleaned some up).
@@ -48,4 +48,3 @@ parameters:
         -
             identifier: property.notFound
             path: app/Console/*
-

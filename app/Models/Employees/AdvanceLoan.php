@@ -37,7 +37,7 @@ class AdvanceLoan extends Model
 
     protected $casts = [
         'date' => 'datetime',
-        'currency_rate' => 'decimal:4',
+        'currency_rate' => 'float',
         'amount' => 'decimal:2',
         'amount_usd' => 'decimal:2',
     ];
@@ -125,7 +125,7 @@ class AdvanceLoan extends Model
     {
         $defaultValue = config('app.advanceLoan_code_start', 1000);
         $newValue = Setting::incrementValue('advanceLoans', 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setAdvanceLoanCode(): string

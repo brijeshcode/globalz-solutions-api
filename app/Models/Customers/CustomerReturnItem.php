@@ -52,7 +52,7 @@ class CustomerReturnItem extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:0',
+        'quantity' => 'integer',
         'price' => 'decimal:2',
         'price_usd' => 'decimal:2',
         'discount_percent' => 'decimal:2',

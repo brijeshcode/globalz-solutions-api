@@ -14,14 +14,14 @@ class GasStationPaymentResource extends JsonResource
     {
         return [
             'id'             => $this->id,
-            'date'           => $this->date?->format('Y-m-d H:i:s'),
+            'date'           => $this->date->format('Y-m-d H:i:s'),
             'code'           => $this->code,
             'gas_station_id' => $this->gas_station_id,
             'account_id'     => $this->account_id,
-            'amount'         => $this->amount,
-            'amount_usd'     => $this->amount_usd,
+            'amount'         => number_format($this->amount, 4, '.', ''),
+            'amount_usd'     => number_format($this->amount_usd, 4, '.', ''),
             'currency_id'    => $this->currency_id,
-            'currency_rate'  => $this->currency_rate,
+            'currency_rate'  => number_format($this->currency_rate, 4, '.', ''),
             'note'           => $this->note,
             'gas_station' => $this->whenLoaded('gasStation', fn() => [
                 'id'   => $this->gasStation->id,

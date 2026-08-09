@@ -21,13 +21,13 @@ class ItemTransferResource extends JsonResource
             'id' => $this->id,
             'code' => $this->code,
             'prefix' => $this->prefix,
-            'date' => $this->date?->format('Y-m-d H:i:s'),
+            'date' => $this->date->format('Y-m-d H:i:s'),
 
             // Computed attributes
-            'total_items_count' => $this->getTotalItemsCountAttribute(),
-            'item_transfer_code' => $this->getItemTransferCodeAttribute(),
-            'total_quantity' => $this->getTotalQuantityAttribute(),
-            'has_items' => $this->getHasItemsAttribute(),
+            'total_items_count' => $this->total_items_count,
+            'item_transfer_code' => $this->item_transfer_code,
+            'total_quantity' => $this->total_quantity,
+            'has_items' => $this->has_items,
 
             'note' => $this->note,
 
@@ -87,7 +87,7 @@ class ItemTransferResource extends JsonResource
 
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
-            'deleted_at' => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s')),
+            'deleted_at' => $this->when(filled($this->deleted_at), $this->deleted_at?->format('Y-m-d H:i:s')),
         ];
     }
 }

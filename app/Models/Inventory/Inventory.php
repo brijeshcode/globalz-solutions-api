@@ -23,7 +23,7 @@ class Inventory extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:0',
+        'quantity' => 'integer',
     ];
 
     protected $searchable = [];

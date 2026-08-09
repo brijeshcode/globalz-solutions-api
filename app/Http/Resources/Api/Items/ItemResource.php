@@ -67,11 +67,11 @@ class ItemResource extends JsonResource
         }
 
         if ($this->fieldWasSelected('starting_price', $selectedFields)) {
-            $data['starting_price'] = $this->starting_price !== null ? (float) $this->starting_price : null;
+            $data['starting_price'] = $this->starting_price !== null ? (float) number_format($this->starting_price, 6, '.', '') : null;
         }
 
         if ($this->fieldWasSelected('starting_quantity', $selectedFields)) {
-            $data['starting_quantity'] = $this->starting_quantity !== null ? (float) $this->starting_quantity : 0;
+            $data['starting_quantity'] = $this->starting_quantity;
         }
 
         if ($this->fieldWasSelected('low_quantity_alert', $selectedFields)) {

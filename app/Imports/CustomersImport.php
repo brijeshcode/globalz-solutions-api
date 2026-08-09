@@ -15,18 +15,16 @@ use App\Models\Setting;
 use App\Helpers\CurrencyHelper;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithValidation;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 
 class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts, WithChunkReading
 {
-    protected $skipDuplicates;
-    protected $updateExisting;
+    protected bool $skipDuplicates;
+    protected bool $updateExisting;
     protected $results = [
         'total' => 0,
         'imported' => 0,
@@ -276,7 +274,7 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
             $data['total_old_sales'] = $totalOldSales;
         }
 
-        if (isset($row['is_active']) && $row['is_active'] !== '' && $row['is_active'] !== null) {
+        if (isset($row['is_active']) && $row['is_active'] !== '') {
             $data['is_active'] = filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN);
         }
 
@@ -351,7 +349,7 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
                 // Parse as d-m-Y
                 $dateString = "{$day}-{$month}-{$fullYear}";
                 $date = Carbon::createFromFormat('d-m-Y', $dateString);
-                if ($date !== false) {
+                if ($date instanceof Carbon) {
                     return $date->format('Y-m-d H:i:s');
                 }
             }
@@ -371,7 +369,7 @@ class CustomersImport implements ToCollection, WithHeadingRow, WithBatchInserts,
 
             foreach ($formats as $format) {
                 $date = Carbon::createFromFormat($format, $dateValue);
-                if ($date !== false) {
+                if ($date instanceof Carbon) {
                     return $date->format('Y-m-d H:i:s');
                 }
             }

@@ -20,7 +20,7 @@ class IncomeTransactionResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'date' => $this->date?->format('Y-m-d'),
+            'date' => $this->date->format('Y-m-d'),
             'code' => $this->code,
             'subject' => $this->subject,
             'amount' => $this->amount,
@@ -64,7 +64,7 @@ class IncomeTransactionResource extends JsonResource
                     'id' => $this->currency->id,
                     'name' => $this->currency->name,
                     'code' => $this->currency->code,
-                    'symbol' => $this->when($this->currency->symbol, $this->currency->symbol),
+                    'symbol' => $this->when(filled($this->currency->symbol), $this->currency->symbol),
                     'calculation_type' => $this->currency->calculation_type,
                     'symbol_position' => $this->currency->symbol_position,
                     'decimal_places' => $this->currency->decimal_places,

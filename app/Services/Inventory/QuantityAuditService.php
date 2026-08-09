@@ -72,7 +72,8 @@ class QuantityAuditService
             $expectedQty      = (float) $expected->expected_quantity;
 
             if (abs($currentQty - $expectedQty) > 0.0001) {
-                $item            = $items[$expected->item_id] ?? null;
+                /** @var Item|null $item */
+                $item            = $items->get($expected->item_id);
                 $discrepancies[] = [
                     'item_id'           => $expected->item_id,
                     'item_code'         => $item?->code ?? 'Unknown',

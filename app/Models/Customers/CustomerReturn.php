@@ -58,6 +58,7 @@ class CustomerReturn extends Model implements ModuleLockable
     protected $casts = [
         'date' => 'datetime',
         'approved_at' => 'datetime',
+        'currency_rate' =>  'float',
         'return_received_at' => 'datetime',
         'total' => 'decimal:2',
         'total_usd' => 'decimal:2',
@@ -254,7 +255,7 @@ class CustomerReturn extends Model implements ModuleLockable
     {
         $defaultValue = config('app.customer_return_code_start', 1000);
         $newValue = Setting::incrementValue('customer_returns', 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setReturnCode(): string

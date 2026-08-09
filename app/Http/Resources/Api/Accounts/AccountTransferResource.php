@@ -19,7 +19,7 @@ class AccountTransferResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'date' => $this->date?->format('Y-m-d H:i:s'),
+            'date' => $this->date->format('Y-m-d H:i:s'),
             'code' => $this->code,
             'prefix' => $this->prefix,
             'from_account_id' => $this->from_account_id,
@@ -28,7 +28,7 @@ class AccountTransferResource extends JsonResource
             'to_currency_id' => $this->to_currency_id,
             'received_amount' => $this->received_amount,
             'sent_amount' => $this->sent_amount,
-            'currency_rate' => $this->currency_rate,
+            'currency_rate' => number_format($this->currency_rate, 4, '.', ''),
             'note' => $this->note,
             'from_account' => $this->whenLoaded('fromAccount', function () {
                 return [

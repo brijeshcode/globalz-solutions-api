@@ -11,6 +11,7 @@ use App\Models\Suppliers\PurchaseItem;
 use App\Models\Suppliers\SupplierItemPrice;
 use App\Services\Suppliers\SupplierItemPriceService;
 use App\Helpers\FeatureHelper;
+use App\Models\Suppliers\PurchaseReturnItem;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -330,7 +331,7 @@ class PriceService
     /**
      * Calculate weighted average price after purchase return
      */
-    private static function calculateWeightedAveragePriceAfterReturn(\App\Models\Suppliers\PurchaseReturnItem $purchaseReturnItem, float $currentPriceUsd, bool $isUpdate = false, ?int $oldQuantity = null): float
+    private static function calculateWeightedAveragePriceAfterReturn(PurchaseReturnItem $purchaseReturnItem, float $currentPriceUsd, bool $isUpdate = false, ?int $oldQuantity = null): float
     {
         $returnedQuantity = $purchaseReturnItem->quantity;
         $returnedPriceUsd = $purchaseReturnItem->cost_per_item_usd;
@@ -362,7 +363,7 @@ class PriceService
             $newTotalValue = 0;
         }
 
-        return $inventoryAfterReturn > 0 ? ($newTotalValue / $inventoryAfterReturn) : $currentPriceUsd;
+        return $newTotalValue / $inventoryAfterReturn;
     }
 
     /**
@@ -462,9 +463,7 @@ class PriceService
         if ($inventoryWithoutThisPurchase < $totalQtyFromOthers) {
             // Some inventory was sold, so we calculate average cost of remaining inventory
             // Use the weighted average of all other purchases as the base cost
-            $averageCostOfOthers = $totalQtyFromOthers > 0
-                ? ($totalValueFromOthers / $totalQtyFromOthers)
-                : 0;
+            $averageCostOfOthers = $totalValueFromOthers / $totalQtyFromOthers;
 
             $baseValue = $inventoryWithoutThisPurchase * $averageCostOfOthers;
         } else {

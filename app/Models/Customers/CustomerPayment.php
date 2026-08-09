@@ -54,7 +54,7 @@ class CustomerPayment extends Model implements ModuleLockable
 
     protected $casts = [
         'date' => 'datetime',
-        'currency_rate' => 'decimal:4',
+        'currency_rate' => 'float',
         'amount' => 'decimal:2',
         'amount_usd' => 'decimal:2',
         'credit_limit' => 'decimal:2',
@@ -219,7 +219,7 @@ class CustomerPayment extends Model implements ModuleLockable
     {
         $defaultValue = config('app.customer_payment_code_start', 1000);
         $newValue = Setting::incrementValue('customer_payments', 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setPaymentCode(): string

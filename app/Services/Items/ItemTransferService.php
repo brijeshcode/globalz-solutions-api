@@ -205,7 +205,7 @@ class ItemTransferService
             // For updates, adjust inventory by the difference
             $quantityDifference = $itemTransferItem->quantity - $oldQuantity;
             if ($quantityDifference != 0) {
-                $absoluteDifference = abs($quantityDifference);
+                $absoluteDifference = (int) abs($quantityDifference);
 
                 if ($quantityDifference > 0) {
                     // Increasing transfer: subtract more from source, add more to destination

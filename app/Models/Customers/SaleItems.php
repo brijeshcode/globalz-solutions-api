@@ -60,7 +60,7 @@ class SaleItems extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:0',
+        'quantity' => 'integer',
         'cost_price' => 'decimal:8',
         'price' => 'decimal:8',
         'price_usd' => 'decimal:8',

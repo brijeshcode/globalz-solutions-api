@@ -32,7 +32,7 @@ class TaxCode extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'is_default' => 'boolean',
-        'tax_percent' => 'decimal:2',
+        'tax_percent' => 'float',
     ];
 
     protected $searchable = [

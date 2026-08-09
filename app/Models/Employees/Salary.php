@@ -164,7 +164,7 @@ class Salary extends Model
     {
         $defaultValue = config('app.salary_code_start', 1000);
         $newValue = Setting::incrementValue('salaries', 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setSalaryCode(): string

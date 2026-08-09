@@ -41,7 +41,7 @@ class SupplierCreditDebitNote extends Model implements ModuleLockable
         'date' => 'datetime',
         'amount' => 'decimal:2',
         'amount_usd' => 'decimal:2',
-        'currency_rate' => 'decimal:4',
+        'currency_rate' => 'float',
     ];
 
     protected $searchable = [
@@ -145,7 +145,7 @@ class SupplierCreditDebitNote extends Model implements ModuleLockable
         $settingKey = 'supplier_credit_debit_notes';
         $defaultValue = config("app.supplier_credit_debit_note_code_start", 1000);
         $newValue = Setting::incrementValue($settingKey, 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setNoteCode(): string

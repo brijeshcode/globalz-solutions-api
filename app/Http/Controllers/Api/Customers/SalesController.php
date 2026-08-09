@@ -89,11 +89,13 @@ class SalesController extends Controller
             $currencyId = $data['currency_id'];
             foreach ($saleItems as $index => $itemData) {
                 if (isset($itemData['item_id'])) {
+                    /** @var Item|null $item */
                     $item = Item::with('itemPrice')->find($itemData['item_id']);
                     $saleItems[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
 
                     // Get cost price from item's price (already in USD)
-                    $costPrice = $item?->itemPrice?->price_usd ?? 0;
+                    $itemPrice = $item?->itemPrice;
+                    $costPrice = $itemPrice?->price_usd ?? 0;
                     if (Sale::TAXFREEPREFIX == $data['prefix']) {
 
                         $saleItems[$index]['tax_percent'] = 0;
@@ -231,16 +233,6 @@ class SalesController extends Controller
             new SaleResource($sale)
         );
     }
-    
-    private function updateAllSalePriceList(){
-        $sales  = Sale::with('customer:id,price_list_id_INV,price_list_id_INX')->whereNull('price_list_id')->get();
-
-        foreach($sales as $sale){
-            $priceListId = $sale->prefix == Sale::TAXPREFIX ? $sale->customer->price_list_id_INV : $sale->customer->price_list_id_INX;
-            $sale->price_list_id = $priceListId;
-            $sale->save();
-        }
-    }
 
     public function update(SalesUpdateRequest $request, Sale $sale): JsonResponse
     {
@@ -270,11 +262,13 @@ class SalesController extends Controller
 
                 foreach ($saleItems as $index => $itemData) {
                     if (isset($itemData['item_id'])) {
+                        /** @var Item|null $item */
                         $item = Item::with('itemPrice')->find($itemData['item_id']);
                         $saleItems[$index]['item_code'] = $item?->code ?? $itemData['item_code'] ?? null;
 
                         // Get cost price from item's price (already in USD)
-                        $costPrice = $item?->itemPrice?->price_usd ?? 0;
+                        $itemPrice = $item?->itemPrice;
+                        $costPrice = $itemPrice?->price_usd ?? 0;
 
                         // Base inputs from request
                         $sellingPrice = $itemData['price'] ?? 0;
@@ -590,7 +584,6 @@ class SalesController extends Controller
             'Sale status updated successfully',
             new SaleResource($sale)
         );
-        $sale->load(['saleItems.item', 'warehouse', 'currency']);
     }
 
     public function unapprove(Sale $sale): JsonResponse
@@ -618,7 +611,7 @@ class SalesController extends Controller
             // Restore customer balance (add back the amount that was deducted)
             $customer = $sale->customer;
             if ($customer) {
-                CustomersHelper::addBalance($customer, $sale->total_usd);
+                CustomersHelper::addBalance($customer, (float) $sale->total_usd);
             }
 
             // Clear approval fields

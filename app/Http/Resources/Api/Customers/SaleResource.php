@@ -31,7 +31,7 @@ class SaleResource extends JsonResource
             'customer_payment_term_id' => $this->customer_payment_term_id,
             'customer_last_payment_receipt_id' => $this->customer_last_payment_receipt_id,
             'client_po_number' => $this->client_po_number,
-            'currency_rate' => $this->currency_rate + 0,
+            'currency_rate' => number_format($this->currency_rate + 0, 4, '.', ''),
             'credit_limit' => $this->credit_limit + 0 ,
             'outStanding_balance' => $this->outStanding_balance + 0,
             'sub_total' => floatval($this->sub_total),

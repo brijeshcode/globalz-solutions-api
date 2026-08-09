@@ -22,13 +22,13 @@ class ItemAdjustResource extends JsonResource
             'code' => $this->code,
             'prefix' => $this->prefix,
             'type' => $this->type,
-            'date' => $this->date?->format('Y-m-d H:i:s'),
+            'date' => $this->date->format('Y-m-d H:i:s'),
 
             // Computed attributes
-            'total_items_count' => $this->getTotalItemsCountAttribute(),
-            'item_adjust_code' => $this->getItemAdjustCodeAttribute(),
-            'total_quantity' => $this->getTotalQuantityAttribute(),
-            'has_items' => $this->getHasItemsAttribute(),
+            'total_items_count' => $this->total_items_count,
+            'item_adjust_code' => $this->item_adjust_code,
+            'total_quantity' => $this->total_quantity,
+            'has_items' => $this->has_items,
 
             'note' => $this->note,
 
@@ -80,7 +80,7 @@ class ItemAdjustResource extends JsonResource
 
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
-            'deleted_at' => $this->when($this->deleted_at, $this->deleted_at?->format('Y-m-d H:i:s')),
+            'deleted_at' => $this->when(filled($this->deleted_at), $this->deleted_at?->format('Y-m-d H:i:s')),
         ];
     }
 }

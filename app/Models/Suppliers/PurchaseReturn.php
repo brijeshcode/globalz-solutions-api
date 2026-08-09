@@ -57,23 +57,23 @@ class PurchaseReturn extends Model
 
     protected $casts = [
         'date' => 'date',
-        'currency_rate' => 'decimal:6',
-        'shipping_fee_usd' => 'decimal:4',
-        'customs_fee_usd' => 'decimal:4',
-        'other_fee_usd' => 'decimal:4',
-        'tax_usd' => 'decimal:4',
-        'shipping_fee_usd_percent' => 'decimal:2',
-        'customs_fee_usd_percent' => 'decimal:2',
-        'other_fee_usd_percent' => 'decimal:2',
-        'tax_usd_percent' => 'decimal:2',
-        'sub_total' => 'decimal:4',
-        'sub_total_usd' => 'decimal:4',
-        'additional_charge_amount' => 'decimal:4',
-        'additional_charge_amount_usd' => 'decimal:4',
-        'total' => 'decimal:4',
-        'total_usd' => 'decimal:4',
-        'final_total' => 'decimal:4',
-        'final_total_usd' => 'decimal:4',
+        'currency_rate' => 'float',
+        'shipping_fee_usd' => 'float',
+        'customs_fee_usd' => 'float',
+        'other_fee_usd' => 'float',
+        'tax_usd' => 'float',
+        'shipping_fee_usd_percent' => 'float',
+        'customs_fee_usd_percent' => 'float',
+        'other_fee_usd_percent' => 'float',
+        'tax_usd_percent' => 'float',
+        'sub_total' => 'float',
+        'sub_total_usd' => 'float',
+        'additional_charge_amount' => 'float',
+        'additional_charge_amount_usd' => 'float',
+        'total' => 'float',
+        'total_usd' => 'float',
+        'final_total' => 'float',
+        'final_total_usd' => 'float',
     ];
 
     protected $searchable = [
@@ -214,7 +214,7 @@ class PurchaseReturn extends Model
         $settingKey = 'purchase_returns';
         $defaultValue = config('app.purchase_return_code_start', 1000);
         $newValue = Setting::incrementValue($settingKey, 'code_counter', 1, $defaultValue);
-        return str_pad($newValue, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $newValue, 6, '0', STR_PAD_LEFT);
     }
 
     public function setPurchaseReturnCode(): string

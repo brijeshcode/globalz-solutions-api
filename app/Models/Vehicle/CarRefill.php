@@ -27,14 +27,14 @@ class CarRefill extends Model
 
     protected $casts = [
         'date'           => 'datetime',
-        'odometer'       => 'decimal:2',
-        'km_driven'      => 'decimal:2',
-        'amount'         => 'decimal:4',
-        'amount_usd'     => 'decimal:8',
-        'currency_rate'  => 'decimal:4',
+        'odometer'       =>  'float', // 'decimal:2',
+        'km_driven'      =>  'float', // 'decimal:2',
+        'amount'         => 'float', // 'decimal:4',
+        'amount_usd'     => 'float', // 'decimal:4',
+        'currency_rate'  => 'float', // 'decimal:4',
         'invoices_count'    => 'integer',
-        'sales_amount_usd'  => 'decimal:8',
-        'delivery_cost_pct' => 'decimal:4',
+        'sales_amount_usd'  => 'float', // 'decimal:4',
+        'delivery_cost_pct' => 'float', // 'decimal:2',
     ];
 
     protected $sortable = [

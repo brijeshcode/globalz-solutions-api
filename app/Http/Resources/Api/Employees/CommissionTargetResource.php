@@ -22,7 +22,7 @@ class CommissionTargetResource extends JsonResource
             'code' => $this->code,
             'prefix' => $this->prefix,
             'commission_target_code' => $this->commission_target_code,
-            'date' => $this->date?->format('Y-m-d'),
+            'date' => $this->date->format('Y-m-d'),
             'name' => $this->name,
             'note' => $this->note,
 

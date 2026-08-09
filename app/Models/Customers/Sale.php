@@ -84,7 +84,7 @@ class Sale extends Model implements ModuleLockable
         'date' => 'datetime',
         'approved_at' => 'datetime',
         'value_date' => 'datetime',
-        'currency_rate' => 'decimal:4',
+        'currency_rate' => 'float',
         'credit_limit' => 'decimal:2',
         'outStanding_balance' => 'decimal:2',
         'sub_total' => 'decimal:8',

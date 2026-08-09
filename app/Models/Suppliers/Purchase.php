@@ -61,18 +61,18 @@ class Purchase extends Model implements ModuleLockable
     protected $casts = [
         'date'         => 'date',
         'delivered_at' => 'datetime',
-        'currency_rate' => 'decimal:6',
-        'sub_total' => 'decimal:4',
-        'sub_total_usd' => 'decimal:4',
-        'discount_amount' => 'decimal:4',
-        'discount_amount_usd' => 'decimal:4',
-        'total' => 'decimal:4',
-        'total_usd' => 'decimal:4',
-        'tax_usd' => 'decimal:4',
-        'tax_usd_percent' => 'decimal:2',
-        'total_expense_usd' => 'decimal:4',
-        'final_total' => 'decimal:4',
-        'final_total_usd' => 'decimal:4',
+        'currency_rate' => 'float',
+        'sub_total' => 'float',
+        'sub_total_usd' => 'float',
+        'discount_amount' => 'float',
+        'discount_amount_usd' => 'float',
+        'total' => 'float',
+        'total_usd' => 'float',
+        'tax_usd' => 'float',
+        'tax_usd_percent' => 'float',
+        'total_expense_usd' => 'float',
+        'final_total' => 'float',
+        'final_total_usd' => 'float',
     ];
 
     protected $searchable = [
@@ -240,14 +240,14 @@ class Purchase extends Model implements ModuleLockable
     {
         $defaultValue = config('app.purchase_code_start', 1000);
         $nextNumber = Setting::getOrCreateCounter('purchases', 'code_counter', $defaultValue);
-        return str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        return str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT);
     }
 
     public static function reserveNextCode(): string
     {
         $defaultValue = config('app.purchase_code_start', 1000);
         $newValue = Setting::incrementValue('purchases', 'code_counter', 1, $defaultValue);
-        return str_pad(($newValue - 1), 6, '0', STR_PAD_LEFT);
+        return str_pad((string) ($newValue - 1), 6, '0', STR_PAD_LEFT);
     }
 
     public static function isCodeUnique(string $code, ?int $excludeId = null): bool

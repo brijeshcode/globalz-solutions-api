@@ -69,9 +69,9 @@ class Item extends Model
         'weight' => 'decimal:4',
         'base_cost' => 'decimal:6',
         'base_sell' => 'decimal:6',
-        'starting_price' => 'decimal:6',
-        'starting_quantity' => 'decimal:6',
-        'low_quantity_alert' => 'decimal:6',
+        'starting_price' => 'float',
+        'starting_quantity' => 'integer',
+        'low_quantity_alert' => 'integer',
     ];
 
     protected $searchable = [

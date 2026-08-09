@@ -21,7 +21,7 @@ class SupplierCreditDebitNoteResource extends JsonResource
             'note_code' => $this->note_code,
             'supplier_id' => $this->supplier_id,
             'currency_id' => $this->currency_id,
-            'currency_rate' => $this->currency_rate,
+            'currency_rate' => number_format($this->currency_rate, 4, '.', ''),
             'amount' => $this->amount,
             'amount_usd' => $this->amount_usd,
             'note' => $this->note,
@@ -39,8 +39,8 @@ class SupplierCreditDebitNoteResource extends JsonResource
                     'id' => $this->supplier->id,
                     'name' => $this->supplier->name,
                     'code' => $this->supplier->code,
-                    'address' => $this->when($this->supplier->address, $this->supplier->address),
-                    'mobile' => $this->when($this->supplier->mobile, $this->supplier->mobile),
+                    'address' => $this->when(filled($this->supplier->address), $this->supplier->address),
+                    'mobile' => $this->when(filled($this->supplier->mobile), $this->supplier->mobile),
                 ];
             }),
 
@@ -49,7 +49,7 @@ class SupplierCreditDebitNoteResource extends JsonResource
                     'id' => $this->currency->id,
                     'name' => $this->currency->name,
                     'code' => $this->currency->code,
-                    'symbol' => $this->when($this->currency->symbol, $this->currency->symbol),
+                    'symbol' => $this->when(filled($this->currency->symbol), $this->currency->symbol),
                     'calculation_type' => $this->currency->calculation_type,
                     'symbol_position' => $this->currency->symbol_position,
                     'decimal_places' => $this->currency->decimal_places,

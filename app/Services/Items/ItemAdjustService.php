@@ -110,7 +110,7 @@ class ItemAdjustService
     /**
      * Process all related data for an item adjust item
      */
-    private function processItemAdjustItemRelatedData(ItemAdjust $itemAdjust, ItemAdjustItem $itemAdjustItem, bool $isUpdate = false, ?float $oldQuantity = null): void
+    private function processItemAdjustItemRelatedData(ItemAdjust $itemAdjust, ItemAdjustItem $itemAdjustItem, bool $isUpdate = false, ?int $oldQuantity = null): void
     {
         // Update inventory (add or subtract based on type)
         $this->updateInventory($itemAdjust, $itemAdjustItem, $isUpdate, $oldQuantity);
@@ -199,7 +199,7 @@ class ItemAdjustService
     /**
      * Update inventory for item adjust item (add or subtract based on type)
      */
-    private function updateInventory(ItemAdjust $itemAdjust, ItemAdjustItem $itemAdjustItem, bool $isUpdate = false, ?float $oldQuantity = null): void
+    private function updateInventory(ItemAdjust $itemAdjust, ItemAdjustItem $itemAdjustItem, bool $isUpdate = false, ?int $oldQuantity = null): void
     {
         if ($isUpdate && $oldQuantity !== null) {
             // For updates, adjust inventory by the difference

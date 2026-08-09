@@ -55,7 +55,7 @@ class ExpenseTransaction extends Model implements ModuleLockable
         'paid_amount' => 'decimal:2',
         'paid_amount_usd' => 'decimal:8',
         'amount_usd' => 'decimal:8',
-        'currency_rate' => 'decimal:4',
+        'currency_rate' => 'float',
         'expense_month' => 'date:Y-m-01',
         'vat_amount' => 'decimal:2',
         'vat_amount_usd' => 'decimal:8',

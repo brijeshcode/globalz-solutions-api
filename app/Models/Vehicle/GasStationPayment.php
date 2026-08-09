@@ -28,9 +28,9 @@ class GasStationPayment extends Model
 
     protected $casts = [
         'date'          => 'datetime',
-        'amount'        => 'decimal:4',
-        'amount_usd'    => 'decimal:8',
-        'currency_rate' => 'decimal:4',
+        'amount'        => 'float' , // 'decimal:4',
+        'amount_usd'    => 'float' , // 'decimal:8',
+        'currency_rate' => 'float' , // 'decimal:4',
     ];
 
     protected $sortable = [
