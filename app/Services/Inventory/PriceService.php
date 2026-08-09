@@ -396,7 +396,7 @@ class PriceService
         $currentQuantity = InventoryService::getTotalQuantityAcrossWarehouses($purchaseItem->item_id);
 
         if ($currentQuantity <= 0) {
-            return $newPriceUsd;
+            return (float) $newPriceUsd;
         }
 
         // Weighted average formula:

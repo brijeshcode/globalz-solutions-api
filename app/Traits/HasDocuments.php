@@ -101,7 +101,7 @@ trait HasDocuments
             $query->whereIn('id', $documentIds);
         }
 
-        return $query->restore();
+        return (bool) $query->restore();
     }
 
     /**

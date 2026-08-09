@@ -7,6 +7,7 @@ use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Expenses\ExpenseCategory;
 use App\Models\Setups\Generals\Currencies\Currency;
+use App\Models\Suppliers\PurchaseExpense;
 use Carbon\CarbonInterface;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ExpenseTransaction extends Model implements ModuleLockable
@@ -168,11 +170,11 @@ class ExpenseTransaction extends Model implements ModuleLockable
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne<PurchaseExpense, $this>
+     * @return HasOne<PurchaseExpense, $this>
      */
-    public function purchaseExpense(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function purchaseExpense(): HasOne
     {
-        return $this->hasOne(\App\Models\Suppliers\PurchaseExpense::class);
+        return $this->hasOne(PurchaseExpense::class);
     }
 
     // ─── Scopes ───────────────────────────────────────────────────────────────

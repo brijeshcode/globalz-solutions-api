@@ -183,7 +183,7 @@ class Employee extends Model
     
     public function setCode(): string
     {
-        return $this->code = self::reserveNextCode();
+        return $this->code = (string) self::reserveNextCode();
     }
 
     protected static function boot()

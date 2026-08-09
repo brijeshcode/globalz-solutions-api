@@ -84,7 +84,7 @@ class ItemPrice extends Model
         if (!$this->effective_date) {
             return 0;
         }
-        return $this->effective_date->diffInDays(now());
+        return (int) $this->effective_date->diffInDays(now());
     }
 
     public function getIsRecentAttribute(): bool

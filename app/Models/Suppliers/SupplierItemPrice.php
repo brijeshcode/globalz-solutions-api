@@ -176,7 +176,7 @@ class SupplierItemPrice extends Model
         if (!$this->last_purchase_date) {
             return 0;
         }
-        return $this->last_purchase_date->diffInDays(now());
+        return (int) $this->last_purchase_date->diffInDays(now());
     }
 
     // Helper Methods (moved to SupplierItemPriceService)
