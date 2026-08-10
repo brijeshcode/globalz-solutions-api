@@ -104,9 +104,9 @@ class PurchaseResource extends JsonResource
                         'discount_amount' => number_format($item->discount_amount, 5, '.', ''),
                         'total_price' => number_format($item->total_price, 5, '.', ''),
                         'total_price_usd' => number_format($item->total_price_usd, 2, '.', '') ,
-                        'total_expense_usd' => number_format($item->total_expense_usd, 2, ''),
-                        'final_total_cost_usd' => number_format($item->final_total_cost_usd, 2, ''),
-                        'cost_per_item_usd' => number_format($item->cost_per_item_usd, 4, ''),
+                        'total_expense_usd' => number_format($item->total_expense_usd, 2, '.', ''),
+                        'final_total_cost_usd' => number_format($item->final_total_cost_usd, 2, '.', ''),
+                        'cost_per_item_usd' => number_format($item->cost_per_item_usd, 4, '.', ''),
                         'note' => $item->note,
                         
                         // Computed attributes
