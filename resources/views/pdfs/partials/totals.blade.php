@@ -75,14 +75,12 @@
 
                     @if($sale->prefix === 'INX')
                      <tr>
-                        <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
-                        <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.discount') }}</td>
-                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; width: 22%;">{{ number_format($sale->discount_amount, $invoiceSettings['total_decimals']) }}</td>
+                        <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 40%;">{{ __('invoice.discount') }}</td>
+                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 40%;">{{ number_format($sale->discount_amount, $invoiceSettings['total_decimals']) }}</td>
                     </tr>
                     <tr>
-                        <td colspan="2" style="border: none; width: 50%;">&nbsp;</td>
-                        <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 28%;">{{ __('invoice.net_total') }}</td>
-                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt; width: 22%;">{{ number_format($sale->total, $invoiceSettings['total_decimals']) }}</td>
+                        <td class="font-bold" style="border: 1px solid #000; padding: 4px 2px; white-space: nowrap; width: 40%;">{{ __('invoice.net_total') }}</td>
+                        <td class="text-right font-bold" style="border: 1px solid #000; padding: 4px 2px; font-size: 10pt; white-space: nowrap; width: 40%;">{{ number_format($sale->total, $invoiceSettings['total_decimals']) }}</td>
                     </tr>
                     @endif
                 </table>
