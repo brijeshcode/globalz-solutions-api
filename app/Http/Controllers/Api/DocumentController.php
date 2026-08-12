@@ -89,7 +89,7 @@ class DocumentController extends Controller
 
             // Store the file
             $filePath = $file->storeAs($basePath, $fileName, 'public');
-            
+
             // Prepare document data
             $documentData = array_merge($validated, [
                 'original_name' => $file->getClientOriginalName(),
@@ -98,6 +98,9 @@ class DocumentController extends Controller
                 'file_size' => $file->getSize(),
                 'mime_type' => $file->getMimeType(),
                 'file_extension' => $extension,
+                'year' => (int) date('Y'),
+                'month' => (int) date('m'),
+                'module' => $moduleName,
                 'uploaded_by' => Auth::id(),
             ]);
             
@@ -168,7 +171,7 @@ class DocumentController extends Controller
             $basePath = $this->getTenantAwareBasePath($moduleName);
 
             $filePath = $file->storeAs($basePath, $fileName, 'public');
-            
+
             // Update file-related fields
             $validated = array_merge($validated, [
                 'original_name' => $file->getClientOriginalName(),
@@ -177,6 +180,9 @@ class DocumentController extends Controller
                 'file_size' => $file->getSize(),
                 'mime_type' => $file->getMimeType(),
                 'file_extension' => $extension,
+                'year' => (int) date('Y'),
+                'month' => (int) date('m'),
+                'module' => $moduleName,
             ]);
             
             unset($validated['file']);
@@ -475,6 +481,20 @@ class DocumentController extends Controller
         // Filter by module (documentable_type)
         if ($request->filled('module')) {
             $query->where('documentable_type', $request->module);
+        }
+
+        // Filter by module folder name (e.g. 'expensetransactions'), matching the storage path
+        if ($request->filled('module_name')) {
+            $query->where('module', $request->module_name);
+        }
+
+        // Filter by upload year / month
+        if ($request->filled('year')) {
+            $query->where('year', $request->year);
+        }
+
+        if ($request->filled('month')) {
+            $query->where('month', $request->month);
         }
         
         // Filter by specific model instance

@@ -151,6 +151,8 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
     Route::controller(BackupController::class)->prefix('backups')->name('backups.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/trigger', 'trigger')->name('trigger');
+        Route::post('/documents/trigger', 'triggerDocuments')->name('documents.trigger');
+        Route::get('/documents/status', 'documentBackupStatus')->name('documents.status');
         Route::get('/settings', 'getSettings')->name('settings');
         Route::put('/settings', 'updateSettings')->name('settings.update');
         Route::get('/schedule-status', 'scheduleStatus')->name('schedule.status');

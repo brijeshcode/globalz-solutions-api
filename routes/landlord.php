@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('cleanup-orphaned-files',         [CommandRunnerController::class, 'cleanupOrphanedFiles'])->name('cleanup-orphaned-files');
         Route::post('schedule-document-cleanup',      [CommandRunnerController::class, 'scheduleDocumentCleanup'])->name('schedule-document-cleanup');
         Route::post('backup-all-tenants',             [CommandRunnerController::class, 'backupAllTenants'])->name('backup-all-tenants');
+        Route::post('backup-documents-all-tenants',   [CommandRunnerController::class, 'backupDocumentsAllTenants'])->name('backup-documents-all-tenants');
         Route::post('backup-retention-cleanup',       [CommandRunnerController::class, 'backupRetentionCleanup'])->name('backup-retention-cleanup');
         Route::post('mirror-all-tenants',             [CommandRunnerController::class, 'mirrorAllTenants'])->name('mirror-all-tenants');
         Route::post('analyze-api-hits',               [CommandRunnerController::class, 'analyzeApiHits'])->name('analyze-api-hits');

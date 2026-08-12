@@ -29,6 +29,9 @@ class Document extends Model
         'description',
         'document_type',
         'folder',
+        'year',
+        'month',
+        'module',
         'tags',
         'sort_order',
         'is_public',
@@ -42,6 +45,8 @@ class Document extends Model
      */
     protected $casts = [
         'file_size' => 'integer',
+        'year' => 'integer',
+        'month' => 'integer',
         'sort_order' => 'integer',
         'is_public' => 'boolean',
         'is_featured' => 'boolean',
@@ -61,6 +66,32 @@ class Document extends Model
         'download_url',
         'preview_url'
     ];
+
+    /**
+     * Extract year, month and module from a stored document path.
+     * Path shape: documents/{tenant}/{year}/{month}/{module}/{filename}
+     * Reads the last four segments so it works with or without the tenant segment.
+     *
+     * @return array{year:int|null,month:int|null,module:string|null}
+     */
+    public static function pathParts(string $filePath): array
+    {
+        $parts = explode('/', trim($filePath, '/'));
+        $count = count($parts);
+
+        $year   = $parts[$count - 4] ?? null;
+        $month  = $parts[$count - 3] ?? null;
+        $module = $parts[$count - 2] ?? null;
+
+        $yearInt  = ($year !== null && ctype_digit($year)) ? (int) $year : null;
+        $monthInt = ($month !== null && ctype_digit($month) && (int) $month >= 1 && (int) $month <= 12) ? (int) $month : null;
+
+        return [
+            'year'   => $yearInt,
+            'month'  => $monthInt,
+            'module' => ($module !== null && $module !== '') ? $module : null,
+        ];
+    }
 
     /**
      * Get the parent documentable model.

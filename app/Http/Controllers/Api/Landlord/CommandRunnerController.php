@@ -143,6 +143,13 @@ class CommandRunnerController
         return ApiResponse::send(trim(Artisan::output()), 200);
     }
 
+    public function backupDocumentsAllTenants(): JsonResponse
+    {
+        Artisan::call('backup:documents-all-tenants');
+
+        return ApiResponse::send(trim(Artisan::output()), 200);
+    }
+
     public function backupRetentionCleanup(): JsonResponse
     {
         Artisan::call('backup:retention-cleanup');

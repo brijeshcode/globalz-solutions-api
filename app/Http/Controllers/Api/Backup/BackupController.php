@@ -6,9 +6,12 @@ use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\BackupLog;
+use App\Models\Document;
+use App\Models\DocumentBackup;
 use App\Services\Backup\BackupRetentionService;
 use App\Services\Backup\BackupService;
 use App\Services\Backup\BackupStorageService;
+use App\Services\Backup\DocumentBackupService;
 use App\Models\Setting;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
@@ -95,6 +98,69 @@ class BackupController extends Controller
     }
 
     /**
+     * Trigger a document/file backup for the current tenant.
+     * Streams every not-yet-backed-up document file to each configured remote driver.
+     * Remote-only: no local copy is made (files already live on the public disk).
+     */
+    public function triggerDocuments(DocumentBackupService $service, BackupStorageService $storageService): JsonResponse
+    {
+        $tenant = Tenant::current();
+
+        if (!$tenant) {
+            return ApiResponse::customError('No active tenant found', 400);
+        }
+
+        $drivers = $storageService->getConfiguredRemoteDrivers($tenant);
+
+        if (empty($drivers)) {
+            return ApiResponse::customError('No remote storage drivers configured. Document backup needs at least one of: s3, ftp, dropbox.', 400);
+        }
+
+        $results = [];
+        foreach ($drivers as $disk) {
+            $results[] = $service->run($tenant, $disk);
+        }
+
+        return ApiResponse::show('Document backup completed', $results);
+    }
+
+    /**
+     * Per-disk document backup status for the current tenant, read from the ledger.
+     * Shows how many document files are backed up / failed / still pending on each
+     * configured remote driver, and when the last successful copy happened.
+     */
+    public function documentBackupStatus(BackupStorageService $storageService): JsonResponse
+    {
+        $tenant = Tenant::current();
+
+        if (!$tenant) {
+            return ApiResponse::customError('No active tenant found', 400);
+        }
+
+        $drivers = $storageService->getConfiguredRemoteDrivers($tenant);
+        $total   = Document::withTrashed()->count();
+
+        $status = [];
+        foreach ($drivers as $disk) {
+            $backedUp = DocumentBackup::where('disk', $disk)->where('status', DocumentBackup::STATUS_SUCCESS)->count();
+            $failed   = DocumentBackup::where('disk', $disk)->where('status', DocumentBackup::STATUS_FAILED)->count();
+
+            $status[] = [
+                'disk'              => $disk,
+                'documents_total'   => $total,
+                'backed_up'         => $backedUp,
+                'failed'            => $failed,
+                'pending'           => max($total - $backedUp, 0),
+                'last_backed_up_at' => DocumentBackup::where('disk', $disk)
+                    ->where('status', DocumentBackup::STATUS_SUCCESS)
+                    ->max('backed_up_at'),
+            ];
+        }
+
+        return ApiResponse::show('Document backup status retrieved successfully', $status);
+    }
+
+    /**
      * Download a backup file by its log ID.
      */
     public function download(int $id): BinaryFileResponse|JsonResponse
@@ -171,6 +237,8 @@ class BackupController extends Controller
             'retention_value'    => (int) Setting::get('backup', 'retention_value', 60, false, Setting::TYPE_NUMBER),
             // Retention — per disk (null type/value means falls back to global)
             'retention_per_disk' => $retentionPerDisk,
+            // Document backup — how long failed ledger rows are kept before pruning
+            'document_failed_retention_days' => (int) Setting::get('backup', 'document_failed_retention_days', 365, false, Setting::TYPE_NUMBER),
             // Delete protection — global and per disk
             'delete_protected'          => (bool) Setting::get('backup', 'delete_protected', false, false, Setting::TYPE_BOOLEAN),
             'delete_protected_per_disk' => collect(BackupRetentionService::KNOWN_DISKS)
@@ -208,6 +276,8 @@ class BackupController extends Controller
             // Retention — global fallback
             'retention_type'  => 'sometimes|string|in:by_count,by_days',
             'retention_value' => 'sometimes|integer|min:1|max:9999',
+            // Document backup — failed-row retention (days)
+            'document_failed_retention_days' => 'sometimes|integer|min:1|max:3650',
             // Retention — per disk
             'retention_per_disk'              => 'sometimes|array',
             'retention_per_disk.*.enabled'    => 'sometimes|boolean',
@@ -261,6 +331,10 @@ class BackupController extends Controller
 
         if ($request->has('retention_value')) {
             Setting::set('backup', 'retention_value', $request->retention_value, Setting::TYPE_NUMBER, 'Number of backups to keep (by_count) or days to retain (by_days)');
+        }
+
+        if ($request->has('document_failed_retention_days')) {
+            Setting::set('backup', 'document_failed_retention_days', $request->document_failed_retention_days, Setting::TYPE_NUMBER, 'Days to keep failed document-backup ledger rows before pruning');
         }
 
         if ($request->has('delete_protected')) {

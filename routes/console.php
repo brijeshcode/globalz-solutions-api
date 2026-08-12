@@ -1,8 +1,10 @@
 <?php
 
 use App\Console\Commands\BackupAllTenantsCommand;
+use App\Console\Commands\BackupDocumentsAllTenantsCommand;
 use App\Console\Commands\BackupRetentionCleanupCommand;
 use App\Console\Commands\MirrorAllTenantsCommand;
+use App\Console\Commands\PruneFailedDocumentBackupsCommand;
 use App\Jobs\RecalculateAllSalesProfitJob;
 use App\Models\Tenant;
 use Illuminate\Foundation\Inspiring;
@@ -99,6 +101,20 @@ Schedule::command(BackupAllTenantsCommand::class)
 Schedule::command(BackupRetentionCleanupCommand::class)
     ->hourlyAt(30)
     ->name('backup-retention-cleanup')
+    ->withoutOverlapping();
+
+// Document/file backup — incremental push of new files to configured remote drivers.
+// Cheap (only new files move), so hourly is fine.
+Schedule::command(BackupDocumentsAllTenantsCommand::class)
+    ->hourlyAt(45)
+    ->name('backup-documents-all-tenants')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Trim stale FAILED document-backup ledger rows (retention configurable per tenant).
+Schedule::command(PruneFailedDocumentBackupsCommand::class)
+    ->daily()
+    ->name('prune-failed-document-backups')
     ->withoutOverlapping();
 
 // ── Mirror ─────────────────────────────────────────────────────────────────────

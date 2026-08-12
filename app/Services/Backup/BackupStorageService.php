@@ -88,7 +88,7 @@ class BackupStorageService
     /**
      * Build an on-the-fly filesystem disk from tenant settings.
      */
-    protected function buildDisk(Tenant $tenant, string $driver): \Illuminate\Contracts\Filesystem\Filesystem
+    public function buildDisk(Tenant $tenant, string $driver): \Illuminate\Contracts\Filesystem\Filesystem
     {
         $tenant->makeCurrent();
 
