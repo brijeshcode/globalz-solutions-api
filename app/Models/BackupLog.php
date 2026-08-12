@@ -10,12 +10,10 @@ class BackupLog extends Model
     use Authorable;
 
     /**
-     * Use the landlord connection — backup_logs lives in the landlord DB,
-     * not in tenant DBs. This ensures records survive even if a tenant DB
-     * is corrupted, and lets super admin view all tenants from one table.
+     * backup_logs lives in the TENANT DB (not landlord) so a tenant's database
+     * dump + files form a self-contained, portable backup. Resolves to the tenant
+     * connection because it is the default connection when a tenant is current.
      */
-    protected $connection = 'mysql';
-
     protected $fillable = [
         'tenant_id',
         'tenant_key',

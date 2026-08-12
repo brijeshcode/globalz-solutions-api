@@ -37,7 +37,7 @@ class BackupRetentionService
         $globalType  = Setting::get('backup', 'retention_type',  'by_count', false, Setting::TYPE_STRING);
         $globalValue = (int) Setting::get('backup', 'retention_value', 60, false, Setting::TYPE_NUMBER);
 
-        $disks = BackupLog::on('mysql')
+        $disks = BackupLog::query()
             ->forTenant($tenantId)
             ->successful()
             ->distinct()
@@ -73,7 +73,7 @@ class BackupRetentionService
     {
         $keep = max($keep, self::MIN_KEEP);
 
-        $keepIds = BackupLog::on('mysql')
+        $keepIds = BackupLog::query()
             ->forTenant($tenantId)
             ->successful()
             ->where('disk', $disk)
@@ -81,7 +81,7 @@ class BackupRetentionService
             ->limit($keep)
             ->pluck('id');
 
-        $toDelete = BackupLog::on('mysql')
+        $toDelete = BackupLog::query()
             ->forTenant($tenantId)
             ->successful()
             ->where('disk', $disk)
@@ -101,7 +101,7 @@ class BackupRetentionService
     {
         $cutoff = now()->subDays($days);
 
-        $safeIds = BackupLog::on('mysql')
+        $safeIds = BackupLog::query()
             ->forTenant($tenantId)
             ->successful()
             ->where('disk', $disk)
@@ -109,7 +109,7 @@ class BackupRetentionService
             ->limit(self::MIN_KEEP)
             ->pluck('id');
 
-        $toDelete = BackupLog::on('mysql')
+        $toDelete = BackupLog::query()
             ->forTenant($tenantId)
             ->successful()
             ->where('disk', $disk)

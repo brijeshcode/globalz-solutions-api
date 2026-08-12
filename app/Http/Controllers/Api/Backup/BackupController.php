@@ -40,7 +40,7 @@ class BackupController extends Controller
             return ApiResponse::customError('No active tenant found', 400);
         }
 
-        $query = BackupLog::on('mysql')->forTenant($tenant->id)->latest();
+        $query = BackupLog::query()->forTenant($tenant->id)->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -166,7 +166,7 @@ class BackupController extends Controller
     public function download(int $id): BinaryFileResponse|JsonResponse
     {
         $tenant = Tenant::current();
-        $log    = BackupLog::on('mysql')->forTenant($tenant->id)->findOrFail($id);
+        $log    = BackupLog::query()->forTenant($tenant->id)->findOrFail($id);
 
         if (!Storage::disk('backup')->exists($log->file_path)) {
             return ApiResponse::notFound('Backup file not found on disk');
@@ -188,7 +188,7 @@ class BackupController extends Controller
         }
 
         $tenant = Tenant::current();
-        $log    = BackupLog::on('mysql')->forTenant($tenant->id)->findOrFail($id);
+        $log    = BackupLog::query()->forTenant($tenant->id)->findOrFail($id);
 
         if ((bool) Setting::get('backup', "delete_protected_{$log->disk}", false, false, Setting::TYPE_BOOLEAN)) {
             return ApiResponse::customError("Manual deletion is disabled for {$log->disk} backups.", 403);
@@ -421,7 +421,7 @@ class BackupController extends Controller
             ];
         }
 
-        $lastBackup = BackupLog::on('mysql')
+        $lastBackup = BackupLog::query()
             ->forTenant($tenant->id)
             ->successful()
             ->latest()

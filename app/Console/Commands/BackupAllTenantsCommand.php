@@ -56,7 +56,7 @@ class BackupAllTenantsCommand extends Command
         $preferredHour   = (int)  Setting::get('backup', 'preferred_hour',   2,    false, Setting::TYPE_NUMBER);
         $skipIfUnchanged = (bool) Setting::get('backup', 'skip_if_unchanged', true, false, Setting::TYPE_BOOLEAN);
 
-        $lastBackup = BackupLog::on('mysql')
+        $lastBackup = BackupLog::query()
             ->forTenant($tenant->id)
             ->successful()
             ->latest()
