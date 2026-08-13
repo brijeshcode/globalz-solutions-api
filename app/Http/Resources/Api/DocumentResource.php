@@ -26,7 +26,8 @@ class DocumentResource extends JsonResource
             'thumbnail_url' => $this->thumbnail_url,
             'download_url' => $this->download_url,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
-
+            'preview_url' => $this->preview_url,
+            
             // Polymorphic relationship info
             'documentable' => [
                 'type' => $this->documentable_type,

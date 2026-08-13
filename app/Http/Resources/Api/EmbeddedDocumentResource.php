@@ -31,6 +31,7 @@ class EmbeddedDocumentResource extends JsonResource
             'file_size_human' => $this->file_size_human,
             'thumbnail_url' => $this->thumbnail_url,
             'download_url' => $this->download_url,
+            'preview_url' => $this->preview_url,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
  
         ];
