@@ -19,7 +19,14 @@ class DocumentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            
+            'original_name' => $this->original_name,
+            'file_extension' => $this->file_extension,
+            'title' => $this->title,
+            'file_size_human' => $this->file_size_human,
+            'thumbnail_url' => $this->thumbnail_url,
+            'download_url' => $this->download_url,
+            'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
+
             // Polymorphic relationship info
             'documentable' => [
                 'type' => $this->documentable_type,
