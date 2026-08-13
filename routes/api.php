@@ -114,8 +114,17 @@ Route::get('/', function () {
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public routes (no authentication required)
+// Signed URL — must stay stateless. Skipping session middleware avoids every
+// thumbnail <img> request writing the same shared session row, which serialized
+// and failed once a page held more than ~10 documents. The tenant is still
+// resolved from the signature-protected `tenant` query param (see OriginTenantFinder).
 Route::get('/documents/{document}/preview-signed', [DocumentController::class, 'previewSigned'])
-    ->name('documents.preview-signed');
+    ->name('documents.preview-signed')
+    ->withoutMiddleware([
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+    ]);
 
 // Tenant Details - Public endpoint for login page branding
 Route::get('/tenant-details', [CompanyController::class, 'getTenantDetails'])
