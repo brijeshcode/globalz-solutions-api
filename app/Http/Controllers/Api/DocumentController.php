@@ -41,7 +41,7 @@ class DocumentController extends Controller
         $query->orderBy($sortBy, $sortDirection);
 
         // Paginate results
-        $perPage = $request->get('per_page', 20);
+        $perPage = $request->get('per_page', 10);
         $documents = $query->paginate($perPage);
 
         return ApiResponse::paginated(
