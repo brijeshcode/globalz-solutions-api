@@ -42,7 +42,7 @@ class DocumentController extends Controller
 
         // Paginate results
         $perPage = $request->get('per_page', 10);
-        $documents = $query->paginate($perPage);
+        $documents = $query->paginate(10);
 
         return ApiResponse::paginated(
             'Documents retrieved successfully',
