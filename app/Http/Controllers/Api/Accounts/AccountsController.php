@@ -28,7 +28,8 @@ class AccountsController extends Controller
         return ApiResponse::paginated(
             'Accounts retrieved successfully',
             $accounts,
-            AccountResource::class
+            AccountResource::class,
+            $this->buildStats($request)
         );
     }
 
@@ -165,20 +166,22 @@ class AccountsController extends Controller
 
     public function stats(Request $request): JsonResponse
     {
+        return ApiResponse::show('Account statistics retrieved successfully', $this->buildStats($request));
+    }
+
+    private function buildStats(Request $request): array
+    {
         $accounts = (clone $this->query($request))->with('currency:id,code')->get();
         $isMultiCurrencyEnabled = TenantFeature::isEnabled('multi_currency');
 
         $privateAccounts    = $accounts->where('is_private', true);
         $nonPrivateAccounts = $accounts->where('is_private', false);
 
-        $stats = [
-            'total_accounts'            => $nonPrivateAccounts->count(),
+        return [
             'total_current_balance_usd' => round($this->sumBalanceInUsd($nonPrivateAccounts->where('include_in_total', true), $isMultiCurrencyEnabled), 2),
-            'total_private_accounts'    => $privateAccounts->count(),
+            // 'total_private_accounts'    => $privateAccounts->count(),
             'total_private_balance_usd' => round($this->sumBalanceInUsd($privateAccounts->where('include_in_total', true), $isMultiCurrencyEnabled), 2),
         ];
-
-        return ApiResponse::show('Account statistics retrieved successfully', $stats);
     }
 
     private function sumBalanceInUsd($accounts, bool $convertCurrency): float
