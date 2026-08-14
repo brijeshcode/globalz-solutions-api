@@ -48,6 +48,43 @@ class EmployeeStatmentsController extends Controller
         );
     }
 
+    public function myStatements(Request $request): JsonResponse
+    {
+        $employee = $request->user()?->employee;
+
+        if (!$employee) {
+            return ApiResponse::notFound('No employee record is linked to your account');
+        }
+
+        $search = $request->get('search');
+
+        $allTransactions = $this->getTransactions($request, $employee, $search);
+        $stats = $this->calculateStats($allTransactions);
+        $this->canUpdateBalance($request, $employee, $stats['balance']);
+
+        if ($request->boolean('withPage')) {
+            $paginatedTransactions = DataHelper::customPaginate(
+                $allTransactions,
+                $this->getPerPage($request),
+                $request->get('page', 1),
+                $request
+            );
+
+            return ApiResponse::paginated(
+                'Your statement retrieved successfully',
+                $paginatedTransactions,
+                null,
+                $stats
+            );
+        }
+
+        return ApiResponse::index(
+            'Your statement retrieved successfully',
+            $allTransactions,
+            $stats
+        );
+    }
+
     public function statements(Request $request): JsonResponse
     {
         $employeeSearch = $request->get('employee');

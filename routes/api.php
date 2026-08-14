@@ -265,6 +265,7 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
     // Employee Statements Controller
     Route::controller(EmployeeStatmentsController::class)->prefix('employee-statements')->name('employee-statements.')->group(function () {
         Route::get('/', 'statements')->name('index');
+        Route::get('my-statement', 'myStatements')->name('my');
         Route::get('{employee}', 'employeeStatements')->name('employee');
     });
 
