@@ -141,8 +141,8 @@ class CustomersController extends Controller
     public function show(Request $request, Customer $customer): JsonResponse
     {
         $customer->load([
-            // 'parent:id,code,name',
-            // 'children:id,code,name,current_balance',
+            'parent:id,code,name,current_balance',
+            'children:id,parent_id,code,name,current_balance,is_active',
             'priceListINV:id,code,description',
             'priceListINX:id,code,description',
             'customerType:id,name',

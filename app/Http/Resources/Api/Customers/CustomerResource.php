@@ -33,6 +33,7 @@ class CustomerResource extends JsonResource
                     'id' => $this->parent->id,
                     'code' => $this->parent->code,
                     'name' => $this->parent->name,
+                    'current_balance' => $this->parent->current_balance ? (float) $this->parent->current_balance : 0,
                 ] : null;
             }),
             'children' => $this->whenLoaded('children', function () {
@@ -142,7 +143,7 @@ class CustomerResource extends JsonResource
 
             // Computed Properties
             'has_parent' => $this->hasParent(),
-            'has_children' => $this->hasChildren(),
+            'has_children' => $this->relationLoaded('children') ? $this->children->isNotEmpty() : $this->hasChildren(),
             'is_over_credit_limit' => $this->isOverCreditLimit(),
             'sales_count' => $this->sales_count ?? 0,
             'payment_count' => $this->customer_payments_count ?? $this->payment_count ?? 0,
