@@ -496,13 +496,8 @@ class PurchasesController extends Controller
         $query = $this->purchaseQuery($request);
 
         $stats = [
-            'purchase_by_status' => (clone $query)->selectRaw('status, count(*) as count')
-                ->groupBy('status')
-                ->get()
-                ->mapWithKeys(function ($item) {
-                    return [$item->status => $item->count];
-                }),
             'total_purchase' => (clone $query)->sum('final_total_usd'),
+            'tax_usd' => (clone $query)->sum('tax_usd'),
         ];
 
         return ApiResponse::show('Sale statistics retrieved successfully', $stats);

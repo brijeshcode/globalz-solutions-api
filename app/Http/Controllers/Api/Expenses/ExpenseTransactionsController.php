@@ -503,6 +503,7 @@ class ExpenseTransactionsController extends Controller
         $stats = [
             'total_transactions'      => (clone $query)->count(),
             'total_amount_usd'        => (clone $query)->selectRaw('COALESCE(SUM(amount_usd + vat_amount_usd), 0) as total')->value('total'),
+            'total_vat_amount_usd'    => (clone $query)->selectRaw('COALESCE(SUM(vat_amount_usd), 0) as total')->value('total'),
             'this_month_transactions' => (clone $query)->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
                 ->count(),

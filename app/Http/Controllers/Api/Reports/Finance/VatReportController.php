@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Reports\Finance;
 
+use App\Helpers\CurrencyHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerReturn;
@@ -9,6 +10,7 @@ use App\Models\Customers\CustomerReturnItem;
 use App\Models\Customers\Sale;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Suppliers\Purchase;
+use App\Services\Currency\CurrencyService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -126,17 +128,43 @@ class VatReportController extends Controller
         // vat difference (net vat collected - all vat paid)
         $vatDifference = $netVatSales - $vatExpenseTotal - $expenseVatTotal - $vatPurchaseTotal;
 
+        // Local-currency equivalents of the USD figures above.
+        // Conversion uses the tenant's CURRENT active rate (there is no per-period
+        // rate snapshot), so `*_local` figures apply today's rate to the period's
+        // USD totals. In single-currency mode CurrencyHelper::fromUsd() returns the
+        // amount as-is, so `*_local` mirrors the USD value.
+        $localCurrency   = CurrencyService::getLocalCurrency();
+        $localCurrencyId = $localCurrency?->id;
+        $toLocal = fn(float $usd): float => round(
+            $localCurrencyId ? CurrencyHelper::fromUsd($localCurrencyId, $usd) : $usd,
+            2
+        );
+
         return [
-            'total_sales'        => round($totalSales, 2),
-            'total_returns'      => round($totalReturns, 2),
-            'net_sales'          => round($netSales, 2),
-            'vat_sales_total'    => round($vatSalesTotal, 2),
-            'vat_return_total'   => round($vatReturnTotal, 2),
-            'net_vat_sales'      => round($netVatSales, 2),
-            'vat_expense_total'  => round($vatExpenseTotal, 2),
-            'expense_vat_total'  => round($expenseVatTotal, 2),
-            'vat_purchase_total' => round($vatPurchaseTotal, 2),
-            'vat_difference'     => round($vatDifference, 2),
+            'total_sales'              => round($totalSales, 2),
+            'total_sales_local'        => $toLocal($totalSales),
+            'total_returns'            => round($totalReturns, 2),
+            'total_returns_local'      => $toLocal($totalReturns),
+            'net_sales'                => round($netSales, 2),
+            'net_sales_local'          => $toLocal($netSales),
+            'vat_sales_total'          => round($vatSalesTotal, 2),
+            'vat_sales_total_local'    => $toLocal($vatSalesTotal),
+            'vat_return_total'         => round($vatReturnTotal, 2),
+            'vat_return_total_local'   => $toLocal($vatReturnTotal),
+            'net_vat_sales'            => round($netVatSales, 2),
+            'net_vat_sales_local'      => $toLocal($netVatSales),
+            'vat_expense_total'        => round($vatExpenseTotal, 2),
+            'vat_expense_total_local'  => $toLocal($vatExpenseTotal),
+            'expense_vat_total'        => round($expenseVatTotal, 2),
+            'expense_vat_total_local'  => $toLocal($expenseVatTotal),
+            'vat_purchase_total'       => round($vatPurchaseTotal, 2),
+            'vat_purchase_total_local' => $toLocal($vatPurchaseTotal),
+            'vat_difference'           => round($vatDifference, 2),
+            'vat_difference_local'     => $toLocal($vatDifference),
+            'local_currency'           => $localCurrency ? [
+                'code'   => $localCurrency->code,
+                'symbol' => $localCurrency->symbol,
+            ] : null,
         ];
     }
 }
