@@ -542,8 +542,11 @@ class ExpenseTransactionsController extends Controller
             ->when($request->has('account_id'),          fn($q) => $q->where('account_id', $request->input('account_id')))
             ->when($request->has('expense_category_id'), fn($q) => $q->where('expense_category_id', $request->input('expense_category_id')))
             ->when($request->has('is_vat_category'),      fn($q) => $q->whereHas('expenseCategory', fn($c) => $c->where('is_vat_category', $request->boolean('is_vat_category'))))
+            ->when($request->input('profit_filter') === 'excluded', fn($q) => $q->whereHas('expenseCategory', fn($c) => $c->where('exclude_from_profit', true)))
+            ->when($request->input('profit_filter') === 'included', fn($q) => $q->whereDoesntHave('expenseCategory', fn($c) => $c->where('exclude_from_profit', true)))
             ->when($request->has('date_from'),           fn($q) => $q->fromDate($request->input('date_from')))
             ->when($request->has('date_to'),             fn($q) => $q->toDate($request->input('date_to')))
+            ->when($request->filled('expense_month'),    fn($q) => $q->where('expense_month', \Carbon\Carbon::parse($request->input('expense_month'))->startOfMonth()->toDateString()))
             ->selectRaw('expense_category_id, COUNT(*) as transactions_count, COALESCE(SUM(amount_usd + vat_amount_usd), 0) as sum_amount_usd, COALESCE(SUM(paid_amount_usd), 0) as sum_paid_usd')
             ->groupBy('expense_category_id')
             ->get()
@@ -642,16 +645,32 @@ class ExpenseTransactionsController extends Controller
             $query->whereHas('expenseCategory', fn($q) => $q->where('is_vat_category', $isVatCategory));
         }
 
+        // profit_filter: 'excluded' = only categories explicitly excluded from profit;
+        // 'included' = everything that counts toward profit (no category, or a category
+        // whose exclude_from_profit is false/NULL) — mirrors ProfitReportService.
+        // Anything else (or absent) = all.
+        if ($request->input('profit_filter') === 'excluded') {
+            $query->whereHas('expenseCategory', fn($q) => $q->where('exclude_from_profit', true));
+        } elseif ($request->input('profit_filter') === 'included') {
+            $query->whereDoesntHave('expenseCategory', fn($q) => $q->where('exclude_from_profit', true));
+        }
+
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->byDateRange($request->input('start_date'), $request->input('end_date'));
         }
 
         if ($request->has('date_from')) {
             $query->fromDate($request->date_from);
-        } 
-        
+        }
+
         if ($request->has('date_to')) {
             $query->toDate($request->date_to);
+        }
+
+        // Filter by expense_month (the month the expense is attributed to). Use this to
+        // reconcile with the Monthly Profit report, which buckets by expense_month.
+        if ($request->filled('expense_month')) {
+            $query->where('expense_month', \Carbon\Carbon::parse($request->input('expense_month'))->startOfMonth()->toDateString());
         }
 
         if ($request->has('min_amount')) {
