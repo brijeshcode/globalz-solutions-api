@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api\Suppliers;
 
 use App\Http\Resources\Api\EmbeddedDocumentResource;
 use Illuminate\Http\Request;
+use App\Helpers\FeatureHelper;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -15,6 +16,7 @@ class SupplierPaymentResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'is_synced_to_old' => $this->when(FeatureHelper::isSyncin(), fn () => $this->is_synced_to_old),
             'date' => $this->date,
             'prefix' => $this->prefix,
             'code' => $this->code,

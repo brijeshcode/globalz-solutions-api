@@ -11,6 +11,7 @@ use App\Models\Setups\Warehouse;
 use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasDateFilters;
+use App\Traits\SyncableToOld;
 use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
@@ -24,7 +25,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CustomerReturn extends Model implements ModuleLockable
 {
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters, SyncableToOld;
 
     public const TAXPREFIX = 'RTN';
     public const TAXFREEPREFIX = 'RTX';

@@ -21,6 +21,7 @@ use App\Traits\TracksActivity;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
+use App\Traits\SyncableToOld;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -40,7 +41,7 @@ class Sale extends Model implements ModuleLockable
 
     public const STATUS_WAITING = 'Waiting';
 
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters, SyncableToOld;
 
     protected $fillable = [
         'code',

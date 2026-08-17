@@ -9,6 +9,7 @@ use Carbon\CarbonInterface;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
 use App\Traits\HasDateFilters;
+use App\Traits\SyncableToOld;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CustomerCreditDebitNote extends Model implements ModuleLockable
 {
-    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters;
+    use HasFactory, SoftDeletes, Authorable, HasDateWithTime, Searchable, Sortable, TracksActivity, HasDateFilters, SyncableToOld;
     
     public const CREDITTAXPREFIX = 'CRN';
     public const CREDITTAXFREEPREFIX = 'CRX';

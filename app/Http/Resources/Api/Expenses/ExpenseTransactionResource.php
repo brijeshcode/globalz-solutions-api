@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api\Expenses;
 
 use App\Http\Resources\Api\EmbeddedDocumentResource;
 use Illuminate\Http\Request;
+use App\Helpers\FeatureHelper;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -20,6 +21,7 @@ class ExpenseTransactionResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'is_synced_to_old' => $this->when(FeatureHelper::isSyncin(), fn () => $this->is_synced_to_old),
             'date' => $this->date->format('Y-m-d'),
             'expense_month' => $this->expense_month?->format('Y-m'),
             'code' => $this->code,

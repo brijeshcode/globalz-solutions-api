@@ -80,6 +80,7 @@ class FeatureController extends Controller
         ['key' => 'tax_codes',                 'name' => 'Tax Codes',                   'description' => 'Manage tax codes and apply them to invoices.'],
         ['key' => 'database_mirror',           'name' => 'Database Mirror',             'description' => 'Mirror tenant database to a remote MySQL server automatically every 30 minutes or on demand.'],
         ['key' => 'bug_lock',                  'name' => 'Bug Lock',                    'description' => 'Allow admins to temporarily lock the system with a maintenance error message, blocking all non-login requests.'],
+        ['key' => 'syncin_old_local_system',   'name' => 'Sync-in Flag',                'description' => "Per-record checkbox to mark transactions already copied into the client's legacy system. Tenant admin also toggles it via settings."],
     ];
 
     public function seedDefaultFeatures(): JsonResponse

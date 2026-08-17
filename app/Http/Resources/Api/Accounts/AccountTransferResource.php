@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\Accounts;
 
 use Illuminate\Http\Request;
+use App\Helpers\FeatureHelper;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -19,6 +20,7 @@ class AccountTransferResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'is_synced_to_old' => $this->when(FeatureHelper::isSyncin(), fn () => $this->is_synced_to_old),
             'date' => $this->date->format('Y-m-d H:i:s'),
             'code' => $this->code,
             'prefix' => $this->prefix,

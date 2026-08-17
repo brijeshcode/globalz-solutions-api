@@ -82,4 +82,14 @@ class FeatureHelper {
     {
         return self::isEnabled('proforma_invoice');
     }
+
+    /**
+     * Syncin ("copied to legacy system") is on only when both the landlord
+     * feature flag is enabled AND the tenant admin has toggled it on in
+     * their own settings.
+     */
+    public static function isSyncin(): bool
+    {
+        return self::isEnabled('syncin_old_local_system') && SettingsHelper::isFeatureEnabled('syncin_old_local_system');
+    }
 }

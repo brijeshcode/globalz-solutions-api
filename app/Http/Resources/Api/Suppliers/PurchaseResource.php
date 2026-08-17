@@ -5,6 +5,7 @@ namespace App\Http\Resources\Api\Suppliers;
 use App\Http\Resources\Api\EmbeddedDocumentResource;
 use App\Models\Suppliers\PurchaseExpense;
 use Illuminate\Http\Request;
+use App\Helpers\FeatureHelper;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -21,6 +22,7 @@ class PurchaseResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'is_synced_to_old' => $this->when(FeatureHelper::isSyncin(), fn () => $this->is_synced_to_old),
             'code' => $this->code,
             'prefix' => $this->prefix,
             'date' => $this->date->format('Y-m-d'),

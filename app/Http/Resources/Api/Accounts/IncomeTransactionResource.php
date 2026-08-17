@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api\Accounts;
 
 use App\Http\Resources\Api\EmbeddedDocumentResource;
 use Illuminate\Http\Request;
+use App\Helpers\FeatureHelper;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -20,6 +21,7 @@ class IncomeTransactionResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'is_synced_to_old' => $this->when(FeatureHelper::isSyncin(), fn () => $this->is_synced_to_old),
             'date' => $this->date->format('Y-m-d'),
             'code' => $this->code,
             'subject' => $this->subject,

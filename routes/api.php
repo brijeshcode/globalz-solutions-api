@@ -95,6 +95,8 @@ use App\Http\Controllers\Api\Settings\Items\ItemCatalogSettingsController;
 use App\Http\Controllers\Api\Settings\ModuleLockSettingsController;
 use App\Http\Controllers\Api\Settings\SaleSettingsController;
 use App\Http\Controllers\Api\Settings\SettingsController;
+use App\Http\Controllers\Api\Settings\SyncinSettingsController;
+use App\Http\Controllers\Api\SyncinController;
 use App\Http\Controllers\Api\Backup\BackupController;
 use App\Http\Controllers\Api\Mirror\MirrorController;
 use Illuminate\Support\Facades\Route;
@@ -168,6 +170,9 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
         Route::get('/{id}/download', 'download')->name('download');
         Route::delete('/{id}', 'destroy')->name('destroy');
     });
+
+    // Sync-in flag: mark transactions as copied to the client's legacy system
+    Route::patch('syncin', [SyncinController::class, 'update'])->name('syncin.update')->middleware('feature:syncin_old_local_system');
 
     // Database Mirror
     Route::controller(MirrorController::class)->prefix('mirrors')->name('mirrors.')->middleware('feature:database_mirror')->group(function () {
@@ -1242,6 +1247,12 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::get('/', [ModuleLockSettingsController::class, 'get'])->name('get');
             Route::put('/', [ModuleLockSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [ModuleLockSettingsController::class, 'reset'])->name('reset');
+        });
+
+        // Sync-in Settings (tenant-level toggle for the syncin feature)
+        Route::prefix('syncin')->name('settings.syncin.')->middleware('feature:syncin_old_local_system')->group(function () {
+            Route::get('/', [SyncinSettingsController::class, 'get'])->name('get');
+            Route::put('/', [SyncinSettingsController::class, 'update'])->name('update');
         });
 
         // Employee Settings

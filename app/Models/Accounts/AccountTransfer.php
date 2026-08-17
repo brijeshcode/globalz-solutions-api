@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDateFilters;
+use App\Traits\SyncableToOld;
 use App\Traits\HasDateWithTime;
 use App\Traits\Searchable;
 use App\Traits\Sortable;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AccountTransfer extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, Searchable, Sortable, HasDateFilters;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, Searchable, Sortable, HasDateFilters, SyncableToOld;
 
     protected $fillable = [
         'date',

@@ -10,6 +10,7 @@ use App\Models\Setups\Warehouse;
 use App\Traits\Authorable;
 use App\Traits\HasBooleanFilters;
 use App\Traits\HasDateFilters;
+use App\Traits\SyncableToOld;
 use App\Traits\HasDateWithTime;
 use App\Traits\HasDocuments;
 use App\Traits\Searchable;
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PurchaseReturn extends Model
 {
-    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, HasDocuments, Searchable, Sortable, HasDateFilters;
+    use HasFactory, SoftDeletes, Authorable, HasBooleanFilters, HasDateWithTime, HasDocuments, Searchable, Sortable, HasDateFilters, SyncableToOld;
     public const STATUS_WAITING = 'Waiting';
 
     protected $fillable = [
