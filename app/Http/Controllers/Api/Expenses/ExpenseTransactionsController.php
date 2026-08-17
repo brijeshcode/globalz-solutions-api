@@ -541,6 +541,7 @@ class ExpenseTransactionsController extends Controller
             ->searchable($request)
             ->when($request->has('account_id'),          fn($q) => $q->where('account_id', $request->input('account_id')))
             ->when($request->has('expense_category_id'), fn($q) => $q->where('expense_category_id', $request->input('expense_category_id')))
+            ->when($request->has('is_vat_category'),      fn($q) => $q->whereHas('expenseCategory', fn($c) => $c->where('is_vat_category', $request->boolean('is_vat_category'))))
             ->when($request->has('date_from'),           fn($q) => $q->fromDate($request->input('date_from')))
             ->when($request->has('date_to'),             fn($q) => $q->toDate($request->input('date_to')))
             ->selectRaw('expense_category_id, COUNT(*) as transactions_count, COALESCE(SUM(amount_usd + vat_amount_usd), 0) as sum_amount_usd, COALESCE(SUM(paid_amount_usd), 0) as sum_paid_usd')
@@ -634,6 +635,11 @@ class ExpenseTransactionsController extends Controller
 
         if ($request->has('account_id')) {
             $query->where('account_id', $request->input('account_id'));
+        }
+
+        if ($request->has('is_vat_category')) {
+            $isVatCategory = $request->boolean('is_vat_category');
+            $query->whereHas('expenseCategory', fn($q) => $q->where('is_vat_category', $isVatCategory));
         }
 
         if ($request->has('start_date') && $request->has('end_date')) {
