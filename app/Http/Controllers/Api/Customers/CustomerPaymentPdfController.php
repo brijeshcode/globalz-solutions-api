@@ -29,7 +29,13 @@ class CustomerPaymentPdfController extends Controller
                 'company' => $companyData,
             ];
 
-            $html = view('pdfs.customer-payment-receipt', $data)->render();
+            // RCT = tax receipt, RCX = tax-free receipt; each has its own blade.
+            $isTax = $customerPayment->prefix === 'RCT';
+            $view = $isTax
+                ? 'pdfs.customer-payments.tax-receipt'
+                : 'pdfs.customer-payments.non-tax-receipt';
+
+            $html = view($view, $data)->render();
 
             $mpdf = new Mpdf([
                 'mode'          => 'utf-8',
@@ -45,8 +51,6 @@ class CustomerPaymentPdfController extends Controller
             $paymentCode = $customerPayment->prefix . '-' . $customerPayment->code;
 
             // Company contact line only appears on tax receipts (RCT); tax-free (RCX) omits it.
-            $isTax = $customerPayment->prefix === 'RCT';
-
             $companyFooterParts = [];
             if ($isTax) {
                 if (!empty($companyData['address'])) $companyFooterParts[] = $companyData['address'];
@@ -75,7 +79,9 @@ class CustomerPaymentPdfController extends Controller
                 $footerHtml = $pageNumberRowHtml;
             }
 
-            $mpdf->SetHTMLFooter($footerHtml);
+            if( $isTax){
+                $mpdf->SetHTMLFooter($footerHtml);
+            }
             $mpdf->WriteHTML($html);
 
             $filename = 'payment-' . $paymentCode . '-' . date('Y-m-d_H-i') . '.pdf';

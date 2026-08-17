@@ -116,7 +116,6 @@
 <body>
 
     @php
-        $isTax = $payment->prefix === 'RCT';
         $currency = $payment->currency;
         $isUsd = !$currency || $currency->code === 'USD';
 
@@ -141,7 +140,7 @@
             @elseif(!empty($company['name']))
                 <div class="company-name">{{ $company['name'] }}</div>
             @endif
-            @if(!empty($company['tax_number']) && $isTax)
+            @if(!empty($company['tax_number']))
                 <div class="tax-number">{{ $company['tax_number'] }}</div>
             @endif
         </div>
@@ -170,7 +169,7 @@
                         <td class="info-value">{{ $payment->customer->code }}</td>
                     </tr>
                     @endif
-                    @if($isTax && $payment->salesperson)
+                    @if($payment->salesperson)
                     <tr>
                         <td class="info-label">Salesperson:</td>
                         <td class="info-value">{{ $payment->salesperson->name }}</td>
