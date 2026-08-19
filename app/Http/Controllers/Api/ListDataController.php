@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\AttachCacheVersion;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
 use App\Models\Customers\Customer;
@@ -40,70 +41,111 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class ListDataController extends Controller
 {
+    /**
+     * Garbage-collection TTL for orphaned cache entries (7 days). Freshness is
+     * entirely handled by the version in the key: when a model changes, its version
+     * is bumped, the key changes, and a fresh query runs. Old keys become unreachable
+     * and are evicted by this TTL. Matches the browser-side 7-day cache window.
+     */
+    private const LIST_CACHE_TTL = (3600 * 24 ) * 7;
+
     public function getList(string $type):JsonResponse
     {
+        // 'accounts', 'customers', and 'items' are intentionally NOT cached: they embed live,
+        // frequently-changing data (current_balance, inventory quantity) whose sources
+        // don't bump the version, so caching would go stale.
         $dataList = match($type) {
-            'warehouses' => $this->warehouses(),
-            'currencies' => $this->currencies(),
-            'users' => $this->users(),
+            'warehouses' => $this->cached('warehouses', ['warehouses'], fn () => $this->warehouses(), true),
+            'currencies' => $this->cached('currencies', ['currencies', 'currency_rate'], fn () => $this->currencies()),
+            'users' => $this->cached('users', ['users'], fn () => $this->users()),
 
+            // customers not cached — includes current_balance which changes on every sale/payment
             'customers' => $this->customers(),
-            'customerPaymentTerms'  => $this->customerPaymentTerms(),
-            'customerGroups'  => $this->customerGroups(),
-            'customerProvince'  => $this->customerProvince(),
-            'customerType'  => $this->customerType(),
-            'customerZone' => $this->customerZone(),
+            'customerPaymentTerms'  => $this->cached('customerPaymentTerms', ['customer_payment_terms'], fn () => $this->customerPaymentTerms()),
+            'customerGroups'  => $this->cached('customerGroups', ['customer_groups'], fn () => $this->customerGroups()),
+            'customerProvince'  => $this->cached('customerProvince', ['customer_province'], fn () => $this->customerProvince()),
+            'customerType'  => $this->cached('customerType', ['customer_types'], fn () => $this->customerType()),
+            'customerZone' => $this->cached('customerZone', ['customer_zone'], fn () => $this->customerZone()),
 
-            // accounts
+            // accounts (not cached — live current_balance)
             'accounts' => $this->accounts(),
-            'accountTypes' => $this->accountTypes(),
+            'accountTypes' => $this->cached('accountTypes', ['account_types'], fn () => $this->accountTypes()),
 
             // expenses
-            'expenseCategories' => $this->expenseCategories(),
-            'parentExpense' => $this->parentExpense(),
-            // expenses
-            'incomeCategories' => $this->incomeCategories(),
-            'parentIncome' => $this->parentIncome(),
+            'expenseCategories' => $this->cached('expenseCategories', ['expense_categories'], fn () => $this->expenseCategories()),
+            'parentExpense' => $this->cached('parentExpense', ['expense_categories'], fn () => $this->parentExpense()),
+            'purchaseExpenses' => $this->cached('purchaseExpenses', ['expense_categories'], fn () => $this->purchaseExpenses()),
+            // incomes
+            'incomeCategories' => $this->cached('incomeCategories', ['income_categories'], fn () => $this->incomeCategories()),
+            'parentIncome' => $this->cached('parentIncome', ['income_categories'], fn () => $this->parentIncome()),
 
-            // items
+            // items (not cached — embeds live inventory quantity)
             'items' => $this->items(),
-            'itemPriceLists' => $this->itemPriceLists(),
-            'itemDefaultPriceList' => $this->itemDefaultPriceList(),
-            'itemBrands' => $this->itemBrands(),
-            'itemCategories' => $this->itemCategories(),
-            'itemFamilies' => $this->itemFamilies(),
-            'itemGroups' => $this->itemGroups(),
-            'itemProfitMargins' => $this->itemProfitMargins(),
-            'itemTypes' => $this->itemTypes(),
-            'itemUnits' => $this->itemUnits(),
+            'itemPriceLists' => $this->cached('itemPriceLists', ['price_lists', 'items'], fn () => $this->itemPriceLists()),
+            'itemDefaultPriceList' => $this->cached('itemDefaultPriceList', ['price_lists', 'items'], fn () => $this->itemDefaultPriceList()),
+            'itemBrands' => $this->cached('itemBrands', ['item_brands'], fn () => $this->itemBrands()),
+            'itemCategories' => $this->cached('itemCategories', ['item_categories'], fn () => $this->itemCategories()),
+            'itemFamilies' => $this->cached('itemFamilies', ['item_families'], fn () => $this->itemFamilies()),
+            'itemGroups' => $this->cached('itemGroups', ['item_groups'], fn () => $this->itemGroups()),
+            'itemProfitMargins' => $this->cached('itemProfitMargins', ['item_profits_margins'], fn () => $this->itemProfitMargins()),
+            'itemTypes' => $this->cached('itemTypes', ['item_types'], fn () => $this->itemTypes()),
+            'itemUnits' => $this->cached('itemUnits', ['item_units'], fn () => $this->itemUnits()),
 
             // suppliers
-            'suppliers'  => $this->suppliers(),
-            'supplierPaymentTerms' => $this->supplierPaymentTerms(),
-            'supplierTypes' => $this->supplierTypes(),
+            'suppliers'  => $this->cached('suppliers', ['suppliers'], fn () => $this->suppliers()),
+            'supplierPaymentTerms' => $this->cached('supplierPaymentTerms', ['supplier_payment_terms'], fn () => $this->supplierPaymentTerms()),
+            'supplierTypes' => $this->cached('supplierTypes', ['supplier_types'], fn () => $this->supplierTypes()),
 
             // employees
-            'employees' => $this->employees(),
-            'commissionTargets' => $this->commissionTargets(),
-            'all-sales-employees' => $this->salesEmployee(),
-            'all-driver-employees' => $this->driverEmployee(),
-            'departments' => $this->departments(),
+            'employees' => $this->cached('employees', ['employees', 'department'], fn () => $this->employees()),
+            'commissionTargets' => $this->cached('commissionTargets', ['commission_targets'], fn () => $this->commissionTargets()),
+            'all-sales-employees' => $this->cached('all-sales-employees', ['employees'], fn () => $this->salesEmployee()),
+            'all-driver-employees' => $this->cached('all-driver-employees', ['employees'], fn () => $this->driverEmployee()),
+            'departments' => $this->cached('departments', ['department'], fn () => $this->departments()),
 
             // vehicles
-            'cars' => $this->cars(),
-            'gasStations' => $this->gasStations(),
+            'cars' => $this->cached('cars', ['cars'], fn () => $this->cars()),
+            'gasStations' => $this->cached('gasStations', ['gas_stations'], fn () => $this->gasStations()),
 
             // generals
-            'countries' => $this->countries(),
-            'taxCodes' => $this->taxCodes(),
+            'countries' => $this->cached('countries', ['countries'], fn () => $this->countries()),
+            'taxCodes' => $this->cached('taxCodes', ['tax_codes'], fn () => $this->taxCodes()),
 
-            
+
             default      => response()->json(['error' => 'Invalid list type'], 400),
         };
         return ApiResponse::index($type . ' data', $dataList);
+    }
+
+    /**
+     * Wrap a list query in a version-keyed cache.
+     *
+     * The cache key embeds the current AttachCacheVersion version number(s) for
+     * the given model group(s). When any of those models change, its version is
+     * bumped and the key changes, so a fresh query runs and stale data is never
+     * served. The cache is already tenant-isolated by PrefixCacheTask.
+     *
+     * @param  string    $type         List type (cache key namespace).
+     * @param  string[]  $versionKeys  Version keys this list depends on.
+     * @param  \Closure  $callback     Produces the data on cache miss.
+     * @param  bool      $perUser      Scope the key to the authed user (role-filtered lists).
+     */
+    private function cached(string $type, array $versionKeys, \Closure $callback, bool $perUser = false)
+    {
+        $versions = AttachCacheVersion::getVersions();
+        $versionSig = implode('.', array_map(fn ($k) => $versions[$k] ?? 0, $versionKeys));
+
+        $key = "list:{$type}";
+        if ($perUser) {
+            $key .= ':u' . (Auth::id() ?? 0);
+        }
+        $key .= ':v' . $versionSig;
+
+        return Cache::remember($key, self::LIST_CACHE_TTL, $callback);
     }
 
     // generals
@@ -237,6 +279,19 @@ class ListDataController extends Controller
     private function parentExpense()
     {
         return ExpenseCategory::active()->orderBy('name')->get(['id', 'name'])->isRoot();
+    }
+
+    // subcategories under the system "Purchase Expenses" parent
+    private function purchaseExpenses()
+    {
+        $parent = ExpenseCategory::where('name', 'Purchase Expenses')
+            ->where('is_system', true)
+            ->firstOrFail();
+
+        return ExpenseCategory::where('parent_id', $parent->id)
+            ->active()
+            ->orderBy('name')
+            ->get(['id', 'name', 'parent_id']);
     }
 
     // incomes
