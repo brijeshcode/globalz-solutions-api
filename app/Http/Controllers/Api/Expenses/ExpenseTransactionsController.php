@@ -547,6 +547,7 @@ class ExpenseTransactionsController extends Controller
             ->when($request->has('date_from'),           fn($q) => $q->fromDate($request->input('date_from')))
             ->when($request->has('date_to'),             fn($q) => $q->toDate($request->input('date_to')))
             ->when($request->filled('expense_month'),    fn($q) => $q->where('expense_month', \Carbon\Carbon::parse($request->input('expense_month'))->startOfMonth()->toDateString()))
+            ->when($request->boolean('vat_only_transaction'), fn($q) => $q->where('vat_amount', '>', 0))
             ->selectRaw('expense_category_id, COUNT(*) as transactions_count, COALESCE(SUM(amount_usd + vat_amount_usd), 0) as sum_amount_usd, COALESCE(SUM(paid_amount_usd), 0) as sum_paid_usd')
             ->groupBy('expense_category_id')
             ->get()
@@ -679,6 +680,10 @@ class ExpenseTransactionsController extends Controller
 
         if ($request->has('max_amount')) {
             $query->where('amount', '<=', $request->input('max_amount'));
+        }
+
+        if ($request->boolean('vat_only_transaction')) {
+            $query->where('vat_amount', '>', 0);
         }
 
         if ($request->has('payment_status')) {

@@ -474,9 +474,10 @@ class CustomerReturnsController extends Controller
             'total_returns' => (clone $query)->count(),
             'received_returns' => (clone $query)->received()->count(),
             'not_received_returns' => (clone $query)->notReceived()->count(),
-            'trashed_returns' => (clone $query)->onlyTrashed()->count(),
             'total_amount' => (clone $query)->sum('total'),
             'total_amount_usd' => (clone $query)->sum('total_usd'),
+            'total_tax_amount_usd' => (clone $query)->sum('total_tax_amount_usd'),
+            // 'trashed_returns' => (clone $query)->onlyTrashed()->count(),
             // 'returns_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(total) as total_amount')
             //     ->groupBy('prefix')
             //     ->get(),

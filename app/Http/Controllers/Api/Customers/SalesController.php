@@ -43,12 +43,15 @@ class SalesController extends Controller
             $query->sortable($request);
         }
 
+        $stats = $this->buildStats($this->saleQuery($request));
+
         $sales = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
             'Sales retrieved successfully',
             $sales,
-            SaleResource::class
+            SaleResource::class,
+            $stats
         );
     }
 
@@ -528,33 +531,25 @@ class SalesController extends Controller
     {
         $query = $this->saleQuery($request);
 
-        $stats = [
-            'total_sales' => (clone $query)->count(),
-            'trashed_sales' => (clone $query)->onlyTrashed()->count(),
-            'total_amount' => (clone $query)->sum('total'),
-            'total_amount_usd' => (clone $query)->sum('total_usd'),
-            'sales_by_status' => (clone $query)->selectRaw('status, count(*) as count')
-                ->groupBy('status')
-                ->get()
-                ->mapWithKeys(function ($item) {
-                    return [$item->status => $item->count];
-                }),
-            // 'sales_by_prefix' => (clone $query)->selectRaw('prefix, count(*) as count, sum(total) as total_amount')
-            //     ->groupBy('prefix')
-            //     ->get(),
-            // 'sales_by_warehouse' => (clone $query)->with('warehouse:id,name')
-            //     ->selectRaw('warehouse_id, count(*) as count, sum(total) as total_amount')
-            //     ->groupBy('warehouse_id')
-            //     ->having('count', '>', 0)
-            //     ->get(),
-            // 'sales_by_currency' => (clone $query)->with('currency:id,name,code')
-            //     ->selectRaw('currency_id, count(*) as count, sum(total) as total_amount')
-            //     ->groupBy('currency_id')
-            //     ->having('count', '>', 0)
-            //     ->get(),
-        ];
+        return ApiResponse::show('Sale statistics retrieved successfully', $this->buildStats($query));
+    }
 
-        return ApiResponse::show('Sale statistics retrieved successfully', $stats);
+    private function buildStats(\Illuminate\Database\Eloquent\Builder $query): array
+    {
+        $trashedSales = (clone $query)->onlyTrashed()->count();
+
+        $statusRows = (clone $query)
+            ->selectRaw('status, COUNT(*) as count, SUM(total) as total_amount, SUM(total_usd) as total_amount_usd, SUM(total_tax_amount_usd) as total_tax_amount_usd')
+            ->groupBy('status')
+            ->get();
+
+        return [
+            'trashed_sales'        => $trashedSales,
+            'total_amount'         => $statusRows->sum('total_amount'),
+            'total_amount_usd'     => $statusRows->sum('total_amount_usd'),
+            'total_tax_amount_usd' => $statusRows->sum('total_tax_amount_usd'),
+            'sales_by_status'      => $statusRows->mapWithKeys(fn($item) => [$item->status => $item->count]),
+        ];
     }
 
     public function changeStatus(Request $request, Sale $sale): JsonResponse

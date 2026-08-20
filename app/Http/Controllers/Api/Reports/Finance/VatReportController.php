@@ -6,7 +6,6 @@ use App\Helpers\CurrencyHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\CustomerReturn;
-use App\Models\Customers\CustomerReturnItem;
 use App\Models\Customers\Sale;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Suppliers\Purchase;
@@ -93,13 +92,11 @@ class VatReportController extends Controller
             ->sum('total_tax_amount_usd');
 
         // vat returned to customers on approved returns
-        $vatReturnTotal = (float) (CustomerReturnItem::whereHas('customerReturn', function ($q) use ($fromDate, $toDate) {
-            $q->where('prefix', CustomerReturn::TAXPREFIX)
-              ->approved()
-              ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
-              ->when($toDate,   fn($q) => $q->where('date', '<=', $toDate));
-        })->selectRaw('SUM(tax_amount_usd * quantity) as total')
-            ->value('total') ?? 0);
+        $vatReturnTotal = (float) CustomerReturn::where('prefix', CustomerReturn::TAXPREFIX)
+            ->approved()
+            ->when($fromDate, fn($q) => $q->where('date', '>=', $fromDate))
+            ->when($toDate,   fn($q) => $q->where('date', '<=', $toDate))
+            ->sum('total_tax_amount_usd');
 
         // net vat on sales (collected - returned)
         $netVatSales = $vatSalesTotal - $vatReturnTotal;
