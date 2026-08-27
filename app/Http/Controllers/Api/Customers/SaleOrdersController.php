@@ -18,6 +18,7 @@ use App\Models\Customers\Sale;
 use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
 use App\Models\Items\PriceList;
+use App\Services\Customers\SaleOfferService;
 use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -41,6 +42,7 @@ class SaleOrdersController extends Controller
                 'createdBy:id,name',
                 'updatedBy:id,name'
             ])
+            ->withCount(['saleItems as offer_items_count' => fn ($q) => $q->whereNotNull('item_offer_id')])
             ->pending()
             ->searchable($request)
             ->sortable($request);
@@ -133,7 +135,7 @@ class SaleOrdersController extends Controller
 
         DB::transaction(function () use ($data, &$sale) {
             // Extract items data
-            $items = $data['items'];
+            $items = app(SaleOfferService::class)->normalize($data['items']);
             unset($data['items']);
 
             $totalProfit = 0;
@@ -337,7 +339,7 @@ class SaleOrdersController extends Controller
 
         DB::transaction(function () use ($data, $sale) {
             if (isset($data['items'])) {
-                $items = $data['items'];
+                $items = app(SaleOfferService::class)->normalize($data['items']);
                 unset($data['items']);
 
                 $totalProfit = 0;

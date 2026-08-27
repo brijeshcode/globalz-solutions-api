@@ -11,6 +11,7 @@ use App\Models\Customers\Customer;
 use App\Models\Employees\CommissionTarget;
 use App\Models\Employees\Employee;
 use App\Models\Items\Item;
+use App\Models\Items\ItemOffer;
 use App\Models\Items\PriceList;
 use App\Models\Setups\Accounts\AccountType;
 use App\Models\Setups\Accounts\IncomeCategory;
@@ -94,6 +95,9 @@ class ListDataController extends Controller
             'itemProfitMargins' => $this->cached('itemProfitMargins', ['item_profits_margins'], fn () => $this->itemProfitMargins()),
             'itemTypes' => $this->cached('itemTypes', ['item_types'], fn () => $this->itemTypes()),
             'itemUnits' => $this->cached('itemUnits', ['item_units'], fn () => $this->itemUnits()),
+
+            // item offers (not cached — used_count changes on every use, validity is date-relative)
+            'itemOffers' => $this->itemOffers(),
 
             // suppliers
             'suppliers'  => $this->cached('suppliers', ['suppliers'], fn () => $this->suppliers()),
@@ -426,6 +430,33 @@ class ListDataController extends Controller
     private function itemUnits()
     {
         return ItemUnit::active()->orderBy('name')->get(['id', 'name', 'short_name', 'description']);
+    }
+
+    private function itemOffers()
+    {
+        return ItemOffer::active()->valid()
+            ->with([
+                'item:id,description,code,short_name',
+                'item.inventories:id,item_id,warehouse_id,quantity',
+                'item.inventories.warehouse:id,name',
+                'freeItem:id,description,code,short_name',
+                'freeItem.inventories:id,item_id,warehouse_id,quantity',
+                'freeItem.inventories.warehouse:id,name',
+            ])
+            ->orderBy('date', 'desc')
+            ->get([
+                'id',
+                'item_id',
+                'free_item_id',
+                'date',
+                'validity_date',
+                'minimum_quantity',
+                'free_quantity',
+                'usage_limit',
+                'can_change_quantity',
+                'allow_multiple',
+                'used_count',
+            ]);
     }
 
     // supplier terms and types

@@ -18,6 +18,7 @@ use App\Models\Customers\Customer;
 use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
 use App\Models\Items\PriceList;
+use App\Services\Customers\SaleOfferService;
 use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -30,7 +31,8 @@ class SalesController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = $this->saleQuery($request);
+        $query = $this->saleQuery($request)
+            ->withCount(['saleItems as offer_items_count' => fn ($q) => $q->whereNotNull('item_offer_id')]);
 
         // If no custom sort is specified, apply default ordering: Waiting first, then latest
         if (!$request->has('sort_by')) {
@@ -69,6 +71,10 @@ class SalesController extends Controller
 
         $data['approved_by'] = $user->id;
         $data['approved_at'] = now();
+
+        // Validate & normalize any applied offer lines before the calculation loop.
+        $data['items'] = app(SaleOfferService::class)->normalize($data['items']);
+
         if (Sale::TAXFREEPREFIX == $data['prefix']) {
             $data['total_tax_amount'] = 0;
             $data['total_tax_amount_usd'] = 0;
@@ -249,6 +255,7 @@ class SalesController extends Controller
 
         DB::transaction(function () use ($data, $sale) {
             if (isset($data['items'])) {
+                $data['items'] = app(SaleOfferService::class)->normalize($data['items']);
                 $saleItems = $data['items'];
                 unset($data['items']);
 

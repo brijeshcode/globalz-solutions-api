@@ -43,6 +43,7 @@ class SaleResource extends JsonResource
             'total' => $this->total + 0,
             'total_usd' => $this->total_usd + 0,
             'total_profit' => $this->total_profit + 0,
+            'has_offers' => $this->has_offers,
             'value_date' => $this->value_date ,
             'total_volume_cbm' => $this->total_volume_cbm + 0,
             'total_weight_kg' => $this->total_weight_kg + 0,

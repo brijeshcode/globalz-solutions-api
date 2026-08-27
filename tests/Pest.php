@@ -88,6 +88,11 @@ uses(Tests\Feature\Suppliers\SupplierPayments\Concerns\HasSupplierPaymentSetup::
     ->group('api', 'suppliers', 'supplier-payments')
     ->in('Feature/Suppliers/SupplierPayments');
 
+// ─── Item Offers ──────────────────────────────────────────────────────────────
+uses(Tests\Feature\Items\ItemOffers\Concerns\HasItemOfferSetup::class)
+    ->group('api', 'items', 'item-offers')
+    ->in('Feature/Items/ItemOffers');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations

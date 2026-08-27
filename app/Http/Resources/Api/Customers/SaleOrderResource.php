@@ -39,6 +39,7 @@ class SaleOrderResource extends JsonResource
             'total' => $this->total + 0,
             'total_usd' => $this->total_usd + 0,
             'total_profit' => $this->total_profit + 0,
+            'has_offers' => $this->has_offers,
             'total_volume_cbm' => $this->total_volume_cbm + 0,
             'total_weight_kg' => $this->total_weight_kg + 0,
             'total_tax_amount' => $this->total_tax_amount + 0,
@@ -139,6 +140,8 @@ class SaleOrderResource extends JsonResource
                     return [
                         'id' => $item->id,
                         'item_id' => $item->item_id,
+                        'item_offer_id' => $item->item_offer_id,
+                        'offer_role' => $item->offer_role,
                         'item_code' => $item->item_code,
                         'quantity' => $item->quantity,
                         'cost_price' => $item->cost_price + 0,

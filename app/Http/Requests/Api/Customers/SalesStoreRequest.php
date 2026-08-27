@@ -55,6 +55,8 @@ class SalesStoreRequest extends FormRequest
 
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
+            'items.*.item_offer_id' => 'nullable|integer|exists:item_offers,id',
+            'items.*.offer_role' => 'nullable|in:main,free',
             'items.*.supplier_id' => 'nullable|exists:suppliers,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.price' => 'required|numeric|min:0',
@@ -86,6 +88,11 @@ class SalesStoreRequest extends FormRequest
             foreach ($this->input('items', []) as $index => $itemData) {
                 $itemId = $itemData['item_id'] ?? null;
                 if (! $itemId) {
+                    continue;
+                }
+
+                // Free offer lines are intentionally sold at 100% discount.
+                if (($itemData['offer_role'] ?? null) === 'free') {
                     continue;
                 }
 

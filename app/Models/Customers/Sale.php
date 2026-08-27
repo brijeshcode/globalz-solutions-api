@@ -148,6 +148,26 @@ class Sale extends Model implements ModuleLockable
     {
         return $this->hasMany(SaleItems::class);
     }
+
+    /**
+     * Whether any line on this sale came from an offer.
+     */
+    public function getHasOffersAttribute(): bool
+    {
+        if (array_key_exists('offer_items_count', $this->attributes)) {
+            return (int) $this->attributes['offer_items_count'] > 0;
+        }
+
+        if ($this->relationLoaded('saleItems')) {
+            return $this->saleItems->contains(fn ($i) => ! is_null($i->item_offer_id));
+        }
+
+        if ($this->relationLoaded('items')) {
+            return $this->items->contains(fn ($i) => ! is_null($i->item_offer_id));
+        }
+
+        return $this->saleItems()->whereNotNull('item_offer_id')->exists();
+    }
     
     /**
      * @return HasMany<SaleItems, $this>

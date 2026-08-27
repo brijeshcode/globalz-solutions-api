@@ -3,6 +3,7 @@
 namespace App\Models\Customers;
 
 use App\Models\Items\Item;
+use App\Models\Items\ItemOffer;
 use App\Services\Inventory\InventoryService;
 use App\Traits\Authorable;
 use App\Traits\Searchable;
@@ -26,6 +27,8 @@ class SaleItems extends Model
         'item_code',
         'sale_id',
         'item_id',
+        'item_offer_id',
+        'offer_role',
         'quantity',
         'cost_price',
         'cost_history_id',
@@ -60,6 +63,7 @@ class SaleItems extends Model
     ];
 
     protected $casts = [
+        'item_offer_id' => 'integer',
         'quantity' => 'integer',
         'cost_price' => 'decimal:8',
         'price' => 'decimal:8',
@@ -128,6 +132,14 @@ class SaleItems extends Model
         return $this->belongsTo(Item::class);
     }
 
+    /**
+     * @return BelongsTo<ItemOffer, $this>
+     */
+    public function itemOffer(): BelongsTo
+    {
+        return $this->belongsTo(ItemOffer::class);
+    }
+
     protected function getActivityLogParent()
     {
         // Ensure sale relationship is loaded (important for delete events)
@@ -190,6 +202,11 @@ class SaleItems extends Model
 
             // Recalculate total tax amount on the sale
             $saleItem->sale->recalculateTotalTax();
+
+            // Count offer usage once per applied offer (main line only).
+            if ($saleItem->offer_role === 'main' && $saleItem->item_offer_id) {
+                ItemOffer::whereKey($saleItem->item_offer_id)->increment('used_count');
+            }
         });
 
         static::updating(function ($saleItem) {
@@ -282,6 +299,14 @@ class SaleItems extends Model
 
                 // Recalculate total tax amount on the sale
                 $saleItem->sale->recalculateTotalTax();
+            }
+
+            // Give the offer usage back when a main offer line is removed.
+            // Runs even when the parent sale is being deleted.
+            if ($saleItem->offer_role === 'main' && $saleItem->item_offer_id) {
+                ItemOffer::whereKey($saleItem->item_offer_id)
+                    ->where('used_count', '>', 0)
+                    ->decrement('used_count');
             }
         });
 

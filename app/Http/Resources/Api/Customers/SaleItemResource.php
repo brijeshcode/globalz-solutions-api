@@ -17,6 +17,8 @@ class SaleItemResource extends JsonResource
             'item_code' => $this->item_code,
             'sale_id' => $this->sale_id,
             'item_id' => $this->item_id,
+            'item_offer_id' => $this->item_offer_id,
+            'offer_role' => $this->offer_role,
             'quantity' => $this->quantity + 0,
             'cost_price' => $this->cost_price + 0,
             'price' => $this->price + 0,
@@ -53,6 +55,7 @@ class SaleItemResource extends JsonResource
             'updated_by' => $this->updated_by,
 
             'item' => $this->whenLoaded('item'),
+            'item_offer' => $this->whenLoaded('itemOffer'),
         ];
     }
 }

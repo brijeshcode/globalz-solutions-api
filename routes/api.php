@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\Setups\TaxCodesController;
 use App\Http\Controllers\Api\Items\ItemsController;
 use App\Http\Controllers\Api\Items\ItemTransfersController;
 use App\Http\Controllers\Api\Items\ItemAdjustsController;
+use App\Http\Controllers\Api\Items\ItemOffersController;
 use App\Http\Controllers\Api\Items\ItemMovementsController;
 use App\Http\Controllers\Api\Items\ItemCostHistoryController;
 use App\Http\Controllers\Api\Items\ItemPriceAuditController;
@@ -627,6 +628,19 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::get('{itemAdjust}', 'show')->name('show');
             Route::put('{itemAdjust}', 'update')->name('update');
             Route::delete('{itemAdjust}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+        });
+
+        // Item Offers Controller
+        Route::controller(ItemOffersController::class)->prefix('offers')->name('offers.')->group(function () {
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{itemOffer}', 'show')->name('show');
+            Route::put('{itemOffer}', 'update')->name('update');
+            Route::delete('{itemOffer}', 'destroy')->name('destroy');
+            Route::patch('{itemOffer}/status', 'updateStatus')->name('status');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
