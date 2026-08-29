@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
-use App\Http\Middleware\AttachCacheVersion;
 use App\Http\Responses\ApiResponse;
 use App\Models\Accounts\Account;
 use App\Models\Customers\Customer;
@@ -41,19 +40,9 @@ use App\Models\Vehicle\GasStation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 
 class ListDataController extends Controller
 {
-    /**
-     * Garbage-collection TTL for orphaned cache entries (7 days). Freshness is
-     * entirely handled by the version in the key: when a model changes, its version
-     * is bumped, the key changes, and a fresh query runs. Old keys become unreachable
-     * and are evicted by this TTL. Matches the browser-side 7-day cache window.
-     */
-    private const LIST_CACHE_TTL = (3600 * 24 ) * 7;
-
     public function getList(string $type):JsonResponse
     {
         // 'accounts', 'customers', and 'items' are intentionally NOT cached: they embed live,
@@ -126,30 +115,22 @@ class ListDataController extends Controller
     }
 
     /**
-     * Wrap a list query in a version-keyed cache.
+     * Run a list query.
      *
-     * The cache key embeds the current AttachCacheVersion version number(s) for
-     * the given model group(s). When any of those models change, its version is
-     * bumped and the key changes, so a fresh query runs and stale data is never
-     * served. The cache is already tenant-isolated by PrefixCacheTask.
+     * Caching is currently DISABLED. The file cache driver ignores Laravel's cache
+     * prefix, so Spatie's PrefixCacheTask could not isolate keys per tenant and these
+     * lists leaked across tenants. Until a tenant-safe key scheme is in place, the
+     * query runs directly on every request (correctly scoped by the tenant DB
+     * connection). The signature is kept so callers don't need to change.
      *
-     * @param  string    $type         List type (cache key namespace).
-     * @param  string[]  $versionKeys  Version keys this list depends on.
-     * @param  \Closure  $callback     Produces the data on cache miss.
-     * @param  bool      $perUser      Scope the key to the authed user (role-filtered lists).
+     * @param  string    $type         List type (kept for call-site compatibility).
+     * @param  string[]  $versionKeys  Version keys (unused while caching is off).
+     * @param  \Closure  $callback     Produces the data.
+     * @param  bool      $perUser      Unused while caching is off.
      */
     private function cached(string $type, array $versionKeys, \Closure $callback, bool $perUser = false)
     {
-        $versions = AttachCacheVersion::getVersions();
-        $versionSig = implode('.', array_map(fn ($k) => $versions[$k] ?? 0, $versionKeys));
-
-        $key = "list:{$type}";
-        if ($perUser) {
-            $key .= ':u' . (Auth::id() ?? 0);
-        }
-        $key .= ':v' . $versionSig;
-
-        return Cache::remember($key, self::LIST_CACHE_TTL, $callback);
+        return $callback();
     }
 
     // generals
