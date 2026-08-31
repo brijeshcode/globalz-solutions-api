@@ -15,6 +15,7 @@ class CustomerAgingReportResource extends JsonResource
             'customer_name'       => $this->name,
             'balance'             => (float) $this->current_balance,
             'last_invoice_date'   => $this->last_invoice_date,
+            'last_invoice_amount' => $this->last_invoice_amount !== null ? (float) $this->last_invoice_amount : null,
             'invoice_age'         => $this->invoice_age !== null ? (int) $this->invoice_age : null,
             'last_payment_date'   => $this->last_payment_date,
             'last_payment_amount' => $this->last_payment_amount !== null ? (float) $this->last_payment_amount : null,
