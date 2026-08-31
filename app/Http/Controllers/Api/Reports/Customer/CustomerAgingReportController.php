@@ -139,7 +139,11 @@ class CustomerAgingReportController extends Controller
         }
 
         if ($request->boolean('hide_zero_balance')) {
-            $query->where('customers.current_balance', '!=', 0);
+            $query->whereNotBetween('customers.current_balance', [-1, 1]);
+        }
+
+        if ($request->boolean('hide_small_balance')) {
+            $query->whereNotBetween('customers.current_balance', [-5, 5]);
         }
 
         return $query;

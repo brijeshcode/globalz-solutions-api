@@ -765,6 +765,10 @@ class CustomersController extends Controller
             $query->whereNotBetween('current_balance', [-1, 1]);
         }
 
+        if ($request->boolean('hide_small_balance')) {
+            $query->whereNotBetween('current_balance', [-5, 5]);
+        }
+
         // Filter by customer group
         if ($request->has('customer_group_id')) {
             $query->where('customer_group_id', $request->customer_group_id);
