@@ -25,7 +25,7 @@ Schedule::command('queue:work --stop-when-empty')
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 Schedule::command('users:auto-logout')
-    ->daily()
+    ->weekly()
     ->at('01:00')
     ->name('auto-logout-all-users')
     ->withoutOverlapping()
