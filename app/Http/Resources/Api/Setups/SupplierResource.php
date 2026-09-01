@@ -51,6 +51,7 @@ class SupplierResource extends JsonResource
                 'type' => $this->paymentTerm?->type,
             ],
             'ship_from' => $this->ship_from,
+            'origin_type' => $this->origin_type,
             'bank_info' => $this->bank_info,
             'discount_percentage' => $this->discount_percentage,
             'currency_id' => $this->currency_id,

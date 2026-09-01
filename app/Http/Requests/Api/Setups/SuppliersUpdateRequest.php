@@ -33,6 +33,7 @@ class SuppliersUpdateRequest extends FormRequest
             // Purchase Info Tab
             'payment_term_id' => 'nullable|exists:supplier_payment_terms,id',
             'ship_from' => 'nullable|string|max:255',
+            'origin_type' => 'nullable|string|in:local,import',
             'bank_info' => 'nullable|string|max:1000',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'currency_id' => 'nullable|exists:currencies,id',
@@ -70,6 +71,7 @@ class SuppliersUpdateRequest extends FormRequest
             'contact_person_mobile.max' => 'Contact person mobile cannot exceed 20 characters.',
             'payment_term_id.exists' => 'Selected payment term is invalid.',
             'ship_from.max' => 'Ship from location cannot exceed 255 characters.',
+            'origin_type.in' => 'Origin type must be either local or import.',
             'bank_info.max' => 'Bank info cannot exceed 1000 characters.',
             'discount_percentage.numeric' => 'Discount percentage must be a valid number.',
             'discount_percentage.min' => 'Discount percentage cannot be negative.',

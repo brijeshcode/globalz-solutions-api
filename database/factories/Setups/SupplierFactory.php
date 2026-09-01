@@ -114,6 +114,7 @@ class SupplierFactory extends Factory
             // Purchase Info Tab
             'payment_term_id' => SupplierPaymentTerm::factory(),
             'ship_from' => $this->faker->optional(0.8)->randomElement($shipFromLocations),
+            'origin_type' => $this->faker->randomElement(['local', 'import']),
             'bank_info' => $this->faker->optional(0.7)->randomElement($bankInfoExamples),
             'discount_percentage' => $this->faker->optional(0.4)->randomFloat(2, 0, 15), // 40% chance, 0-15%
             'currency_id' => Currency::factory(),

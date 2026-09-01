@@ -521,6 +521,13 @@ class PurchasesController extends Controller
             $query->where('supplier_id', $request->input('supplier_id'));
         }
 
+        // Filter by the origin type (local / import) of the purchased supplier
+        if ($request->filled('origin_type')) {
+            $query->whereHas('supplier', function ($q) use ($request) {
+                $q->where('origin_type', $request->input('origin_type'));
+            });
+        }
+
         if ($request->has('currency_id')) {
             $query->where('currency_id', $request->input('currency_id'));
         }

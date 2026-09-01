@@ -357,6 +357,11 @@ class SuppliersController extends Controller
             $query->where('payment_term_id', $request->payment_term_id);
         }
 
+        // Filter by origin type (local / Import)
+        if ($request->filled('origin_type')) {
+            $query->where('origin_type', $request->origin_type);
+        }
+
         // Filter by currency
         if ($request->has('currency_id')) {
             $query->where('currency_id', $request->currency_id);
