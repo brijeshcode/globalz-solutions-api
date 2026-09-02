@@ -198,7 +198,6 @@ class UserSettingsController extends Controller
             'theme' => ['value' => 'light', 'data_type' => UserSetting::TYPE_STRING],
             'layout' => ['value' => 'sidebar', 'data_type' => UserSetting::TYPE_STRING],
             'language' => ['value' => 'en', 'data_type' => UserSetting::TYPE_STRING],
-            'timezone' => ['value' => 'UTC', 'data_type' => UserSetting::TYPE_STRING],
             'notifications_enabled' => ['value' => true, 'data_type' => UserSetting::TYPE_BOOLEAN],
         ];
 

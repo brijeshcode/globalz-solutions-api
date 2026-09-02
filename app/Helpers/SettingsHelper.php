@@ -169,11 +169,6 @@ class SettingsHelper
         return self::userGet($userId, 'language', 'en');
     }
 
-    public static function userTimezone(?int $userId = null): string
-    {
-        return self::userGet($userId, 'timezone', self::timezone());
-    }
-
     public static function userLayout(?int $userId = null): string
     {
         return self::userGet($userId, 'layout', 'sidebar');

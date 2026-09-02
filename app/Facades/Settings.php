@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\Facade;
  * @method static int decimalPlaces()
  * @method static string userTheme(int $userId = null)
  * @method static string userLanguage(int $userId = null)
- * @method static string userTimezone(int $userId = null)
  * @method static string userLayout(int $userId = null)
  * @method static bool userNotificationsEnabled(int $userId = null)
  * @method static string getCurrentItemCode()
