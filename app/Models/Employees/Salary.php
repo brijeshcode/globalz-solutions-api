@@ -212,8 +212,21 @@ class Salary extends Model
         });
 
         static::deleted(function ($salary) {
+            // On force delete of an already soft-deleted salary the balance was
+            // already returned at soft-delete time — don't return it a second time.
+            if ($salary->isForceDeleting()) {
+                return;
+            }
+
             // Add balance back to account when salary is deleted
             AccountsHelper::addBalance(Account::find($salary->account_id), $salary->final_total);
+            $salary->employee->recalculateBalance();
+        });
+
+        static::restored(function ($salary) {
+            // Restoring makes the salary active again, so pay it out of the account
+            // once more (mirrors the created event's outflow).
+            AccountsHelper::removeBalance(Account::find($salary->account_id), $salary->final_total);
             $salary->employee->recalculateBalance();
         });
     }
