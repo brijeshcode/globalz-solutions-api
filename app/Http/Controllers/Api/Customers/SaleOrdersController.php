@@ -107,12 +107,12 @@ class SaleOrdersController extends Controller
             $query->where('prefix', $request->prefix);
         }
 
-        if ($request->has('start_date')) {
-            $query->fromDate($request->start_date);
+        if ($request->has('date_from')) {
+            $query->fromDate($request->date_from);
         }
 
-        if ($request->has('end_date')) {
-            $query->toDate($request->end_date);
+        if ($request->has('date_to')) {
+            $query->toDate($request->date_to);
         }
         $sales = $this->applyPagination($query, $request);
 
