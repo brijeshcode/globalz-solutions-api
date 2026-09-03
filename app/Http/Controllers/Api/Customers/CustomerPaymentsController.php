@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Exports\CustomerPaymentsExport;
 use App\Helpers\ApiHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
@@ -15,6 +16,7 @@ use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CustomerPaymentsController extends Controller
 {
@@ -258,6 +260,14 @@ class CustomerPaymentsController extends Controller
         ];
 
         return ApiResponse::show('Customer payment statistics retrieved successfully', $stats);
+    }
+
+    public function export(Request $request)
+    {
+        $query    = $this->paymentQuery($request);
+        $filename = 'customer-payments_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new CustomerPaymentsExport($query), $filename);
     }
 
     private function paymentQuery(Request $request)

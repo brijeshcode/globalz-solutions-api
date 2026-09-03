@@ -363,6 +363,7 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::get('stats', 'stats')->name('stats');
             Route::get('trashed', 'trashed')->name('trashed');
             Route::get('trashed/{id}', 'showTrashed')->name('trashed.show');
+            Route::get('export', 'export')->name('export');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{customerPayment}', 'show')->name('show');
