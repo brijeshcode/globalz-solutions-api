@@ -515,6 +515,7 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
         Route::controller(PurchasesController::class)->prefix('purchases')->name('purchases.')->group(function () {
             Route::get('stats', 'stats')->name('stats');
             Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('export', 'export')->name('export');
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('{purchase}', 'show')->name('show');

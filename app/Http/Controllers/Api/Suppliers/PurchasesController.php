@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Suppliers;
 
+use App\Exports\PurchasesExport;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Suppliers\PurchasesStoreRequest;
@@ -16,6 +17,7 @@ use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PurchasesController extends Controller
 {
@@ -34,7 +36,8 @@ class PurchasesController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = $this->purchaseQuery($request);
-
+        $query->with('purchaseExpenses.expenseTransaction.expenseCategory:id,name');
+        
         $purchases = $this->applyPagination($query, $request);
 
         return ApiResponse::paginated(
@@ -501,6 +504,14 @@ class PurchasesController extends Controller
         ];
 
         return ApiResponse::show('Sale statistics retrieved successfully', $stats);
+    }
+
+    public function export(Request $request)
+    {
+        $query    = $this->purchaseQuery($request);
+        $filename = 'purchases_' . now()->format('Y-m-d_His') . '.xlsx';
+
+        return Excel::download(new PurchasesExport($query), $filename);
     }
 
     private function purchaseQuery(Request $request)
