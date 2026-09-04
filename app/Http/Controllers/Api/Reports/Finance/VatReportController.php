@@ -123,7 +123,7 @@ class VatReportController extends Controller
             ->sum('tax_usd');
 
         // vat difference (net vat collected - all vat paid)
-        $vatDifference = $netVatSales - $vatExpenseTotal - $expenseVatTotal - $vatPurchaseTotal;
+        $vatDifference = ( $vatExpenseTotal + $expenseVatTotal + $vatPurchaseTotal) - $netVatSales ;
 
         // Local-currency equivalents of the USD figures above.
         // Conversion uses the tenant's CURRENT active rate (there is no per-period
