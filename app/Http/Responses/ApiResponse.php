@@ -46,7 +46,7 @@ class ApiResponse
     /**
      * Paginated response with resource transformation
      */
-    public static function paginated(string $message, LengthAwarePaginator $paginator, ?string $resourceClass = null, ?array $stats = null): JsonResponse
+    public static function paginated(string $message, LengthAwarePaginator $paginator, ?string $resourceClass = null, ?array $stats = null, ?array $meta = null): JsonResponse
     {
         // Transform data using resource class if provided
         $data = $resourceClass
@@ -73,6 +73,10 @@ class ApiResponse
 
         if ($stats !== null) {
             $response['stats'] = $stats;
+        }
+
+        if ($meta !== null) {
+            $response['meta'] = $meta;
         }
 
         return response()->json($response, 200);

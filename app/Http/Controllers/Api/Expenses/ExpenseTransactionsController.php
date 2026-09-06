@@ -16,6 +16,7 @@ use App\Models\Expenses\ExpensePayment;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Landlord\TenantFeature;
 use App\Models\Suppliers\PurchaseExpense;
+use App\Services\Expenses\ExpensePeriodSummaryService;
 use App\Traits\HasPagination;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setups\Expenses\ExpenseCategory;
@@ -45,10 +46,36 @@ class ExpenseTransactionsController extends Controller
 
         $expenseTransactions = $this->applyPagination($query, $request);
 
+        $meta = null;
+        if ($request->boolean('trend')) {
+            $meta = ['trend' => $this->buildTrend($request)];
+        }
+
         return ApiResponse::paginated(
             'Expense transactions retrieved successfully',
             $expenseTransactions,
-            ExpenseTransactionResource::class
+            ExpenseTransactionResource::class,
+            null,
+            $meta
+        );
+    }
+
+    /**
+     * Build the weekly/monthly/yearly expense trend for the current (filtered) listing.
+     * Reuses the same filtered query, so an active expense_category_id/account/date filter
+     * automatically scopes the trend.
+     */
+    private function buildTrend(Request $request): array
+    {
+        $validated = $request->validate([
+            'trend_period' => ['sometimes', 'in:weekly,monthly,yearly'],
+            'trend_count'  => ['sometimes', 'integer', 'min:1', 'max:' . ExpensePeriodSummaryService::MAX_COUNT],
+        ]);
+
+        return app(ExpensePeriodSummaryService::class)->summarize(
+            $this->query($request),
+            $validated['trend_period'] ?? ExpensePeriodSummaryService::PERIOD_MONTHLY,
+            (int) ($validated['trend_count'] ?? 12)
         );
     }
 
