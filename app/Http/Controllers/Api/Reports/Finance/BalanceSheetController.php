@@ -12,6 +12,7 @@ use App\Models\Employees\Salary;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Customers\CustomerReturn;
+use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Setups\Supplier;
 use App\Models\Suppliers\Purchase;
 use App\Models\Vehicle\GasStation;
@@ -224,12 +225,14 @@ class BalanceSheetController extends Controller
         // so the sign is flipped: money owed to us becomes a positive asset, and vice versa.
         $value = -1 * (float) Customer::query()
             ->active()
+            ->whereHas('salesperson', fn ($q) => $q->active())
             ->sum('current_balance');
 
         return [
             'value' => $value,
-            'note' => 'Total outstanding balance of all active customers — the money customers owe the company. '
-                . 'Stored negative in the system (amount to collect), shown here with the sign flipped so it reads positive.',
+            'note' => 'Total outstanding balance of active customers whose assigned salesperson is also active — '
+                . 'the money those customers owe the company. Stored negative in the system (amount to collect), '
+                . 'shown here with the sign flipped so it reads positive.',
         ];
     }
 
@@ -449,17 +452,28 @@ class BalanceSheetController extends Controller
 
     /**
      * VAT paid on Current Stock — Assets line.
-     * SKIPPED: formula not yet decided (input VAT recoverable on stock on hand).
-     * Likely VAT rate applied to Inventory / Stock on Hand, but the rate source
-     * (per-item tax code vs flat rate) still needs to be confirmed with the client.
+     * Total input VAT the company has paid: VAT recorded via VAT expense categories
+     * plus the tax on delivered TAX purchases. Same components the VAT report uses
+     * (see VatReportController::calculateVatReport), summed here without a date range
+     * because the balance sheet is a live snapshot.
      *
      * @return array{value: float, note: string}
      */
     private function vatPaidOnCurrentStock(): array
     {
+        $vatExpenseTotal = (float) ExpenseTransaction::whereHas('expenseCategory', function ($q) {
+            $q->where('is_vat_category', true);
+        })->sum('amount_usd');
+
+        $vatPurchaseTotal = (float) Purchase::where('prefix', Purchase::TAXPREFIX)
+            ->where('status', 'Delivered')
+            ->sum('tax_usd');
+
         return [
-            'value' => 0.0,
-            'note' => 'Not yet calculated — the VAT-on-current-stock formula and rate source are pending confirmation with the client.',
+            'value' => $vatExpenseTotal + $vatPurchaseTotal,
+            'note' => 'Total input VAT paid (USD): VAT recorded via VAT expense categories ('
+                . number_format($vatExpenseTotal, 2) . ') plus the tax on delivered TAX purchases ('
+                . number_format($vatPurchaseTotal, 2) . ').',
         ];
     }
 
