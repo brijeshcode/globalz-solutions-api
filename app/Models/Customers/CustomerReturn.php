@@ -251,6 +251,19 @@ class CustomerReturn extends Model implements ModuleLockable
         return $this->prefix . $this->code;
     }
 
+    public function getStatusAttribute(): string
+    {
+        if ($this->isReceived()) {
+            return 'received';
+        }
+
+        if ($this->isApproved()) {
+            return 'approved';
+        }
+
+        return 'pending';
+    }
+
     // Code Generation Methods
     public static function reserveNextCode(): string
     {

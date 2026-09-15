@@ -194,17 +194,4 @@ class CustomerReturnResource extends JsonResource
             }),
         ];
     }
-
-    private function getStatusAttribute(): string
-    {
-        if ($this->isReceived()) {
-            return 'received';
-        }
-
-        if ($this->isApproved()) {
-            return 'approved';
-        }
-
-        return 'pending';
-    }
 }
