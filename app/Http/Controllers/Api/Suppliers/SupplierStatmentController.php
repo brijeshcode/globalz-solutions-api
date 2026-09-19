@@ -263,7 +263,7 @@ class SupplierStatmentController extends Controller
         // Calculate running balance in chronological order (oldest to newest)
         $balance = 0;
         $transactionsWithBalance = $sortedByDateAsc->map(function ($transaction) use (&$balance) {
-            $balance += $transaction['debit'] - $transaction['credit'];
+            $balance += $transaction['credit'] - $transaction['debit'];
             $transaction['balance'] = $balance;
             return $transaction;
         });
@@ -291,8 +291,9 @@ class SupplierStatmentController extends Controller
                 'type' => $item->type == 'credit' ? 'Credit Note' : 'Debit Note',
                 'date' => $item->date,
                 'amount' => $item->type === 'credit' ? -$item->amount : $item->amount,
-                'debit' => $item->type === 'debit' ? $item->amount : 0,
-                'credit' => $item->type === 'credit' ? $item->amount : 0,
+                // Supplier credit note reduces what we owe (debit); debit note increases it (credit).
+                'debit' => $item->type === 'credit' ? $item->amount : 0,
+                'credit' => $item->type === 'debit' ? $item->amount : 0,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
@@ -320,8 +321,9 @@ class SupplierStatmentController extends Controller
                 'type' => 'Purchase',
                 'date' => $item->date,
                 'amount' => $item->total,
-                'debit' => $item->total,
-                'credit' => 0,
+                // Purchase is a credit transaction: it increases what we owe the supplier.
+                'debit' => 0,
+                'credit' => $item->total,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
@@ -349,8 +351,9 @@ class SupplierStatmentController extends Controller
                 'type' => 'Payment',
                 'date' => $item->date,
                 'amount' => -$item->amount,
-                'debit' => 0,
-                'credit' => $item->amount,
+                // Payment is a debit transaction: it reduces what we owe (paying in advance goes negative).
+                'debit' => $item->amount,
+                'credit' => 0,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
@@ -378,8 +381,9 @@ class SupplierStatmentController extends Controller
                 'type' => 'Purchase Return',
                 'date' => $item->date,
                 'amount' => -$item->total,
-                'debit' => 0,
-                'credit' => $item->total,
+                // Purchase return is a debit transaction: it reduces what we owe the supplier.
+                'debit' => $item->total,
+                'credit' => 0,
                 'note' => $item->note,
                 'supplier' => [
                     'id' => $item->supplier->id,
@@ -401,7 +405,7 @@ class SupplierStatmentController extends Controller
         return [
             'total_debit' => $totalDebit,
             'total_credit' => $totalCredit,
-            'balance' => $totalDebit - $totalCredit,
+            'balance' => $totalCredit - $totalDebit,
         ];
     }
 

@@ -317,7 +317,7 @@ class BalanceSheetController extends Controller
 
         return [
             'value' => $value,
-            'note' => 'Active suppliers whose balance is negative — the supplier owes us or we have prepaid, '
+            'note' => 'Active suppliers whose balance is negative — the supplier owes us or we have paid in advance, '
                 . 'each converted to USD. Shown as an asset (the negative sign is dropped).',
         ];
     }
