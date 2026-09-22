@@ -20,6 +20,7 @@ use App\Models\Employees\SalaryItem;
 use App\Models\Setting;
 use App\Services\Employees\Commission\RuleCalculator;
 use App\Traits\HasPagination;
+use App\Traits\ResolvesCompanyPdfData;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,7 @@ use Mpdf\Mpdf;
 class SalaryController extends Controller
 {
     use HasPagination;
+    use ResolvesCompanyPdfData;
 
     public function index(Request $request): JsonResponse
     {
@@ -396,36 +398,6 @@ class SalaryController extends Controller
         })->values()->all();
     }
 
-    private function getCompanyDataForPdf(): array
-    {
-        $companyData = SettingsHelper::getGroup('company');
-
-        if (!empty($companyData['logo'])) {
-            $setting = Setting::where('group_name', 'company')->where('key_name', 'logo')->first();
-
-            if ($setting && $setting->documents()->exists()) {
-                $document = $setting->documents()->latest()->first();
-                $filePath = $document->file_path;
-
-                if (str_starts_with($filePath, 'public/')) {
-                    $filePath = substr($filePath, 7);
-                }
-
-                $absolutePath = storage_path('app/public/' . $filePath);
-                if (!file_exists($absolutePath)) {
-                    $absolutePath = storage_path($filePath);
-                }
-
-                $companyData['logo'] = [
-                    'path'   => $absolutePath,
-                    'exists' => file_exists($absolutePath),
-                ];
-            }
-        }
-
-        return $companyData;
-    }
-
     public function mySalaryDetail(Salary $salary): JsonResponse
     {
         // git refresh
@@ -469,7 +441,7 @@ class SalaryController extends Controller
                 'items',
             ]);
 
-            $company    = $this->getCompanyDataForPdf();
+            $company    = $this->getCompanyData();
             $month      = $salary->month;
             $year       = $salary->year;
             $employeeId = $salary->employee_id;

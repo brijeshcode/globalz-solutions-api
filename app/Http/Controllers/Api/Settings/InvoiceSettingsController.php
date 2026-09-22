@@ -6,12 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomerInvoiceSettingsUpdateRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\Setting;
+use App\Traits\HandlesSettingFileUpload;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class InvoiceSettingsController extends Controller
 {
+    use HandlesSettingFileUpload;
+
     private const GROUP = 'invoice';
+
+    /** Setting keys that hold uploaded files (resolved to preview URLs on read). */
+    private const FILE_KEYS = ['logo', 'stamp'];
 
     private const AVAILABLE_TEMPLATES = [
         ['id' => 'template-1', 'name' => 'Standard',      'description' => 'Default layout'],
@@ -46,6 +51,15 @@ class InvoiceSettingsController extends Controller
         'language'                       => ['value' => 'en',         'type' => Setting::TYPE_STRING],
         'unit_price_decimals'            => ['value' => 2,            'type' => Setting::TYPE_NUMBER],
         'total_decimals'                 => ['value' => 2,            'type' => Setting::TYPE_NUMBER],
+        // Company logo/stamp shown on the printed invoice.
+        'logo'         => ['value' => '',    'type' => Setting::TYPE_STRING],
+        'stamp'        => ['value' => '',    'type' => Setting::TYPE_STRING],
+        'show_logo'    => ['value' => true,  'type' => Setting::TYPE_BOOLEAN],
+        'show_stamp'   => ['value' => false, 'type' => Setting::TYPE_BOOLEAN],
+        'logo_width'   => ['value' => '200', 'type' => Setting::TYPE_STRING],
+        'logo_height'  => ['value' => '80',  'type' => Setting::TYPE_STRING],
+        'stamp_width'  => ['value' => '150', 'type' => Setting::TYPE_STRING],
+        'stamp_height' => ['value' => '100', 'type' => Setting::TYPE_STRING],
     ];
 
     /**
@@ -54,6 +68,7 @@ class InvoiceSettingsController extends Controller
     public function index(): JsonResponse
     {
         $settings = Setting::getGroup(self::GROUP);
+        $settings = $this->resolveDocumentUrls($settings);
 
         $settings['available_templates'] = self::AVAILABLE_TEMPLATES;
         $settings['available_languages'] = self::AVAILABLE_LANGUAGES;
@@ -66,14 +81,26 @@ class InvoiceSettingsController extends Controller
      */
     public function update(CustomerInvoiceSettingsUpdateRequest $request): JsonResponse
     {
-        $validated = $request->validated();
+        foreach (self::FILE_KEYS as $fileField) {
+            if ($request->hasFile($fileField)) {
+                $result = $this->handleSettingFileUpload(
+                    self::GROUP,
+                    $request->file($fileField),
+                    $fileField,
+                    'Invoice ' . ucfirst($fileField)
+                );
+                if ($result instanceof JsonResponse) {
+                    return $result;
+                }
+            }
+        }
 
-        foreach ($validated as $key => $value) {
+        foreach ($request->safe()->except(self::FILE_KEYS) as $key => $value) {
             $dataType = self::DEFAULTS[$key]['type'] ?? Setting::TYPE_STRING;
             Setting::set(self::GROUP, $key, $value, $dataType);
         }
 
-        $updated = Setting::getGroup(self::GROUP);
+        $updated = $this->resolveDocumentUrls(Setting::getGroup(self::GROUP));
 
         return ApiResponse::update('Invoice settings updated successfully', $updated);
     }
@@ -87,8 +114,34 @@ class InvoiceSettingsController extends Controller
             Setting::set(self::GROUP, $key, $config['value'], $config['type']);
         }
 
-        $settings = Setting::getGroup(self::GROUP);
+        $settings = $this->resolveDocumentUrls(Setting::getGroup(self::GROUP));
 
         return ApiResponse::update('Invoice settings reset to defaults', $settings);
+    }
+
+    /**
+     * Replace stored logo/stamp file paths with document preview URLs.
+     */
+    private function resolveDocumentUrls(array $settings): array
+    {
+        foreach (self::FILE_KEYS as $field) {
+            if (empty($settings[$field])) {
+                continue;
+            }
+
+            $setting = Setting::where('group_name', self::GROUP)
+                ->where('key_name', $field)
+                ->first();
+
+            if ($setting && $setting->documents()->exists()) {
+                $document = $setting->documents()->latest()->first();
+                $settings[$field] = [
+                    'thumbnail_url' => $document->thumbnail_url,
+                    'preview_url'   => $document->preview_url,
+                ];
+            }
+        }
+
+        return $settings;
     }
 }

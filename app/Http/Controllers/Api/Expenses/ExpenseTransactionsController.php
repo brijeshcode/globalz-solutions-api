@@ -72,8 +72,17 @@ class ExpenseTransactionsController extends Controller
             'trend_count'  => ['sometimes', 'integer', 'min:1', 'max:' . ExpensePeriodSummaryService::MAX_COUNT],
         ]);
 
+        // The trend always spans the last N periods, so the listing's date filters must
+        // NOT constrain it — otherwise the graph would collapse to the filtered range.
+        // Non-date filters (category, account, etc.) are kept so scoping still works.
+        $trendRequest = $request->duplicate();
+        foreach (['start_date', 'end_date', 'date_from', 'date_to', 'expense_month'] as $dateKey) {
+            $trendRequest->query->remove($dateKey);
+            $trendRequest->request->remove($dateKey);
+        }
+
         return app(ExpensePeriodSummaryService::class)->summarize(
-            $this->query($request),
+            $this->query($trendRequest),
             $validated['trend_period'] ?? ExpensePeriodSummaryService::PERIOD_MONTHLY,
             (int) ($validated['trend_count'] ?? 12)
         );

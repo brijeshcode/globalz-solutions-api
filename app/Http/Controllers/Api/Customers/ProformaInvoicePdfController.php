@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Customers\ProformaInvoice;
 use App\Models\Setting;
 use App\Services\Currency\CurrencyService;
+use App\Traits\ResolvesCompanyPdfData;
 use Illuminate\Http\Response;
 use Mpdf\Mpdf;
 
 class ProformaInvoicePdfController extends Controller
 {
+    use ResolvesCompanyPdfData;
+
     public function generateInvoice(ProformaInvoice $proformaInvoice, string $action = 'download')
     {
         try {
@@ -101,32 +104,4 @@ class ProformaInvoicePdfController extends Controller
         }
     }
 
-    private function getCompanyData(): array
-    {
-        $companyData = SettingsHelper::getGroup('company');
-
-        foreach (['logo', 'stamp'] as $field) {
-            if (!empty($companyData[$field])) {
-                $setting = Setting::where('group_name', 'company')->where('key_name', $field)->first();
-                if ($setting && $setting->documents()->exists()) {
-                    $document = $setting->documents()->latest()->first();
-                    $filePath = $document->file_path;
-                    if (str_starts_with($filePath, 'public/')) {
-                        $filePath = substr($filePath, 7);
-                    }
-                    $absolutePath = storage_path('app/public/' . $filePath);
-                    if (!file_exists($absolutePath)) {
-                        $absolutePath = storage_path($filePath);
-                    }
-                    $companyData[$field] = [
-                        'preview_url' => $document->preview_url,
-                        'path'        => $absolutePath,
-                        'exists'      => file_exists($absolutePath),
-                    ];
-                }
-            }
-        }
-
-        return $companyData;
-    }
 }

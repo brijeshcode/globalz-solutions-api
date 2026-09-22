@@ -8,6 +8,7 @@ use App\Models\Customers\Sale;
 use App\Helpers\SettingsHelper;
 use App\Models\Setting;
 use App\Services\Currency\CurrencyService;
+use App\Traits\ResolvesCompanyPdfData;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Response;
@@ -16,6 +17,8 @@ use Mpdf\Mpdf;
 
 class SalePdfController extends Controller
 {
+    use ResolvesCompanyPdfData;
+
     /**
      * Generate and download/stream sale invoice PDF
      *
@@ -203,48 +206,4 @@ class SalePdfController extends Controller
         }
     }
 
-    /**
-     * Get company data from settings including logo and stamp
-     *
-     * @return array
-     */
-    private function getCompanyData(): array
-    {
-        $companyData = SettingsHelper::getGroup('company');
-
-        // Get logo and stamp documents with full absolute paths for mPDF
-        foreach (['logo', 'stamp'] as $field) {
-            if (!empty($companyData[$field])) {
-                $setting = Setting::where('group_name', 'company')
-                    ->where('key_name', $field)
-                    ->first();
-
-                if ($setting && $setting->documents()->exists()) {
-                    $document = $setting->documents()->latest()->first();
-
-                    // Get absolute file path - remove 'public/' prefix if it exists in file_path
-                    $filePath = $document->file_path;
-                    if (str_starts_with($filePath, 'public/')) {
-                        $filePath = substr($filePath, 7); // Remove 'public/' prefix
-                    }
-
-                    // Construct absolute path
-                    $absolutePath = storage_path('app/public/' . $filePath);
-
-                    // Check if file exists, if not try without 'app/public/'
-                    if (!file_exists($absolutePath)) {
-                        $absolutePath = storage_path($filePath);
-                    }
-
-                    $companyData[$field] = [
-                        'preview_url' => $document->preview_url,
-                        'path' => $absolutePath,
-                        'exists' => file_exists($absolutePath),
-                    ];
-                }
-            }
-        }
-
-        return $companyData;
-    }
 }

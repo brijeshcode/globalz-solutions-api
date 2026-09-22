@@ -129,9 +129,9 @@ Route::get('/documents/{document}/preview-signed', [DocumentController::class, '
         \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
     ]);
 
-// Tenant Details - Public endpoint for login page branding
-Route::get('/tenant-details', [CompanyController::class, 'getTenantDetails'])
-    ->name('tenant-details.public');
+// Company Details - Public endpoint for login page branding
+Route::get('/company-details', [CompanyController::class, 'getPublicDetails'])
+    ->name('company-details.public');
 
 // Cache Versions - Public endpoint for app startup cache check
 Route::get('/cache-versions', [CacheVersionController::class, 'index'])
@@ -656,13 +656,9 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             // Route::get('/settings/template', [ImportCustomerSetupController::class, 'downloadTemplate'])->name('settings.template');
         });
 
-        Route::controller(CompanyController::class)->prefix('company')->name('company.')->group(function () {
-            Route::get('/', 'get')->name('get');
-            Route::post('/getSelected', 'getSelected')->name('getSelected');
-            Route::post('/', 'set')->name('set');
-
-            // Tenant Details (branding for login page)
-            Route::post('/tenant-details', 'setTenantDetails')->name('tenant-details.set');
+        Route::controller(CompanyController::class)->prefix('company-details')->name('company-details.')->group(function () {
+            Route::get('/', 'getDetails')->name('get');
+            Route::post('/', 'setDetails')->name('set');
         });
 
         // Warehouses Controller

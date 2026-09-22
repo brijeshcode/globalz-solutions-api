@@ -293,12 +293,21 @@ class Setting extends Model
     }
 
     /**
+     * Branding image settings (invoice logo/stamp, company_details logo/favicon)
+     * are image-only and size-capped.
+     */
+    private function isBrandingImageSetting(): bool
+    {
+        return in_array($this->group_name, ['invoice', 'company_details'], true)
+            && in_array($this->key_name, ['logo', 'stamp', 'favicon'], true);
+    }
+
+    /**
      * Get allowed document file extensions for settings
      */
     public function getAllowedDocumentExtensions(): array
     {
-        // For company logo/stamp, only allow image files
-        if ($this->group_name === 'company' && in_array($this->key_name, ['logo', 'stamp'])) {
+        if ($this->isBrandingImageSetting()) {
             return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'ico', 'webp'];
         }
 
@@ -311,8 +320,7 @@ class Setting extends Model
      */
     public function getMaxDocumentFileSize(): int
     {
-        // For company logo/stamp, limit to 2MB
-        if ($this->group_name === 'company' && in_array($this->key_name, ['logo', 'stamp'])) {
+        if ($this->isBrandingImageSetting()) {
             return 2 * 1024 * 1024; // 2MB
         }
 

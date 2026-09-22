@@ -27,7 +27,7 @@ class TenantSetupController extends Controller
     public function setup(Request $request, Tenant $tenant): JsonResponse
     {
         $validated = $request->validate([
-            // Company settings (group: company)
+            // Company identity (stored in the company_details group)
             'company'                  => 'nullable|array',
             'company.name'             => 'nullable|string|max:255',
             'company.address'          => 'nullable|string|max:500',
@@ -36,15 +36,15 @@ class TenantSetupController extends Controller
             'company.website'          => 'nullable|url|max:255',
             'company.tax_number'       => 'nullable|string|max:100',
 
-            // Tenant branding (group: tenant_details)
-            'tenant_details'                   => 'nullable|array',
-            'tenant_details.company_name'      => 'nullable|string|max:255',
-            'tenant_details.tagline'           => 'nullable|string|max:255',
-            'tenant_details.description'       => 'nullable|string|max:500',
-            'tenant_details.primary_color'     => 'nullable|string|max:50',
-            'tenant_details.secondary_color'   => 'nullable|string|max:50',
-            'tenant_details.contact_email'     => 'nullable|email|max:255',
-            'tenant_details.contact_phone'     => 'nullable|string|max:50',
+            // Company branding (group: company_details)
+            'company_details'                   => 'nullable|array',
+            'company_details.company_name'      => 'nullable|string|max:255',
+            'company_details.tagline'           => 'nullable|string|max:255',
+            'company_details.description'       => 'nullable|string|max:500',
+            'company_details.primary_color'     => 'nullable|string|max:50',
+            'company_details.secondary_color'   => 'nullable|string|max:50',
+            'company_details.contact_email'     => 'nullable|email|max:255',
+            'company_details.contact_phone'     => 'nullable|string|max:50',
 
             // Currency settings (group: currency)
             'currency'                         => 'required|array',
@@ -73,17 +73,22 @@ class TenantSetupController extends Controller
         try {
             $tenant->execute(function () use ($validated) {
                 DB::transaction(function () use ($validated) {
-                    // Company settings
+                    // Company identity (stored in the company_details group).
+                    $companyKeyMap = [
+                        'name'  => 'company_name',
+                        'email' => 'contact_email',
+                        'phone' => 'contact_phone',
+                    ];
                     if (!empty($validated['company'])) {
                         foreach ($validated['company'] as $key => $value) {
-                            Setting::set('company', $key, $value);
+                            Setting::set('company_details', $companyKeyMap[$key] ?? $key, $value);
                         }
                     }
 
-                    // Tenant branding
-                    if (!empty($validated['tenant_details'])) {
-                        foreach ($validated['tenant_details'] as $key => $value) {
-                            Setting::set('tenant_details', $key, $value);
+                    // Branding (also company_details; overrides identity for shared keys).
+                    if (!empty($validated['company_details'])) {
+                        foreach ($validated['company_details'] as $key => $value) {
+                            Setting::set('company_details', $key, $value);
                         }
                     }
 
@@ -139,10 +144,9 @@ class TenantSetupController extends Controller
     public function readiness(Tenant $tenant): JsonResponse
     {
         $checks = $tenant->execute(fn() => [
-            'company'        => $this->checkCompanySettings(),
-            'tenant_details' => $this->checkTenantDetails(),
-            'currency'       => $this->checkCurrencySettings(),
-            'users'          => $this->checkRequiredUsers(),
+            'company_details' => $this->checkCompanyDetails(),
+            'currency'        => $this->checkCurrencySettings(),
+            'users'           => $this->checkRequiredUsers(),
         ]);
 
         $ready = collect($checks)->every(fn($check) => $check['passed']);
@@ -155,25 +159,14 @@ class TenantSetupController extends Controller
 
     // ─── Private checks (called from within tenant context) ───────────────────
 
-    private function checkCompanySettings(): array
+    private function checkCompanyDetails(): array
     {
-        $name   = Setting::get('company', 'name');
+        $name   = Setting::get('company_details', 'company_name');
         $passed = !empty($name);
 
         return [
             'passed'  => $passed,
-            'missing' => $passed ? [] : ['company name not set'],
-        ];
-    }
-
-    private function checkTenantDetails(): array
-    {
-        $name   = Setting::get('tenant_details', 'company_name');
-        $passed = !empty($name);
-
-        return [
-            'passed'  => $passed,
-            'missing' => $passed ? [] : ['tenant_details company_name not set'],
+            'missing' => $passed ? [] : ['company_details company_name not set'],
         ];
     }
 

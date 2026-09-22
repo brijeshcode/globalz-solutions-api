@@ -44,7 +44,7 @@ class PruneOrphanedSettings extends Command
     /**
      * Groups whose keys are set dynamically at runtime — skipped entirely to avoid false positives.
      */
-    private const DYNAMIC_GROUPS = ['company', 'tenant_details'];
+    private const DYNAMIC_GROUPS = ['company_details'];
 
     /**
      * All explicitly known settings: group_name => [key_names].
@@ -81,6 +81,18 @@ class PruneOrphanedSettings extends Command
             'inv_show_google_map_qrcode',
             'inx_show_google_map_qrcode',
             'show_catalog_qrcode',
+            'template',
+            'language',
+            'unit_price_decimals',
+            'total_decimals',
+            'logo',
+            'stamp',
+            'show_logo',
+            'show_stamp',
+            'logo_width',
+            'logo_height',
+            'stamp_width',
+            'stamp_height',
         ],
         'sale_settings' => [
             'block_new_sale',

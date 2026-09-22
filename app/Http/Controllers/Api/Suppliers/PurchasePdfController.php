@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Api\Suppliers;
 
-use App\Helpers\SettingsHelper;
 use App\Http\Controllers\Controller;
-use App\Models\Setting;
 use App\Models\Suppliers\Purchase;
+use App\Traits\ResolvesCompanyPdfData;
 use Mpdf\Mpdf;
 
 class PurchasePdfController extends Controller
 {
+    use ResolvesCompanyPdfData;
+
     public function generatePurchase(Purchase $purchase, string $action = 'download')
     {
         try {
@@ -71,32 +72,4 @@ class PurchasePdfController extends Controller
         }
     }
 
-    private function getCompanyData(): array
-    {
-        $companyData = SettingsHelper::getGroup('company');
-
-        foreach (['logo', 'stamp'] as $field) {
-            if (!empty($companyData[$field])) {
-                $setting = Setting::where('group_name', 'company')->where('key_name', $field)->first();
-                if ($setting && $setting->documents()->exists()) {
-                    $document = $setting->documents()->latest()->first();
-                    $filePath = $document->file_path;
-                    if (str_starts_with($filePath, 'public/')) {
-                        $filePath = substr($filePath, 7);
-                    }
-                    $absolutePath = storage_path('app/public/' . $filePath);
-                    if (!file_exists($absolutePath)) {
-                        $absolutePath = storage_path($filePath);
-                    }
-                    $companyData[$field] = [
-                        'preview_url' => $document->preview_url,
-                        'path'        => $absolutePath,
-                        'exists'      => file_exists($absolutePath),
-                    ];
-                }
-            }
-        }
-
-        return $companyData;
-    }
 }

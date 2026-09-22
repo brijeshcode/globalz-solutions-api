@@ -91,7 +91,7 @@ class TenantSettingsController extends Controller
                 Setting::set($group, $key, $value);
             }
 
-            AttachCacheVersion::invalidate('tenant_details');
+            AttachCacheVersion::invalidate('company_details');
         });
 
         // Return the current state of all managed settings

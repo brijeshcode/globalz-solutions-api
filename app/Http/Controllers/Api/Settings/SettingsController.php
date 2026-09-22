@@ -14,11 +14,10 @@ class SettingsController extends Controller
     /**
      * Groups blocked from the frontend /settings/all endpoint.
      * Add a group here when it has its own dedicated controller/endpoint.
-     * e.g. tenant_details → CompanyController, company → CompanyController
+     * e.g. company_details → CompanyController, invoice → InvoiceSettingsController
      */
     private const FRONTEND_BLOCKED_GROUPS = [
-        'tenant_details',
-        'company',
+        'company_details',
     ];
 
     /**

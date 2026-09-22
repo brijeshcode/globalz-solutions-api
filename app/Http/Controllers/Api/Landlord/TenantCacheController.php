@@ -21,7 +21,7 @@ class TenantCacheController extends Controller
      *   key (string, required) — the cache version key to bump.
      *                            Use 'global' to bump all keys at once.
      *
-     * Examples: 'tenant_details', 'currencies', 'global'
+     * Examples: 'company_details', 'currencies', 'global'
      */
     public function invalidate(Request $request, Tenant $tenant): JsonResponse
     {

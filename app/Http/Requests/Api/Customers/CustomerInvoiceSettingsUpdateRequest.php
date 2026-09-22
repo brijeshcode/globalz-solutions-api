@@ -36,6 +36,14 @@ class CustomerInvoiceSettingsUpdateRequest extends FormRequest
             'language'                      => 'sometimes|string|in:en,fr,ar',
             'unit_price_decimals'           => 'sometimes|integer|min:0|max:6',
             'total_decimals'                => 'sometimes|integer|min:0|max:6',
+            'logo'                          => 'sometimes|nullable|file|image|max:2048',
+            'stamp'                         => 'sometimes|nullable|file|image|max:2048',
+            'show_logo'                     => 'sometimes|boolean',
+            'show_stamp'                    => 'sometimes|boolean',
+            'logo_width'                    => 'sometimes|nullable|string|max:10',
+            'logo_height'                   => 'sometimes|nullable|string|max:10',
+            'stamp_width'                   => 'sometimes|nullable|string|max:10',
+            'stamp_height'                  => 'sometimes|nullable|string|max:10',
         ];
     }
 }

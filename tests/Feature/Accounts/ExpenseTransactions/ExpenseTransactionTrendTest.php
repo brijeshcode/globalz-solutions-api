@@ -134,6 +134,51 @@ it('supports a yearly trend', function () {
         ->and((float) $current['total'])->toBe(500.0);
 });
 
+it('ignores date filters for the trend while still filtering the list', function () {
+    $thisMonth = Carbon::now()->startOfMonth()->addDay();
+    $threeMonthsAgo = Carbon::now()->subMonthsNoOverflow(3)->startOfMonth()->addDay();
+
+    $this->createTransaction(['date' => $thisMonth->toDateString(), 'amount' => 100, 'amount_usd' => 100]);
+    $this->createTransaction(['date' => $threeMonthsAgo->toDateString(), 'amount' => 70, 'amount_usd' => 70]);
+
+    // Date filter narrows the list to the current month only.
+    $response = $this->getJson(route('expense-transactions.index', [
+        'trend'       => 1,
+        'trend_count' => 6,
+        'date_from'   => $thisMonth->copy()->startOfMonth()->toDateString(),
+        'date_to'     => $thisMonth->copy()->endOfMonth()->toDateString(),
+    ]))->assertOk();
+
+    // List is filtered by the date range -> only the current month's transaction.
+    expect($response->json('data'))->toHaveCount(1);
+
+    // Trend is NOT constrained by the date filter -> the older bucket still carries its total.
+    $periods = collect($response->json('meta.trend.periods'))->keyBy('key');
+    expect((float) $periods[Carbon::now()->format('Y-m')]['total'])->toBe(100.0)
+        ->and((float) $periods[$threeMonthsAgo->format('Y-m')]['total'])->toBe(70.0);
+});
+
+it('still scopes the trend by non-date filters like category', function () {
+    $rent = ExpenseCategory::factory()->create(['name' => 'Rent']);
+    $fuel = ExpenseCategory::factory()->create(['name' => 'Fuel']);
+    $thisMonth = Carbon::now()->startOfMonth()->addDay()->toDateString();
+
+    $this->createTransaction(['date' => $thisMonth, 'expense_category_id' => $rent->id, 'amount' => 300, 'amount_usd' => 300]);
+    $this->createTransaction(['date' => $thisMonth, 'expense_category_id' => $fuel->id, 'amount' => 120, 'amount_usd' => 120]);
+
+    $current = collect(
+        $this->getJson(route('expense-transactions.index', [
+            'trend'               => 1,
+            'trend_count'         => 3,
+            'expense_category_id' => $rent->id,
+            'date_from'           => Carbon::now()->startOfMonth()->toDateString(),
+        ]))->assertOk()->json('meta.trend.periods')
+    )->last();
+
+    expect((float) $current['total'])->toBe(300.0)
+        ->and($current['categories'])->toHaveCount(1);
+});
+
 it('rejects an invalid trend_period', function () {
     $this->getJson(route('expense-transactions.index', ['trend' => 1, 'trend_period' => 'daily']))
         ->assertStatus(422)
