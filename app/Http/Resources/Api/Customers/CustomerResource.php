@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\Customers;
 
+use App\Helpers\CustomersHelper;
 use App\Http\Resources\Api\EmbeddedDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -20,7 +21,9 @@ class CustomerResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $currentBalance = $this->hasParent() ? 0 : ($this->current_balance ? (float) $this->current_balance : 0);
+        $currentBalance = (CustomersHelper::combineEnabled() && $this->hasParent())
+            ? 0
+            : ($this->current_balance ? (float) $this->current_balance : 0);
         return [
             'id' => $this->id,
             
@@ -223,7 +226,9 @@ class CustomerResource extends JsonResource
      */
     private function getBalanceSummary(): array
     {
-        $balance = $this->hasParent() ? 0.0 : (float) $this->current_balance;
+        $balance = (CustomersHelper::combineEnabled() && $this->hasParent())
+            ? 0.0
+            : (float) $this->current_balance;
 
         return [
             'amount' => (float) $balance,

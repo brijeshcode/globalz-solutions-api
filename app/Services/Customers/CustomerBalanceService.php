@@ -9,6 +9,7 @@ use App\Models\Customers\Sale;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Customers\CustomerCreditDebitNote;
+use App\Helpers\CustomersHelper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -663,16 +664,13 @@ class CustomerBalanceService
         ];
     }
 
-    private static function updateCustomerCurrentBalance(int $customerId): void
+    public static function updateCustomerCurrentBalance(int $customerId): void
     {
-        // Sum all monthly closing balances for the customer
-        $totalBalance = self::currentTransactionTotal($customerId) + self::latestClosingBalance($customerId);
-
-        // Update customer's current balance
+        // Delegate to the single source of truth for balance recalculation,
+        // which honours the parent/child combine rule.
         $customer = Customer::find($customerId);
-        if($customer->current_balance != $totalBalance){
-            $customer->current_balance = $totalBalance;
-            $customer->save();
+        if ($customer) {
+            CustomersHelper::recalculateCurrentBalance($customer);
         }
     }
 

@@ -26,6 +26,7 @@ class FeatureController extends Controller
         ['key' => 'customer_return_orders',    'name' => 'Customer Return Orders',      'description' => 'Pending return orders that require approval. Requires customer_returns.'],
         ['key' => 'customer_credit_notes',     'name' => 'Customer Credit/Debit Notes', 'description' => 'Issue credit or debit notes against customer accounts.'],
         ['key' => 'proforma_invoice',          'name' => 'Proforma Invoice',            'description' => 'Enable proforma invoice creation and management.'],
+        ['key' => 'combine_parent_child_balance', 'name' => 'Combine Parent/Child Balance', 'description' => 'Fold each child customer\'s balance into its parent: child transactions post to the parent, the child shows a zero balance, and the parent statement can include children. When off, parent and child keep separate balances.'],
 
         // Purchases & Suppliers
         ['key' => 'purchase_returns',          'name' => 'Purchase Returns',            'description' => 'Return purchased goods back to suppliers.'],

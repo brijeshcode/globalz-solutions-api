@@ -23,7 +23,7 @@ it('returns the customer itself as balance owner when combine is off', function 
 });
 
 it('returns the parent as balance owner for a child when combine is on', function () {
-    Setting::set('customers', 'combine_parent_child_balance', true, Setting::TYPE_BOOLEAN);
+    $this->enableCombineBalance();
     $parent = Customer::factory()->create();
     $child  = Customer::factory()->create(['parent_id' => $parent->id]);
 
@@ -42,7 +42,7 @@ it('applies a live balance delta to the child itself when combine is off', funct
 });
 
 it('routes a live balance delta to the parent when combine is on', function () {
-    Setting::set('customers', 'combine_parent_child_balance', true, Setting::TYPE_BOOLEAN);
+    $this->enableCombineBalance();
     $parent = Customer::factory()->create(['current_balance' => 0]);
     $child  = Customer::factory()->create(['parent_id' => $parent->id, 'current_balance' => 0]);
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Helpers\CustomersHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Customers\CustomersStoreRequest;
@@ -12,7 +13,6 @@ use App\Http\Responses\ApiResponse;
 use App\Exports\CustomersExport;
 use App\Imports\CustomersImport;
 use App\Models\Customers\Customer;
-use App\Models\Items\PriceList;
 use App\Models\Setups\Employees\Department;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -381,7 +381,12 @@ class CustomersController extends Controller
             // 'customers_with_balance' =>  (clone $query)->where('current_balance', '!=', 0)->count(),
             // 'customers_over_credit_limit' =>  (clone $query)->whereColumn('current_balance', '>', 'credit_limit')
             //     ->whereNotNull('credit_limit')->count(),
-            'total_customer_balance' =>  (clone $query)->sum('current_balance'),
+            // When combining, a child's balance is folded into its parent, so sum only
+            // parents/standalone customers (parent_id IS NULL) to avoid double-counting
+            // any stale child balances that predate a recalc.
+            'total_customer_balance' =>  (clone $query)
+                ->when(CustomersHelper::combineEnabled(), fn ($q) => $q->whereNull('parent_id'))
+                ->sum('current_balance'),
             // 'customers_by_type' =>  (clone $query)->with('customerType:id,name')
             //     ->selectRaw('customer_type_id, count(*) as count')
             //     ->groupBy('customer_type_id')
