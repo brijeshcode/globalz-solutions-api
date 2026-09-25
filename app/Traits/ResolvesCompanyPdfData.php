@@ -12,11 +12,16 @@ trait ResolvesCompanyPdfData
      * the `company_details` group and print branding (logo/stamp + toggles)
      * from the `invoice` group. Logo/stamp document references are resolved to
      * absolute file paths mpdf can embed.
+     *
+     * `$stampGroup` lets a document pull its stamp from a different settings
+     * group (e.g. customer returns use their own stamp) while keeping the logo
+     * and identity from the shared groups.
      */
-    protected function getCompanyData(): array
+    protected function getCompanyData(string $stampGroup = 'invoice'): array
     {
         $details = SettingsHelper::getGroup('company_details');
         $invoice = SettingsHelper::getGroup('invoice');
+        $stamp   = $stampGroup === 'invoice' ? $invoice : SettingsHelper::getGroup($stampGroup);
 
         $company = [
             'name'         => $details['company_name']  ?? null,
@@ -26,21 +31,22 @@ trait ResolvesCompanyPdfData
             'email'        => $details['contact_email'] ?? null,
             'website'      => $details['website']       ?? null,
             'show_logo'    => $invoice['show_logo']    ?? false,
-            'show_stamp'   => $invoice['show_stamp']   ?? false,
+            'show_stamp'   => $stamp['show_stamp']     ?? false,
             'logo_width'   => $invoice['logo_width']   ?? null,
             'logo_height'  => $invoice['logo_height']  ?? null,
-            'stamp_width'  => $invoice['stamp_width']  ?? null,
-            'stamp_height' => $invoice['stamp_height'] ?? null,
+            'stamp_width'  => $stamp['stamp_width']    ?? null,
+            'stamp_height' => $stamp['stamp_height']   ?? null,
             'logo'         => $invoice['logo']         ?? null,
-            'stamp'        => $invoice['stamp']        ?? null,
+            'stamp'        => $stamp['stamp']          ?? null,
         ];
 
-        foreach (['logo', 'stamp'] as $field) {
+        $fieldGroups = ['logo' => 'invoice', 'stamp' => $stampGroup];
+        foreach ($fieldGroups as $field => $group) {
             if (empty($company[$field])) {
                 continue;
             }
 
-            $setting = Setting::where('group_name', 'invoice')
+            $setting = Setting::where('group_name', $group)
                 ->where('key_name', $field)
                 ->first();
 

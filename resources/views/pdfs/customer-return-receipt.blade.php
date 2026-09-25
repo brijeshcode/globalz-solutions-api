@@ -402,6 +402,16 @@
     </table>
     @endif
 
+    {{-- ── Company Stamp (tax returns only) ── --}}
+    @if($isTax && !empty($company['show_stamp']) && $company['show_stamp'] && !empty($company['stamp']['exists']))
+        @php $stampW = $company['stamp_width'] ?? 150; $stampH = $company['stamp_height'] ?? 100; @endphp
+        <div style="text-align: center; margin-top: 10px;">
+            <img src="{{ $company['stamp']['path'] }}"
+                 alt="{{ $company['name'] ?? 'Company Stamp' }}"
+                 style="height: {{ $stampH }}px; width: {{ $stampW }}px; opacity: 0.7;">
+        </div>
+    @endif
+
     {{-- ── Signatures ── --}}
     <table class="sig-table">
         <tr>
