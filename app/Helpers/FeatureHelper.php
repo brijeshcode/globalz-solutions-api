@@ -83,6 +83,11 @@ class FeatureHelper {
         return self::isEnabled('proforma_invoice');
     }
 
+    public static function isCombineParentChildBalance(): bool
+    {
+        return self::isEnabled('combine_parent_child_balance');
+    }
+
     /**
      * Syncin ("copied to legacy system") is on only when both the landlord
      * feature flag is enabled AND the tenant admin has toggled it on in

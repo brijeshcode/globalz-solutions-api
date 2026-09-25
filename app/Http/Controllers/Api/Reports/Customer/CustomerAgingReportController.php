@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Reports\Customer;
 
+use App\Helpers\CustomersHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\Reports\Customer\CustomerAgingReportResource;
 use App\Http\Responses\ApiResponse;
@@ -47,7 +48,11 @@ class CustomerAgingReportController extends Controller
         $this->loadLastInvoices($paginated->getCollection());
 
         $stats = [
-            'total_balance' => (float) $this->buildQuery($request)->sum('customers.current_balance'),
+            // When combining, a child's balance is folded into its parent — sum only
+            // parents/standalone customers to avoid double-counting stale child balances.
+            'total_balance' => (float) $this->buildQuery($request)
+                ->when(CustomersHelper::combineEnabled(), fn (Builder $q) => $q->whereNull('customers.parent_id'))
+                ->sum('customers.current_balance'),
         ];
 
         return ApiResponse::paginated(

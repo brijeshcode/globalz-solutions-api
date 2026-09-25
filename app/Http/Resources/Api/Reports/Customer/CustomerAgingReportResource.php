@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\Reports\Customer;
 
+use App\Helpers\CustomersHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -13,7 +14,10 @@ class CustomerAgingReportResource extends JsonResource
             'customer_id'         => $this->id,
             'customer_code'       => $this->code,
             'customer_name'       => $this->name,
-            'balance'             => (float) $this->current_balance,
+            // Child balance is owned by its parent when combining — show 0 for consistency.
+            'balance'             => (CustomersHelper::combineEnabled() && $this->hasParent())
+                ? 0.0
+                : (float) $this->current_balance,
             'last_invoice_date'   => $this->last_invoice_date,
             'last_invoice_amount' => $this->last_invoice_amount !== null ? (float) $this->last_invoice_amount : null,
             'invoice_age'         => $this->invoice_age !== null ? (int) $this->invoice_age : null,

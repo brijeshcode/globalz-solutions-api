@@ -2,9 +2,13 @@
 
 namespace Tests\Feature\Customers\Customers\Concerns;
 
+use App\Helpers\FeatureHelper;
 use App\Models\Employees\Employee;
 use App\Models\Items\PriceList;
+use App\Models\Landlord\Feature;
+use App\Models\Landlord\TenantFeature;
 use App\Models\Setting;
+use App\Models\Tenant;
 use App\Models\Setups\Customers\CustomerGroup;
 use App\Models\Setups\Customers\CustomerPaymentTerm;
 use App\Models\Setups\Customers\CustomerProvince;
@@ -52,6 +56,40 @@ trait HasCustomerSetup
             'department_id' => $this->salesDepartment->id,
             'is_active'     => true,
         ]);
+
+        // Landlord feature rows persist across tests; ensure each starts with combine OFF.
+        $this->setCombineBalance(false);
+    }
+
+    /**
+     * Enable the developer-managed "combine parent/child balance" landlord feature
+     * for the current test tenant.
+     */
+    protected function enableCombineBalance(): void
+    {
+        $this->setCombineBalance(true);
+    }
+
+    /**
+     * Landlord feature rows persist across tests (not covered by RefreshDatabase),
+     * so reset to a known state explicitly.
+     */
+    protected function setCombineBalance(bool $enabled): void
+    {
+        $feature = Feature::firstOrCreate(
+            ['key' => 'combine_parent_child_balance'],
+            ['name' => 'Combine Parent/Child Balance', 'description' => 'Test seeder', 'is_active' => true]
+        );
+
+        $tenantId = Tenant::current()->id;
+
+        TenantFeature::updateOrCreate(
+            ['tenant_id' => $tenantId, 'feature_id' => $feature->id],
+            ['is_enabled' => $enabled]
+        );
+
+        TenantFeature::clearCache($tenantId);
+        FeatureHelper::flush();
     }
 
     protected function customerPayload(array $overrides = []): array

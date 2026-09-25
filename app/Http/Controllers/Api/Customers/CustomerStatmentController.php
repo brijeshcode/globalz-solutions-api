@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customers;
 
+use App\Helpers\CustomersHelper;
 use App\Helpers\DataHelper;
 use App\Helpers\RoleHelper;
 use App\Http\Controllers\Controller;
@@ -37,7 +38,7 @@ class CustomerStatmentController extends Controller
 
         $allTransactions = $this->getTransactions($request, $customer, $search);
         $stats = $this->calculateStats($allTransactions);
-        $this->canUpdateBalance($request, $customer, $stats['balance']);
+        $this->canUpdateBalance($request, $customer);
 
         // Check if pagination is requested
         if ($request->boolean('withPage')) {
@@ -129,21 +130,13 @@ class CustomerStatmentController extends Controller
      */
     public function processCustomerBalanceRecalculation(Customer $customer): array
     {
-        // Create empty request for getTransactions
-        $request = new Request();
-
-        $transactions = $this->getTransactions($request, $customer, null);
-
-        // Calculate the correct balance directly (total credit - total debit)
-        // This is independent of transaction sort order
-        $calculatedBalance = $transactions->sum('credit') - $transactions->sum('debit');
         $oldBalance = $customer->current_balance;
 
-        // Check if balance is different
-        if ($customer->current_balance != $calculatedBalance) {
-            // Update the customer balance
-            $customer->update(['current_balance' => $calculatedBalance]);
+        // Canonical recompute (honours the parent/child combine rule).
+        $calculatedBalance = CustomersHelper::recalculateCurrentBalance($customer);
 
+        // Check if balance is different
+        if ((float) $oldBalance != $calculatedBalance) {
             return [
                 'updated' => true,
                 'customer_id' => $customer->id,
@@ -232,9 +225,9 @@ class CustomerStatmentController extends Controller
         );
     }
 
-    private function canUpdateBalance(Request $request, Customer $customer, float $balance): void
+    private function canUpdateBalance(Request $request, Customer $customer): void
     {
-        // Only update balance if no filters are applied
+        // Only refresh the stored balance when no filters are applied (we need the full picture).
         $hasFilters = $request->has('from_date')
             || $request->has('to_date')
             || $request->has('search')
@@ -244,45 +237,48 @@ class CustomerStatmentController extends Controller
             return;
         }
 
-        if($customer->current_balance == $balance){
-            return;
-        }
-
-        // Update customer balance
-        $customer->update(['current_balance' => $balance]);
+        // Recompute the canonical balance, independent of the scope being viewed:
+        //   combine OFF -> parent-only (children excluded); child keeps its own balance
+        //   combine ON  -> parent + children; a child resolves to 0 (owned by parent)
+        CustomersHelper::recalculateCurrentBalance($customer);
     }
 
     private function getTransactions(Request $request, Customer $customer, ?string $noteSearch = null)
     {
         $transactionType = $request->get('transaction_type');
 
-        $childIds = $customer->children()->pluck('id')->toArray();
-        $isParent = !empty($childIds);
-        $customerIds = $isParent ? array_merge([$customer->id], $childIds) : [$customer->id];
+        // Include children only when explicitly requested; default follows the combine setting.
+        $isParent = $customer->children()->exists();
+        $includeChildren = $request->boolean('include_children_transactions', CustomersHelper::combineEnabled());
+        $childIds = ($isParent && $includeChildren)
+            ? $customer->children()->pluck('id')->toArray()
+            : [];
+        $scopeIncludesChildren = !empty($childIds);
+        $customerIds = array_merge([$customer->id], $childIds);
 
         $allTransactions = collect();
 
         if (!$transactionType || $transactionType === 'credit_debit_note') {
             $allTransactions = $allTransactions->concat(
-                $this->getCreditDebitNotes($request, $customerIds, $isParent, $noteSearch)
+                $this->getCreditDebitNotes($request, $customerIds, $scopeIncludesChildren, $noteSearch)
             );
         }
 
         if (!$transactionType || $transactionType === 'sale') {
             $allTransactions = $allTransactions->concat(
-                $this->getSales($request, $customerIds, $isParent, $noteSearch)
+                $this->getSales($request, $customerIds, $scopeIncludesChildren, $noteSearch)
             );
         }
 
         if (!$transactionType || $transactionType === 'payment') {
             $allTransactions = $allTransactions->concat(
-                $this->getPayments($request, $customerIds, $isParent, $noteSearch)
+                $this->getPayments($request, $customerIds, $scopeIncludesChildren, $noteSearch)
             );
         }
 
         if (!$transactionType || $transactionType === 'return') {
             $allTransactions = $allTransactions->concat(
-                $this->getReturns($request, $customerIds, $isParent, $noteSearch)
+                $this->getReturns($request, $customerIds, $scopeIncludesChildren, $noteSearch)
             );
         }
 
