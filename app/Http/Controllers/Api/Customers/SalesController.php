@@ -814,6 +814,25 @@ class SalesController extends Controller
             $query->byCustomer($request->customer_id);
         }
 
+        
+        if ($request->has('discount_checks')) {
+            if($request->discount_checks == 'discount_amount')
+            {
+                $query->where('discount_amount', '!=', 0);
+            }
+
+            if($request->discount_checks == 'has_item_discount')
+            {
+                $query->whereHas('saleItems', fn ($q) => $q->where('discount_amount', '!=', 0));
+            }
+
+            if($request->discount_checks == 'both_discount')
+            {
+                $query->where('discount_amount', '!=', 0)
+                    ->whereHas('saleItems', fn ($q) => $q->where('discount_amount', '!=', 0));
+            }
+        }
+  
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
