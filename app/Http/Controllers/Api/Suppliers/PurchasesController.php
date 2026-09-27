@@ -301,7 +301,36 @@ class PurchasesController extends Controller
     }
 
 
-  
+    public function undoDelivery(Purchase $purchase): JsonResponse
+    {
+        if (! RoleHelper::canDeveloper()) {
+            return ApiResponse::customError('Only a developer can undo a delivered purchase.', 422);
+        }
+
+        try {
+            $this->purchaseService->undoDelivery($purchase);
+
+            $purchase->load([
+                'createdBy:id,name',
+                'updatedBy:id,name',
+                'supplier:id,code,name',
+                'warehouse:id,name',
+                'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+                'purchaseItems.item:id,code,short_name',
+                'documents'
+            ]);
+
+            return ApiResponse::update(
+                'Purchase delivery undone. Inventory and prices have been reverted.',
+                new PurchaseResource($purchase)
+            );
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::customError($e->getMessage(), 422);
+        } catch (\Exception $e) {
+            return ApiResponse::customError('Failed to undo delivery: ' . $e->getMessage(), 500);
+        }
+    }
+
     /**
      * Get the next suggested purchase code
      */

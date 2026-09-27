@@ -523,6 +523,7 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::get('{purchase}', 'show')->name('show');
             Route::put('{purchase}', 'update')->name('update')->middleware('module.lock');
             Route::patch('{purchase}/changeStatus', 'changeStatus')->name('changeStatus')->middleware('module.lock');
+            Route::patch('{purchase}/undo-delivery', 'undoDelivery')->name('undo-delivery')->middleware('module.lock');
             Route::get('{purchase}/recalculate-sale-profit/preview', 'recalculateSaleProfitPreview')->name('recalculate-sale-profit.preview')->middleware('feature:sale_profit_recalculation');
             Route::post('{purchase}/recalculate-sale-profit', 'recalculateSaleProfit')->name('recalculate-sale-profit')->middleware('feature:sale_profit_recalculation');
             Route::delete('{purchase}', 'destroy')->name('destroy')->middleware('module.lock');

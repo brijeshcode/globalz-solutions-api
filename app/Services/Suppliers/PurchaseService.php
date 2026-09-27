@@ -488,6 +488,94 @@ class PurchaseService
     }
 
     /**
+     * Undo a delivered purchase: reverse inventory and price effects, revert status.
+     * Mirrors the delivered branch of deletePurchase() but keeps the purchase record.
+     */
+    public function undoDelivery(Purchase $purchase): void
+    {
+        try {
+            DB::transaction(function () use ($purchase) {
+                if ($purchase->status !== 'Delivered') {
+                    throw new \InvalidArgumentException(
+                        "Purchase #{$purchase->id} is not delivered."
+                    );
+                }
+
+                $purchaseItems = $purchase->purchaseItems()->get();
+
+                $this->validateNoSalesFromPurchase($purchaseItems->pluck('id')->all());
+
+                foreach ($purchaseItems as $purchaseItem) {
+                    $this->validateInventoryBeforeDeletion(
+                        $purchaseItem->item_id,
+                        $purchase->warehouse_id,
+                        $purchaseItem->quantity
+                    );
+                }
+
+                foreach ($purchaseItems as $purchaseItem) {
+                    InventoryService::subtract($purchaseItem->item_id, $purchase->warehouse_id, $purchaseItem->quantity);
+                    PriceService::deleteFromPurchase($purchase, $purchaseItem);
+                    SupplierItemPriceService::deleteFromPurchase($purchase, $purchaseItem);
+                }
+
+                $purchase->update(['status' => 'Shipped', 'delivered_at' => null]);
+            });
+        } catch (\InvalidArgumentException $e) {
+            Log::warning('Purchase undo delivery validation failed', [
+                'error' => $e->getMessage(),
+                'purchase_id' => $purchase->id,
+                'purchase_code' => $purchase->code ?? 'N/A',
+            ]);
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Failed to undo purchase delivery', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'purchase_id' => $purchase->id,
+                'purchase_code' => $purchase->code ?? 'N/A',
+            ]);
+            throw new \RuntimeException(
+                "Failed to undo delivery for purchase #{$purchase->id}: " . $e->getMessage() .
+                ". All changes have been rolled back.",
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Block undo if any sale drew its cost from this purchase. Sales are bound to a
+     * purchase via sale_items.cost_history_id -> item_price_history (source_type
+     * 'purchase_item', source_id = purchase_item id).
+     */
+    private function validateNoSalesFromPurchase(array $purchaseItemIds): void
+    {
+        if (empty($purchaseItemIds)) {
+            return;
+        }
+
+        $historyIds = \App\Models\Inventory\ItemPriceHistory::withTrashed()
+            ->where('source_type', 'purchase_item')
+            ->whereIn('source_id', $purchaseItemIds)
+            ->pluck('id');
+
+        if ($historyIds->isEmpty()) {
+            return;
+        }
+
+        $soldCount = \App\Models\Customers\SaleItems::whereIn('cost_history_id', $historyIds)
+            ->whereNull('deleted_at')
+            ->count();
+
+        if ($soldCount > 0) {
+            throw new \InvalidArgumentException(
+                "Cannot undo delivery: {$soldCount} sale item(s) were sold using this purchase's cost. Undo is only allowed when no sale has been made from this purchase."
+            );
+        }
+    }
+
+    /**
      * Deliver a purchase and add inventory
      * Called when purchase status changes to 'Delivered'
      */
