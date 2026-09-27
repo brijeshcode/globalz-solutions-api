@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Reports\Sales;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\Reports\Sales\ItemsSaleReportResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\Setups\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,8 @@ class ItemsSaleReportController extends Controller
         'item_description'      => 'items.description',
         'item_code'             => 'sale_items.item_code',
         'total_quantity'        => 'total_quantity',
+        'total_net_sell_price'     => 'total_net_sell_price',
+        'total_net_sell_price_usd' => 'total_net_sell_price_usd',
         'total_sale_amount'     => 'total_sale_amount',
         'total_sale_amount_usd' => 'total_sale_amount_usd',
         'total_profit'          => 'total_profit',
@@ -29,9 +32,15 @@ class ItemsSaleReportController extends Controller
     {
         $perPage = $request->get('per_page', 50);
 
+        $defaultWarehouseId = Warehouse::where('is_default', true)->value('id');
+
         $query = DB::table('sale_items')
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->join('items', 'sale_items.item_id', '=', 'items.id')
+            ->leftJoin('inventories', function ($join) use ($defaultWarehouseId) {
+                $join->on('inventories.item_id', '=', 'sale_items.item_id')
+                    ->where('inventories.warehouse_id', '=', $defaultWarehouseId);
+            })
             ->leftJoin('item_categories', 'items.item_category_id', '=', 'item_categories.id')
             ->leftJoin('item_families', 'items.item_family_id', '=', 'item_families.id')
             ->leftJoin('item_groups', 'items.item_group_id', '=', 'item_groups.id')
@@ -66,7 +75,10 @@ class ItemsSaleReportController extends Controller
                 DB::raw('COALESCE(item_types.name, NULL) as type_name'),
                 DB::raw('COALESCE(item_brands.name, NULL) as brand_name'),
                 DB::raw('COALESCE(suppliers.name, NULL) as supplier_name'),
+                DB::raw('MAX(inventories.quantity) as default_stock'),
                 DB::raw('SUM(sale_items.quantity) as total_quantity'),
+                DB::raw('SUM(sale_items.total_net_sell_price) as total_net_sell_price'),
+                DB::raw('SUM(sale_items.total_net_sell_price_usd) as total_net_sell_price_usd'),
                 DB::raw('SUM(sale_items.total_price) as total_sale_amount'),
                 DB::raw('SUM(sale_items.total_price_usd) as total_sale_amount_usd'),
                 DB::raw('SUM(sale_items.total_profit) as total_profit'),
@@ -96,6 +108,8 @@ class ItemsSaleReportController extends Controller
             ->mergeBindings($query)
             ->selectRaw('
                 SUM(total_quantity) as total_quantity,
+                SUM(total_net_sell_price) as total_net_sell_price,
+                SUM(total_net_sell_price_usd) as total_net_sell_price_usd,
                 SUM(total_sale_amount) as total_sale_amount,
                 SUM(total_sale_amount_usd) as total_sale_amount_usd,
                 SUM(total_profit) as total_profit,
@@ -106,7 +120,9 @@ class ItemsSaleReportController extends Controller
         $items = $query->paginate($perPage);
 
         $stats = [
-            'total_quantity'        => (float) ($totalsQuery->total_quantity ?? 0),
+            'total_quantity'            => (float) ($totalsQuery->total_quantity ?? 0),
+            'total_net_sell_price'      => round((float) ($totalsQuery->total_net_sell_price ?? 0), 2),
+            'total_net_sell_price_usd'  => round((float) ($totalsQuery->total_net_sell_price_usd ?? 0), 2),
             'total_sale_amount'     => round((float) ($totalsQuery->total_sale_amount ?? 0), 2),
             'total_sale_amount_usd' => round((float) ($totalsQuery->total_sale_amount_usd ?? 0), 2),
             'total_profit'          => round((float) ($totalsQuery->total_profit ?? 0), 2),
