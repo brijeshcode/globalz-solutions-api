@@ -185,7 +185,7 @@
 
     {{-- ── Signature ── --}}
     <table class="sig-table">
-        
+
         <tr>
             <td style="height: 60px; border-bottom: 1.5px solid #555555;"></td>
         </tr>

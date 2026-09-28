@@ -92,6 +92,7 @@ use App\Http\Controllers\Api\Setups\Accounts\IncomeCategoriesController;
 use App\Http\Controllers\Api\Setups\Customers\ImportCustomerSetupController;
 use App\Http\Controllers\Api\Settings\EmployeeSettingsController;
 use App\Http\Controllers\Api\Settings\CustomerReturnSettingsController;
+use App\Http\Controllers\Api\Settings\CustomerPaymentSettingsController;
 use App\Http\Controllers\Api\Settings\InvoiceSettingsController;
 use App\Http\Controllers\Api\Settings\Items\ItemCatalogSettingsController;
 use App\Http\Controllers\Api\Settings\ModuleLockSettingsController;
@@ -1254,6 +1255,13 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::get('/', [CustomerReturnSettingsController::class, 'index'])->name('index');
             Route::put('/', [CustomerReturnSettingsController::class, 'update'])->name('update');
             Route::post('/reset', [CustomerReturnSettingsController::class, 'reset'])->name('reset');
+        });
+
+        // Customer Payment Settings
+        Route::prefix('customer-payment')->name('settings.customer-payment.')->group(function () {
+            Route::get('/', [CustomerPaymentSettingsController::class, 'index'])->name('index');
+            Route::put('/', [CustomerPaymentSettingsController::class, 'update'])->name('update');
+            Route::post('/reset', [CustomerPaymentSettingsController::class, 'reset'])->name('reset');
         });
 
         // Sale Settings

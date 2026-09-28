@@ -22,7 +22,7 @@ class CustomerPaymentPdfController extends Controller
                 'createdBy:id,name',
             ]);
 
-            $companyData = $this->getCompanyData();
+            $companyData = $this->getCompanyData('customer_payment');
 
             $data = [
                 'payment' => $customerPayment,
