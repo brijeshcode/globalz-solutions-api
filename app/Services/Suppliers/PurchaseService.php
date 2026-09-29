@@ -503,7 +503,7 @@ class PurchaseService
 
                 $purchaseItems = $purchase->purchaseItems()->get();
 
-                $this->validateNoSalesFromPurchase($purchaseItems->pluck('id')->all());
+                $this->validateNoSalesFromPurchase($purchaseItems->pluck('id')->all(), $purchase->date);
 
                 foreach ($purchaseItems as $purchaseItem) {
                     $this->validateInventoryBeforeDeletion(
@@ -548,8 +548,11 @@ class PurchaseService
      * Block undo if any sale drew its cost from this purchase. Sales are bound to a
      * purchase via sale_items.cost_history_id -> item_price_history (source_type
      * 'purchase_item', source_id = purchase_item id).
+     *
+     * Sales dated before the purchase date are ignored: they cannot legitimately
+     * depend on this purchase's cost, so they must not block the undo.
      */
-    private function validateNoSalesFromPurchase(array $purchaseItemIds): void
+    private function validateNoSalesFromPurchase(array $purchaseItemIds, ?string $purchaseDate = null): void
     {
         if (empty($purchaseItemIds)) {
             return;
@@ -566,6 +569,7 @@ class PurchaseService
 
         $soldCount = \App\Models\Customers\SaleItems::whereIn('cost_history_id', $historyIds)
             ->whereNull('deleted_at')
+            ->when($purchaseDate, fn ($q) => $q->whereHas('sale', fn ($s) => $s->whereDate('date', '>=', $purchaseDate)))
             ->count();
 
         if ($soldCount > 0) {
