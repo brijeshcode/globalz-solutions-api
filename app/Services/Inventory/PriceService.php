@@ -173,6 +173,22 @@ class PriceService
     }
 
     /**
+     * Undo a delivery: soft-delete this purchase item's price history rows so
+     * they drop out of price calculations, then restore the item's current
+     * price from the remaining history. Unlike deleteFromPurchase() (which keeps
+     * the row and just notes it), a re-delivery recreates fresh history rows.
+     */
+    public static function undoDeliveryForPurchaseItem(Purchase $purchase, PurchaseItem $purchaseItem): void
+    {
+        ItemPriceHistory::where('item_id', $purchaseItem->item_id)
+            ->where('source_type', 'purchase_item')
+            ->where('source_id', $purchaseItem->id)
+            ->delete();
+
+        self::restorePriceFromHistory($purchaseItem->item_id, $purchase->date);
+    }
+
+    /**
      * Determine whether a new price history entry should be marked as current.
      * Weighted average: always current (latest calculation wins).
      * Last cost: only current if this purchase item is the newest delivered purchase for the item.

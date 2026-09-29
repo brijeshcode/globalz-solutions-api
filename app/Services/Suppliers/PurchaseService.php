@@ -515,7 +515,7 @@ class PurchaseService
 
                 foreach ($purchaseItems as $purchaseItem) {
                     InventoryService::subtract($purchaseItem->item_id, $purchase->warehouse_id, $purchaseItem->quantity);
-                    PriceService::deleteFromPurchase($purchase, $purchaseItem);
+                    PriceService::undoDeliveryForPurchaseItem($purchase, $purchaseItem);
                     SupplierItemPriceService::deleteFromPurchase($purchase, $purchaseItem);
                 }
 
