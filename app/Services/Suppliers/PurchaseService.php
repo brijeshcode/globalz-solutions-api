@@ -567,14 +567,21 @@ class PurchaseService
             return;
         }
 
-        $soldCount = \App\Models\Customers\SaleItems::whereIn('cost_history_id', $historyIds)
+        $soldItems = \App\Models\Customers\SaleItems::whereIn('cost_history_id', $historyIds)
             ->whereNull('deleted_at')
             ->when($purchaseDate, fn ($q) => $q->whereHas('sale', fn ($s) => $s->whereDate('date', '>=', $purchaseDate)))
-            ->count();
+            ->with(['sale:id,prefix,code,date', 'item:id,code,short_name'])
+            ->get();
 
-        if ($soldCount > 0) {
+        if ($soldItems->isNotEmpty()) {
+            $details = $soldItems->map(function ($si) {
+                $saleCode = $si->sale ? trim(($si->sale->prefix ?? '') . $si->sale->code) : 'N/A';
+                $itemName = $si->item ? trim(($si->item->code ? $si->item->code . ' - ' : '') . $si->item->short_name) : 'N/A';
+                return "Sale {$saleCode}: {$itemName} (qty {$si->quantity})";
+            })->implode('; ');
+
             throw new \InvalidArgumentException(
-                "Cannot undo delivery: {$soldCount} sale item(s) were sold using this purchase's cost. Undo is only allowed when no sale has been made from this purchase."
+                "Cannot undo delivery: {$soldItems->count()} sale item(s) were sold using this purchase's cost. {$details}. Undo is only allowed when no sale has been made from this purchase."
             );
         }
     }
