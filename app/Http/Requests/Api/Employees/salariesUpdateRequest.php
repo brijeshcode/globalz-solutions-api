@@ -33,7 +33,8 @@ class SalariesUpdateRequest extends FormRequest
                 Rule::unique('salaries')->where(function ($query) {
                     return $query->where('employee_id', $this->employee_id)
                                  ->where('month', $this->month)
-                                 ->where('year', $this->year);
+                                 ->where('year', $this->year)
+                                 ->whereNull('deleted_at');
                 })->ignore($salaryId),
             ],
             'account_id' => 'required|exists:accounts,id',
