@@ -83,6 +83,11 @@ class FeatureHelper {
         return self::isEnabled('proforma_invoice');
     }
 
+    public static function isSaleServices(): bool
+    {
+        return self::isEnabled('sale_services');
+    }
+
     public static function isEmployeeCreditNotes(): bool
     {
         return self::isEnabled('employee_credit_notes');

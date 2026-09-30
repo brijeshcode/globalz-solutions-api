@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Customers\CustomerStatmentController;
 use App\Http\Controllers\Api\Customers\CustomerStatementPdfController;
 use App\Http\Controllers\Api\Customers\CustomerReturnPdfController;
 use App\Http\Controllers\Api\Customers\SalesController;
+use App\Http\Controllers\Api\Services\ServicesController;
 use App\Http\Controllers\Api\Customers\SalePdfController;
 use App\Http\Controllers\Api\Customers\SaleOrdersController;
 use App\Http\Controllers\Api\Customers\ProformaInvoicesController;
@@ -315,6 +316,19 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
         Route::controller(SalePdfController::class)->prefix('sales')->name('sales.')->group(function () {
             Route::get('{sale}/pdf/download', 'generateInvoice')->defaults('action', 'download')->name('pdf.download');
             Route::get('{sale}/pdf/stream', 'generateInvoice')->defaults('action', 'stream')->name('pdf.stream');
+        });
+
+        // Services catalog (gated by the sale_services feature)
+        Route::controller(ServicesController::class)->prefix('services')->name('services.')->middleware('feature:sale_services')->group(function () {
+            Route::get('active', 'active')->name('active');
+            Route::get('trashed', 'trashed')->name('trashed');
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('{service}', 'show')->name('show');
+            Route::put('{service}', 'update')->name('update');
+            Route::delete('{service}', 'destroy')->name('destroy');
+            Route::patch('{id}/restore', 'restore')->name('restore');
+            Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
         });
 
         // Sale Orders Controller (for pending sale orders) - Must be defined BEFORE {customer} routes to avoid conflicts
