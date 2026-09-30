@@ -83,6 +83,21 @@ class FeatureHelper {
         return self::isEnabled('proforma_invoice');
     }
 
+    public static function isEmployeeCreditNotes(): bool
+    {
+        return self::isEnabled('employee_credit_notes');
+    }
+
+    public static function isMyStatement(): bool
+    {
+        return self::isEnabled('my_statement');
+    }
+
+    public static function isActivityLogs(): bool
+    {
+        return self::isEnabled('activity_logs');
+    }
+
     public static function isCombineParentChildBalance(): bool
     {
         return self::isEnabled('combine_parent_child_balance');

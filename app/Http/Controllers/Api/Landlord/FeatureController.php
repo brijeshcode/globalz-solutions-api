@@ -56,6 +56,7 @@ class FeatureController extends Controller
         ['key' => 'salary_management',         'name' => 'Salary Management',           'description' => 'Process monthly employee salaries.'],
         ['key' => 'employee_commissions',      'name' => 'Employee Commissions',        'description' => 'Define commission targets and calculate earned commissions.'],
         ['key' => 'advance_loans',             'name' => 'Advance Loans',               'description' => 'Track employee advance loans and deductions.'],
+        ['key' => 'employee_credit_notes',     'name' => 'Employee Credit/Debit Notes', 'description' => 'Issue credit or debit notes against employee accounts.'],
 
         // Reports
         ['key' => 'report_capital',            'name' => 'Capital Report',              'description' => 'Business capital tracker report.'],
@@ -82,6 +83,7 @@ class FeatureController extends Controller
         ['key' => 'database_mirror',           'name' => 'Database Mirror',             'description' => 'Mirror tenant database to a remote MySQL server automatically every 30 minutes or on demand.'],
         ['key' => 'bug_lock',                  'name' => 'Bug Lock',                    'description' => 'Allow admins to temporarily lock the system with a maintenance error message, blocking all non-login requests.'],
         ['key' => 'syncin_old_local_system',   'name' => 'Sync-in Flag',                'description' => "Per-record checkbox to mark transactions already copied into the client's legacy system. Tenant admin also toggles it via settings."],
+        ['key' => 'my_statement',              'name' => 'My Statement',                'description' => 'Enable the "my statement" screen for viewing an own account statement.'],
     ];
 
     public function seedDefaultFeatures(): JsonResponse

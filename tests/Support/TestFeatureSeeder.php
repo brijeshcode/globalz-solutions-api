@@ -53,6 +53,7 @@ class TestFeatureSeeder
         'salary_management',
         'employee_commissions',
         'advance_loans',
+        'employee_credit_notes',
 
         // Reports
         'report_capital',
@@ -67,6 +68,7 @@ class TestFeatureSeeder
         // System
         'activity_logs',
         'tax_codes',
+        'my_statement',
     ];
 
     public static function seed(Tenant $tenant): void

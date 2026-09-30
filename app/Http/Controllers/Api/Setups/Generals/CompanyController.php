@@ -170,7 +170,7 @@ class CompanyController extends Controller
     private function createDefaults(): void
     {
         $defaults = [
-            'company_name'    => 'Globalz Solutions - Wholesale & Distribution',
+            'company_name'    => 'Globalz system',
             'tagline'         => 'Wholesale & Distribution',
             'description'     => 'Wholesale & Distribution, employee and expense management system',
             'primary_color'   => '#1976D2',
