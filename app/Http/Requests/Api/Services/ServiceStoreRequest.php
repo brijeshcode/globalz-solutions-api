@@ -15,6 +15,7 @@ class ServiceStoreRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:200',
+            'hsn' => 'nullable|string|max:255',
             'tax_code_id' => 'required|exists:tax_codes,id',
             'amount' => 'required|numeric|min:0',
             'currency_id' => 'nullable|exists:currencies,id',

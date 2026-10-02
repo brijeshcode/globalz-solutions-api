@@ -27,6 +27,7 @@ class SaleItems extends Model
         'item_code',
         'sale_id',
         'item_id',
+        'hsn',
         'item_offer_id',
         'offer_role',
         'quantity',
@@ -174,6 +175,9 @@ class SaleItems extends Model
                     $saleItem->tax_label = ($saleItem->tax_percent == 0 || !$item->taxCode)
                         ? 'No'
                         : $item->taxCode->name;
+
+                    // Snapshot HSN from the item (explicit value on the line wins)
+                    $saleItem->hsn = $saleItem->hsn ?: $item->hsn;
 
                     // Set volume and weight from item
                     $saleItem->unit_volume_cbm = $item->volume ?? 0;

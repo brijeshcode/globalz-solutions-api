@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\FeatureHelper;
 use App\Helpers\RoleHelper;
 use App\Helpers\SettingsHelper;
 use App\Models\Items\Item;
@@ -53,7 +54,8 @@ class SalesUpdateRequest extends FormRequest
             'total_usd' => 'sometimes|required|numeric|min:0',
             'note' => 'nullable|string',
 
-            'items' => 'sometimes|required|array|min:1',
+            // items xor services is enforced in withValidator (mirrors SalesStoreRequest).
+            'items' => 'sometimes|array',
             'items.*.id' => 'nullable|exists:sale_items,id',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.item_offer_id' => 'nullable|integer|exists:item_offers,id',
@@ -69,12 +71,36 @@ class SalesUpdateRequest extends FormRequest
             'items.*.total_price' => 'required|numeric|min:0',
             'items.*.total_price_usd' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string',
+
+            // Service lines: server takes unit_price and computes the rest.
+            'services' => 'sometimes|array',
+            'services.*.id' => 'nullable|exists:sale_services,id',
+            'services.*.service_id' => 'required|exists:services,id',
+            'services.*.date' => 'nullable|date',
+            'services.*.quantity' => 'required|numeric|min:0.01',
+            'services.*.unit_price' => 'required|numeric|min:0',
+            'services.*.tax_percent' => 'nullable|numeric|min:0',
+            'services.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'services.*.note' => 'nullable|string',
         ];
     }
 
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            // Mirror store: a sale needs at least one item or service. Only enforced when the
+            // request actually touches the line arrays — a partial update may omit them entirely.
+            if ($this->has('items') || $this->has('services')) {
+                $hasItems = !empty($this->input('items'));
+                $hasServices = !empty($this->input('services')) && FeatureHelper::isSaleServices();
+
+                if (!$hasItems && !$hasServices) {
+                    $validator->errors()->add('items', FeatureHelper::isSaleServices()
+                        ? 'Provide at least one item or service.'
+                        : 'At least one sale item is required.');
+                }
+            }
+
             if (! $this->has('items')) {
                 return;
             }

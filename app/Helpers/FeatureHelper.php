@@ -88,6 +88,11 @@ class FeatureHelper {
         return self::isEnabled('sale_services');
     }
 
+    public static function isHsnField(): bool
+    {
+        return self::isEnabled('hsn_field');
+    }
+
     public static function isEmployeeCreditNotes(): bool
     {
         return self::isEnabled('employee_credit_notes');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\Items;
 
+use App\Helpers\FeatureHelper;
 use App\Http\Resources\Api\EmbeddedDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -36,6 +37,10 @@ class ItemResource extends JsonResource
 
         if ($this->fieldWasSelected('description', $selectedFields)) {
             $data['description'] = $this->description;
+        }
+
+        if (FeatureHelper::isHsnField() && $this->fieldWasSelected('hsn', $selectedFields)) {
+            $data['hsn'] = $this->hsn;
         }
 
         // Optional fields if they were selected

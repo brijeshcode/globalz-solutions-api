@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Accounts;
 
+use App\Helpers\FeatureHelper;
 use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -25,7 +26,7 @@ class AccountsStoreRequest extends FormRequest
         return [
             'name' => 'required|string|max:255|unique:accounts,name',
             'account_type_id' => 'required|integer|exists:account_types,id',
-            'currency_id' => 'required|integer|exists:currencies,id',
+            'currency_id' => (FeatureHelper::isMultiCurrency() ? 'required' : 'nullable') . '|integer|exists:currencies,id',
             'description' => 'nullable|string|max:65535',
             // Balance Information
             'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',

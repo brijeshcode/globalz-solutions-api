@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use App\Models\Landlord\TenantFeature;
 use App\Models\Setups\Generals\Currencies\Currency;
+use App\Services\Currency\CurrencyService;
 use Illuminate\Support\Facades\Log;
 
 class CurrencyHelper {
@@ -32,6 +33,20 @@ class CurrencyHelper {
     public static function resetStaticCache(): void
     {
         self::$currencies = null;
+    }
+
+    /**
+     * The tenant's local currency (e.g. LBP). Delegates to CurrencyService,
+     * which caches it. Used as the default currency in single-currency mode.
+     */
+    public static function getLocalCurrency(): ?Currency
+    {
+        return CurrencyService::getLocalCurrency();
+    }
+
+    public static function getLocalCurrencyId(): ?int
+    {
+        return CurrencyService::getLocalCurrencyId();
     }
 
     /**

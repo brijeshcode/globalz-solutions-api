@@ -43,6 +43,19 @@ class SaleResource extends JsonResource
             'total' => $this->total + 0,
             'total_usd' => $this->total_usd + 0,
             'total_profit' => $this->total_profit + 0,
+            // Per-type breakout only surfaces when the feature is on; disabled tenants see no new keys.
+            $this->mergeWhen(FeatureHelper::isSaleServices(), fn () => [
+                'items_total' => $this->items_total + 0,
+                'items_total_usd' => $this->items_total_usd + 0,
+                'items_profit' => $this->items_profit + 0,
+                'items_total_tax_amount' => $this->items_total_tax_amount + 0,
+                'items_total_tax_amount_usd' => $this->items_total_tax_amount_usd + 0,
+                'services_total' => $this->services_total + 0,
+                'services_total_usd' => $this->services_total_usd + 0,
+                'services_profit' => $this->services_profit + 0,
+                'services_total_tax_amount' => $this->services_total_tax_amount + 0,
+                'services_total_tax_amount_usd' => $this->services_total_tax_amount_usd + 0,
+            ]),
             'has_offers' => $this->has_offers,
             'value_date' => $this->value_date ,
             'total_volume_cbm' => $this->total_volume_cbm + 0,
@@ -77,6 +90,8 @@ class SaleResource extends JsonResource
             
             'sale_items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
             'items' => SaleItemResource::collection($this->whenLoaded('saleItems')),
+            'sale_services' => SaleServiceResource::collection($this->whenLoaded('saleServices')),
+            'services' => SaleServiceResource::collection($this->whenLoaded('saleServices')),
             'warehouse' => $this->whenLoaded('warehouse'),
             'priceList' => $this->whenLoaded('priceList'),
             'currency' => $this->whenLoaded('currency', function () {

@@ -117,7 +117,12 @@
             @include('pdfs.partials.invoice-details')
         </div>
 
-        @include('pdfs.partials.items-table-template-2')
+        @if(count($sale->items) > 0)
+            @include('pdfs.partials.items-table-template-2')
+        @endif
+        @if($showServices)
+            @include('pdfs.partials.services-table')
+        @endif
         @include('pdfs.partials.totals-template-2')
         @include('pdfs.partials.signature')
         @include('pdfs.partials.footer')

@@ -41,6 +41,7 @@ class Item extends Model
         'code',
         'short_name',
         'description',
+        'hsn',
         'item_type_id',
         'item_family_id',
         'item_group_id',

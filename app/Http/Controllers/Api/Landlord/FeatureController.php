@@ -81,6 +81,7 @@ class FeatureController extends Controller
         // System
         ['key' => 'activity_logs',             'name' => 'Activity Logs',               'description' => 'Full audit trail of all user actions.'],
         ['key' => 'tax_codes',                 'name' => 'Tax Codes',                   'description' => 'Manage tax codes and apply them to invoices.'],
+        ['key' => 'hsn_field',                 'name' => 'HSN/SAC Code',                'description' => 'Capture an HSN/SAC tax code on items and services, snapshot it onto sale lines, and print it on the GST invoice. When off the column is hidden in the API and PDF (data stays in the table).'],
         ['key' => 'database_mirror',           'name' => 'Database Mirror',             'description' => 'Mirror tenant database to a remote MySQL server automatically every 30 minutes or on demand.'],
         ['key' => 'bug_lock',                  'name' => 'Bug Lock',                    'description' => 'Allow admins to temporarily lock the system with a maintenance error message, blocking all non-login requests.'],
         ['key' => 'syncin_old_local_system',   'name' => 'Sync-in Flag',                'description' => "Per-record checkbox to mark transactions already copied into the client's legacy system. Tenant admin also toggles it via settings."],

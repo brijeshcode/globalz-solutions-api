@@ -21,6 +21,7 @@ class InvoiceSettingsController extends Controller
     private const AVAILABLE_TEMPLATES = [
         ['id' => 'template-1', 'name' => 'Standard',      'description' => 'Default layout'],
         ['id' => 'template-2', 'name' => 'French Style',  'description' => 'Bilingual header with ICE number'],
+        ['id' => 'gst',        'name' => 'GST',           'description' => 'Indian GST invoice with CGST/SGST split by tax rate'],
     ];
 
     private const AVAILABLE_LANGUAGES = [

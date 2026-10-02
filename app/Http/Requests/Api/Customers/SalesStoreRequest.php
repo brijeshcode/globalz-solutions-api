@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Customers;
 
 use App\Helpers\CurrencyHelper;
+use App\Helpers\FeatureHelper;
 use App\Helpers\RoleHelper;
 use App\Helpers\SettingsHelper;
 use App\Models\Items\Item;
@@ -39,7 +40,8 @@ class SalesStoreRequest extends FormRequest
             'salesperson_id' => 'nullable|exists:employees,id',
             'customer_id' => 'nullable|exists:customers,id',
             'currency_id' => 'required|exists:currencies,id',
-            'warehouse_id' => 'required|exists:warehouses,id',
+            // Required for item sales (stock location); optional for service-only — see withValidator.
+            'warehouse_id' => 'nullable|exists:warehouses,id',
             'customer_payment_term_id' => 'nullable|exists:customer_payment_terms,id',
             'client_po_number' => 'nullable|string|max:255',
             'currency_rate' => 'required|numeric|min:0',
@@ -53,7 +55,8 @@ class SalesStoreRequest extends FormRequest
             'total_usd' => 'required|numeric|min:0',
             'note' => 'nullable|string',
 
-            'items' => 'required|array|min:1',
+            // items xor services is enforced in withValidator (separate mode for now).
+            'items' => 'nullable|array',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.item_offer_id' => 'nullable|integer|exists:item_offers,id',
             'items.*.offer_role' => 'nullable|in:main,free',
@@ -68,12 +71,37 @@ class SalesStoreRequest extends FormRequest
             'items.*.total_price' => 'required|numeric|min:0',
             'items.*.total_price_usd' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string',
+
+            // Service lines: server takes unit_price and computes the rest.
+            'services' => 'nullable|array',
+            'services.*.service_id' => 'required|exists:services,id',
+            'services.*.date' => 'nullable|date',
+            'services.*.quantity' => 'required|numeric|min:0.01',
+            'services.*.unit_price' => 'required|numeric|min:0',
+            'services.*.tax_percent' => 'nullable|numeric|min:0',
+            'services.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'services.*.note' => 'nullable|string',
         ];
     }
 
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            // Separate mode: a sale is either items or services, not both (combined comes later).
+            $hasItems = !empty($this->input('items'));
+            $hasServices = !empty($this->input('services')) && FeatureHelper::isSaleServices();
+
+            if (!$hasItems && !$hasServices) {
+                $validator->errors()->add('items', FeatureHelper::isSaleServices()
+                    ? 'Provide at least one item or service.'
+                    : 'At least one sale item is required.');
+            }
+
+            // Item sales need a stock location; service-only sales fall back to the default warehouse.
+            if ($hasItems && empty($this->input('warehouse_id'))) {
+                $validator->errors()->add('warehouse_id', 'Warehouse is required.');
+            }
+
             $allowBelowCost = RoleHelper::isSuperAdmin()
                 ? SettingsHelper::get('sale_settings', 'allow_super_admin_sell_below_cost', false)
                 : SettingsHelper::get('sale_settings', 'allow_admin_sell_below_cost', false);

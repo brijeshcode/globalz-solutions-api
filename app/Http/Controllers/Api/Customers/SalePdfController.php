@@ -30,13 +30,20 @@ class SalePdfController extends Controller
     {
         try {
             // Load all required relationships
-            $sale->load([
+            $relations = [
                 'customer',
                 'currency',
                 'salesperson',
                 'warehouse',
                 'items.item'
-            ]);
+            ];
+            // Service lines only exist for tenants with the feature on.
+            if (FeatureHelper::isSaleServices()) {
+                $relations[] = 'saleServices.service';
+            }
+            $sale->load($relations);
+
+            $showServices = FeatureHelper::isSaleServices() && $sale->saleServices->isNotEmpty();
 
             // Get company data from settings
             $companyData = $this->getCompanyData();
@@ -54,6 +61,18 @@ class SalePdfController extends Controller
             $template = $invoiceGroup['template'] ?? 'template-1';
             $language = $invoiceGroup['language'] ?? 'en';
 
+            // GST template: group lines by tax rate (lowest first) and split each rate into CGST/SGST.
+            $gstSummary = [];
+            $amountInWords = null;
+            if ($template === 'gst') {
+                $sale->setRelation('items', $sale->items->sortBy('tax_percent')->values());
+                if ($showServices) {
+                    $sale->setRelation('saleServices', $sale->saleServices->sortBy('tax_percent')->values());
+                }
+                $gstSummary = $sale->gstRateSummary($showServices);
+                $amountInWords = \App\Helpers\NumberToWordsHelper::inr((float) $sale->total);
+            }
+
             $invoiceSettings  = [
                 'local_currency_code'       => $localCurrency?->code,
                 'local_currency_symbol'     => $localCurrency?->symbol,
@@ -62,7 +81,11 @@ class SalePdfController extends Controller
                 'show_local_currency_total' => $notLocalCurrency && ($invoiceGroup['show_local_currency_total'] ?? false),
                 'show_note_1'               => $invoiceGroup['show_note_1'] ?? true,
                 'show_note_2'               => $invoiceGroup['show_note_2'] ?? true,
+                // Live note text; footer falls back to the per-sale snapshot when these are empty.
+                'note_1'                    => $invoiceGroup['note_1'] ?? '',
+                'note_2'                    => $invoiceGroup['note_2'] ?? '',
                 'is_multi_currency'         => $isMultiCurrency,
+                'show_hsn'                  => FeatureHelper::isHsnField(),
                 'unit_price_decimals'       => min(max((int) ($invoiceGroup['unit_price_decimals'] ?? 2), 0), 6),
                 'total_decimals'            => min(max((int) ($invoiceGroup['total_decimals'] ?? 2), 0), 6),
             ];
@@ -110,6 +133,10 @@ class SalePdfController extends Controller
                 'qrCodeBase64'        => $qrCodeBase64,
                 'catalogQrCodeBase64' => $catalogQrCodeBase64,
                 'catalogLabel'        => $catalogGroup["{$prefix}_label"] ?? null,
+                'showServices'        => $showServices,
+                'showSalesperson'     => FeatureHelper::isEnabled('employee_management'),
+                'gstSummary'          => $gstSummary,
+                'amountInWords'       => $amountInWords,
                 // 'calculatedSubTotal' => $calculatedSubTotal,
             ];
            
@@ -125,6 +152,11 @@ class SalePdfController extends Controller
             $previousLocale = app()->getLocale();
             app()->setLocale($language);
             $html = view($viewName, $data)->render();
+            // GST layout pins totals + terms/stamp to the bottom of the last page via the mPDF footer,
+            // so render those partials here (while the invoice locale is active) to inject below.
+            $gstFooterHtml = $template === 'gst'
+                ? view('pdfs.partials.totals-gst', $data)->render() . view('pdfs.partials.footer-gst', $data)->render()
+                : null;
             app()->setLocale($previousLocale);
 
             // Create mPDF instance with optimized margins
@@ -160,15 +192,21 @@ class SalePdfController extends Controller
             // Regular footer (all pages): page number row only
             $mpdf->SetHTMLFooter($pageNumberRowHtml);
 
-            // For INV with company details: define a named last-page footer and switch to it
-            // at the very end of the HTML content so it only applies to the last page
-            if ($sale->prefix === Sale::TAXPREFIX && !empty($companyFooterLine)) {
+            // Define a named last-page footer and switch to it at the very end of the HTML
+            // content so it only applies to the last page.
+            $lastPageFooterHtml = null;
+            if ($gstFooterHtml !== null) {
+                // GST: totals + terms/stamp pinned to the page bottom, then the page-number row.
+                $lastPageFooterHtml = $gstFooterHtml . $pageNumberRowHtml;
+            } elseif ($sale->prefix === Sale::TAXPREFIX && !empty($companyFooterLine)) {
                 $lastPageFooterHtml =
                     '<div style="text-align: center; font-size: 8pt; border-top: 2px solid #000000; padding-top: 4px; margin-bottom: 4px;">'
                     . $companyFooterLine .
                     '</div>'
                     . $pageNumberRowHtml;
+            }
 
+            if ($lastPageFooterHtml !== null) {
                 // Define named footer at start, switch to it at end of content
                 $defineFooter = '<!--mpdf <htmlpagefooter name="lastpagefooter">' . $lastPageFooterHtml . '</htmlpagefooter> mpdf-->';
                 $switchFooter = '<!--mpdf <sethtmlpagefooter name="lastpagefooter" page="ALL" value="1" /> mpdf-->';

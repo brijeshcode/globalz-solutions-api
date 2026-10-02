@@ -4,6 +4,7 @@ namespace App\Models\Customers;
 
 use App\Contracts\ModuleLockable;
 use App\Helpers\CommonHelper;
+use App\Helpers\FeatureHelper;
 use Carbon\CarbonInterface;
 use App\Models\Employees\Employee;
 use App\Models\Setting;
@@ -66,6 +67,16 @@ class Sale extends Model implements ModuleLockable
         'total',
         'total_usd',
         'total_profit',
+        'items_total',
+        'items_total_usd',
+        'items_profit',
+        'services_total',
+        'services_total_usd',
+        'services_profit',
+        'items_total_tax_amount',
+        'items_total_tax_amount_usd',
+        'services_total_tax_amount',
+        'services_total_tax_amount_usd',
         'total_volume_cbm',
         'total_weight_kg',
         'approved_by',
@@ -95,6 +106,16 @@ class Sale extends Model implements ModuleLockable
         'total' => 'decimal:8',
         'total_usd' => 'decimal:8',
         'total_profit' => 'decimal:8',
+        'items_total' => 'decimal:8',
+        'items_total_usd' => 'decimal:8',
+        'items_profit' => 'decimal:8',
+        'services_total' => 'decimal:8',
+        'services_total_usd' => 'decimal:8',
+        'services_profit' => 'decimal:8',
+        'items_total_tax_amount' => 'decimal:8',
+        'items_total_tax_amount_usd' => 'decimal:8',
+        'services_total_tax_amount' => 'decimal:8',
+        'services_total_tax_amount_usd' => 'decimal:8',
         'total_volume_cbm' => 'decimal:4',
         'total_weight_kg' => 'decimal:4',
         'total_tax_amount' => 'decimal:8',
@@ -175,6 +196,14 @@ class Sale extends Model implements ModuleLockable
     public function items(): HasMany
     {
         return $this->hasMany(SaleItems::class);
+    }
+
+    /**
+     * @return HasMany<SaleService, $this>
+     */
+    public function saleServices(): HasMany
+    {
+        return $this->hasMany(SaleService::class);
     }
 
     /**
@@ -389,18 +418,29 @@ class Sale extends Model implements ModuleLockable
 
     public function recalculateTotalTax(): void
     {
-        $totalTaxAmount = $this->saleItems->sum(function ($item) {
-            return $item->tax_amount * $item->quantity;
-        });
+        $itemsTax = $this->saleItems->sum(fn ($item) => $item->tax_amount * $item->quantity);
+        $itemsTaxUsd = $this->saleItems->sum(fn ($item) => $item->tax_amount_usd * $item->quantity);
 
-        $totalTaxAmountUsd = $this->saleItems->sum(function ($item) {
-            return $item->tax_amount_usd * $item->quantity;
-        });
+        $update = [
+            'total_tax_amount' => $itemsTax,
+            'total_tax_amount_usd' => $itemsTaxUsd,
+        ];
 
-        $this->updateQuietly([
-            'total_tax_amount' => $totalTaxAmount,
-            'total_tax_amount_usd' => $totalTaxAmountUsd,
-        ]);
+        // Service tax + per-type breakout only when the feature is on. Tenants without it
+        // never touch the sale_services table or the new breakout columns.
+        if (FeatureHelper::isSaleServices()) {
+            $servicesTax = $this->saleServices->sum(fn ($service) => $service->unit_tax_amount * $service->quantity);
+            $servicesTaxUsd = $this->saleServices->sum(fn ($service) => $service->unit_tax_amount_usd * $service->quantity);
+
+            $update['total_tax_amount'] += $servicesTax;
+            $update['total_tax_amount_usd'] += $servicesTaxUsd;
+            $update['items_total_tax_amount'] = $itemsTax;
+            $update['items_total_tax_amount_usd'] = $itemsTaxUsd;
+            $update['services_total_tax_amount'] = $servicesTax;
+            $update['services_total_tax_amount_usd'] = $servicesTaxUsd;
+        }
+
+        $this->updateQuietly($update);
     }
 
     /**
@@ -419,6 +459,18 @@ class Sale extends Model implements ModuleLockable
         $saleTotalTaxUsd = 0;
         $totalVolumeCbm = 0;
         $totalWeightKg = 0;
+
+        // Per-type breakout (grand totals above stay item + service combined)
+        $itemsTotal = 0;
+        $itemsTotalUsd = 0;
+        $itemsProfit = 0;
+        $servicesTotal = 0;
+        $servicesTotalUsd = 0;
+        $servicesProfit = 0;
+        $itemsTotalTax = 0;
+        $itemsTotalTaxUsd = 0;
+        $servicesTotalTax = 0;
+        $servicesTotalTaxUsd = 0;
 
         // Reload sale items to ensure fresh data
         $this->load('saleItems.item.itemPrice');
@@ -509,6 +561,92 @@ class Sale extends Model implements ModuleLockable
             $saleTotalTaxUsd += $totalTaxAmountUsd;
             $totalVolumeCbm += $saleItem->total_volume_cbm ?? 0;
             $totalWeightKg += $saleItem->total_weight_kg ?? 0;
+
+            $itemsTotal += $totalPrice;
+            $itemsTotalUsd += $totalPriceUsd;
+            $itemsProfit += $itemTotalProfit;
+            $itemsTotalTax += $totalTaxAmount;
+            $itemsTotalTaxUsd += $totalTaxAmountUsd;
+        }
+
+        // Service lines: only touched when the feature is enabled. Tenants without it never
+        // query sale_services nor write the breakout columns. Snapshot cost/selling price
+        // (unit_cost_price already in usd, unit_price in selected currency) — not re-fetched.
+        $servicesEnabled = FeatureHelper::isSaleServices();
+
+        if ($servicesEnabled) {
+            $this->load('saleServices');
+
+            foreach ($this->saleServices as $saleService) {
+                $costPrice = $saleService->unit_cost_price ?? 0;
+                $sellingPrice = $saleService->unit_price ?? 0;
+                $quantity = $saleService->quantity ?? 0;
+                $discountPercent = $saleService->discount_percent ?? 0;
+                $taxPercent = $saleService->tax_percent ?? 0;
+
+                $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice, $currencyRate);
+
+                $unitDiscountAmount = $sellingPrice * ($discountPercent / 100);
+                $unitDiscountAmountUsd = $sellingPriceUsd * ($discountPercent / 100);
+
+                $discountAmount = $unitDiscountAmount * $quantity;
+                $discountAmountUsd = $unitDiscountAmountUsd * $quantity;
+
+                $netSellPrice = $sellingPrice - $unitDiscountAmount;
+                $netSellPriceUsd = $sellingPriceUsd - $unitDiscountAmountUsd;
+
+                $taxAmount = $taxPercent > 0 ? $netSellPrice * ($taxPercent / 100) : 0;
+                $taxAmountUsd = $taxPercent > 0 ? $netSellPriceUsd * ($taxPercent / 100) : 0;
+
+                $ttcPrice = $netSellPrice + $taxAmount;
+                $ttcPriceUsd = $netSellPriceUsd + $taxAmountUsd;
+
+                $totalNetSellPrice = $netSellPrice * $quantity;
+                $totalNetSellPriceUsd = $netSellPriceUsd * $quantity;
+
+                $totalTaxAmount = $taxAmount * $quantity;
+                $totalTaxAmountUsd = $taxAmountUsd * $quantity;
+
+                $totalPrice = $ttcPrice * $quantity;
+                $totalPriceUsd = $ttcPriceUsd * $quantity;
+
+                $unitProfit = $netSellPriceUsd - $costPrice;
+                $serviceTotalProfit = $unitProfit * $quantity;
+
+                $saleService->updateQuietly([
+                    'unit_price_usd' => $sellingPriceUsd,
+                    'unit_discount_amount' => $unitDiscountAmount,
+                    'unit_discount_amount_usd' => $unitDiscountAmountUsd,
+                    'total_discount_amount' => $discountAmount,
+                    'total_discount_amount_usd' => $discountAmountUsd,
+                    'unit_net_sell_price' => $netSellPrice,
+                    'unit_net_sell_price_usd' => $netSellPriceUsd,
+                    'unit_tax_amount' => $taxAmount,
+                    'unit_tax_amount_usd' => $taxAmountUsd,
+                    'unit_ttc_price' => $ttcPrice,
+                    'unit_ttc_price_usd' => $ttcPriceUsd,
+                    'total_net_sell_price' => $totalNetSellPrice,
+                    'total_net_sell_price_usd' => $totalNetSellPriceUsd,
+                    'total_tax_amount' => $totalTaxAmount,
+                    'total_tax_amount_usd' => $totalTaxAmountUsd,
+                    'total_price' => $totalPrice,
+                    'total_price_usd' => $totalPriceUsd,
+                    'unit_profit' => $unitProfit,
+                    'total_profit' => $serviceTotalProfit,
+                ]);
+
+                $totalProfit += $serviceTotalProfit;
+                $subTotal += $totalNetSellPrice;
+                $subTotalUsd += $totalNetSellPriceUsd;
+                $saleTotalTax += $totalTaxAmount;
+                $saleTotalTaxUsd += $totalTaxAmountUsd;
+
+                $servicesTotal += $totalPrice;
+                $servicesTotalUsd += $totalPriceUsd;
+                $servicesProfit += $serviceTotalProfit;
+                $servicesTotalTax += $totalTaxAmount;
+                $servicesTotalTaxUsd += $totalTaxAmountUsd;
+            }
         }
 
         // Sale-level discount
@@ -516,7 +654,7 @@ class Sale extends Model implements ModuleLockable
         $additionalDiscountUsd = $this->discount_amount_usd ?? 0;
 
         // Update sale totals without firing events
-        $this->updateQuietly([
+        $update = [
             'sub_total' => $subTotal,
             'sub_total_usd' => $subTotalUsd,
             'total_tax_amount' => $saleTotalTax,
@@ -526,7 +664,70 @@ class Sale extends Model implements ModuleLockable
             'total_profit' => $totalProfit - $additionalDiscountUsd,
             'total_volume_cbm' => $totalVolumeCbm,
             'total_weight_kg' => $totalWeightKg,
-        ]);
+        ];
+
+        // Breakout columns only when the feature is on (see recalculateTotalTax()).
+        if ($servicesEnabled) {
+            $update['items_total'] = $itemsTotal;
+            $update['items_total_usd'] = $itemsTotalUsd;
+            $update['items_profit'] = $itemsProfit;
+            $update['services_total'] = $servicesTotal;
+            $update['services_total_usd'] = $servicesTotalUsd;
+            $update['services_profit'] = $servicesProfit;
+            $update['items_total_tax_amount'] = $itemsTotalTax;
+            $update['items_total_tax_amount_usd'] = $itemsTotalTaxUsd;
+            $update['services_total_tax_amount'] = $servicesTotalTax;
+            $update['services_total_tax_amount_usd'] = $servicesTotalTaxUsd;
+        }
+
+        $this->updateQuietly($update);
+    }
+
+    /**
+     * Group taxed lines (items + optionally services) by tax rate for a GST invoice.
+     *
+     * Each distinct rate (tax_percent > 0) becomes one bucket, sorted ascending, with the
+     * total tax split in half for the CGST/SGST columns. Reads already-loaded relations only.
+     *
+     * @return array<int, array{percent: float, half_percent: float, tax: float, tax_usd: float, half: float, half_usd: float}>
+     */
+    public function gstRateSummary(bool $includeServices = true): array
+    {
+        $buckets = [];
+
+        $add = function ($percent, $tax, $taxUsd) use (&$buckets) {
+            $percent = (float) $percent;
+            if ($percent <= 0) {
+                return;
+            }
+            $key = (string) $percent;
+            if (!isset($buckets[$key])) {
+                $buckets[$key] = ['percent' => $percent, 'tax' => 0.0, 'tax_usd' => 0.0];
+            }
+            $buckets[$key]['tax'] += (float) $tax;
+            $buckets[$key]['tax_usd'] += (float) $taxUsd;
+        };
+
+        foreach ($this->items as $item) {
+            $add($item->tax_percent, $item->total_tax_amount, $item->total_tax_amount_usd);
+        }
+
+        if ($includeServices) {
+            foreach ($this->saleServices as $service) {
+                $add($service->tax_percent, $service->total_tax_amount, $service->total_tax_amount_usd);
+            }
+        }
+
+        ksort($buckets, SORT_NUMERIC);
+
+        return array_values(array_map(fn ($b) => [
+            'percent'      => $b['percent'],
+            'half_percent' => $b['percent'] / 2,
+            'tax'          => $b['tax'],
+            'tax_usd'      => $b['tax_usd'],
+            'half'         => $b['tax'] / 2,
+            'half_usd'     => $b['tax_usd'] / 2,
+        ], $buckets));
     }
 
     /**
@@ -664,6 +865,12 @@ class Sale extends Model implements ModuleLockable
 
                 // Delete the sale item
                 $saleItem->delete();
+            }
+
+            // Service lines carry no inventory; just soft-delete them. Skipped entirely
+            // for tenants without the feature (the table may not even exist).
+            if (FeatureHelper::isSaleServices()) {
+                SaleService::where('sale_id', $sale->id)->get()->each->delete();
             }
         });
     }

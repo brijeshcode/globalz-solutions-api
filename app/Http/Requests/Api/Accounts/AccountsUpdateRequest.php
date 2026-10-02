@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Accounts;
 
+use App\Helpers\FeatureHelper;
 use App\Helpers\RoleHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,7 +34,7 @@ class AccountsUpdateRequest extends FormRequest
                 Rule::unique('accounts', 'name')->ignore($accountId)
             ],
             'account_type_id' => 'required|integer|exists:account_types,id',
-            'currency_id' => 'required|integer|exists:currencies,id',
+            'currency_id' => (FeatureHelper::isMultiCurrency() ? 'required' : 'nullable') . '|integer|exists:currencies,id',
             // Balance Information
             'opening_balance' => 'nullable|numeric|min:-999999999.9999|max:999999999.9999',
             'description' => 'nullable|string|max:65535',

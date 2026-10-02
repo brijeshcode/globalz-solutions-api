@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\Services;
 
+use App\Helpers\FeatureHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,6 +16,7 @@ class ServiceResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'hsn' => $this->when(FeatureHelper::isHsnField(), $this->hsn),
             'tax_code_id' => $this->tax_code_id,
             'amount' => $this->amount + 0,
             'amount_usd' => $this->amount_usd + 0,

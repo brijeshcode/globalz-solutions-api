@@ -2,14 +2,16 @@
     <tbody>
         <tr class="totals-row first-total">
             @if($sale->prefix !== 'INX')
-            {{-- Left: volume + weight --}}
+            {{-- Left: volume + weight (hidden for service-only invoices) --}}
             <td style="width: 45%; vertical-align: top; border: none;">
+                @if(count($sale->items) > 0)
                 <div style="font-size: 8pt;">
                     <strong>{{ __('invoice.volume_cbm') }}:</strong> {{ number_format($totalVolume, 2) }}
                 </div>
                 <div style="font-size: 8pt;">
                     <strong>{{ __('invoice.weight_kg') }}:</strong> {{ number_format($totalWeight, 2) }}
                 </div>
+                @endif
             </td>
 
             {{-- Middle: stamp --}}

@@ -2,7 +2,7 @@
 <html dir="{{ __('invoice.direction') }}">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>{{ __('invoice.title') }} {{ $sale->prefix }}-{{ $sale->code }}</title>
+    <title>{{ __('invoice.tax_invoice_title') }} {{ $sale->prefix }}-{{ $sale->code }}</title>
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;
@@ -53,6 +53,11 @@
         .items-table td { border: 1px solid #000000; padding: 4px 2px; }
         .items-table tr:nth-child(even) { background-color: #F5F5F5; }
         .items-table thead { display: table-row-group; }
+        /* GST line tables: outer border + vertical column lines, no horizontal row lines, no zebra. */
+        .gst-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8pt; border: 1px solid #000000; }
+        .gst-table th { background-color: #E0E0E0; border: 1px solid #000000; padding: 4px 2px; font-weight: bold; text-align: center; }
+        .gst-table td { border-left: 1px solid #000000; border-right: 1px solid #000000; padding: 4px 2px; }
+        .gst-table thead { display: table-row-group; }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         .text-left { text-align: left; }
@@ -75,22 +80,17 @@
 </head>
 <body>
     <div class="invoice-container">
-        @include('pdfs.partials.header')
+        @include('pdfs.partials.header-gst')
 
-        <div class="info-section clearfix">
-            @include('pdfs.partials.customer-info')
-            @include('pdfs.partials.invoice-details')
-        </div>
+        @include('pdfs.partials.invoice-meta-gst')
 
         @if(count($sale->items) > 0)
-            @include('pdfs.partials.items-table')
+            @include('pdfs.partials.items-table-gst')
         @endif
         @if($showServices)
-            @include('pdfs.partials.services-table')
+            @include('pdfs.partials.services-table-gst')
         @endif
-        @include('pdfs.partials.totals')
-        @include('pdfs.partials.signature')
-        @include('pdfs.partials.footer')
+        {{-- totals-gst + footer-gst are injected as the last-page mPDF footer (see SalePdfController) so they pin to the page bottom --}}
     </div>
 
 </body>

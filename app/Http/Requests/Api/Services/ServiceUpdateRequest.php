@@ -15,6 +15,7 @@ class ServiceUpdateRequest extends FormRequest
     {
         return [
             'name' => 'sometimes|required|string|max:200',
+            'hsn' => 'nullable|string|max:255',
             'tax_code_id' => 'sometimes|required|exists:tax_codes,id',
             'amount' => 'sometimes|required|numeric|min:0',
             'currency_id' => 'nullable|exists:currencies,id',

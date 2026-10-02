@@ -28,6 +28,7 @@ class ItemsStoreRequest extends FormRequest
             'code' => 'required|string|max:255|unique:items,code',
             'short_name' => 'nullable|string|max:255',
             'description' => 'required|string',
+            'hsn' => 'nullable|string|max:255',
             'item_type_id' => 'nullable|exists:item_types,id',
 
             // Classification Fields

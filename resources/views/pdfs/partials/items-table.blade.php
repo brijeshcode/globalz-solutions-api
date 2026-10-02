@@ -1,5 +1,10 @@
 <table class="items-table">
     <thead>
+        @if($showServices ?? false)
+        <tr>
+            <th colspan="7" style="text-align: left;">{{ __('invoice.items') }}</th>
+        </tr>
+        @endif
         @if($sale->prefix === 'INV')
         <tr>
             <th style="width: 5%;">#</th>
@@ -38,7 +43,8 @@
         @php
             $itemsCount = count($sale->items);
             $minRows = 15;
-            $emptyRows = $itemsCount < $minRows ? $minRows - $itemsCount : 0;
+            // Skip page-filler rows when a services table follows.
+            $emptyRows = ($showServices ?? false) ? 0 : ($itemsCount < $minRows ? $minRows - $itemsCount : 0);
         @endphp
 
         @for($i = 0; $i < $emptyRows; $i++)

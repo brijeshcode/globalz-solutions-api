@@ -19,7 +19,7 @@
             <td>{{ $sale->currency->code ?? 'N/A' }}</td>
         </tr>
         @endif
-        @if($sale->salesperson && $sale->prefix !== 'INX')
+        @if($sale->salesperson && $sale->prefix !== 'INX' && ($showSalesperson ?? true))
         <tr>
             <td class="info-label">{{ __('invoice.label_salesperson') }}:</td>
             <td>{{ $sale->salesperson->name ?? 'Not assigned' }}</td>

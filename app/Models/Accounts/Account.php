@@ -2,6 +2,7 @@
 
 namespace App\Models\Accounts;
 
+use App\Helpers\CurrencyHelper;
 use App\Models\Setups\Accounts\AccountType;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Traits\Authorable;
@@ -57,6 +58,17 @@ class Account extends Model
 
     protected $defaultSortField = 'name';
     protected $defaultSortDirection = 'asc';
+
+    protected static function booted(): void
+    {
+        // Single-currency mode sends no currency_id (nullable in the request);
+        // fall back to the tenant's local currency so the FK is never empty.
+        static::saving(function (Account $account) {
+            if (empty($account->currency_id)) {
+                $account->currency_id = CurrencyHelper::getLocalCurrencyId();
+            }
+        });
+    }
 
     public function scopeActive(Builder $query)
     {

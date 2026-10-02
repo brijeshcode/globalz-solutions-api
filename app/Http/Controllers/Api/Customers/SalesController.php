@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Customers;
 use App\Helpers\CommonHelper;
 use App\Helpers\CurrencyHelper;
 use App\Helpers\CustomersHelper;
+use App\Helpers\FeatureHelper;
 use App\Helpers\RoleHelper;
 use App\Helpers\SettingsHelper;
 use App\Http\Controllers\Controller;
@@ -14,10 +15,12 @@ use App\Http\Resources\Api\Customers\SaleResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Sale;
 use App\Models\Customers\SaleItems;
+use App\Models\Customers\SaleService;
 use App\Models\Customers\Customer;
 use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Items\Item;
 use App\Models\Items\PriceList;
+use App\Models\Setups\Warehouse;
 use App\Services\Customers\SaleOfferService;
 use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
@@ -72,8 +75,15 @@ class SalesController extends Controller
         $data['approved_by'] = $user->id;
         $data['approved_at'] = now();
 
+        // Service-only sales may omit the warehouse; fall back to the default one.
+        if (empty($data['warehouse_id'])) {
+            $data['warehouse_id'] = Warehouse::where('is_default', true)->value('id');
+        }
+
         // Validate & normalize any applied offer lines before the calculation loop.
-        $data['items'] = app(SaleOfferService::class)->normalize($data['items']);
+        if (!empty($data['items'])) {
+            $data['items'] = app(SaleOfferService::class)->normalize($data['items']);
+        }
 
         if (Sale::TAXFREEPREFIX == $data['prefix']) {
             $data['total_tax_amount'] = 0;
@@ -82,8 +92,10 @@ class SalesController extends Controller
         }
 
         $sale = DB::transaction(function () use ($data) {
-            $saleItems = $data['items'];
-            unset($data['items']);
+            $saleItems = $data['items'] ?? [];
+            // Services only when the feature is enabled; otherwise silently ignored (never blocks the sale).
+            $saleServices = FeatureHelper::isSaleServices() ? ($data['services'] ?? []) : [];
+            unset($data['items'], $data['services']);
 
             $totalProfit = 0;
             $subTotal = 0;
@@ -92,6 +104,18 @@ class SalesController extends Controller
             $saleTotalTaxUsd = 0;
             $totalVolumeCbm = 0;
             $totalWeightKg = 0;
+
+            // Per-type breakout accumulators
+            $itemsTotal = 0;
+            $itemsTotalUsd = 0;
+            $itemsProfit = 0;
+            $itemsTax = 0;
+            $itemsTaxUsd = 0;
+            $servicesTotal = 0;
+            $servicesTotalUsd = 0;
+            $servicesProfit = 0;
+            $servicesTax = 0;
+            $servicesTaxUsd = 0;
 
             // Calculate totals from sale items
             $currencyRate = $data['currency_rate'] ?? 1;
@@ -191,7 +215,84 @@ class SalesController extends Controller
                     $saleTotalTaxUsd += $totalTaxAmountUsd;  // Sum of all items' total_tax_amount_usd
                     $totalVolumeCbm += $itemData['total_volume_cbm'] ?? 0;
                     $totalWeightKg += $itemData['total_weight_kg'] ?? 0;
+
+                    $itemsTotal += $totalPrice;
+                    $itemsTotalUsd += $totalPriceUsd;
+                    $itemsProfit += $itemTotalProfit;
+                    $itemsTax += $totalTaxAmount;
+                    $itemsTaxUsd += $totalTaxAmountUsd;
                 }
+            }
+
+            // Service lines: cost is always 0 (pure profit); server takes unit_price and
+            // computes the rest. Same formula as items, no stock/volume/weight.
+            foreach ($saleServices as $index => $serviceData) {
+                $sellingPrice = $serviceData['unit_price'] ?? 0;
+                $quantity = $serviceData['quantity'] ?? 0;
+                $discountPercent = $serviceData['discount_percent'] ?? 0;
+                $taxPercent = (Sale::TAXFREEPREFIX == $data['prefix']) ? 0 : ($serviceData['tax_percent'] ?? 0);
+
+                $sellingPriceUsd = CurrencyHelper::toUsd($currencyId, $sellingPrice, $currencyRate);
+
+                $costPrice = 0;
+
+                $unitDiscountAmount = $sellingPrice * ($discountPercent / 100);
+                $unitDiscountAmountUsd = $sellingPriceUsd * ($discountPercent / 100);
+                $discountAmount = $unitDiscountAmount * $quantity;
+                $discountAmountUsd = $unitDiscountAmountUsd * $quantity;
+                $netSellPrice = $sellingPrice - $unitDiscountAmount;
+                $netSellPriceUsd = $sellingPriceUsd - $unitDiscountAmountUsd;
+                $taxAmount = $taxPercent > 0 ? $netSellPrice * ($taxPercent / 100) : 0;
+                $taxAmountUsd = $taxPercent > 0 ? $netSellPriceUsd * ($taxPercent / 100) : 0;
+                $ttcPrice = $netSellPrice + $taxAmount;
+                $ttcPriceUsd = $netSellPriceUsd + $taxAmountUsd;
+                $totalNetSellPrice = $netSellPrice * $quantity;
+                $totalNetSellPriceUsd = $netSellPriceUsd * $quantity;
+                $totalTaxAmount = $taxAmount * $quantity;
+                $totalTaxAmountUsd = $taxAmountUsd * $quantity;
+                $totalPrice = $ttcPrice * $quantity;
+                $totalPriceUsd = $ttcPriceUsd * $quantity;
+                $unitProfit = $netSellPriceUsd - $costPrice;
+                $serviceTotalProfit = $unitProfit * $quantity;
+
+                $saleServices[$index]['date'] = $serviceData['date'] ?? $data['date'];
+                $saleServices[$index]['unit_cost_price'] = $costPrice;
+                $saleServices[$index]['unit_price'] = $sellingPrice;
+                $saleServices[$index]['unit_price_usd'] = $sellingPriceUsd;
+                $saleServices[$index]['discount_percent'] = $discountPercent;
+                $saleServices[$index]['unit_discount_amount'] = $unitDiscountAmount;
+                $saleServices[$index]['unit_discount_amount_usd'] = $unitDiscountAmountUsd;
+                $saleServices[$index]['total_discount_amount'] = $discountAmount;
+                $saleServices[$index]['total_discount_amount_usd'] = $discountAmountUsd;
+                $saleServices[$index]['unit_net_sell_price'] = $netSellPrice;
+                $saleServices[$index]['unit_net_sell_price_usd'] = $netSellPriceUsd;
+                $saleServices[$index]['tax_percent'] = $taxPercent;
+                $saleServices[$index]['unit_tax_amount'] = $taxAmount;
+                $saleServices[$index]['unit_tax_amount_usd'] = $taxAmountUsd;
+                $saleServices[$index]['unit_ttc_price'] = $ttcPrice;
+                $saleServices[$index]['unit_ttc_price_usd'] = $ttcPriceUsd;
+                $saleServices[$index]['total_net_sell_price'] = $totalNetSellPrice;
+                $saleServices[$index]['total_net_sell_price_usd'] = $totalNetSellPriceUsd;
+                $saleServices[$index]['total_tax_amount'] = $totalTaxAmount;
+                $saleServices[$index]['total_tax_amount_usd'] = $totalTaxAmountUsd;
+                $saleServices[$index]['total_price'] = $totalPrice;
+                $saleServices[$index]['total_price_usd'] = $totalPriceUsd;
+                $saleServices[$index]['unit_profit'] = $unitProfit;
+                $saleServices[$index]['total_profit'] = $serviceTotalProfit;
+                if (Sale::TAXFREEPREFIX == $data['prefix']) {
+                    $saleServices[$index]['tax_label'] = '';
+                }
+
+                $totalProfit += $serviceTotalProfit;
+                $subTotal += $totalNetSellPrice;
+                $subTotalUsd += $totalNetSellPriceUsd;
+                $saleTotalTax += $totalTaxAmount;
+                $saleTotalTaxUsd += $totalTaxAmountUsd;
+                $servicesTotal += $totalPrice;
+                $servicesTotalUsd += $totalPriceUsd;
+                $servicesProfit += $serviceTotalProfit;
+                $servicesTax += $totalTaxAmount;
+                $servicesTaxUsd += $totalTaxAmountUsd;
             }
 
             // Sale-level discount
@@ -209,6 +310,20 @@ class SalesController extends Controller
             $data['total_volume_cbm'] = $totalVolumeCbm;
             $data['total_weight_kg'] = $totalWeightKg;
 
+            // Breakout columns only when the feature is on — disabled tenants never write them.
+            if (FeatureHelper::isSaleServices()) {
+                $data['items_total'] = $itemsTotal;
+                $data['items_total_usd'] = $itemsTotalUsd;
+                $data['items_profit'] = $itemsProfit;
+                $data['items_total_tax_amount'] = $itemsTax;
+                $data['items_total_tax_amount_usd'] = $itemsTaxUsd;
+                $data['services_total'] = $servicesTotal;
+                $data['services_total_usd'] = $servicesTotalUsd;
+                $data['services_profit'] = $servicesProfit;
+                $data['services_total_tax_amount'] = $servicesTax;
+                $data['services_total_tax_amount_usd'] = $servicesTaxUsd;
+            }
+
             $sale = Sale::create($data);
 
             foreach ($saleItems as $itemData) {
@@ -216,10 +331,15 @@ class SalesController extends Controller
                 SaleItems::create($itemData);
             }
 
+            foreach ($saleServices as $serviceData) {
+                $serviceData['sale_id'] = $sale->id;
+                SaleService::create($serviceData);
+            }
+
             return $sale;
         });
 
-        $sale->load(['saleItems.item', 'warehouse', 'currency']);
+        $sale->load(['saleItems.item', 'saleServices.service', 'warehouse', 'currency']);
 
         return ApiResponse::store(
             'Sale created successfully',
@@ -236,6 +356,10 @@ class SalesController extends Controller
         }
 
         $sale->load(['saleItems.item', 'saleItems.item.itemUnit:id,name', 'saleItems.item.taxCode:id,name,code,description,tax_percent', 'warehouse:id,name', 'currency', 'priceList:id,code,description', 'customer:id,name,code,address,city,mobile,mof_tax_number,google_map', 'salesperson:id,name', 'createdBy:id,name', 'updatedBy:id,name', 'approvedBy:id,name', 'statusHistories.changedBy', 'statusHistories.car']);
+
+        if (FeatureHelper::isSaleServices()) {
+            $sale->load(['saleServices.service']);
+        }
 
         return ApiResponse::show(
             'Sale retrieved successfully',
@@ -254,11 +378,11 @@ class SalesController extends Controller
         $originalAmount = $sale->total_usd;
 
         DB::transaction(function () use ($data, $sale) {
-            if (isset($data['items'])) {
-                $data['items'] = app(SaleOfferService::class)->normalize($data['items']);
-                $saleItems = $data['items'];
-                unset($data['items']);
+            $hasItems = isset($data['items']);
+            $hasServices = FeatureHelper::isSaleServices() && isset($data['services']);
 
+            if ($hasItems || $hasServices) {
+                // Shared accumulators across items + services (combined sale supported).
                 $totalProfit = 0;
                 $subTotal = 0;
                 $subTotalUsd = 0;
@@ -266,9 +390,25 @@ class SalesController extends Controller
                 $saleTotalTaxUsd = 0;
                 $totalVolumeCbm = 0;
                 $totalWeightKg = 0;
+                $itemsTotal = 0;
+                $itemsTotalUsd = 0;
+                $itemsProfit = 0;
+                $itemsTax = 0;
+                $itemsTaxUsd = 0;
+                $servicesTotal = 0;
+                $servicesTotalUsd = 0;
+                $servicesProfit = 0;
+                $servicesTax = 0;
+                $servicesTaxUsd = 0;
 
-                // Calculate totals from sale items
                 $currencyRate = $data['currency_rate'] ?? $sale->currency_rate ?? 1;
+                $prefix = $data['prefix'] ?? $sale->prefix;
+            }
+
+            if ($hasItems) {
+                $data['items'] = app(SaleOfferService::class)->normalize($data['items']);
+                $saleItems = $data['items'];
+                unset($data['items']);
 
                 foreach ($saleItems as $index => $itemData) {
                     if (isset($itemData['item_id'])) {
@@ -364,52 +504,13 @@ class SalesController extends Controller
                         $saleTotalTaxUsd += $totalTaxAmountUsd;
                         $totalVolumeCbm += $itemData['total_volume_cbm'] ?? 0;
                         $totalWeightKg += $itemData['total_weight_kg'] ?? 0;
+                        $itemsTotal += $totalPrice;
+                        $itemsTotalUsd += $totalPriceUsd;
+                        $itemsProfit += $itemTotalProfit;
+                        $itemsTax += $totalTaxAmount;
+                        $itemsTaxUsd += $totalTaxAmountUsd;
                     }
                 }
-
-                // Sale-level discount
-                $additionalDiscount = $data['discount_amount'] ?? 0;
-                $additionalDiscountUsd = $data['discount_amount_usd'] ?? 0;
-
-                // Handle prefix-dependent fields
-                $prefix = $data['prefix'] ?? $sale->prefix;
-                if ($prefix == Sale::TAXFREEPREFIX) {
-                    $saleTotalTax = 0;
-                    $saleTotalTaxUsd = 0;
-                    $data['total_tax_amount'] = 0;
-                    $data['total_tax_amount_usd'] = 0;
-                    $data['invoice_tax_label'] = '';
-                } else {
-                    $data['total_tax_amount'] = $saleTotalTax;
-                    $data['total_tax_amount_usd'] = $saleTotalTaxUsd;
-                    $data['invoice_tax_label'] = CommonHelper::getTaxLable();
-                }
-
-                // Update price_list_id when prefix changes
-                $customer = Customer::select('price_list_id_INV', 'price_list_id_INX')->find($data['customer_id'] ?? $sale->customer_id);
-                if ($customer) {
-                    $customerPriceList = $prefix == Sale::TAXFREEPREFIX
-                        ? $customer->price_list_id_INX
-                        : $customer->price_list_id_INV;
-
-                    if (!$customerPriceList) {
-                        $defaultPriceList = $prefix == Sale::TAXFREEPREFIX
-                            ? PriceList::getDefaultInx()
-                            : PriceList::getDefaultInv();
-                        $customerPriceList = $defaultPriceList?->id;
-                    }
-
-                    $data['price_list_id'] = $customerPriceList;
-                }
-
-                // Calculate sale totals
-                $data['sub_total'] = $subTotal;
-                $data['sub_total_usd'] = $subTotalUsd;
-                $data['total'] = $subTotal + $saleTotalTax - $additionalDiscount;
-                $data['total_usd'] = $subTotalUsd + $saleTotalTaxUsd - $additionalDiscountUsd;
-                $data['total_profit'] = $totalProfit - $additionalDiscountUsd;
-                $data['total_volume_cbm'] = $totalVolumeCbm;
-                $data['total_weight_kg'] = $totalWeightKg;
 
                 // Get existing sale item IDs from the request
                 $requestItemIds = collect($saleItems)
@@ -449,10 +550,163 @@ class SalesController extends Controller
                 }
             }
 
+            if ($hasServices) {
+                $saleServices = $data['services'];
+                unset($data['services']);
+
+                foreach ($saleServices as $index => $serviceData) {
+                    $sellingPrice = $serviceData['unit_price'] ?? 0;
+                    $quantity = $serviceData['quantity'] ?? 0;
+                    $discountPercent = $serviceData['discount_percent'] ?? 0;
+                    $taxPercent = ($prefix == Sale::TAXFREEPREFIX) ? 0 : ($serviceData['tax_percent'] ?? 0);
+
+                    $sellingPriceUsd = CurrencyHelper::toUsd($sale->currency_id, $sellingPrice, $currencyRate);
+
+                    $costPrice = 0;
+
+                    $unitDiscountAmount = $sellingPrice * ($discountPercent / 100);
+                    $unitDiscountAmountUsd = $sellingPriceUsd * ($discountPercent / 100);
+                    $discountAmount = $unitDiscountAmount * $quantity;
+                    $discountAmountUsd = $unitDiscountAmountUsd * $quantity;
+                    $netSellPrice = $sellingPrice - $unitDiscountAmount;
+                    $netSellPriceUsd = $sellingPriceUsd - $unitDiscountAmountUsd;
+                    $taxAmount = $taxPercent > 0 ? $netSellPrice * ($taxPercent / 100) : 0;
+                    $taxAmountUsd = $taxPercent > 0 ? $netSellPriceUsd * ($taxPercent / 100) : 0;
+                    $ttcPrice = $netSellPrice + $taxAmount;
+                    $ttcPriceUsd = $netSellPriceUsd + $taxAmountUsd;
+                    $totalNetSellPrice = $netSellPrice * $quantity;
+                    $totalNetSellPriceUsd = $netSellPriceUsd * $quantity;
+                    $totalTaxAmount = $taxAmount * $quantity;
+                    $totalTaxAmountUsd = $taxAmountUsd * $quantity;
+                    $totalPrice = $ttcPrice * $quantity;
+                    $totalPriceUsd = $ttcPriceUsd * $quantity;
+                    $unitProfit = $netSellPriceUsd - $costPrice;
+                    $serviceTotalProfit = $unitProfit * $quantity;
+
+                    $saleServices[$index]['date'] = $serviceData['date'] ?? ($data['date'] ?? $sale->date);
+                    $saleServices[$index]['unit_cost_price'] = $costPrice;
+                    $saleServices[$index]['unit_price'] = $sellingPrice;
+                    $saleServices[$index]['unit_price_usd'] = $sellingPriceUsd;
+                    $saleServices[$index]['discount_percent'] = $discountPercent;
+                    $saleServices[$index]['unit_discount_amount'] = $unitDiscountAmount;
+                    $saleServices[$index]['unit_discount_amount_usd'] = $unitDiscountAmountUsd;
+                    $saleServices[$index]['total_discount_amount'] = $discountAmount;
+                    $saleServices[$index]['total_discount_amount_usd'] = $discountAmountUsd;
+                    $saleServices[$index]['unit_net_sell_price'] = $netSellPrice;
+                    $saleServices[$index]['unit_net_sell_price_usd'] = $netSellPriceUsd;
+                    $saleServices[$index]['tax_percent'] = $taxPercent;
+                    $saleServices[$index]['unit_tax_amount'] = $taxAmount;
+                    $saleServices[$index]['unit_tax_amount_usd'] = $taxAmountUsd;
+                    $saleServices[$index]['unit_ttc_price'] = $ttcPrice;
+                    $saleServices[$index]['unit_ttc_price_usd'] = $ttcPriceUsd;
+                    $saleServices[$index]['total_net_sell_price'] = $totalNetSellPrice;
+                    $saleServices[$index]['total_net_sell_price_usd'] = $totalNetSellPriceUsd;
+                    $saleServices[$index]['total_tax_amount'] = $totalTaxAmount;
+                    $saleServices[$index]['total_tax_amount_usd'] = $totalTaxAmountUsd;
+                    $saleServices[$index]['total_price'] = $totalPrice;
+                    $saleServices[$index]['total_price_usd'] = $totalPriceUsd;
+                    $saleServices[$index]['unit_profit'] = $unitProfit;
+                    $saleServices[$index]['total_profit'] = $serviceTotalProfit;
+                    if ($prefix == Sale::TAXFREEPREFIX) {
+                        $saleServices[$index]['tax_label'] = '';
+                    }
+
+                    $totalProfit += $serviceTotalProfit;
+                    $subTotal += $totalNetSellPrice;
+                    $subTotalUsd += $totalNetSellPriceUsd;
+                    $saleTotalTax += $totalTaxAmount;
+                    $saleTotalTaxUsd += $totalTaxAmountUsd;
+                    $servicesProfit += $serviceTotalProfit;
+                    $servicesTotal += $totalPrice;
+                    $servicesTotalUsd += $totalPriceUsd;
+                    $servicesTax += $totalTaxAmount;
+                    $servicesTaxUsd += $totalTaxAmountUsd;
+                }
+
+                // Remove services no longer present in the request (no inventory to restore).
+                $requestServiceIds = collect($saleServices)->pluck('id')->filter()->values()->all();
+                $sale->saleServices()->whereNotIn('id', $requestServiceIds)->delete();
+
+                foreach ($saleServices as $serviceData) {
+                    $serviceData['sale_id'] = $sale->id;
+
+                    if (isset($serviceData['id']) && $serviceData['id']) {
+                        $saleService = SaleService::find($serviceData['id']);
+                        if ($saleService && $saleService->sale_id === $sale->id) {
+                            unset($serviceData['id']);
+                            $saleService->update($serviceData);
+                        }
+                    } else {
+                        unset($serviceData['id']);
+                        SaleService::create($serviceData);
+                    }
+                }
+            }
+
+            // Combined sale-level totals written once, after both item and service loops.
+            if ($hasItems || $hasServices) {
+                $additionalDiscount = $data['discount_amount'] ?? 0;
+                $additionalDiscountUsd = $data['discount_amount_usd'] ?? 0;
+
+                // Tax-free prefix: no tax anywhere, clear the label.
+                if ($prefix == Sale::TAXFREEPREFIX) {
+                    $saleTotalTax = 0;
+                    $saleTotalTaxUsd = 0;
+                    $itemsTax = 0;
+                    $itemsTaxUsd = 0;
+                    $servicesTax = 0;
+                    $servicesTaxUsd = 0;
+                    $data['invoice_tax_label'] = '';
+                } else {
+                    $data['invoice_tax_label'] = CommonHelper::getTaxLable();
+                }
+
+                // Update price_list_id when prefix changes
+                $customer = Customer::select('price_list_id_INV', 'price_list_id_INX')->find($data['customer_id'] ?? $sale->customer_id);
+                if ($customer) {
+                    $customerPriceList = $prefix == Sale::TAXFREEPREFIX
+                        ? $customer->price_list_id_INX
+                        : $customer->price_list_id_INV;
+
+                    if (!$customerPriceList) {
+                        $defaultPriceList = $prefix == Sale::TAXFREEPREFIX
+                            ? PriceList::getDefaultInx()
+                            : PriceList::getDefaultInv();
+                        $customerPriceList = $defaultPriceList?->id;
+                    }
+
+                    $data['price_list_id'] = $customerPriceList;
+                }
+
+                $data['sub_total'] = $subTotal;
+                $data['sub_total_usd'] = $subTotalUsd;
+                $data['total_tax_amount'] = $saleTotalTax;
+                $data['total_tax_amount_usd'] = $saleTotalTaxUsd;
+                $data['total'] = $subTotal + $saleTotalTax - $additionalDiscount;
+                $data['total_usd'] = $subTotalUsd + $saleTotalTaxUsd - $additionalDiscountUsd;
+                $data['total_profit'] = $totalProfit - $additionalDiscountUsd;
+                $data['total_volume_cbm'] = $totalVolumeCbm;
+                $data['total_weight_kg'] = $totalWeightKg;
+
+                // Breakout columns only when the feature is on.
+                if (FeatureHelper::isSaleServices()) {
+                    $data['items_total'] = $itemsTotal;
+                    $data['items_total_usd'] = $itemsTotalUsd;
+                    $data['items_profit'] = $itemsProfit;
+                    $data['items_total_tax_amount'] = $itemsTax;
+                    $data['items_total_tax_amount_usd'] = $itemsTaxUsd;
+                    $data['services_total'] = $servicesTotal;
+                    $data['services_total_usd'] = $servicesTotalUsd;
+                    $data['services_profit'] = $servicesProfit;
+                    $data['services_total_tax_amount'] = $servicesTax;
+                    $data['services_total_tax_amount_usd'] = $servicesTaxUsd;
+                }
+            }
+
             $sale->update($data);
         });
 
-        $sale->load(['saleItems.item', 'warehouse', 'currency']);
+        $sale->load(['saleItems.item', 'saleServices.service', 'warehouse', 'currency']);
 
         return ApiResponse::update(
             'Sale updated successfully',
@@ -482,6 +736,10 @@ class SalesController extends Controller
             ->approved()
             ->searchable($request)
             ->sortable($request);
+
+        if (FeatureHelper::isSaleServices()) {
+            $query->with(['saleServices.service']);
+        }
 
         if ($request->has('warehouse_id')) {
             $query->byWarehouse($request->warehouse_id);
@@ -515,8 +773,9 @@ class SalesController extends Controller
 
         $sale->restore();
         $sale->saleItems()->withTrashed()->restore();
+        $sale->saleServices()->withTrashed()->restore();
 
-        $sale->load(['saleItems.item', 'warehouse', 'currency']);
+        $sale->load(['saleItems.item', 'saleServices.service', 'warehouse', 'currency']);
 
         return ApiResponse::update(
             'Sale restored successfully',
@@ -529,6 +788,7 @@ class SalesController extends Controller
         $sale = Sale::onlyTrashed()->findOrFail($id);
 
         $sale->saleItems()->withTrashed()->forceDelete();
+        $sale->saleServices()->withTrashed()->forceDelete();
         $sale->forceDelete();
 
         return ApiResponse::delete('Sale permanently deleted successfully');
@@ -753,6 +1013,10 @@ class SalesController extends Controller
             ->approved()
             ->searchable($request)
             ;
+
+        if (FeatureHelper::isSaleServices()) {
+            $query->with(['saleServices.service']);
+        }
 
         // Role-based filtering: salesman can only see their own returns
         if (RoleHelper::isSalesman() && !RoleHelper::isAdmin()) {
