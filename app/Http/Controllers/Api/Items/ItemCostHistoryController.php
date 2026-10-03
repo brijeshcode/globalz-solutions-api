@@ -8,6 +8,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Inventory\ItemPrice;
 use App\Models\Inventory\ItemPriceHistory;
 use App\Models\Suppliers\PurchaseExpense;
+use App\Services\Inventory\ItemCostLedger;
 use App\Services\Inventory\PriceService;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -46,14 +47,15 @@ class ItemCostHistoryController extends Controller
             ->orderBy('effective_date', 'desc')
             ->paginate($request->get('per_page', 50));
 
-        // When ?verify=1, run the audit and attach a price_check to each row showing
-        // whether the stored price matches the recomputed price.
+        // When ?verify=1, diagnose each item ON THIS PAGE by replaying its stock
+        // movements (ItemCostLedger) and attach a price_check explaining the first
+        // thing that is wrong. Scoped to the page so it never has to "check all
+        // items" in one shot — paging through verifies the whole catalogue.
         $auditIndex = null;
         if ($request->boolean('verify')) {
             $tolerance  = (float) $request->input('tolerance', 0.0);
-            $audit      = PriceService::auditItemPrices($tolerance);
-            $auditIndex = collect($audit['changes'])
-                ->concat($audit['missing'])
+            $auditIndex = $rows->getCollection()
+                ->map(fn($row) => ItemCostLedger::diagnose($row->item_id, $tolerance))
                 ->keyBy('item_id');
         }
 
@@ -114,10 +116,17 @@ class ItemCostHistoryController extends Controller
             'effective_date'   => $row->effective_date,
             'history'          => $histories->take(5)->map(fn($h) => $this->transformRow($h, $expPctMap))->values(),
             'price_check'      => $auditIndex !== null ? [
-                'correct_price' => $auditRow['correct_price'] ?? null,
-                'difference'    => $auditRow['difference'] ?? 0,
-                'diff_percent'  => $auditRow['diff_percent'] ?? '0%',
-                'needs_fix'     => $auditRow !== null,
+                'status'         => $auditRow['status'] ?? null,            // ok | stale_price | wrong_history | missing_history | missing_item_price | no_movements
+                'needs_fix'      => isset($auditRow['status']) && !in_array($auditRow['status'], ['ok', 'no_movements'], true),
+                'correct_price'  => $auditRow['correct_price'] ?? null,
+                'current_price'  => $auditRow['current_price'] ?? null,
+                'difference'     => $auditRow['difference'] ?? 0,
+                'diff_percent'   => $auditRow['diff_percent'] ?? '0%',
+                // "why": populated for history-level failures so you can see where it broke
+                'at_purchase'      => $auditRow['at_purchase'] ?? null,
+                'at_date'          => $auditRow['at_date'] ?? null,
+                'stored_average'   => $auditRow['stored_average'] ?? null,
+                'expected_average' => $auditRow['expected_average'] ?? null,
             ] : null,
         ];
     }

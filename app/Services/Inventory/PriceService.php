@@ -1140,60 +1140,23 @@ class PriceService
      */
     private static function computeCorrectPrice(int $itemId, string $costCalculation): ?array
     {
-        if ($costCalculation === Item::COST_LAST_COST) {
-            $latest = PurchaseItem::where('purchase_items.item_id', $itemId)
-                ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
-                ->where('purchases.status', 'Delivered')
-                ->whereNull('purchase_items.deleted_at')
-                ->whereNull('purchases.deleted_at')
-                ->orderByDesc('purchases.id')
-                ->orderByDesc('purchase_items.id')
-                ->first(['purchase_items.cost_per_item_usd', 'purchases.id as purchase_id', 'purchases.date as purchase_date', 'purchases.prefix as purchase_prefix', 'purchases.code as purchase_code']);
+        // Single source of truth: replay all stock movements (purchases AND sales,
+        // returns, adjustments) as a global moving average — see ItemCostLedger.
+        // The audit now uses the exact same math as the write path instead of the
+        // old sales-ignoring cumulative average that made correct prices look wrong.
+        $replay = ItemCostLedger::replay($itemId);
 
-            return $latest ? [
-                'price'         => (float) $latest->cost_per_item_usd,
-                'purchase_id'   => $latest->purchase_id,
-                'purchase_code' => $latest->purchase_prefix . $latest->purchase_code,
-                'purchase_date' => $latest->purchase_date,
-            ] : null;
-        }
-
-        // Weighted average: recompute from delivered purchases in chronological order.
-        $deliveredItems = PurchaseItem::where('purchase_items.item_id', $itemId)
-            ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
-            ->where('purchases.status', 'Delivered')
-            ->whereNull('purchase_items.deleted_at')
-            ->whereNull('purchases.deleted_at')
-            ->orderBy('purchases.date', 'asc')
-            ->orderBy('purchases.id', 'asc')
-            ->orderBy('purchase_items.id', 'asc')
-            ->get(['purchase_items.id', 'purchase_items.quantity', 'purchase_items.cost_per_item_usd', 'purchases.date']);
-
-        if ($deliveredItems->isEmpty()) {
+        if ($replay === null) {
             return null;
         }
 
-        $item       = Item::find($itemId);
-        $totalQty   = ($item && $item->starting_quantity > 0) ? (float) $item->starting_quantity : 0.0;
-        $totalValue = ($item && $item->starting_price > 0)    ? $totalQty * (float) $item->starting_price : 0.0;
-
-        $runningAverages = [];
-
-        foreach ($deliveredItems as $pi) {
-            $totalQty   += (float) $pi->quantity;
-            $totalValue += (float) $pi->quantity * (float) $pi->cost_per_item_usd;
-
-            $runningAverages[$pi->id] = $totalQty > 0 ? round($totalValue / $totalQty, 4) : 0.0;
-        }
-
-        $price = $totalQty > 0 ? ($totalValue / $totalQty) : null;
-
-        return $price !== null ? [
-            'price'            => $price,
-            'purchase_id'      => null,
-            'purchase_date'    => null,
-            'running_averages' => $runningAverages,
-        ] : null;
+        return [
+            'price'            => $replay['price'],
+            'purchase_id'      => $replay['last_purchase_id'],
+            'purchase_code'    => null,
+            'purchase_date'    => $replay['last_purchase_date'],
+            'running_averages' => $replay['running_averages'],
+        ];
     }
 
 }
