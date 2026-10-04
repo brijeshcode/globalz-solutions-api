@@ -36,8 +36,10 @@ class CustomerInvoiceSettingsUpdateRequest extends FormRequest
             'language'                      => 'sometimes|string|in:en,fr,ar',
             'unit_price_decimals'           => 'sometimes|integer|min:0|max:6',
             'total_decimals'                => 'sometimes|integer|min:0|max:6',
-            'logo'                          => 'sometimes|nullable|file|image|max:2048',
-            'stamp'                         => 'sometimes|nullable|file|image|max:2048',
+            // Only validate as a file when one was actually uploaded; the frontend
+            // echoes the existing logo/stamp value back on save, which isn't a file.
+            'logo'                          => $this->hasFile('logo') ? 'file|image|max:2048' : 'nullable',
+            'stamp'                         => $this->hasFile('stamp') ? 'file|image|max:2048' : 'nullable',
             'show_logo'                     => 'sometimes|boolean',
             'show_stamp'                    => 'sometimes|boolean',
             'logo_width'                    => 'sometimes|nullable|string|max:10',
