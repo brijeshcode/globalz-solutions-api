@@ -52,6 +52,8 @@ class ExpenseCategoriesUpdateRequest extends FormRequest
             'is_active'           => 'boolean',
             'exclude_from_profit' => 'boolean',
             'is_vat_category'     => 'boolean',
+            'expense_tag_ids'     => 'nullable|array',
+            'expense_tag_ids.*'   => 'integer|exists:expense_tags,id',
         ];
     }
 

@@ -673,6 +673,10 @@ class ExpenseTransactionsController extends Controller
             $query->whereIn('expense_category_id', $categoryIds);
         }
 
+        if ($request->filled('tag_id')) {
+            $query->byTag((int) $request->input('tag_id'));
+        }
+
         if ($request->has('account_id')) {
             $query->where('account_id', $request->input('account_id'));
         }

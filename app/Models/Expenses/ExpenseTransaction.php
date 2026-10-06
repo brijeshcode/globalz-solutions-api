@@ -6,6 +6,7 @@ use App\Contracts\ModuleLockable;
 use App\Models\Accounts\Account;
 use App\Models\Setting;
 use App\Models\Setups\Expenses\ExpenseCategory;
+use App\Models\Setups\Expenses\ExpenseTag;
 use App\Models\Setups\Generals\Currencies\Currency;
 use App\Models\Suppliers\PurchaseExpense;
 use Carbon\CarbonInterface;
@@ -199,6 +200,12 @@ class ExpenseTransaction extends Model implements ModuleLockable
     public function scopeByCode(Builder $query, string $code)
     {
         return $query->where('code', $code);
+    }
+
+    public function scopeByTag(Builder $query, int $tagId)
+    {
+        $categoryIds = ExpenseTag::find($tagId)?->categoryIds() ?? [];
+        return $query->whereIn('expense_category_id', $categoryIds);
     }
 
     // ─── Code generation ──────────────────────────────────────────────────────

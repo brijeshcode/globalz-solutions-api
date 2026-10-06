@@ -7,6 +7,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Employees\Salary;
 use App\Models\Expenses\ExpenseTransaction;
 use App\Models\Setups\Expenses\ExpenseCategory;
+use App\Models\Setups\Expenses\ExpenseTag;
 use App\Models\Vehicle\GasStationPayment;
 use App\Helpers\FeatureHelper;
 use Illuminate\Http\JsonResponse;
@@ -27,8 +28,14 @@ class ExpenseReportController extends Controller
             $toDate = Carbon::now()->endOfMonth()->format('Y-m-d');
         }
 
-        $expenseReport = $this->getExpenseReport($fromDate, $toDate, $month, false);
-        $excludedCategoryReport = $this->getExpenseReport($fromDate, $toDate, $month, true);
+        // Optional tag filter: null = no filter (all categories); [] = tag with no
+        // mapped categories (zero rows). Distinguishing the two keeps an empty tag
+        // from silently reporting everything.
+        $tagId = $request->get('tag_id');
+        $tagCategoryIds = $tagId ? (ExpenseTag::find($tagId)?->categoryIds() ?? []) : null;
+
+        $expenseReport = $this->getExpenseReport($fromDate, $toDate, $month, false, $tagCategoryIds);
+        $excludedCategoryReport = $this->getExpenseReport($fromDate, $toDate, $month, true, $tagCategoryIds);
         $salaryReport = $this->getSalaryReport($fromDate, $toDate, $month);
         $data = [
             'from_date' => $fromDate,
@@ -46,7 +53,7 @@ class ExpenseReportController extends Controller
         return ApiResponse::send('Expense report retrieved successfully', 200, $data);
     }
 
-    private function getExpenseReport(?string $fromDate, ?string $toDate, ?string $month, bool $excludedOnly): array
+    private function getExpenseReport(?string $fromDate, ?string $toDate, ?string $month, bool $excludedOnly, ?array $tagCategoryIds = null): array
     {
         // Get expense totals grouped by category via transactions (includes VAT)
         $query = ExpenseTransaction::query()
@@ -62,6 +69,7 @@ class ExpenseReportController extends Controller
             ->when($fromDate, fn($q) => $q->where('expense_transactions.date', '>=', $fromDate))
             ->when($toDate, fn($q) => $q->where('expense_transactions.date', '<=', $toDate))
             ->when($month, fn($q) => $q->where('expense_transactions.expense_month', $month . '-01'))
+            ->when($tagCategoryIds !== null, fn($q) => $q->whereIn('expense_transactions.expense_category_id', $tagCategoryIds))
             ->whereNull('expense_categories.deleted_at')
             ->groupBy(
                 'expense_categories.id',

@@ -57,6 +57,7 @@ use App\Http\Controllers\Api\Setups\Customers\CustomerZonesController;
 use App\Http\Controllers\Api\Setups\Employees\DepartmentsController;
 use App\Http\Controllers\Api\Setups\Users\UsersController;
 use App\Http\Controllers\Api\Setups\Expenses\ExpenseCategoriesController;
+use App\Http\Controllers\Api\Setups\Expenses\ExpenseTagsController;
 use App\Http\Controllers\Api\Setups\Expenses\PurchaseExpenseSubcategoryController;
 use App\Http\Controllers\Api\Vehicle\CarRefillsController;
 use App\Http\Controllers\Api\Vehicle\CarsController;
@@ -1070,6 +1071,16 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
                 Route::delete('{expenseCategory}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            // Expense Tags Controller
+            Route::controller(ExpenseTagsController::class)->prefix('tags')->name('tags.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{expenseTag}', 'show')->name('show');
+                Route::put('{expenseTag}', 'update')->name('update');
+                Route::delete('{expenseTag}', 'destroy')->name('destroy');
+                Route::put('{expenseTag}/categories', 'syncCategories')->name('categories');
             });
         });
 

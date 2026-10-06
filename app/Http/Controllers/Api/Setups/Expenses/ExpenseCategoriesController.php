@@ -34,7 +34,7 @@ class ExpenseCategoriesController extends Controller
                     ->orWhere('parent_id', '!=', $purchaseExpenseParentId)
                 )
             )
-            ->with(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name'])
+            ->with(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name', 'tags:id,name,code'])
             ->searchable($request)
             ->sortable($request);
 
@@ -89,8 +89,13 @@ class ExpenseCategoriesController extends Controller
      */
     public function store(ExpenseCategoriesStoreRequest $request): JsonResponse
     {
-        $expenseCategory = ExpenseCategory::create($request->validated());
-        $expenseCategory->load(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name']);
+        $data = $request->validated();
+        $tagIds = $data['expense_tag_ids'] ?? [];
+        unset($data['expense_tag_ids']); // not a column — synced to the pivot below
+
+        $expenseCategory = ExpenseCategory::create($data);
+        $expenseCategory->tags()->sync($tagIds);
+        $expenseCategory->load(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name', 'tags:id,name,code']);
 
         return ApiResponse::store(
             'Expense category created successfully',
@@ -103,7 +108,7 @@ class ExpenseCategoriesController extends Controller
      */
     public function show(ExpenseCategory $expenseCategory): JsonResponse
     {
-        $expenseCategory->load(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name', 'children']);
+        $expenseCategory->load(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name', 'children', 'tags:id,name,code']);
 
         return ApiResponse::show(
             'Expense category retrieved successfully',
@@ -116,8 +121,17 @@ class ExpenseCategoriesController extends Controller
      */
     public function update(ExpenseCategoriesUpdateRequest $request, ExpenseCategory $expenseCategory): JsonResponse
     {
-        $expenseCategory->update($request->validated());
-        $expenseCategory->load(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name']);
+        $data = $request->validated();
+        // Sync tags only when the field is sent; omitting it leaves existing tags untouched.
+        $syncTags = array_key_exists('expense_tag_ids', $data);
+        $tagIds = $data['expense_tag_ids'] ?? [];
+        unset($data['expense_tag_ids']); // not a column
+
+        $expenseCategory->update($data);
+        if ($syncTags) {
+            $expenseCategory->tags()->sync($tagIds);
+        }
+        $expenseCategory->load(['createdBy:id,name', 'updatedBy:id,name', 'parent:id,name', 'tags:id,name,code']);
 
         return ApiResponse::update(
             'Expense category updated successfully',

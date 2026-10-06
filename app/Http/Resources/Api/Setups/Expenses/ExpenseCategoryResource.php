@@ -38,6 +38,12 @@ class ExpenseCategoryResource extends JsonResource
             'children' => ExpenseCategoryResource::collection($this->whenLoaded('children')),
             'children_recursive' => ExpenseCategoryResource::collection($this->whenLoaded('childrenRecursive')),
 
+            'tags' => $this->whenLoaded('tags', fn () => $this->tags->map(fn ($t) => [
+                'id'   => $t->id,
+                'name' => $t->name,
+                'code' => $t->code,
+            ])),
+
             'created_by' => [
                 'id' => $this->createdBy?->id,
                 'name' => $this->createdBy?->name,

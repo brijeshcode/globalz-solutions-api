@@ -6,13 +6,13 @@ use Illuminate\Support\Facades\DB;
 it('targets the landlord test database', function () {
     $database = DB::connection('mysql')->getDatabaseName();
 
-    expect($database)->toBe('nick_globalzTest');
+    expect($database)->toBe('nick_globalztest');
 });
 
 it('targets the tenant test database', function () {
     $database = DB::connection('tenant')->getDatabaseName();
 
-    expect($database)->toBe('nick_globalzTest_tenant');
+    expect($database)->toBe('nick_globalztest_tenant');
 });
 
 it('tenant record exists in landlord test database with correct domain', function () {
@@ -20,7 +20,7 @@ it('tenant record exists in landlord test database with correct domain', functio
 
     expect($tenant)->not->toBeNull()
         ->and($tenant->domain)->toBe('test.example.com')
-        ->and($tenant->database)->toBe('nick_globalzTest_tenant');
+        ->and($tenant->database)->toBe('nick_globalztest_tenant');
 });
 
 it('current tenant is bound and points to tenant test database', function () {
@@ -28,5 +28,5 @@ it('current tenant is bound and points to tenant test database', function () {
 
     expect($tenant)->not->toBeNull()
         ->and($tenant->domain)->toBe('test.example.com')
-        ->and($tenant->database)->toBe('nick_globalzTest_tenant');
+        ->and($tenant->database)->toBe('nick_globalztest_tenant');
 });
