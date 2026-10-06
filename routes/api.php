@@ -414,6 +414,7 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
             Route::post('/', 'store')->name('store');
             Route::get('{customerReturn}', 'show')->name('show');
             Route::put('{customerReturn}', 'update')->name('update')->middleware('module.lock');
+            Route::post('{customerReturn}/refresh', 'refresh')->name('refresh')->middleware('module.lock');
             Route::delete('{customerReturn}', 'destroy')->name('destroy')->middleware('module.lock');
             Route::patch('{id}/restore', 'restore')->name('restore');
             Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');

@@ -12,6 +12,7 @@ use App\Http\Resources\Api\Customers\CustomerReturnResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerReturn;
+use App\Models\Customers\SaleItems;
 use App\Services\Customers\CustomerReturnService;
 use App\Services\Inventory\InventoryService;
 use App\Traits\HasPagination;
@@ -294,6 +295,130 @@ class CustomerReturnsController extends Controller
             'Customer return updated successfully',
             new CustomerReturnResource($customerReturn)
         );
+    }
+
+    /**
+     * Re-pull each sale-linked return line from its source sale item and recompute totals.
+     * Quantities and which lines exist are preserved; only prices/discount/tax/derived
+     * values are refreshed. Direct (non-sale-linked) lines are left untouched.
+     */
+    public function refresh(CustomerReturn $customerReturn): JsonResponse
+    {
+        $isReceived   = $customerReturn->isReceived();
+        $isSuperAdmin = RoleHelper::canSuperAdmin();
+
+        if ($isReceived && !$isSuperAdmin) {
+            return ApiResponse::customError('Only super admins can refresh received returns', 403);
+        }
+
+        // Direct returns have no source sale to refresh from.
+        if (!$customerReturn->items()->whereNotNull('sale_item_id')->exists()) {
+            return ApiResponse::customError('This is a direct return with no linked sale to refresh from.', 422);
+        }
+
+        $oldCustomerId = $customerReturn->customer_id;
+        $oldTotalUsd   = (float) $customerReturn->total_usd;
+
+        $itemChanges   = [];
+        $totalsChanges = [];
+
+        DB::transaction(function () use ($customerReturn, $isReceived, $oldCustomerId, $oldTotalUsd, &$itemChanges, &$totalsChanges) {
+            foreach ($customerReturn->items as $item) {
+                // Skip direct lines and lines whose source sale item is gone.
+                if (!$item->sale_item_id || !SaleItems::find($item->sale_item_id)) {
+                    continue;
+                }
+
+                $original = $item->getOriginal();
+
+                $itemData = $this->customerReturnService->prepareReturnItemData([
+                    'sale_item_id' => $item->sale_item_id,
+                    'quantity'     => $item->quantity, // preserve the return's own quantity
+                    'note'         => $item->note,
+                ], $customerReturn->prefix, $customerReturn->currency_rate);
+
+                $item->update($itemData);
+
+                $fields = $this->diffChanges($original, $item->getChanges());
+                if ($fields) {
+                    $itemChanges[] = [
+                        'return_item_id' => $item->id,
+                        'item_code'      => $item->item_code,
+                        'fields'         => $fields,
+                    ];
+                }
+            }
+
+            // Recalculate return totals
+            $customerReturn->refresh();
+            $headerOriginal = $customerReturn->getOriginal();
+            $customerReturn->total = $customerReturn->items->sum('total_price');
+            $customerReturn->total_usd = $customerReturn->items->sum('total_price_usd');
+            $customerReturn->subtotal_taxable_amount = $customerReturn->items->sum('total_taxable_amount');
+            $customerReturn->subtotal_taxable_amount_usd = $customerReturn->items->sum('total_taxable_amount_usd');
+            $customerReturn->total_tax_amount = $customerReturn->items->sum('total_tax_amount');
+            $customerReturn->total_tax_amount_usd = $customerReturn->items->sum('total_tax_amount_usd');
+            $customerReturn->total_volume_cbm = $customerReturn->items->sum('total_volume_cbm');
+            $customerReturn->total_weight_kg = $customerReturn->items->sum('total_weight_kg');
+            $customerReturn->save();
+
+            $totalsChanges = $this->diffChanges($headerOriginal, $customerReturn->getChanges());
+
+            // Adjust customer balance when refreshing a received return.
+            // Quantities are unchanged, so inventory is unaffected; only the USD total can move.
+            if ($isReceived) {
+                $newTotalUsd = (float) $customerReturn->total_usd;
+                CustomersHelper::removeBalance(Customer::find($oldCustomerId), $oldTotalUsd);
+                CustomersHelper::addBalance(Customer::find($oldCustomerId), $newTotalUsd);
+            }
+        });
+
+        $customerReturn->load([
+            'customer:id,name,code,address,city,mobile,mof_tax_number',
+            'currency:id,name,code,symbol,symbol_position,decimal_places,decimal_separator,thousand_separator,calculation_type',
+            'warehouse:id,name,address_line_1',
+            'salesperson:id,name',
+            'approvedBy:id,name',
+            'returnReceivedBy:id,name',
+            'items.item:id,short_name,code,description',
+            'items.saleItem',
+            'createdBy:id,name',
+            'updatedBy:id,name'
+        ]);
+
+        $hasChanges = !empty($itemChanges) || !empty($totalsChanges);
+
+        return response()->json([
+            'message' => $hasChanges
+                ? 'Customer return refreshed successfully'
+                : 'No changes needed — this return already matches the sale.',
+            'data'    => new CustomerReturnResource($customerReturn),
+            'changes' => [
+                'has_changes' => $hasChanges,
+                'items'       => $itemChanges,
+                'totals'      => $totalsChanges,
+            ],
+        ], 200);
+    }
+
+    /**
+     * Build an old/new diff from a model's getChanges(), dropping bookkeeping columns
+     * and normalising numeric strings to floats for a clean response.
+     */
+    private function diffChanges(array $original, array $changes): array
+    {
+        $out = [];
+        foreach ($changes as $field => $new) {
+            if (in_array($field, ['updated_at', 'created_at', 'updated_by'], true)) {
+                continue;
+            }
+            $old = $original[$field] ?? null;
+            $out[$field] = [
+                'old' => is_numeric($old) ? (float) $old : $old,
+                'new' => is_numeric($new) ? (float) $new : $new,
+            ];
+        }
+        return $out;
     }
 
     public function markReceived(Request $request, CustomerReturn $customerReturn): JsonResponse
