@@ -71,6 +71,7 @@ use App\Http\Controllers\Api\Employees\CommissionTargetsController;
 use App\Http\Controllers\Api\Employees\EmployeeCreditDebitNotesController;
 use App\Http\Controllers\Api\ListDataController;
 use App\Http\Controllers\Api\Setups\Accounts\AccountTypesController;
+use App\Http\Controllers\Api\Setups\Generals\Accounts\AssetsController;
 use App\Http\Controllers\Api\Setups\Generals\CompanyController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\CurrenciesController;
 use App\Http\Controllers\Api\Setups\Generals\Currencies\currencyRatesController;
@@ -819,6 +820,17 @@ Route::middleware(['auth:sanctum', 'bug-lock', 'global-edit-lock'])->group(funct
                 Route::get('{accountType}', 'show')->name('show');
                 Route::put('{accountType}', 'update')->name('update');
                 Route::delete('{accountType}', 'destroy')->name('destroy');
+                Route::patch('{id}/restore', 'restore')->name('restore');
+                Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
+            });
+
+            Route::controller(AssetsController::class)->prefix('assets')->name('assets.')->group(function () {
+                Route::get('trashed', 'trashed')->name('trashed');
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{asset}', 'show')->name('show');
+                Route::put('{asset}', 'update')->name('update');
+                Route::delete('{asset}', 'destroy')->name('destroy');
                 Route::patch('{id}/restore', 'restore')->name('restore');
                 Route::delete('{id}/force-delete', 'forceDelete')->name('force-delete');
             });

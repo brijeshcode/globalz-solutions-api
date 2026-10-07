@@ -13,6 +13,7 @@ use App\Models\Customers\Customer;
 use App\Models\Customers\CustomerPayment;
 use App\Models\Customers\CustomerReturn;
 use App\Models\Expenses\ExpenseTransaction;
+use App\Models\Setups\Generals\Accounts\Asset;
 use App\Models\Setups\Supplier;
 use App\Models\Suppliers\Purchase;
 use App\Models\Vehicle\GasStation;
@@ -493,16 +494,19 @@ class BalanceSheetController extends Controller
 
     /**
      * Equipment & Hardware — Non-Current Assets line.
-     * MISSING: there is no equipment/fixed-asset table in the system yet, so this
-     * cannot be derived. Needs a data source (a fixed-assets register or a manual value).
+     * Sum of amount_usd across every asset in the assets register (furniture,
+     * computers, appliances, etc.), already stored in USD at entry time.
      *
      * @return array{value: float, note: string}
      */
     private function equipmentAndHardware(): array
     {
+        $value = (float) Asset::sum('amount_usd');
+
         return [
-            'value' => 0.0,
-            'note' => 'Not available — the system has no equipment / fixed-asset register to derive this from yet.',
+            'value' => $value,
+            'note' => 'Total USD value of all assets recorded in the assets register '
+                . '(equipment, hardware, furniture and other fixed assets).',
         ];
     }
 

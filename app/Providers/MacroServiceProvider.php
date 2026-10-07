@@ -68,16 +68,26 @@ class MacroServiceProvider extends ServiceProvider
             return $this->decimal($column, 45, 8);
         });
 
+        Blueprint::macro('moneyMedium', function (string $column) {
+            /** @var \Illuminate\Database\Schema\Blueprint $this */
+            return $this->decimal($column, 25, 6);
+        });
+
+        Blueprint::macro('moneySmall', function (string $column) {
+            /** @var \Illuminate\Database\Schema\Blueprint $this */
+            return $this->decimal($column, 14, 6);
+        });
+
         // Exchange rates (huge integer + 10 decimals)
         Blueprint::macro('rate', function (string $column) {
             /** @var \Illuminate\Database\Schema\Blueprint $this */
-            return $this->decimal($column, 30, 8);
+            return $this->decimal($column, 20, 8);
         });
 
-        // Quantities (large integer + 6 decimals)
+        // Quantities (large integer + 2 decimals)
         Blueprint::macro('quantity', function (string $column) {
             /** @var \Illuminate\Database\Schema\Blueprint $this */
-            return $this->decimal($column, 20, 2);
+            return $this->decimal($column, 15, 2);
         });
 
         // Quantities (large integer + 6 decimals)
