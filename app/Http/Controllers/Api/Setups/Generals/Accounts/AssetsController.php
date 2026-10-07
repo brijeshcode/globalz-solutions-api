@@ -8,6 +8,7 @@ use App\Http\Requests\Api\Setups\Generals\Accounts\AssetUpdateRequest;
 use App\Http\Resources\Api\Setups\Generals\Accounts\AssetsResource;
 use App\Http\Responses\ApiResponse;
 use App\Helpers\CurrencyHelper;
+use App\Helpers\RoleHelper;
 use App\Models\Setups\Generals\Accounts\Asset;
 use App\Traits\HasPagination;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,13 @@ use Illuminate\Http\Request;
 class AssetsController extends Controller
 {
     use HasPagination;
+
+    public function __construct()
+    {
+        if (!RoleHelper::canSuperAdmin()) {
+            abort(403, 'Unauthorized. Super admin access required.');
+        }
+    }
 
     public function index(Request $request): JsonResponse
     {
