@@ -134,6 +134,21 @@ Route::get('/documents/{document}/preview-signed', [DocumentController::class, '
         \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
     ]);
 
+// Signed, DB-free file serving for document thumbnails/previews. Unlike
+// preview-signed above, this resolves NO tenant and loads NO model: the
+// tenant-scoped storage path is baked into the signature-protected `path`
+// param, so a grid of many images can load without each request booting
+// tenancy or touching a database. See DocumentController@serveFile.
+Route::get('/documents/serve', [DocumentController::class, 'serveFile'])
+    ->name('documents.serve')
+    ->withoutMiddleware([
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \App\Http\Middleware\AttachCacheVersion::class,
+        \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+        \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
+    ]);
+
 // Company Details - Public endpoint for login page branding
 Route::get('/company-details', [CompanyController::class, 'getPublicDetails'])
     ->name('company-details.public');

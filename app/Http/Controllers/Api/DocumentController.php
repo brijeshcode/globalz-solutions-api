@@ -271,13 +271,49 @@ class DocumentController extends Controller
         if (!Storage::disk('public')->exists($document->file_path)) {
             abort(404, 'File not found');
         }
-        
+
         $filePath = Storage::disk('public')->path($document->file_path);
-        
+
         return response()->file($filePath, [
             'Content-Type' => $document->mime_type,
             'Content-Disposition' => 'inline; filename="' . $document->original_name . '"'
         ]);
+    }
+
+    /**
+     * Serve a document file via a signed, DB-free URL.
+     *
+     * Deliberately resolves NO tenant and loads NO Document model: the
+     * tenant-scoped storage path is baked into the signature-protected `path`
+     * param (tenant isolation is by path segment — SwitchTenantStorageTask is
+     * off, so the public disk is shared). This lets a grid of many thumbnails
+     * load without each request booting tenancy or querying a database — the
+     * concurrency that previously choked the server. The signature + expiry +
+     * path scoping are the access control.
+     */
+    public function serveFile(Request $request): \Symfony\Component\HttpFoundation\Response
+    {
+        if (!$request->hasValidSignature()) {
+            abort(403, 'Invalid or expired link');
+        }
+
+        $path = (string) $request->query('path');
+
+        // Scope to the documents tree and block traversal. The signature already
+        // prevents tampering with the path; this is defence in depth.
+        if ($path === '' || str_contains($path, '..') || !str_starts_with($path, 'documents/')) {
+            abort(403);
+        }
+
+        if (!Storage::disk('public')->exists($path)) {
+            abort(404, 'File not found');
+        }
+
+        // Cache for the signed-URL lifetime so repeat views/pagination don't
+        // re-request at all. Content-Type is auto-detected from the file.
+        return response()->file(Storage::disk('public')->path($path))
+            ->setMaxAge(86400)
+            ->setPrivate();
     }
 
     /**

@@ -208,26 +208,13 @@ class Document extends Model
      */
     public function getThumbnailUrlAttribute(): string
     {
-        // For images, return a signed URL that doesn't require authentication.
-        // The tenant domain is included (signature-protected) so native viewers
-        // that send no Origin/Referer headers can still resolve the tenant.
-        if (str_starts_with($this->mime_type, 'image/')) {
-            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
-                'documents.preview-signed',
-                now()->addHours(24), // Valid for 24 hours
-                ['document' => $this->id, 'tenant' => \App\Models\Tenant::current()?->domain]
-            );
+        // Images and PDFs: signed, DB-free URL (see signedFileUrl). Serves the
+        // file without the browser's request booting tenancy or hitting the DB,
+        // so a grid of many thumbnails loads without choking the server.
+        if (str_starts_with($this->mime_type, 'image/') || $this->mime_type === 'application/pdf') {
+            return $this->signedFileUrl();
         }
 
-        // For PDFs, also use signed URL for preview
-        if ($this->mime_type === 'application/pdf') {
-            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
-                'documents.preview-signed',
-                now()->addHours(24), // Valid for 24 hours
-                ['document' => $this->id, 'tenant' => \App\Models\Tenant::current()?->domain]
-            );
-        }
-        
         // Return default thumbnails based on file type for other files
         return match($this->file_extension) {
             'doc', 'docx' => '/images/file-types/word.png',
@@ -246,15 +233,26 @@ class Document extends Model
     {
         // For images and PDFs, return signed URL for preview
         if ($this->isImage() || $this->isPdf()) {
-            return \Illuminate\Support\Facades\URL::temporarySignedRoute(
-                'documents.preview-signed',
-                now()->addHours(24),
-                ['document' => $this->id, 'tenant' => \App\Models\Tenant::current()?->domain]
-            );
+            return $this->signedFileUrl();
         }
-        
+
         // For other file types, return download URL
         return $this->download_url;
+    }
+
+    /**
+     * Signed, DB-free URL that serves this file via DocumentController@serveFile.
+     * The tenant-scoped storage path is baked into the (signature-protected)
+     * `path` param, so the serving request needs no tenant resolution or model
+     * lookup. Valid for 24 hours.
+     */
+    private function signedFileUrl(): string
+    {
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'documents.serve',
+            now()->addHours(24),
+            ['path' => $this->file_path]
+        );
     }
 
     /**
