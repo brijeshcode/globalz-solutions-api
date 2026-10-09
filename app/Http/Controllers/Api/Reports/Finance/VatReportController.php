@@ -122,8 +122,12 @@ class VatReportController extends Controller
             ->when($toDate,   fn($q) => $q->where('date', '<=', $toDate))
             ->sum('tax_usd');
 
-        // vat difference (net vat collected - all vat paid)
-        $vatDifference = ( $vatExpenseTotal + $expenseVatTotal + $vatPurchaseTotal) - $netVatSales ;
+        // Total Deductible VAT: VAT paid on import purchases (VAT-category expenses) +
+        // VAT paid on local delivered TAX purchases + VAT field on all expenses.
+        $totalDeductibleVat = $vatExpenseTotal + $vatPurchaseTotal + $expenseVatTotal;
+
+        // vat difference (deductible vat - net vat on sales)
+        $vatDifference = $totalDeductibleVat - $netVatSales;
 
         // Local-currency equivalents of the USD figures above.
         // Conversion uses the tenant's CURRENT active rate (there is no per-period
@@ -154,8 +158,10 @@ class VatReportController extends Controller
             'vat_expense_total_local'  => $toLocal($vatExpenseTotal),
             'expense_vat_total'        => round($expenseVatTotal, 2),
             'expense_vat_total_local'  => $toLocal($expenseVatTotal),
-            'vat_purchase_total'       => round($vatPurchaseTotal, 2),
-            'vat_purchase_total_local' => $toLocal($vatPurchaseTotal),
+            'vat_purchase_total'         => round($vatPurchaseTotal, 2),
+            'vat_purchase_total_local'   => $toLocal($vatPurchaseTotal),
+            'total_deductible_vat'       => round($totalDeductibleVat, 2),
+            'total_deductible_vat_local' => $toLocal($totalDeductibleVat),
             'vat_difference'           => round($vatDifference, 2),
             'vat_difference_local'     => $toLocal($vatDifference),
             'local_currency'           => $localCurrency ? [
