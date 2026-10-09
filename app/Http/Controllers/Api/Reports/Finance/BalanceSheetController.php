@@ -24,8 +24,10 @@ use Illuminate\Support\Facades\DB;
 
 class BalanceSheetController extends Controller
 {
-    public function __construct(private ProfitReportService $profitReportService)
-    {
+    public function __construct(
+        private ProfitReportService $profitReportService,
+        private VatReportController $vatReportController,
+    ) {
     }
 
     /**
@@ -85,7 +87,7 @@ class BalanceSheetController extends Controller
         ]);
 
         $accountsPayable = $this->section(array_merge([
-            $this->makeLine('Goverment VAT owed (negative only)', $this->governmentVat()),
+            $this->makeLine('Goverment VAT owed', $this->governmentVatOwed()),
             $this->makeLine("Supplier's Balances (negative only)", $this->suppliersBalancesLiability()),
             $this->makeLine("Gas Station's Balances (negative only)", $this->gasStationBalancesNegative()),
         ],
@@ -489,6 +491,26 @@ class BalanceSheetController extends Controller
         return [
             'value' => 0.0,
             'note' => 'Not yet calculated — the Government VAT figure (paid vs owed) has no agreed data source yet.',
+        ];
+    }
+
+    /**
+     * Goverment VAT owed — Accounts Payable line.
+     * Pulls the all-time VAT report difference (vatPaid − netVatSales). It is negative
+     * when the company has collected more VAT than it paid — i.e. VAT owed to the
+     * government — which is the correct sign for this liability line. Wired to the VAT
+     * report for now so the two reports' figures can be compared.
+     *
+     * @return array{value: float, note: string}
+     */
+    private function governmentVatOwed(): array
+    {
+        $vatReport = $this->vatReportController->calculateVatReport(null, null);
+
+        return [
+            'value' => (float) $vatReport['vat_difference'],
+            'note' => 'All-time VAT report difference (VAT paid minus net VAT on sales). A negative figure means '
+                . 'the company owes the government. Sourced from the VAT report for now to verify the numbers match.',
         ];
     }
 
